@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useCompany } from "@/hooks/useCompany";
 import { Users, ShieldCheck, ShieldOff, Ban, CheckCircle, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { he } from "date-fns/locale";
@@ -41,10 +42,12 @@ const ROLE_COLORS: Record<string, string> = {
   employee: "bg-secondary text-secondary-foreground border-secondary",
 };
 
-async function fetchUsers(): Promise<ManagedUser[]> {
+async function fetchUsers(companyId: string | null): Promise<ManagedUser[]> {
   const { data: { session } } = await supabase.auth.getSession();
+  const params = new URLSearchParams({ action: "list" });
+  if (companyId) params.set("company_id", companyId);
   const res = await fetch(
-    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-users?action=list`,
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-users?${params}`,
     {
       headers: {
         Authorization: `Bearer ${session?.access_token}`,
@@ -63,11 +66,12 @@ async function fetchUsers(): Promise<ManagedUser[]> {
 export default function UserManagement() {
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
+  const { activeCompanyId } = useCompany();
   const queryClient = useQueryClient();
 
   const { data: users = [], isLoading, refetch } = useQuery({
-    queryKey: ["managed-users"],
-    queryFn: fetchUsers,
+    queryKey: ["managed-users", activeCompanyId],
+    queryFn: () => fetchUsers(activeCompanyId),
   });
 
   const roleMutation = useMutation({
