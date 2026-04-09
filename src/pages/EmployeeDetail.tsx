@@ -34,6 +34,7 @@ const permissionLabels: Record<string, string> = {
 export default function EmployeeDetail() {
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState("assets");
+  const [offboardingOpen, setOffboardingOpen] = useState(false);
   const { data: employee, isLoading } = useEmployee(id!);
   const { data: assets } = useEmployeeAssets(id!);
   const { data: digitalAccess } = useEmployeeDigitalAccess(id!);
@@ -80,7 +81,7 @@ export default function EmployeeDetail() {
             </div>
           </div>
           {employee.status !== "leaving" && employee.status !== "inactive" && (
-            <Button variant="destructive" className="gap-2">
+            <Button variant="destructive" className="gap-2" onClick={() => setOffboardingOpen(true)}>
               <UserMinus className="w-4 h-4" />
               התנעת עזיבה
             </Button>
