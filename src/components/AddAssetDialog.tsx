@@ -3,9 +3,9 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Package } from "lucide-react";
+import { Package, AlertCircle } from "lucide-react";
 import { useCreateAsset } from "@/hooks/useMutations";
-import { useAssetCategories, useEmployees } from "@/hooks/useData";
+import { useAssetCategories, useEmployees, useAssets } from "@/hooks/useData";
 import { useCategoryFields } from "@/hooks/useCategories";
 import { useToast } from "@/hooks/use-toast";
 
@@ -17,8 +17,10 @@ interface Props {
 export function AddAssetDialog({ open, onOpenChange }: Props) {
   const { data: categories } = useAssetCategories();
   const { data: employees } = useEmployees();
+  const { data: existingAssets } = useAssets();
   const mutation = useCreateAsset();
   const { toast } = useToast();
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [form, setForm] = useState({
     asset_code: "",
@@ -55,11 +57,24 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
     }
   }, [form.current_owner_id]);
 
-  const set = (key: string, value: string) => setForm(prev => ({ ...prev, [key]: value }));
+  const set = (key: string, value: string) => {
+    setForm(prev => ({ ...prev, [key]: value }));
+    setErrors(prev => { const n = { ...prev }; delete n[key]; return n; });
+  };
 
   const handleSubmit = async () => {
-    if (!form.asset_name || !form.category_id || !form.asset_code) {
-      toast({ title: "שגיאה", description: "נא למלא שם פריט, קטגוריה ומזהה", variant: "destructive" });
+    const e: Record<string, string> = {};
+    if (!form.asset_code.trim()) e.asset_code = "שדה חובה";
+    else if (existingAssets?.some(a => a.asset_code === form.asset_code))
+      e.asset_code = "מזהה פריט כבר קיים במערכת";
+    if (!form.asset_name.trim()) e.asset_name = "שדה חובה";
+    if (!form.category_id) e.category_id = "נא לבחור קטגוריה";
+    if (form.serial_number && existingAssets?.some(a => a.serial_number === form.serial_number))
+      e.serial_number = "מספר סידורי כבר קיים במערכת";
+
+    setErrors(e);
+    if (Object.keys(e).length > 0) {
+      toast({ title: "שגיאת ולידציה", description: "נא לתקן את השגיאות המסומנות", variant: "destructive" });
       return;
     }
     try {
@@ -104,13 +119,14 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
             <select
               value={form.category_id}
               onChange={(e) => { set("category_id", e.target.value); setCustomFields({}); }}
-              className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
+              className={`w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 ${errors.category_id ? "ring-2 ring-destructive/50" : "focus:ring-primary/30"}`}
             >
               <option value="">בחר קטגוריה...</option>
               {(categories ?? []).map(c => (
                 <option key={c.id} value={c.id}>{c.category_name}</option>
               ))}
             </select>
+            {errors.category_id && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.category_id}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -119,9 +135,10 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
               <input
                 value={form.asset_code}
                 onChange={(e) => set("asset_code", e.target.value)}
-                className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 font-mono"
+                className={`w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 font-mono ${errors.asset_code ? "ring-2 ring-destructive/50" : "focus:ring-primary/30"}`}
                 dir="ltr"
               />
+              {errors.asset_code && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.asset_code}</p>}
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">מספר סידורי</label>
@@ -129,9 +146,10 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
                 value={form.serial_number}
                 onChange={(e) => set("serial_number", e.target.value)}
                 placeholder="SN..."
-                className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 font-mono"
+                className={`w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 font-mono ${errors.serial_number ? "ring-2 ring-destructive/50" : "focus:ring-primary/30"}`}
                 dir="ltr"
               />
+              {errors.serial_number && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.serial_number}</p>}
             </div>
           </div>
 
