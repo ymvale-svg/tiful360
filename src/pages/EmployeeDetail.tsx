@@ -237,6 +237,16 @@ export default function EmployeeDetail() {
           permission_level: da.permission_level,
         }))}
       />
+
+      {/* Transfer dialog */}
+      {transferAsset && (
+        <TransferAssetDialog
+          open={!!transferAsset}
+          onOpenChange={(open) => { if (!open) setTransferAsset(null); }}
+          asset={transferAsset}
+          currentOwnerName={employee.full_name}
+        />
+      )}
     </div>
   );
 }
