@@ -25,19 +25,9 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     try {
-      if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: window.location.origin },
-        });
-        if (error) throw error;
-        toast({ title: "נרשמת בהצלחה!", description: 'בדוק את תיבת הדוא"ל שלך לאימות.' });
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        navigate("/");
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      navigate("/");
     } catch (error: any) {
       toast({ title: "שגיאה", description: error.message, variant: "destructive" });
     } finally {
@@ -113,9 +103,7 @@ export default function Login() {
 
         {/* Form */}
         <div className="bg-card rounded-2xl border border-border shadow-card p-8">
-          <h2 className="text-lg font-semibold mb-6 text-center">
-            {mode === "signup" ? "הרשמה למערכת" : "כניסה למערכת"}
-          </h2>
+          <h2 className="text-lg font-semibold mb-6 text-center">כניסה למערכת</h2>
 
           {/* Google SSO */}
           <Button
@@ -134,19 +122,17 @@ export default function Login() {
             {googleLoading ? "מתחבר..." : "התחבר באמצעות חשבון חברה"}
           </Button>
 
-          {mode !== "signup" && (
-            <div className="relative mb-4">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border" />
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="bg-card px-3 text-muted-foreground">או</span>
-              </div>
+          <div className="relative mb-4">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
             </div>
-          )}
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-card px-3 text-muted-foreground">או</span>
+            </div>
+          </div>
 
           {/* Auth mode tabs */}
-          {mode !== "signup" && (
+          <div className="flex items-center gap-1 bg-muted rounded-lg p-1 mb-5">
             <div className="flex items-center gap-1 bg-muted rounded-lg p-1 mb-5">
               <button
                 onClick={() => { setMode("email"); setOtpSent(false); }}
