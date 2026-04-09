@@ -84,16 +84,33 @@ export function OffboardingDialog({
     }
   };
 
-  const handleDownloadPdf = () => {
-    // Generate a client-side protocol document
-    const doc = generateProtocolHtml(employee, assets, digitalAccess, endDate);
-    const blob = new Blob([doc], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `protocol_${employee.employee_code}_${endDate}.html`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleDownloadPdf = async () => {
+    const html2pdf = (await import("html2pdf.js")).default;
+    const htmlContent = generateProtocolHtml(employee, assets, digitalAccess, endDate);
+    const container = document.createElement("div");
+    container.innerHTML = htmlContent;
+    // Extract the body content for html2pdf
+    const bodyMatch = htmlContent.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+    const styleMatch = htmlContent.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+    const wrapper = document.createElement("div");
+    wrapper.setAttribute("dir", "rtl");
+    if (styleMatch) {
+      const style = document.createElement("style");
+      style.textContent = styleMatch[1];
+      wrapper.appendChild(style);
+    }
+    wrapper.innerHTML += bodyMatch ? bodyMatch[1] : htmlContent;
+    document.body.appendChild(wrapper);
+    
+    await html2pdf().set({
+      margin: [10, 10, 10, 10],
+      filename: `protocol_${employee.employee_code}_${endDate}.pdf`,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+    }).from(wrapper).save();
+    
+    document.body.removeChild(wrapper);
   };
 
   const handleClose = () => {
