@@ -27,7 +27,7 @@ export default function Login() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      navigate("/");
+      navigate("/select-company");
     } catch (error: any) {
       toast({ title: "שגיאה", description: error.message, variant: "destructive" });
     } finally {
@@ -65,7 +65,7 @@ export default function Login() {
         type: "sms",
       });
       if (error) throw error;
-      navigate("/");
+      navigate("/select-company");
     } catch (error: any) {
       toast({ title: "שגיאה", description: error.message, variant: "destructive" });
     } finally {
@@ -81,7 +81,7 @@ export default function Login() {
       });
       if (result.error) throw result.error;
       if (result.redirected) return;
-      navigate("/");
+      navigate("/select-company");
     } catch (error: any) {
       toast({ title: "שגיאה בהתחברות עם Google", description: error.message, variant: "destructive" });
     } finally {

@@ -11,7 +11,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Verify caller is admin
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -20,7 +19,6 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Verify caller with anon client
     const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -29,8 +27,8 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Check admin role
     const { data: callerRoles } = await anonClient.from("user_roles").select("role").eq("user_id", caller.id);
+    const callerIsSuperAdmin = callerRoles?.some((r: any) => r.role === "super_admin");
     const isAdmin = callerRoles?.some((r: any) => r.role === "admin" || r.role === "super_admin");
     if (!isAdmin) {
       return new Response(JSON.stringify({ error: "Forbidden: admin only" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -41,13 +39,57 @@ Deno.serve(async (req) => {
     const action = url.searchParams.get("action");
 
     if (req.method === "GET" && action === "list") {
+      const companyId = url.searchParams.get("company_id");
+
       const { data: { users }, error } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
       if (error) throw error;
 
-      // Get all roles
       const { data: allRoles } = await adminClient.from("user_roles").select("*");
 
-      const enriched = users.map((u: any) => ({
+      // Get user IDs that belong to the requested company
+      let companyUserIds: Set<string> | null = null;
+      if (companyId && !callerIsSuperAdmin) {
+        // Verify caller has access to this company
+        const { data: callerAccess } = await adminClient
+          .from("user_company_access")
+          .select("id")
+          .eq("user_id", caller.id)
+          .eq("company_id", companyId)
+          .limit(1);
+        if (!callerAccess || callerAccess.length === 0) {
+          return new Response(JSON.stringify({ error: "No access to this company" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+      }
+
+      if (companyId) {
+        const { data: companyAccess } = await adminClient
+          .from("user_company_access")
+          .select("user_id")
+          .eq("company_id", companyId);
+        companyUserIds = new Set((companyAccess ?? []).map((a: any) => a.user_id));
+      } else if (!callerIsSuperAdmin) {
+        // Non-super-admin without company_id: get all users from caller's companies
+        const { data: callerCompanyAccess } = await adminClient
+          .from("user_company_access")
+          .select("company_id")
+          .eq("user_id", caller.id);
+        const callerCompanyIds = (callerCompanyAccess ?? []).map((a: any) => a.company_id);
+        if (callerCompanyIds.length > 0) {
+          const { data: companyUsers } = await adminClient
+            .from("user_company_access")
+            .select("user_id")
+            .in("company_id", callerCompanyIds);
+          companyUserIds = new Set((companyUsers ?? []).map((a: any) => a.user_id));
+        } else {
+          companyUserIds = new Set();
+        }
+      }
+
+      const filteredUsers = companyUserIds
+        ? users.filter((u: any) => companyUserIds!.has(u.id))
+        : users;
+
+      const enriched = filteredUsers.map((u: any) => ({
         id: u.id,
         email: u.email,
         phone: u.phone,
@@ -90,9 +132,6 @@ Deno.serve(async (req) => {
       }
 
       if (ban) {
-        // Ban for 100 years
-        const banUntil = new Date();
-        banUntil.setFullYear(banUntil.getFullYear() + 100);
         await adminClient.auth.admin.updateUserById(user_id, { ban_duration: "876000h" });
       } else {
         await adminClient.auth.admin.updateUserById(user_id, { ban_duration: "none" });
