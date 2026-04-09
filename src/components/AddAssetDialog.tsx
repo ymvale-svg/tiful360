@@ -119,13 +119,14 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
             <select
               value={form.category_id}
               onChange={(e) => { set("category_id", e.target.value); setCustomFields({}); }}
-              className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
+              className={`w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 ${errors.category_id ? "ring-2 ring-destructive/50" : "focus:ring-primary/30"}`}
             >
               <option value="">בחר קטגוריה...</option>
               {(categories ?? []).map(c => (
                 <option key={c.id} value={c.id}>{c.category_name}</option>
               ))}
             </select>
+            {errors.category_id && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.category_id}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
