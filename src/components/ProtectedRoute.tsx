@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
 
-type AppRole = "admin" | "it_manager" | "employee";
+type AppRole = "admin" | "it_manager" | "employee" | "super_admin";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -28,7 +28,8 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
 
   // If specific roles required, check access
   if (requiredRoles && requiredRoles.length > 0 && roles.length > 0) {
-    const hasAccess = requiredRoles.some((r) => roles.includes(r));
+    const isSuperAdmin = roles.includes("super_admin");
+    const hasAccess = isSuperAdmin || requiredRoles.some((r) => roles.includes(r));
     if (!hasAccess) {
       return <Navigate to="/" replace />;
     }

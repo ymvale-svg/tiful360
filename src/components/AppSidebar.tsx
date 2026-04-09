@@ -12,28 +12,33 @@ import {
   ChevronRight,
   Boxes,
   LogOut,
+  Crown,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 
-type AppRole = "admin" | "it_manager" | "employee";
+type AppRole = "admin" | "it_manager" | "employee" | "super_admin";
 
 interface NavItem {
   label: string;
   icon: any;
   path: string;
-  roles?: AppRole[]; // if undefined, visible to all
+  roles?: AppRole[];
 }
 
 const mainNav: NavItem[] = [
-  { label: "לוח בקרה", icon: LayoutDashboard, path: "/", roles: ["admin", "it_manager"] },
-  { label: "עובדים", icon: Users, path: "/employees", roles: ["admin"] },
-  { label: "נכסים וציוד", icon: Package, path: "/assets", roles: ["admin", "it_manager"] },
-  { label: "קטגוריות ציוד", icon: Boxes, path: "/categories", roles: ["admin"] },
-  { label: "משימות IT", icon: Shield, path: "/it-tickets", roles: ["admin", "it_manager"] },
-  { label: "התראות", icon: Bell, path: "/alerts", roles: ["admin", "it_manager"] },
-  { label: "ניהול משתמשים", icon: Users, path: "/user-management", roles: ["admin"] },
+  { label: "לוח בקרה", icon: LayoutDashboard, path: "/", roles: ["admin", "it_manager", "super_admin"] },
+  { label: "עובדים", icon: Users, path: "/employees", roles: ["admin", "super_admin"] },
+  { label: "נכסים וציוד", icon: Package, path: "/assets", roles: ["admin", "it_manager", "super_admin"] },
+  { label: "קטגוריות ציוד", icon: Boxes, path: "/categories", roles: ["admin", "super_admin"] },
+  { label: "משימות IT", icon: Shield, path: "/it-tickets", roles: ["admin", "it_manager", "super_admin"] },
+  { label: "התראות", icon: Bell, path: "/alerts", roles: ["admin", "it_manager", "super_admin"] },
+  { label: "ניהול משתמשים", icon: Users, path: "/user-management", roles: ["admin", "super_admin"] },
+];
+
+const superAdminNav: NavItem[] = [
+  { label: "ניהול חברות", icon: Building2, path: "/companies", roles: ["super_admin"] },
 ];
 
 const portalNav: NavItem[] = [
@@ -41,17 +46,18 @@ const portalNav: NavItem[] = [
 ];
 
 const bottomNav: NavItem[] = [
-  { label: "הגדרות", icon: Settings, path: "/settings", roles: ["admin"] },
+  { label: "הגדרות", icon: Settings, path: "/settings", roles: ["admin", "super_admin"] },
 ];
 
 export function AppSidebar() {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
-  const { roles, signOut, user } = useAuth();
+  const { roles, signOut, user, isSuperAdmin } = useAuth();
 
   const canSee = (item: NavItem) => {
     if (!item.roles) return true;
-    if (roles.length === 0) return true; // roles not loaded yet, show all
+    if (roles.length === 0) return true;
+    if (isSuperAdmin) return true;
     return item.roles.some((r) => roles.includes(r));
   };
 
@@ -75,6 +81,7 @@ export function AppSidebar() {
   };
 
   const visibleMain = mainNav.filter(canSee);
+  const visibleSuperAdmin = superAdminNav.filter(canSee);
   const visiblePortal = portalNav.filter(canSee);
   const visibleBottom = bottomNav.filter(canSee);
 
@@ -100,6 +107,24 @@ export function AppSidebar() {
 
       {/* Main nav */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+        {/* Super Admin section */}
+        {visibleSuperAdmin.length > 0 && (
+          <>
+            <div className="space-y-1">
+              {!collapsed && (
+                <p className="px-3 py-1 text-[11px] font-medium text-sidebar-muted uppercase tracking-wider flex items-center gap-1">
+                  <Crown className="w-3 h-3" />
+                  סופר אדמין
+                </p>
+              )}
+              {visibleSuperAdmin.map((item) => (
+                <NavItemComponent key={item.path} item={item} />
+              ))}
+            </div>
+            <div className="my-4 border-t border-sidebar-border" />
+          </>
+        )}
+
         <div className="space-y-1">
           {visibleMain.map((item) => (
             <NavItemComponent key={item.path} item={item} />
@@ -126,7 +151,6 @@ export function AppSidebar() {
           <NavItemComponent key={item.path} item={item} />
         ))}
 
-        {/* Sign out */}
         <button
           onClick={() => signOut()}
           className="sidebar-item sidebar-item-inactive w-full"

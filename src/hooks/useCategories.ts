@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useCompany } from "@/hooks/useCompany";
 
 export function useCategoryFields(categoryId: string) {
   return useQuery({
@@ -19,11 +20,12 @@ export function useCategoryFields(categoryId: string) {
 
 export function useCreateCategory() {
   const queryClient = useQueryClient();
+  const { activeCompanyId } = useCompany();
   return useMutation({
     mutationFn: async (params: { category_name: string; prefix: string; description?: string; icon?: string }) => {
       const { data, error } = await supabase
         .from("asset_categories")
-        .insert(params)
+        .insert({ ...params, company_id: activeCompanyId })
         .select()
         .single();
       if (error) throw error;
