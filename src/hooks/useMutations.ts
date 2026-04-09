@@ -1,0 +1,99 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+
+export function useCreateEmployee() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: {
+      employee_code: string;
+      full_name: string;
+      id_number: string;
+      role: string;
+      department: string;
+      phone?: string;
+      email?: string;
+      start_date?: string;
+      status?: "active" | "onboarding";
+    }) => {
+      const { data, error } = await supabase
+        .from("employees")
+        .insert(params)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["employees"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+    },
+  });
+}
+
+export function useCreateAsset() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: {
+      asset_code: string;
+      asset_name: string;
+      category_id: string;
+      serial_number?: string;
+      current_owner_id?: string;
+      status?: "in_use" | "in_stock" | "in_repair";
+      custom_fields?: Record<string, any>;
+      expiry_date?: string;
+      notes?: string;
+    }) => {
+      const { data, error } = await supabase
+        .from("assets")
+        .insert(params)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["assets"] });
+      queryClient.invalidateQueries({ queryKey: ["asset-categories"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["employee-assets"] });
+    },
+  });
+}
+
+export function useTransferAsset() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ assetId, newOwnerId, assetName, fromName, toName }: {
+      assetId: string;
+      newOwnerId: string | null;
+      assetName: string;
+      fromName: string;
+      toName: string;
+    }) => {
+      const { error } = await supabase
+        .from("assets")
+        .update({
+          current_owner_id: newOwnerId,
+          status: newOwnerId ? "in_use" : "in_stock",
+        })
+        .eq("id", assetId);
+      if (error) throw error;
+
+      // Log activity
+      const { data: { user } } = await supabase.auth.getUser();
+      await supabase.from("activity_log").insert({
+        action: `העברת בעלות: ${assetName}`,
+        details: `מ-${fromName} אל ${toName}`,
+        entity_type: "asset",
+        entity_id: assetId,
+        performed_by: user?.id,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["assets"] });
+      queryClient.invalidateQueries({ queryKey: ["employee-assets"] });
+      queryClient.invalidateQueries({ queryKey: ["activity-log"] });
+    },
+  });
+}
