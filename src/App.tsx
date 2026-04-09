@@ -16,6 +16,7 @@ import EmployeePortal from "@/pages/EmployeePortal";
 import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
 import CategoryManager from "@/pages/CategoryManager";
+import UserManagement from "@/pages/UserManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,7 @@ const App = () => (
               <Route path="/it-tickets" element={<ProtectedRoute requiredRoles={["admin", "it_manager"]}><ITTickets /></ProtectedRoute>} />
               <Route path="/alerts" element={<ProtectedRoute requiredRoles={["admin", "it_manager"]}><Alerts /></ProtectedRoute>} />
               <Route path="/portal" element={<EmployeePortal />} />
+              <Route path="/user-management" element={<ProtectedRoute requiredRoles={["admin"]}><UserManagement /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute requiredRoles={["admin"]}><Settings /></ProtectedRoute>} />
             </Route>
             <Route path="*" element={<NotFound />} />
