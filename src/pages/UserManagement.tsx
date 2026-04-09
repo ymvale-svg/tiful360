@@ -28,12 +28,14 @@ interface ManagedUser {
 }
 
 const ROLE_LABELS: Record<string, string> = {
+  super_admin: "סופר אדמין",
   admin: "מנהל מערכת",
   it_manager: "מנהל IT",
   employee: "עובד",
 };
 
 const ROLE_COLORS: Record<string, string> = {
+  super_admin: "bg-primary/10 text-primary border-primary/20",
   admin: "bg-destructive/10 text-destructive border-destructive/20",
   it_manager: "bg-accent text-accent-foreground border-accent",
   employee: "bg-secondary text-secondary-foreground border-secondary",
