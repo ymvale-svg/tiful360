@@ -15,6 +15,7 @@ import Alerts from "@/pages/Alerts";
 import EmployeePortal from "@/pages/EmployeePortal";
 import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
+import CategoryManager from "@/pages/CategoryManager";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ const App = () => (
               <Route path="/employees" element={<Employees />} />
               <Route path="/employees/:id" element={<EmployeeDetail />} />
               <Route path="/assets" element={<Assets />} />
+              <Route path="/categories" element={<CategoryManager />} />
               <Route path="/it-tickets" element={<ITTickets />} />
               <Route path="/alerts" element={<Alerts />} />
               <Route path="/portal" element={<EmployeePortal />} />
