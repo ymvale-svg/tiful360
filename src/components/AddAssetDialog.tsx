@@ -17,8 +17,10 @@ interface Props {
 export function AddAssetDialog({ open, onOpenChange }: Props) {
   const { data: categories } = useAssetCategories();
   const { data: employees } = useEmployees();
+  const { data: existingAssets } = useAssets();
   const mutation = useCreateAsset();
   const { toast } = useToast();
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [form, setForm] = useState({
     asset_code: "",
