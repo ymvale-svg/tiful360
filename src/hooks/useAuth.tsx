@@ -1,12 +1,18 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+
+type AppRole = "admin" | "it_manager" | "employee";
 
 interface AuthContextType {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  roles: AppRole[];
+  hasRole: (role: AppRole) => boolean;
+  isAdmin: boolean;
+  isIT: boolean;
+  isEmployee: boolean;
   signOut: () => Promise<void>;
 }
 
@@ -14,33 +20,70 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   user: null,
   loading: true,
+  roles: [],
+  hasRole: () => false,
+  isAdmin: false,
+  isIT: false,
+  isEmployee: false,
   signOut: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [roles, setRoles] = useState<AppRole[]>([]);
+
+  const fetchRoles = useCallback(async (userId: string) => {
+    const { data } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
+    setRoles((data ?? []).map((r) => r.role));
+  }, []);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      if (session?.user) {
+        // Defer role fetch to avoid Supabase deadlock
+        setTimeout(() => fetchRoles(session.user.id), 0);
+      } else {
+        setRoles([]);
+      }
       setLoading(false);
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      if (session?.user) {
+        fetchRoles(session.user.id);
+      }
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [fetchRoles]);
 
+  const hasRole = useCallback((role: AppRole) => roles.includes(role), [roles]);
   const signOut = async () => {
     await supabase.auth.signOut();
+    setRoles([]);
   };
 
   return (
-    <AuthContext.Provider value={{ session, user: session?.user ?? null, loading, signOut }}>
+    <AuthContext.Provider
+      value={{
+        session,
+        user: session?.user ?? null,
+        loading,
+        roles,
+        hasRole,
+        isAdmin: roles.includes("admin"),
+        isIT: roles.includes("it_manager"),
+        isEmployee: roles.includes("employee"),
+        signOut,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
