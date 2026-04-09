@@ -147,7 +147,7 @@ export default function EmployeeDetail() {
                 </div>
               )}
               <div className="flex items-center gap-2 mt-3">
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setTransferAsset(asset)}>
                   <RefreshCw className="w-3 h-3" />
                   העבר בעלות
                 </Button>
