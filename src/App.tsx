@@ -35,14 +35,14 @@ const App = () => (
               </ProtectedRoute>
             }>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/employees" element={<Employees />} />
-              <Route path="/employees/:id" element={<EmployeeDetail />} />
-              <Route path="/assets" element={<Assets />} />
-              <Route path="/categories" element={<CategoryManager />} />
-              <Route path="/it-tickets" element={<ITTickets />} />
-              <Route path="/alerts" element={<Alerts />} />
+              <Route path="/employees" element={<ProtectedRoute requiredRoles={["admin"]}><Employees /></ProtectedRoute>} />
+              <Route path="/employees/:id" element={<ProtectedRoute requiredRoles={["admin"]}><EmployeeDetail /></ProtectedRoute>} />
+              <Route path="/assets" element={<ProtectedRoute requiredRoles={["admin", "it_manager"]}><Assets /></ProtectedRoute>} />
+              <Route path="/categories" element={<ProtectedRoute requiredRoles={["admin"]}><CategoryManager /></ProtectedRoute>} />
+              <Route path="/it-tickets" element={<ProtectedRoute requiredRoles={["admin", "it_manager"]}><ITTickets /></ProtectedRoute>} />
+              <Route path="/alerts" element={<ProtectedRoute requiredRoles={["admin", "it_manager"]}><Alerts /></ProtectedRoute>} />
               <Route path="/portal" element={<EmployeePortal />} />
-              <Route path="/settings" element={<Settings />} />
+              <Route path="/settings" element={<ProtectedRoute requiredRoles={["admin"]}><Settings /></ProtectedRoute>} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

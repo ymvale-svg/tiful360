@@ -1,8 +1,15 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
 
-export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { session, loading } = useAuth();
+type AppRole = "admin" | "it_manager" | "employee";
+
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  requiredRoles?: AppRole[];
+}
+
+export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps) {
+  const { session, loading, roles } = useAuth();
 
   if (loading) {
     return (
@@ -17,6 +24,14 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!session) {
     return <Navigate to="/login" replace />;
+  }
+
+  // If specific roles required, check access
+  if (requiredRoles && requiredRoles.length > 0 && roles.length > 0) {
+    const hasAccess = requiredRoles.some((r) => roles.includes(r));
+    if (!hasAccess) {
+      return <Navigate to="/" replace />;
+    }
   }
 
   return <>{children}</>;

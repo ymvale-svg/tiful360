@@ -2,44 +2,82 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
-import { Building2, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Building2, Mail, Lock, Eye, EyeOff, Phone, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+
+type AuthMode = "email" | "phone" | "signup";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [mode, setMode] = useState<AuthMode>("email");
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     try {
-      if (isSignUp) {
+      if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
           email,
           password,
           options: { emailRedirectTo: window.location.origin },
         });
         if (error) throw error;
-        toast({ title: "נרשמת בהצלחה!", description: "בדוק את תיבת הדוא\"ל שלך לאימות." });
+        toast({ title: "נרשמת בהצלחה!", description: 'בדוק את תיבת הדוא"ל שלך לאימות.' });
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         navigate("/");
       }
     } catch (error: any) {
-      toast({
-        title: "שגיאה",
-        description: error.message,
-        variant: "destructive",
+      toast({ title: "שגיאה", description: error.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendOtp = async () => {
+    if (!phone || phone.length < 10) {
+      toast({ title: "שגיאה", description: "נא להזין מספר טלפון תקין", variant: "destructive" });
+      return;
+    }
+    setLoading(true);
+    try {
+      const formattedPhone = phone.startsWith("+") ? phone : `+972${phone.replace(/^0/, "")}`;
+      const { error } = await supabase.auth.signInWithOtp({ phone: formattedPhone });
+      if (error) throw error;
+      setPhone(formattedPhone);
+      setOtpSent(true);
+      toast({ title: "קוד נשלח", description: "קוד אימות נשלח לטלפון שלך" });
+    } catch (error: any) {
+      toast({ title: "שגיאה", description: error.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        phone,
+        token: otp,
+        type: "sms",
       });
+      if (error) throw error;
+      navigate("/");
+    } catch (error: any) {
+      toast({ title: "שגיאה", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -51,22 +89,11 @@ export default function Login() {
       const result = await lovable.auth.signInWithOAuth("google", {
         redirect_uri: window.location.origin,
       });
-
-      if (result.error) {
-        throw result.error;
-      }
-
-      if (result.redirected) {
-        return;
-      }
-
+      if (result.error) throw result.error;
+      if (result.redirected) return;
       navigate("/");
     } catch (error: any) {
-      toast({
-        title: "שגיאה בהתחברות עם Google",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "שגיאה בהתחברות עם Google", description: error.message, variant: "destructive" });
     } finally {
       setGoogleLoading(false);
     }
@@ -87,14 +114,14 @@ export default function Login() {
         {/* Form */}
         <div className="bg-card rounded-2xl border border-border shadow-card p-8">
           <h2 className="text-lg font-semibold mb-6 text-center">
-            {isSignUp ? "הרשמה למערכת" : "כניסה למערכת"}
+            {mode === "signup" ? "הרשמה למערכת" : "כניסה למערכת"}
           </h2>
 
           {/* Google SSO */}
           <Button
             type="button"
             variant="outline"
-            className="w-full gap-3 mb-6 py-5"
+            className="w-full gap-3 mb-4 py-5"
             onClick={handleGoogleLogin}
             disabled={googleLoading}
           >
@@ -107,67 +134,156 @@ export default function Login() {
             {googleLoading ? "מתחבר..." : "התחבר באמצעות חשבון חברה"}
           </Button>
 
-          <div className="relative mb-6">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center text-xs">
-              <span className="bg-card px-3 text-muted-foreground">או באמצעות דוא"ל</span>
-            </div>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">דוא"ל</label>
-              <div className="relative">
-                <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@company.co.il"
-                  className="w-full pr-10 pl-4 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 transition-all"
-                  required
-                  dir="ltr"
-                />
+          {mode !== "signup" && (
+            <div className="relative mb-4">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-card px-3 text-muted-foreground">או</span>
               </div>
             </div>
+          )}
 
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">סיסמה</label>
-              <div className="relative">
-                <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full pr-10 pl-10 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 transition-all"
-                  required
-                  dir="ltr"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
+          {/* Auth mode tabs */}
+          {mode !== "signup" && (
+            <div className="flex items-center gap-1 bg-muted rounded-lg p-1 mb-5">
+              <button
+                onClick={() => { setMode("email"); setOtpSent(false); }}
+                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-colors ${
+                  mode === "email" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"
+                }`}
+              >
+                <Mail className="w-3.5 h-3.5" />
+                דוא"ל וסיסמה
+              </button>
+              <button
+                onClick={() => { setMode("phone"); setOtpSent(false); }}
+                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-colors ${
+                  mode === "phone" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"
+                }`}
+              >
+                <Phone className="w-3.5 h-3.5" />
+                SMS OTP
+              </button>
             </div>
+          )}
 
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "טוען..." : isSignUp ? "הרשמה" : "כניסה"}
-            </Button>
-          </form>
+          {/* Email/Password form */}
+          {(mode === "email" || mode === "signup") && (
+            <form onSubmit={handleEmailSubmit} className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">דוא"ל</label>
+                <div className="relative">
+                  <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@company.co.il"
+                    className="w-full pr-10 pl-4 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+                    required
+                    dir="ltr"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">סיסמה</label>
+                <div className="relative">
+                  <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full pr-10 pl-10 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+                    required
+                    dir="ltr"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "טוען..." : mode === "signup" ? "הרשמה" : "כניסה"}
+              </Button>
+            </form>
+          )}
+
+          {/* Phone OTP form */}
+          {mode === "phone" && !otpSent && (
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">מספר טלפון</label>
+                <div className="relative">
+                  <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="050-1234567"
+                    className="w-full pr-10 pl-4 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+                    dir="ltr"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">הזן מספר ישראלי או בינלאומי עם קידומת +</p>
+              </div>
+              <Button className="w-full gap-2" onClick={handleSendOtp} disabled={loading}>
+                {loading ? "שולח..." : "שלח קוד אימות"}
+                <ArrowRight className="w-4 h-4 rotate-180" />
+              </Button>
+            </div>
+          )}
+
+          {mode === "phone" && otpSent && (
+            <form onSubmit={handleVerifyOtp} className="space-y-4">
+              <div className="text-center mb-2">
+                <p className="text-sm text-muted-foreground">
+                  קוד אימות נשלח ל-<span className="font-mono font-medium text-foreground" dir="ltr">{phone}</span>
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">קוד אימות</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                  placeholder="000000"
+                  className="w-full px-4 py-3 bg-muted rounded-lg text-center text-2xl font-mono tracking-[0.5em] outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+                  dir="ltr"
+                  autoFocus
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading || otp.length < 6}>
+                {loading ? "מאמת..." : "אמת והתחבר"}
+              </Button>
+              <button
+                type="button"
+                onClick={() => { setOtpSent(false); setOtp(""); }}
+                className="w-full text-sm text-primary hover:underline"
+              >
+                שלח קוד מחדש
+              </button>
+            </form>
+          )}
 
           <div className="mt-6 text-center">
-            <button
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-sm text-primary hover:underline"
-            >
-              {isSignUp ? "יש לך כבר חשבון? התחבר" : "אין לך חשבון? הירשם"}
-            </button>
+            {mode === "signup" ? (
+              <button onClick={() => setMode("email")} className="text-sm text-primary hover:underline">
+                יש לך כבר חשבון? התחבר
+              </button>
+            ) : (
+              <button onClick={() => setMode("signup")} className="text-sm text-primary hover:underline">
+                אין לך חשבון? הירשם
+              </button>
+            )}
           </div>
         </div>
       </div>

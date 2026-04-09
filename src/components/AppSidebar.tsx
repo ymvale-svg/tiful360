@@ -11,33 +11,51 @@ import {
   ChevronLeft,
   ChevronRight,
   Boxes,
+  LogOut,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 
-const mainNav = [
-  { label: "לוח בקרה", icon: LayoutDashboard, path: "/" },
-  { label: "עובדים", icon: Users, path: "/employees" },
-  { label: "נכסים וציוד", icon: Package, path: "/assets" },
-  { label: "קטגוריות ציוד", icon: Boxes, path: "/categories" },
-  { label: "משימות IT", icon: Shield, path: "/it-tickets" },
-  { label: "התראות", icon: Bell, path: "/alerts" },
+type AppRole = "admin" | "it_manager" | "employee";
+
+interface NavItem {
+  label: string;
+  icon: any;
+  path: string;
+  roles?: AppRole[]; // if undefined, visible to all
+}
+
+const mainNav: NavItem[] = [
+  { label: "לוח בקרה", icon: LayoutDashboard, path: "/", roles: ["admin", "it_manager"] },
+  { label: "עובדים", icon: Users, path: "/employees", roles: ["admin"] },
+  { label: "נכסים וציוד", icon: Package, path: "/assets", roles: ["admin", "it_manager"] },
+  { label: "קטגוריות ציוד", icon: Boxes, path: "/categories", roles: ["admin"] },
+  { label: "משימות IT", icon: Shield, path: "/it-tickets", roles: ["admin", "it_manager"] },
+  { label: "התראות", icon: Bell, path: "/alerts", roles: ["admin", "it_manager"] },
 ];
 
-const portalNav = [
+const portalNav: NavItem[] = [
   { label: "פורטל עובדים", icon: UserCircle, path: "/portal" },
 ];
 
-const bottomNav = [
-  { label: "הגדרות", icon: Settings, path: "/settings" },
+const bottomNav: NavItem[] = [
+  { label: "הגדרות", icon: Settings, path: "/settings", roles: ["admin"] },
 ];
 
 export function AppSidebar() {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+  const { roles, signOut, user } = useAuth();
 
-  const NavItem = ({ item }: { item: typeof mainNav[0] }) => {
-    const isActive = location.pathname === item.path || 
+  const canSee = (item: NavItem) => {
+    if (!item.roles) return true;
+    if (roles.length === 0) return true; // roles not loaded yet, show all
+    return item.roles.some((r) => roles.includes(r));
+  };
+
+  const NavItemComponent = ({ item }: { item: NavItem }) => {
+    const isActive = location.pathname === item.path ||
       (item.path !== "/" && location.pathname.startsWith(item.path));
 
     return (
@@ -54,6 +72,10 @@ export function AppSidebar() {
       </Link>
     );
   };
+
+  const visibleMain = mainNav.filter(canSee);
+  const visiblePortal = portalNav.filter(canSee);
+  const visibleBottom = bottomNav.filter(canSee);
 
   return (
     <aside
@@ -78,8 +100,8 @@ export function AppSidebar() {
       {/* Main nav */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
         <div className="space-y-1">
-          {mainNav.map((item) => (
-            <NavItem key={item.path} item={item} />
+          {visibleMain.map((item) => (
+            <NavItemComponent key={item.path} item={item} />
           ))}
         </div>
 
@@ -91,17 +113,28 @@ export function AppSidebar() {
               פורטל
             </p>
           )}
-          {portalNav.map((item) => (
-            <NavItem key={item.path} item={item} />
+          {visiblePortal.map((item) => (
+            <NavItemComponent key={item.path} item={item} />
           ))}
         </div>
       </nav>
 
       {/* Bottom */}
       <div className="p-3 border-t border-sidebar-border space-y-1">
-        {bottomNav.map((item) => (
-          <NavItem key={item.path} item={item} />
+        {visibleBottom.map((item) => (
+          <NavItemComponent key={item.path} item={item} />
         ))}
+
+        {/* Sign out */}
+        <button
+          onClick={() => signOut()}
+          className="sidebar-item sidebar-item-inactive w-full"
+          title={collapsed ? "התנתק" : undefined}
+        >
+          <LogOut className="w-5 h-5 shrink-0" />
+          {!collapsed && <span>התנתק</span>}
+        </button>
+
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="sidebar-item sidebar-item-inactive w-full"
