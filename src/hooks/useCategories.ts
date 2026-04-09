@@ -1,9 +1,7 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAssetCategories } from "./useData";
 
 export function useCategoryFields(categoryId: string) {
-  const { useQuery } = require("@tanstack/react-query");
   return useQuery({
     queryKey: ["category-fields", categoryId],
     queryFn: async () => {
@@ -60,7 +58,6 @@ export function useSaveCategoryFields() {
         sort_order: number;
       }>;
     }) => {
-      // Delete removed fields
       const existingIds = fields.filter(f => f.id).map(f => f.id!);
       const { data: current } = await supabase
         .from("category_fields")
@@ -72,7 +69,6 @@ export function useSaveCategoryFields() {
         await supabase.from("category_fields").delete().in("id", toDelete);
       }
 
-      // Upsert fields
       for (const field of fields) {
         if (field.id) {
           await supabase.from("category_fields").update({
