@@ -33,6 +33,7 @@ const mainNav: NavItem[] = [
   { label: "קטגוריות ציוד", icon: Boxes, path: "/categories", roles: ["admin"] },
   { label: "משימות IT", icon: Shield, path: "/it-tickets", roles: ["admin", "it_manager"] },
   { label: "התראות", icon: Bell, path: "/alerts", roles: ["admin", "it_manager"] },
+  { label: "ניהול משתמשים", icon: Users, path: "/user-management", roles: ["admin"] },
 ];
 
 const portalNav: NavItem[] = [
