@@ -3,6 +3,7 @@ import { Search, Plus, Eye, MoreHorizontal, Boxes } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAssets, useAssetCategories } from "@/hooks/useData";
+import { AddAssetDialog } from "@/components/AddAssetDialog";
 
 const assetStatusLabels: Record<string, string> = {
   in_use: "בשימוש", in_stock: "במלאי", in_repair: "בתיקון", lost: "אבד",
@@ -16,6 +17,7 @@ export default function Assets() {
   const { data: categories } = useAssetCategories();
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [search, setSearch] = useState("");
+  const [addOpen, setAddOpen] = useState(false);
 
   const filtered = (assets ?? []).filter((a) => {
     const matchCat = selectedCategory === "all" || a.category_id === selectedCategory;
@@ -31,7 +33,7 @@ export default function Assets() {
           <h1 className="page-title">נכסים וציוד</h1>
           <p className="page-subtitle">ניהול מלאי ומעקב אחר כלל ציוד החברה</p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setAddOpen(true)}>
           <Plus className="w-4 h-4" />
           פריט חדש
         </Button>
@@ -124,6 +126,8 @@ export default function Assets() {
           </table>
         )}
       </div>
+
+      <AddAssetDialog open={addOpen} onOpenChange={setAddOpen} />
     </div>
   );
 }
