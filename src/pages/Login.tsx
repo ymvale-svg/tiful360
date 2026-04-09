@@ -6,7 +6,7 @@ import { Building2, Mail, Lock, Eye, EyeOff, Phone, ArrowRight } from "lucide-re
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
-type AuthMode = "email" | "phone" | "signup";
+type AuthMode = "email" | "phone";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -25,19 +25,9 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     try {
-      if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: window.location.origin },
-        });
-        if (error) throw error;
-        toast({ title: "נרשמת בהצלחה!", description: 'בדוק את תיבת הדוא"ל שלך לאימות.' });
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        navigate("/");
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      navigate("/");
     } catch (error: any) {
       toast({ title: "שגיאה", description: error.message, variant: "destructive" });
     } finally {
@@ -102,7 +92,6 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Logo */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center mx-auto mb-4">
             <Building2 className="w-8 h-8 text-primary-foreground" />
@@ -111,13 +100,9 @@ export default function Login() {
           <p className="text-sm text-muted-foreground mt-1">מערכת ניהול משאבים מרכזית</p>
         </div>
 
-        {/* Form */}
         <div className="bg-card rounded-2xl border border-border shadow-card p-8">
-          <h2 className="text-lg font-semibold mb-6 text-center">
-            {mode === "signup" ? "הרשמה למערכת" : "כניסה למערכת"}
-          </h2>
+          <h2 className="text-lg font-semibold mb-6 text-center">כניסה למערכת</h2>
 
-          {/* Google SSO */}
           <Button
             type="button"
             variant="outline"
@@ -134,43 +119,37 @@ export default function Login() {
             {googleLoading ? "מתחבר..." : "התחבר באמצעות חשבון חברה"}
           </Button>
 
-          {mode !== "signup" && (
-            <div className="relative mb-4">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border" />
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="bg-card px-3 text-muted-foreground">או</span>
-              </div>
+          <div className="relative mb-4">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
             </div>
-          )}
-
-          {/* Auth mode tabs */}
-          {mode !== "signup" && (
-            <div className="flex items-center gap-1 bg-muted rounded-lg p-1 mb-5">
-              <button
-                onClick={() => { setMode("email"); setOtpSent(false); }}
-                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-colors ${
-                  mode === "email" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"
-                }`}
-              >
-                <Mail className="w-3.5 h-3.5" />
-                דוא"ל וסיסמה
-              </button>
-              <button
-                onClick={() => { setMode("phone"); setOtpSent(false); }}
-                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-colors ${
-                  mode === "phone" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"
-                }`}
-              >
-                <Phone className="w-3.5 h-3.5" />
-                SMS OTP
-              </button>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-card px-3 text-muted-foreground">או</span>
             </div>
-          )}
+          </div>
 
-          {/* Email/Password form */}
-          {(mode === "email" || mode === "signup") && (
+          <div className="flex items-center gap-1 bg-muted rounded-lg p-1 mb-5">
+            <button
+              onClick={() => { setMode("email"); setOtpSent(false); }}
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-colors ${
+                mode === "email" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"
+              }`}
+            >
+              <Mail className="w-3.5 h-3.5" />
+              דוא"ל וסיסמה
+            </button>
+            <button
+              onClick={() => { setMode("phone"); setOtpSent(false); }}
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-colors ${
+                mode === "phone" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"
+              }`}
+            >
+              <Phone className="w-3.5 h-3.5" />
+              SMS OTP
+            </button>
+          </div>
+
+          {mode === "email" && (
             <form onSubmit={handleEmailSubmit} className="space-y-4">
               <div>
                 <label className="text-sm font-medium mb-1.5 block">דוא"ל</label>
@@ -210,12 +189,11 @@ export default function Login() {
                 </div>
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "טוען..." : mode === "signup" ? "הרשמה" : "כניסה"}
+                {loading ? "טוען..." : "כניסה"}
               </Button>
             </form>
           )}
 
-          {/* Phone OTP form */}
           {mode === "phone" && !otpSent && (
             <div className="space-y-4">
               <div>
@@ -273,18 +251,6 @@ export default function Login() {
               </button>
             </form>
           )}
-
-          <div className="mt-6 text-center">
-            {mode === "signup" ? (
-              <button onClick={() => setMode("email")} className="text-sm text-primary hover:underline">
-                יש לך כבר חשבון? התחבר
-              </button>
-            ) : (
-              <button onClick={() => setMode("signup")} className="text-sm text-primary hover:underline">
-                אין לך חשבון? הירשם
-              </button>
-            )}
-          </div>
         </div>
       </div>
     </div>
