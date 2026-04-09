@@ -1,11 +1,12 @@
 import { Outlet, useNavigate } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
+import { CompanySelector } from "./CompanySelector";
 import { Bell, Search, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useData";
 
 export function AppLayout() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, isSuperAdmin } = useAuth();
   const { data: profile } = useProfile();
   const navigate = useNavigate();
 
@@ -18,19 +19,24 @@ export function AppLayout() {
     ? profile.display_name.split(" ").map(w => w[0]).join("").slice(0, 2)
     : user?.email?.slice(0, 2) ?? "??";
 
+  const roleLabel = isSuperAdmin ? "סופר אדמין" : profile?.system_role === 'admin' ? 'מנהל מערכת' : profile?.system_role === 'it' ? 'צוות IT' : 'עובד';
+
   return (
     <div className="min-h-screen bg-background">
       <AppSidebar />
       
       <div className="mr-[240px] min-h-screen">
         <header className="sticky top-0 z-30 h-16 bg-card/80 backdrop-blur-md border-b border-border flex items-center justify-between px-6">
-          <div className="flex items-center gap-3 bg-muted rounded-lg px-3 py-2 w-80">
-            <Search className="w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="חיפוש עובדים, ציוד, משימות..."
-              className="bg-transparent text-sm outline-none w-full placeholder:text-muted-foreground"
-            />
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 bg-muted rounded-lg px-3 py-2 w-80">
+              <Search className="w-4 h-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="חיפוש עובדים, ציוד, משימות..."
+                className="bg-transparent text-sm outline-none w-full placeholder:text-muted-foreground"
+              />
+            </div>
+            <CompanySelector />
           </div>
 
           <div className="flex items-center gap-4">
@@ -44,7 +50,7 @@ export function AppLayout() {
               </div>
               <div className="text-right">
                 <p className="text-sm font-medium">{profile?.display_name || user?.email}</p>
-                <p className="text-[11px] text-muted-foreground">{profile?.system_role === 'admin' ? 'מנהל מערכת' : profile?.system_role === 'it' ? 'צוות IT' : 'עובד'}</p>
+                <p className="text-[11px] text-muted-foreground">{roleLabel}</p>
               </div>
             </div>
             <button
