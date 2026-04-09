@@ -36,6 +36,7 @@ export default function EmployeeDetail() {
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState("assets");
   const [offboardingOpen, setOffboardingOpen] = useState(false);
+  const [transferAsset, setTransferAsset] = useState<any>(null);
   const { data: employee, isLoading } = useEmployee(id!);
   const { data: assets } = useEmployeeAssets(id!);
   const { data: digitalAccess } = useEmployeeDigitalAccess(id!);
