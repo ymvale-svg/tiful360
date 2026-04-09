@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Search, Plus, Download, Eye, MoreHorizontal, UserMinus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEmployees } from "@/hooks/useData";
+import { AddEmployeeDialog } from "@/components/AddEmployeeDialog";
 
 type EmployeeStatus = "active" | "onboarding" | "leaving" | "inactive";
 
@@ -24,6 +25,7 @@ export default function Employees() {
   const { data: employees, isLoading } = useEmployees();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<EmployeeStatus | "all">("all");
+  const [addOpen, setAddOpen] = useState(false);
 
   const filtered = (employees ?? []).filter((emp) => {
     const matchSearch = emp.full_name.includes(search) || emp.employee_code.includes(search) || emp.role.includes(search);
@@ -38,7 +40,7 @@ export default function Employees() {
           <h1 className="page-title">ניהול עובדים</h1>
           <p className="page-subtitle">{employees?.length ?? 0} עובדים רשומים במערכת</p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setAddOpen(true)}>
           <Plus className="w-4 h-4" />
           עובד חדש
         </Button>
@@ -123,6 +125,8 @@ export default function Employees() {
           </table>
         )}
       </div>
+
+      <AddEmployeeDialog open={addOpen} onOpenChange={setAddOpen} />
     </div>
   );
 }

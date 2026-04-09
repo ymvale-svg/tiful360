@@ -8,6 +8,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useEmployee, useEmployeeAssets, useEmployeeDigitalAccess, useActivityLog } from "@/hooks/useData";
 import { OffboardingDialog } from "@/components/OffboardingDialog";
+import { TransferAssetDialog } from "@/components/TransferAssetDialog";
 
 const tabs = [
   { id: "assets", label: "משאבים חומריים", icon: Package },
@@ -35,6 +36,7 @@ export default function EmployeeDetail() {
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState("assets");
   const [offboardingOpen, setOffboardingOpen] = useState(false);
+  const [transferAsset, setTransferAsset] = useState<any>(null);
   const { data: employee, isLoading } = useEmployee(id!);
   const { data: assets } = useEmployeeAssets(id!);
   const { data: digitalAccess } = useEmployeeDigitalAccess(id!);
@@ -145,7 +147,7 @@ export default function EmployeeDetail() {
                 </div>
               )}
               <div className="flex items-center gap-2 mt-3">
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setTransferAsset(asset)}>
                   <RefreshCw className="w-3 h-3" />
                   העבר בעלות
                 </Button>
@@ -235,6 +237,16 @@ export default function EmployeeDetail() {
           permission_level: da.permission_level,
         }))}
       />
+
+      {/* Transfer dialog */}
+      {transferAsset && (
+        <TransferAssetDialog
+          open={!!transferAsset}
+          onOpenChange={(open) => { if (!open) setTransferAsset(null); }}
+          asset={transferAsset}
+          currentOwnerName={employee.full_name}
+        />
+      )}
     </div>
   );
 }
