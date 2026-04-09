@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useEmployee, useEmployeeAssets, useEmployeeDigitalAccess, useActivityLog } from "@/hooks/useData";
+import { OffboardingDialog } from "@/components/OffboardingDialog";
 
 const tabs = [
   { id: "assets", label: "משאבים חומריים", icon: Package },
@@ -33,6 +34,7 @@ const permissionLabels: Record<string, string> = {
 export default function EmployeeDetail() {
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState("assets");
+  const [offboardingOpen, setOffboardingOpen] = useState(false);
   const { data: employee, isLoading } = useEmployee(id!);
   const { data: assets } = useEmployeeAssets(id!);
   const { data: digitalAccess } = useEmployeeDigitalAccess(id!);
@@ -79,7 +81,7 @@ export default function EmployeeDetail() {
             </div>
           </div>
           {employee.status !== "leaving" && employee.status !== "inactive" && (
-            <Button variant="destructive" className="gap-2">
+            <Button variant="destructive" className="gap-2" onClick={() => setOffboardingOpen(true)}>
               <UserMinus className="w-4 h-4" />
               התנעת עזיבה
             </Button>
@@ -213,6 +215,26 @@ export default function EmployeeDetail() {
           )}
         </div>
       )}
+
+      {/* Offboarding dialog */}
+      <OffboardingDialog
+        open={offboardingOpen}
+        onOpenChange={setOffboardingOpen}
+        employee={employee}
+        assets={(assets ?? []).map(a => ({
+          id: a.id,
+          asset_name: a.asset_name,
+          asset_code: a.asset_code,
+          serial_number: a.serial_number,
+          asset_categories: (a as any).asset_categories,
+        }))}
+        digitalAccess={(digitalAccess ?? []).map(da => ({
+          id: da.id,
+          access_type: da.access_type,
+          resource_path: da.resource_path,
+          permission_level: da.permission_level,
+        }))}
+      />
     </div>
   );
 }
