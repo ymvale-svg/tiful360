@@ -155,7 +155,7 @@ export default function Login() {
             </div>
 
           {/* Email/Password form */}
-          {(mode === "email" || mode === "signup") && (
+          {mode === "email" && (
             <form onSubmit={handleEmailSubmit} className="space-y-4">
               <div>
                 <label className="text-sm font-medium mb-1.5 block">דוא"ל</label>
@@ -195,7 +195,7 @@ export default function Login() {
                 </div>
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "טוען..." : mode === "signup" ? "הרשמה" : "כניסה"}
+                {loading ? "טוען..." : "כניסה"}
               </Button>
             </form>
           )}
@@ -259,17 +259,6 @@ export default function Login() {
             </form>
           )}
 
-          <div className="mt-6 text-center">
-            {mode === "signup" ? (
-              <button onClick={() => setMode("email")} className="text-sm text-primary hover:underline">
-                יש לך כבר חשבון? התחבר
-              </button>
-            ) : (
-              <button onClick={() => setMode("signup")} className="text-sm text-primary hover:underline">
-                אין לך חשבון? הירשם
-              </button>
-            )}
-          </div>
         </div>
       </div>
     </div>
