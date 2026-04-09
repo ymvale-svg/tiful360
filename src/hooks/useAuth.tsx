@@ -13,6 +13,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isIT: boolean;
   isEmployee: boolean;
+  isSuperAdmin: boolean;
   signOut: () => Promise<void>;
 }
 
@@ -25,6 +26,7 @@ const AuthContext = createContext<AuthContextType>({
   isAdmin: false,
   isIT: false,
   isEmployee: false,
+  isSuperAdmin: false,
   signOut: async () => {},
 });
 
@@ -45,7 +47,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session?.user) {
-        // Defer role fetch to avoid Supabase deadlock
         setTimeout(() => fetchRoles(session.user.id), 0);
       } else {
         setRoles([]);
@@ -64,11 +65,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, [fetchRoles]);
 
-  const hasRole = useCallback((role: AppRole) => roles.includes(role), [roles]);
+  const hasRole = useCallback((role: AppRole) => roles.includes(role) || roles.includes("super_admin"), [roles]);
   const signOut = async () => {
     await supabase.auth.signOut();
     setRoles([]);
   };
+
+  const isSuperAdmin = roles.includes("super_admin");
 
   return (
     <AuthContext.Provider
@@ -78,9 +81,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         roles,
         hasRole,
-        isAdmin: roles.includes("admin"),
-        isIT: roles.includes("it_manager"),
+        isAdmin: isSuperAdmin || roles.includes("admin"),
+        isIT: isSuperAdmin || roles.includes("it_manager"),
         isEmployee: roles.includes("employee"),
+        isSuperAdmin,
         signOut,
       }}
     >
