@@ -3,9 +3,9 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Package } from "lucide-react";
+import { Package, AlertCircle } from "lucide-react";
 import { useCreateAsset } from "@/hooks/useMutations";
-import { useAssetCategories, useEmployees } from "@/hooks/useData";
+import { useAssetCategories, useEmployees, useAssets } from "@/hooks/useData";
 import { useCategoryFields } from "@/hooks/useCategories";
 import { useToast } from "@/hooks/use-toast";
 
