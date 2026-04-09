@@ -20,6 +20,7 @@ import CategoryManager from "@/pages/CategoryManager";
 import UserManagement from "@/pages/UserManagement";
 import Companies from "@/pages/Companies";
 import SelectCompany from "@/pages/SelectCompany";
+import ResetPassword from "@/pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
           <CompanyProvider>
             <Routes>
               <Route path="/login" element={<Login />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/select-company" element={<SelectCompany />} />
               <Route element={
                 <ProtectedRoute>
