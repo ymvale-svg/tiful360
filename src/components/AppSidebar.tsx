@@ -10,6 +10,7 @@ import {
   Building2,
   ChevronLeft,
   ChevronRight,
+  Boxes,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -18,6 +19,7 @@ const mainNav = [
   { label: "לוח בקרה", icon: LayoutDashboard, path: "/" },
   { label: "עובדים", icon: Users, path: "/employees" },
   { label: "נכסים וציוד", icon: Package, path: "/assets" },
+  { label: "קטגוריות ציוד", icon: Boxes, path: "/categories" },
   { label: "משימות IT", icon: Shield, path: "/it-tickets" },
   { label: "התראות", icon: Bell, path: "/alerts" },
 ];
