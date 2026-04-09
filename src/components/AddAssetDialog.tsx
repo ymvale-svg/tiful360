@@ -57,11 +57,24 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
     }
   }, [form.current_owner_id]);
 
-  const set = (key: string, value: string) => setForm(prev => ({ ...prev, [key]: value }));
+  const set = (key: string, value: string) => {
+    setForm(prev => ({ ...prev, [key]: value }));
+    setErrors(prev => { const n = { ...prev }; delete n[key]; return n; });
+  };
 
   const handleSubmit = async () => {
-    if (!form.asset_name || !form.category_id || !form.asset_code) {
-      toast({ title: "שגיאה", description: "נא למלא שם פריט, קטגוריה ומזהה", variant: "destructive" });
+    const e: Record<string, string> = {};
+    if (!form.asset_code.trim()) e.asset_code = "שדה חובה";
+    else if (existingAssets?.some(a => a.asset_code === form.asset_code))
+      e.asset_code = "מזהה פריט כבר קיים במערכת";
+    if (!form.asset_name.trim()) e.asset_name = "שדה חובה";
+    if (!form.category_id) e.category_id = "נא לבחור קטגוריה";
+    if (form.serial_number && existingAssets?.some(a => a.serial_number === form.serial_number))
+      e.serial_number = "מספר סידורי כבר קיים במערכת";
+
+    setErrors(e);
+    if (Object.keys(e).length > 0) {
+      toast({ title: "שגיאת ולידציה", description: "נא לתקן את השגיאות המסומנות", variant: "destructive" });
       return;
     }
     try {
