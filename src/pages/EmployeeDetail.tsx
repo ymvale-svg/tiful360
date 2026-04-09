@@ -215,6 +215,26 @@ export default function EmployeeDetail() {
           )}
         </div>
       )}
+
+      {/* Offboarding dialog */}
+      <OffboardingDialog
+        open={offboardingOpen}
+        onOpenChange={setOffboardingOpen}
+        employee={employee}
+        assets={(assets ?? []).map(a => ({
+          id: a.id,
+          asset_name: a.asset_name,
+          asset_code: a.asset_code,
+          serial_number: a.serial_number,
+          asset_categories: (a as any).asset_categories,
+        }))}
+        digitalAccess={(digitalAccess ?? []).map(da => ({
+          id: da.id,
+          access_type: da.access_type,
+          resource_path: da.resource_path,
+          permission_level: da.permission_level,
+        }))}
+      />
     </div>
   );
 }
