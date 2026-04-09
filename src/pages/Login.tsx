@@ -153,7 +153,6 @@ export default function Login() {
                 SMS OTP
               </button>
             </div>
-          )}
 
           {/* Email/Password form */}
           {(mode === "email" || mode === "signup") && (
