@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
 
     // Check admin role
     const { data: callerRoles } = await anonClient.from("user_roles").select("role").eq("user_id", caller.id);
-    const isAdmin = callerRoles?.some((r: any) => r.role === "admin");
+    const isAdmin = callerRoles?.some((r: any) => r.role === "admin" || r.role === "super_admin");
     if (!isAdmin) {
       return new Response(JSON.stringify({ error: "Forbidden: admin only" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
