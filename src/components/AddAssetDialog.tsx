@@ -135,9 +135,10 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
               <input
                 value={form.asset_code}
                 onChange={(e) => set("asset_code", e.target.value)}
-                className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 font-mono"
+                className={`w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 font-mono ${errors.asset_code ? "ring-2 ring-destructive/50" : "focus:ring-primary/30"}`}
                 dir="ltr"
               />
+              {errors.asset_code && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.asset_code}</p>}
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">מספר סידורי</label>
@@ -145,9 +146,10 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
                 value={form.serial_number}
                 onChange={(e) => set("serial_number", e.target.value)}
                 placeholder="SN..."
-                className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 font-mono"
+                className={`w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 font-mono ${errors.serial_number ? "ring-2 ring-destructive/50" : "focus:ring-primary/30"}`}
                 dir="ltr"
               />
+              {errors.serial_number && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.serial_number}</p>}
             </div>
           </div>
 
