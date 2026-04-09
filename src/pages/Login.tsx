@@ -92,7 +92,6 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Logo */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center mx-auto mb-4">
             <Building2 className="w-8 h-8 text-primary-foreground" />
@@ -101,11 +100,9 @@ export default function Login() {
           <p className="text-sm text-muted-foreground mt-1">מערכת ניהול משאבים מרכזית</p>
         </div>
 
-        {/* Form */}
         <div className="bg-card rounded-2xl border border-border shadow-card p-8">
           <h2 className="text-lg font-semibold mb-6 text-center">כניסה למערכת</h2>
 
-          {/* Google SSO */}
           <Button
             type="button"
             variant="outline"
@@ -131,30 +128,27 @@ export default function Login() {
             </div>
           </div>
 
-          {/* Auth mode tabs */}
           <div className="flex items-center gap-1 bg-muted rounded-lg p-1 mb-5">
-            <div className="flex items-center gap-1 bg-muted rounded-lg p-1 mb-5">
-              <button
-                onClick={() => { setMode("email"); setOtpSent(false); }}
-                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-colors ${
-                  mode === "email" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"
-                }`}
-              >
-                <Mail className="w-3.5 h-3.5" />
-                דוא"ל וסיסמה
-              </button>
-              <button
-                onClick={() => { setMode("phone"); setOtpSent(false); }}
-                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-colors ${
-                  mode === "phone" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"
-                }`}
-              >
-                <Phone className="w-3.5 h-3.5" />
-                SMS OTP
-              </button>
-            </div>
+            <button
+              onClick={() => { setMode("email"); setOtpSent(false); }}
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-colors ${
+                mode === "email" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"
+              }`}
+            >
+              <Mail className="w-3.5 h-3.5" />
+              דוא"ל וסיסמה
+            </button>
+            <button
+              onClick={() => { setMode("phone"); setOtpSent(false); }}
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-colors ${
+                mode === "phone" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"
+              }`}
+            >
+              <Phone className="w-3.5 h-3.5" />
+              SMS OTP
+            </button>
+          </div>
 
-          {/* Email/Password form */}
           {mode === "email" && (
             <form onSubmit={handleEmailSubmit} className="space-y-4">
               <div>
@@ -200,7 +194,6 @@ export default function Login() {
             </form>
           )}
 
-          {/* Phone OTP form */}
           {mode === "phone" && !otpSent && (
             <div className="space-y-4">
               <div>
@@ -258,7 +251,6 @@ export default function Login() {
               </button>
             </form>
           )}
-
         </div>
       </div>
     </div>
