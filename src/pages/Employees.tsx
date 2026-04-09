@@ -125,6 +125,8 @@ export default function Employees() {
           </table>
         )}
       </div>
+
+      <AddEmployeeDialog open={addOpen} onOpenChange={setAddOpen} />
     </div>
   );
 }
