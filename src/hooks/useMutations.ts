@@ -1,8 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useCompany } from "@/hooks/useCompany";
 
 export function useCreateEmployee() {
   const queryClient = useQueryClient();
+  const { activeCompanyId } = useCompany();
   return useMutation({
     mutationFn: async (params: {
       employee_code: string;
@@ -17,7 +19,7 @@ export function useCreateEmployee() {
     }) => {
       const { data, error } = await supabase
         .from("employees")
-        .insert(params)
+        .insert({ ...params, company_id: activeCompanyId })
         .select()
         .single();
       if (error) throw error;
@@ -32,6 +34,7 @@ export function useCreateEmployee() {
 
 export function useCreateAsset() {
   const queryClient = useQueryClient();
+  const { activeCompanyId } = useCompany();
   return useMutation({
     mutationFn: async (params: {
       asset_code: string;
@@ -46,7 +49,7 @@ export function useCreateAsset() {
     }) => {
       const { data, error } = await supabase
         .from("assets")
-        .insert(params)
+        .insert({ ...params, company_id: activeCompanyId })
         .select()
         .single();
       if (error) throw error;
@@ -80,7 +83,6 @@ export function useTransferAsset() {
         .eq("id", assetId);
       if (error) throw error;
 
-      // Log activity
       const { data: { user } } = await supabase.auth.getUser();
       await supabase.from("activity_log").insert({
         action: `העברת בעלות: ${assetName}`,

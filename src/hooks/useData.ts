@@ -1,14 +1,15 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useCompany } from "@/hooks/useCompany";
 
 export function useEmployees() {
+  const { activeCompanyId } = useCompany();
   return useQuery({
-    queryKey: ["employees"],
+    queryKey: ["employees", activeCompanyId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("employees")
-        .select("*")
-        .order("full_name");
+      let query = supabase.from("employees").select("*").order("full_name");
+      if (activeCompanyId) query = query.eq("company_id", activeCompanyId);
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -62,13 +63,16 @@ export function useEmployeeDigitalAccess(employeeId: string) {
 }
 
 export function useAssets() {
+  const { activeCompanyId } = useCompany();
   return useQuery({
-    queryKey: ["assets"],
+    queryKey: ["assets", activeCompanyId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("assets")
         .select("*, asset_categories(category_name, prefix, icon), employees!assets_current_owner_id_fkey(full_name)")
         .order("created_at", { ascending: false });
+      if (activeCompanyId) query = query.eq("company_id", activeCompanyId);
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -76,13 +80,13 @@ export function useAssets() {
 }
 
 export function useAssetCategories() {
+  const { activeCompanyId } = useCompany();
   return useQuery({
-    queryKey: ["asset-categories"],
+    queryKey: ["asset-categories", activeCompanyId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("asset_categories")
-        .select("*, assets(count)")
-        .order("category_name");
+      let query = supabase.from("asset_categories").select("*, assets(count)").order("category_name");
+      if (activeCompanyId) query = query.eq("company_id", activeCompanyId);
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -90,13 +94,13 @@ export function useAssetCategories() {
 }
 
 export function useITTickets() {
+  const { activeCompanyId } = useCompany();
   return useQuery({
-    queryKey: ["it-tickets"],
+    queryKey: ["it-tickets", activeCompanyId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("it_tickets")
-        .select("*, employees(full_name)")
-        .order("created_at", { ascending: false });
+      let query = supabase.from("it_tickets").select("*, employees(full_name)").order("created_at", { ascending: false });
+      if (activeCompanyId) query = query.eq("company_id", activeCompanyId);
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -104,15 +108,13 @@ export function useITTickets() {
 }
 
 export function useAlerts() {
+  const { activeCompanyId } = useCompany();
   return useQuery({
-    queryKey: ["alerts"],
+    queryKey: ["alerts", activeCompanyId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("alerts")
-        .select("*")
-        .eq("is_resolved", false)
-        .order("severity")
-        .order("target_date");
+      let query = supabase.from("alerts").select("*").eq("is_resolved", false).order("severity").order("target_date");
+      if (activeCompanyId) query = query.eq("company_id", activeCompanyId);
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -120,17 +122,13 @@ export function useAlerts() {
 }
 
 export function useActivityLog(employeeId?: string) {
+  const { activeCompanyId } = useCompany();
   return useQuery({
-    queryKey: ["activity-log", employeeId],
+    queryKey: ["activity-log", activeCompanyId, employeeId],
     queryFn: async () => {
-      let query = supabase
-        .from("activity_log")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(50);
-      if (employeeId) {
-        query = query.eq("employee_id", employeeId);
-      }
+      let query = supabase.from("activity_log").select("*").order("created_at", { ascending: false }).limit(50);
+      if (activeCompanyId) query = query.eq("company_id", activeCompanyId);
+      if (employeeId) query = query.eq("employee_id", employeeId);
       const { data, error } = await query;
       if (error) throw error;
       return data;
@@ -139,13 +137,13 @@ export function useActivityLog(employeeId?: string) {
 }
 
 export function useAnnouncements() {
+  const { activeCompanyId } = useCompany();
   return useQuery({
-    queryKey: ["announcements"],
+    queryKey: ["announcements", activeCompanyId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("announcements")
-        .select("*")
-        .order("published_at", { ascending: false });
+      let query = supabase.from("announcements").select("*").order("published_at", { ascending: false });
+      if (activeCompanyId) query = query.eq("company_id", activeCompanyId);
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -153,13 +151,13 @@ export function useAnnouncements() {
 }
 
 export function useKnowledgeBase() {
+  const { activeCompanyId } = useCompany();
   return useQuery({
-    queryKey: ["knowledge-base"],
+    queryKey: ["knowledge-base", activeCompanyId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("knowledge_base")
-        .select("*")
-        .order("title");
+      let query = supabase.from("knowledge_base").select("*").order("title");
+      if (activeCompanyId) query = query.eq("company_id", activeCompanyId);
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -184,15 +182,23 @@ export function useProfile() {
 }
 
 export function useDashboardStats() {
+  const { activeCompanyId } = useCompany();
   return useQuery({
-    queryKey: ["dashboard-stats"],
+    queryKey: ["dashboard-stats", activeCompanyId],
     queryFn: async () => {
-      const [employees, assets, alerts, tickets] = await Promise.all([
-        supabase.from("employees").select("status", { count: "exact" }),
-        supabase.from("assets").select("status", { count: "exact" }),
-        supabase.from("alerts").select("id", { count: "exact" }).eq("is_resolved", false),
-        supabase.from("it_tickets").select("id", { count: "exact" }).neq("status", "done"),
-      ]);
+      let empQ = supabase.from("employees").select("status", { count: "exact" });
+      let assetQ = supabase.from("assets").select("status", { count: "exact" });
+      let alertQ = supabase.from("alerts").select("id", { count: "exact" }).eq("is_resolved", false);
+      let ticketQ = supabase.from("it_tickets").select("id", { count: "exact" }).neq("status", "done");
+
+      if (activeCompanyId) {
+        empQ = empQ.eq("company_id", activeCompanyId);
+        assetQ = assetQ.eq("company_id", activeCompanyId);
+        alertQ = alertQ.eq("company_id", activeCompanyId);
+        ticketQ = ticketQ.eq("company_id", activeCompanyId);
+      }
+
+      const [employees, assets, alerts, tickets] = await Promise.all([empQ, assetQ, alertQ, ticketQ]);
       return {
         activeEmployees: employees.count ?? 0,
         totalAssets: assets.count ?? 0,
