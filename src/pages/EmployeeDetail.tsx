@@ -8,6 +8,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useEmployee, useEmployeeAssets, useEmployeeDigitalAccess, useActivityLog } from "@/hooks/useData";
 import { OffboardingDialog } from "@/components/OffboardingDialog";
+import { TransferAssetDialog } from "@/components/TransferAssetDialog";
 
 const tabs = [
   { id: "assets", label: "משאבים חומריים", icon: Package },
