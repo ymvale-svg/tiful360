@@ -2,22 +2,17 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
-import { Building2, Mail, Lock, Eye, EyeOff, Phone, ArrowRight } from "lucide-react";
+import { Building2, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-
-type AuthMode = "email" | "phone";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [mode, setMode] = useState<AuthMode>("email");
+  const [forgotMode, setForgotMode] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -35,37 +30,20 @@ export default function Login() {
     }
   };
 
-  const handleSendOtp = async () => {
-    if (!phone || phone.length < 10) {
-      toast({ title: "שגיאה", description: "נא להזין מספר טלפון תקין", variant: "destructive" });
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      toast({ title: "שגיאה", description: "נא להזין כתובת דוא\"ל", variant: "destructive" });
       return;
     }
     setLoading(true);
     try {
-      const formattedPhone = phone.startsWith("+") ? phone : `+972${phone.replace(/^0/, "")}`;
-      const { error } = await supabase.auth.signInWithOtp({ phone: formattedPhone });
-      if (error) throw error;
-      setPhone(formattedPhone);
-      setOtpSent(true);
-      toast({ title: "קוד נשלח", description: "קוד אימות נשלח לטלפון שלך" });
-    } catch (error: any) {
-      toast({ title: "שגיאה", description: error.message, variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.verifyOtp({
-        phone,
-        token: otp,
-        type: "sms",
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
       });
       if (error) throw error;
-      navigate("/select-company");
+      toast({ title: "נשלח בהצלחה", description: "קישור לאיפוס סיסמה נשלח לכתובת הדוא\"ל שלך" });
+      setForgotMode(false);
     } catch (error: any) {
       toast({ title: "שגיאה", description: error.message, variant: "destructive" });
     } finally {
@@ -103,6 +81,8 @@ export default function Login() {
         <div className="bg-card rounded-2xl border border-border shadow-card p-8">
           <h2 className="text-lg font-semibold mb-6 text-center">כניסה למערכת</h2>
 
+          {!forgotMode && (
+            <>
           <Button
             type="button"
             variant="outline"
@@ -127,29 +107,10 @@ export default function Login() {
               <span className="bg-card px-3 text-muted-foreground">או</span>
             </div>
           </div>
+            </>
+          )}
 
-          <div className="flex items-center gap-1 bg-muted rounded-lg p-1 mb-5">
-            <button
-              onClick={() => { setMode("email"); setOtpSent(false); }}
-              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-colors ${
-                mode === "email" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"
-              }`}
-            >
-              <Mail className="w-3.5 h-3.5" />
-              דוא"ל וסיסמה
-            </button>
-            <button
-              onClick={() => { setMode("phone"); setOtpSent(false); }}
-              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-colors ${
-                mode === "phone" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"
-              }`}
-            >
-              <Phone className="w-3.5 h-3.5" />
-              SMS OTP
-            </button>
-          </div>
-
-          {mode === "email" && (
+          {!forgotMode ? (
             <form onSubmit={handleEmailSubmit} className="space-y-4">
               <div>
                 <label className="text-sm font-medium mb-1.5 block">דוא"ל</label>
@@ -191,63 +152,41 @@ export default function Login() {
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "טוען..." : "כניסה"}
               </Button>
+              <button
+                type="button"
+                onClick={() => setForgotMode(true)}
+                className="w-full text-sm text-primary hover:underline"
+              >
+                שכחתי סיסמה
+              </button>
             </form>
-          )}
-
-          {mode === "phone" && !otpSent && (
-            <div className="space-y-4">
+          ) : (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
               <div>
-                <label className="text-sm font-medium mb-1.5 block">מספר טלפון</label>
+                <label className="text-sm font-medium mb-1.5 block">דוא"ל</label>
                 <div className="relative">
-                  <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="050-1234567"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@company.co.il"
                     className="w-full pr-10 pl-4 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+                    required
                     dir="ltr"
                   />
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">הזן מספר ישראלי או בינלאומי עם קידומת +</p>
+                <p className="text-xs text-muted-foreground mt-2">קישור לאיפוס סיסמה יישלח לכתובת הדוא"ל שלך</p>
               </div>
-              <Button className="w-full gap-2" onClick={handleSendOtp} disabled={loading}>
-                {loading ? "שולח..." : "שלח קוד אימות"}
-                <ArrowRight className="w-4 h-4 rotate-180" />
-              </Button>
-            </div>
-          )}
-
-          {mode === "phone" && otpSent && (
-            <form onSubmit={handleVerifyOtp} className="space-y-4">
-              <div className="text-center mb-2">
-                <p className="text-sm text-muted-foreground">
-                  קוד אימות נשלח ל-<span className="font-mono font-medium text-foreground" dir="ltr">{phone}</span>
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1.5 block">קוד אימות</label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={6}
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                  placeholder="000000"
-                  className="w-full px-4 py-3 bg-muted rounded-lg text-center text-2xl font-mono tracking-[0.5em] outline-none focus:ring-2 focus:ring-primary/30 transition-all"
-                  dir="ltr"
-                  autoFocus
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={loading || otp.length < 6}>
-                {loading ? "מאמת..." : "אמת והתחבר"}
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "שולח..." : "שלח קישור איפוס"}
               </Button>
               <button
                 type="button"
-                onClick={() => { setOtpSent(false); setOtp(""); }}
+                onClick={() => setForgotMode(false)}
                 className="w-full text-sm text-primary hover:underline"
               >
-                שלח קוד מחדש
+                חזרה לכניסה
               </button>
             </form>
           )}
