@@ -6,7 +6,7 @@ import { Building2, Mail, Lock, Eye, EyeOff, Phone, ArrowRight } from "lucide-re
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
-type AuthMode = "email" | "phone" | "signup";
+type AuthMode = "email" | "phone";
 
 export default function Login() {
   const [email, setEmail] = useState("");
