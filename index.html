@@ -25,6 +25,40 @@
 
   <body>
     <div id="root"></div>
+    <script>
+      // Proxy Supabase requests through Vite dev server to bypass network filters
+      (function() {
+        var PROXY_PREFIX = "/__lovable_backend_proxy";
+        var meta = document.querySelector('meta[name="supabase-url"]');
+        // Read from Vite env at build time via inline replacement won't work here,
+        // so we extract from the Supabase client URL pattern
+        var supabaseOrigin = null;
+        try {
+          // We'll set this from a data attribute
+          supabaseOrigin = document.documentElement.dataset.supabaseOrigin;
+        } catch(e) {}
+        
+        if (!supabaseOrigin) {
+          // Fallback: detect from first supabase request
+          var _origFetch = window.fetch;
+          window.fetch = function(input, init) {
+            var url = typeof input === 'string' ? input : (input instanceof URL ? input.toString() : input.url);
+            if (url && url.indexOf('.supabase.co') !== -1) {
+              try {
+                var u = new URL(url);
+                var origin = u.origin;
+                var proxiedUrl = PROXY_PREFIX + url.slice(origin.length);
+                if (input instanceof Request) {
+                  return _origFetch.call(window, new Request(proxiedUrl, input), init);
+                }
+                return _origFetch.call(window, proxiedUrl, init);
+              } catch(e) {}
+            }
+            return _origFetch.call(window, input, init);
+          };
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
