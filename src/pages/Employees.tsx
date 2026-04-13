@@ -26,6 +26,7 @@ export default function Employees() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<EmployeeStatus | "all">("all");
   const [addOpen, setAddOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const filtered = (employees ?? []).filter((emp) => {
     const matchSearch = emp.full_name.includes(search) || emp.employee_code.includes(search) || emp.role.includes(search);
@@ -40,10 +41,16 @@ export default function Employees() {
           <h1 className="page-title">ניהול עובדים</h1>
           <p className="page-subtitle">{employees?.length ?? 0} עובדים רשומים במערכת</p>
         </div>
-        <Button className="gap-2" onClick={() => setAddOpen(true)}>
-          <Plus className="w-4 h-4" />
-          עובד חדש
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
+            <Upload className="w-4 h-4" />
+            יבוא מאקסל
+          </Button>
+          <Button className="gap-2" onClick={() => setAddOpen(true)}>
+            <Plus className="w-4 h-4" />
+            עובד חדש
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -127,6 +134,7 @@ export default function Employees() {
       </div>
 
       <AddEmployeeDialog open={addOpen} onOpenChange={setAddOpen} />
+      <ImportExcelDialog open={importOpen} onOpenChange={setImportOpen} mode="employees" />
     </div>
   );
 }
