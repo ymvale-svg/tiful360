@@ -197,6 +197,9 @@ export function ImportExcelDialog({ open, onOpenChange, mode }: Props) {
     const headers = EMPLOYEE_COLUMNS.map((c) => c.label);
     const example = ["EMP-001", "ישראל ישראלי", "123456782", "מהנדס", "הנדסה", "050-1234567", "israel@company.co.il", "2025-01-01", "active"];
     const ws = XLSX.utils.aoa_to_sheet([headers, example]);
+    ws["!dir"] = "rtl";
+    const colWidths = headers.map((h) => ({ wch: Math.max(h.length + 4, 14) }));
+    ws["!cols"] = colWidths;
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "עובדים");
     XLSX.writeFile(wb, "תבנית_יבוא_עובדים.xlsx");
