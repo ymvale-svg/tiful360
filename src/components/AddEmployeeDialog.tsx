@@ -51,6 +51,7 @@ export function AddEmployeeDialog({ open, onOpenChange }: Props) {
     department: "",
     phone: "",
     email: "",
+    birth_date: "",
     start_date: new Date().toISOString().split("T")[0],
     status: "active" as "active" | "onboarding",
   });
@@ -103,12 +104,13 @@ export function AddEmployeeDialog({ open, onOpenChange }: Props) {
         ...form,
         phone: form.phone || undefined,
         email: form.email || undefined,
+        birth_date: form.birth_date || undefined,
       });
       toast({ title: "עובד נוסף בהצלחה" });
       onOpenChange(false);
       setForm({
         employee_code: "", full_name: "", id_number: "", role: "",
-        department: "", phone: "", email: "",
+        department: "", phone: "", email: "", birth_date: "",
         start_date: new Date().toISOString().split("T")[0], status: "active",
       });
       setErrors({});
@@ -163,6 +165,16 @@ export function AddEmployeeDialog({ open, onOpenChange }: Props) {
           ))}
 
           <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-sm font-medium mb-1 block">תאריך לידה</label>
+              <input
+                type="date"
+                value={form.birth_date}
+                onChange={(e) => set("birth_date", e.target.value)}
+                className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
+                dir="ltr"
+              />
+            </div>
             <div>
               <label className="text-sm font-medium mb-1 block">תאריך התחלה</label>
               <input

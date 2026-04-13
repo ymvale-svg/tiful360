@@ -76,6 +76,11 @@ export default function EmployeeDetail() {
                 </span>
                 <span className="text-xs text-muted-foreground">ת.ז: {employee.id_number}</span>
                 <span className="text-xs text-muted-foreground">{employee.employee_code}</span>
+                {employee.birth_date && (
+                  <span className="text-xs text-muted-foreground">
+                    תאריך לידה: {new Date(employee.birth_date).toLocaleDateString("he-IL")}
+                  </span>
+                )}
                 <span className="text-xs text-muted-foreground">
                   תחילת עבודה: {new Date(employee.start_date).toLocaleDateString("he-IL")}
                 </span>

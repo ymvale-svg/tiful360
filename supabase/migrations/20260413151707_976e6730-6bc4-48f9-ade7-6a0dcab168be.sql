@@ -1,0 +1,1 @@
+ALTER TABLE public.employees ADD COLUMN birth_date date NULL;
