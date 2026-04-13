@@ -15,6 +15,7 @@ export function useCreateEmployee() {
       phone?: string;
       email?: string;
       start_date?: string;
+      birth_date?: string;
       status?: "active" | "onboarding";
     }) => {
       const { data, error } = await supabase
