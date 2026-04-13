@@ -409,6 +409,7 @@ export type Database = {
       }
       employees: {
         Row: {
+          birth_date: string | null
           company_id: string | null
           created_at: string
           department: string
@@ -427,6 +428,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          birth_date?: string | null
           company_id?: string | null
           created_at?: string
           department: string
@@ -445,6 +447,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          birth_date?: string | null
           company_id?: string | null
           created_at?: string
           department?: string
