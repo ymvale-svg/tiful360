@@ -10,7 +10,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
-import { Users, ShieldCheck, ShieldOff, Ban, CheckCircle, RefreshCw } from "lucide-react";
+import { Users, ShieldCheck, ShieldOff, Ban, CheckCircle, RefreshCw, Upload } from "lucide-react";
+import { ImportExcelDialog } from "@/components/ImportExcelDialog";
 import { format } from "date-fns";
 import { he } from "date-fns/locale";
 
@@ -68,6 +69,7 @@ export default function UserManagement() {
   const { user: currentUser } = useAuth();
   const { activeCompanyId } = useCompany();
   const queryClient = useQueryClient();
+  const [importOpen, setImportOpen] = useState(false);
 
   const { data: users = [], isLoading, refetch } = useQuery({
     queryKey: ["managed-users", activeCompanyId],
@@ -138,10 +140,16 @@ export default function UserManagement() {
           <h1 className="text-2xl font-bold text-foreground">ניהול משתמשים</h1>
           <p className="text-muted-foreground">צפייה, שינוי תפקידים והשהיית חשבונות</p>
         </div>
-        <Button variant="outline" onClick={() => refetch()} className="gap-2">
-          <RefreshCw className="w-4 h-4" />
-          רענון
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
+            <Upload className="w-4 h-4" />
+            יבוא מאקסל
+          </Button>
+          <Button variant="outline" onClick={() => refetch()} className="gap-2">
+            <RefreshCw className="w-4 h-4" />
+            רענון
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -295,6 +303,7 @@ export default function UserManagement() {
           </Table>
         </CardContent>
       </Card>
+      <ImportExcelDialog open={importOpen} onOpenChange={setImportOpen} mode="employees" />
     </div>
   );
 }
