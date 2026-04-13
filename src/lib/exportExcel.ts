@@ -8,8 +8,6 @@ export function exportToExcel(data: Record<string, any>[], headers: { key: strin
     }, {} as Record<string, any>)
   );
   const ws = XLSX.utils.json_to_sheet(rows);
-  // Set RTL
-  ws["!dir"] = "rtl";
   // Auto column widths
   const colWidths = headers.map((h) => {
     const maxLen = Math.max(h.label.length, ...data.map((r) => String(r[h.key] ?? "").length));
@@ -18,6 +16,7 @@ export function exportToExcel(data: Record<string, any>[], headers: { key: strin
   ws["!cols"] = colWidths;
 
   const wb = XLSX.utils.book_new();
+  wb.Workbook = { Views: [{ RTL: true }] };
   XLSX.utils.book_append_sheet(wb, ws, "גיליון1");
   XLSX.writeFile(wb, `${fileName}.xlsx`);
 }
