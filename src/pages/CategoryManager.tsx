@@ -6,7 +6,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAssetCategories } from "@/hooks/useData";
-import { useCategoryFields, useCreateCategory, useSaveCategoryFields } from "@/hooks/useCategories";
+import { useCategoryFields, useCreateCategory, useUpdateCategory, useSaveCategoryFields } from "@/hooks/useCategories";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -98,10 +98,13 @@ export default function CategoryManager() {
           {/* Fields editor */}
           <div className="lg:col-span-2">
             {selectedId ? (
-              <FieldsEditor
-                categoryId={selectedId}
-                categoryName={categories?.find(c => c.id === selectedId)?.category_name ?? ""}
-              />
+              <div className="space-y-4">
+                <CategoryEditor category={categories?.find(c => c.id === selectedId)!} />
+                <FieldsEditor
+                  categoryId={selectedId}
+                  categoryName={categories?.find(c => c.id === selectedId)?.category_name ?? ""}
+                />
+              </div>
             ) : (
               <div className="bg-card rounded-xl border border-border/50 shadow-card p-12 text-center text-muted-foreground">
                 <Settings2 className="w-12 h-12 mx-auto mb-4 opacity-20" />
