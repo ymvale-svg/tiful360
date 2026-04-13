@@ -45,13 +45,12 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
         const mm = String(now.getMonth() + 1).padStart(2, "0");
         const yy = String(now.getFullYear()).slice(-2);
         const dateStr = `${mm}${yy}`;
-        // Count existing assets with same prefix and month/year pattern
-        const pattern = `${cat.prefix}${dateStr}-`;
+        const pattern = `${cat.prefix}-${dateStr}-`;
         const matchingAssets = existingAssets.filter(a => a.asset_code.startsWith(pattern));
         const nextNum = matchingAssets.length + 1;
         setForm(prev => ({
           ...prev,
-          asset_code: `${cat.prefix}${dateStr}-${String(nextNum).padStart(3, "0")}`,
+          asset_code: `${cat.prefix}-${dateStr}-${String(nextNum).padStart(3, "0")}`,
         }));
       }
     }
