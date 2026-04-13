@@ -71,6 +71,8 @@ const COLUMN_MAP: Record<string, string> = {
   "דוא\"ל": "email",
   "אימייל": "email",
   "email": "email",
+  "תאריך לידה": "birth_date",
+  "birth_date": "birth_date",
   "תאריך התחלה": "start_date",
   "start_date": "start_date",
   "סטטוס": "status",
