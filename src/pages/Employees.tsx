@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Search, Plus, Download, Eye, MoreHorizontal, UserMinus } from "lucide-react";
+import { Search, Plus, Download, Eye, MoreHorizontal, UserMinus, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEmployees } from "@/hooks/useData";
 import { AddEmployeeDialog } from "@/components/AddEmployeeDialog";
+import { ImportExcelDialog } from "@/components/ImportExcelDialog";
 
 type EmployeeStatus = "active" | "onboarding" | "leaving" | "inactive";
 
