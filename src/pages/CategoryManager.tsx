@@ -6,7 +6,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAssetCategories } from "@/hooks/useData";
-import { useCategoryFields, useCreateCategory, useSaveCategoryFields } from "@/hooks/useCategories";
+import { useCategoryFields, useCreateCategory, useUpdateCategory, useSaveCategoryFields } from "@/hooks/useCategories";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -98,10 +98,13 @@ export default function CategoryManager() {
           {/* Fields editor */}
           <div className="lg:col-span-2">
             {selectedId ? (
-              <FieldsEditor
-                categoryId={selectedId}
-                categoryName={categories?.find(c => c.id === selectedId)?.category_name ?? ""}
-              />
+              <div className="space-y-4">
+                <CategoryEditor category={categories?.find(c => c.id === selectedId)!} />
+                <FieldsEditor
+                  categoryId={selectedId}
+                  categoryName={categories?.find(c => c.id === selectedId)?.category_name ?? ""}
+                />
+              </div>
             ) : (
               <div className="bg-card rounded-xl border border-border/50 shadow-card p-12 text-center text-muted-foreground">
                 <Settings2 className="w-12 h-12 mx-auto mb-4 opacity-20" />
@@ -406,6 +409,92 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ============================
+// Category Editor (name, prefix, description)
+// ============================
+function CategoryEditor({ category }: { category: { id: string; category_name: string; prefix: string; description?: string | null } }) {
+  const updateMutation = useUpdateCategory();
+  const { toast } = useToast();
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(category.category_name);
+  const [prefix, setPrefix] = useState(category.prefix);
+  const [description, setDescription] = useState(category.description ?? "");
+
+  useEffect(() => {
+    setName(category.category_name);
+    setPrefix(category.prefix);
+    setDescription(category.description ?? "");
+    setEditing(false);
+  }, [category.id, category.category_name, category.prefix, category.description]);
+
+  const handleSave = async () => {
+    if (!name.trim() || !prefix.trim()) {
+      toast({ title: "שגיאה", description: "שם וקידומת הם שדות חובה", variant: "destructive" });
+      return;
+    }
+    try {
+      await updateMutation.mutateAsync({
+        id: category.id,
+        category_name: name,
+        prefix: prefix.toUpperCase(),
+        description: description || undefined,
+      });
+      toast({ title: "קטגוריה עודכנה בהצלחה" });
+      setEditing(false);
+    } catch (err: any) {
+      toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+    }
+  };
+
+  if (!editing) {
+    return (
+      <div className="bg-card rounded-xl border border-border/50 shadow-card p-5 flex items-center justify-between">
+        <div>
+          <h2 className="font-semibold">{category.category_name}</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            קידומת: <span className="font-mono">{category.prefix}</span>
+            {category.description && ` • ${category.description}`}
+          </p>
+        </div>
+        <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setEditing(true)}>
+          <Pencil className="w-3.5 h-3.5" />
+          ערוך
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-card rounded-xl border border-primary/30 shadow-card p-5 space-y-3 animate-fade-in">
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-sm font-medium mb-1 block">שם הקטגוריה</label>
+          <input value={name} onChange={e => setName(e.target.value)}
+            className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30" />
+        </div>
+        <div>
+          <label className="text-sm font-medium mb-1 block">קידומת</label>
+          <input value={prefix} onChange={e => setPrefix(e.target.value.replace(/[^a-zA-Z]/g, "").slice(0, 3))}
+            className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 font-mono uppercase" dir="ltr" maxLength={3} />
+        </div>
+      </div>
+      <div>
+        <label className="text-sm font-medium mb-1 block">תיאור</label>
+        <input value={description} onChange={e => setDescription(e.target.value)} placeholder="תיאור קצר..."
+          className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30" />
+      </div>
+      <div className="flex gap-2 justify-end">
+        <Button size="sm" variant="outline" onClick={() => setEditing(false)}>
+          <X className="w-3.5 h-3.5 ml-1" />ביטול
+        </Button>
+        <Button size="sm" onClick={handleSave} disabled={updateMutation.isPending}>
+          <Check className="w-3.5 h-3.5 ml-1" />{updateMutation.isPending ? "שומר..." : "שמור"}
+        </Button>
+      </div>
     </div>
   );
 }

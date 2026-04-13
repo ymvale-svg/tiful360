@@ -36,19 +36,26 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
 
   const { data: catFields } = useCategoryFields(form.category_id);
 
-  // Auto-generate asset code when category changes
+  // Auto-generate asset code when category changes: PREFIX + MM/YY - running number
   useEffect(() => {
-    if (form.category_id && categories) {
+    if (form.category_id && categories && existingAssets) {
       const cat = categories.find(c => c.id === form.category_id);
       if (cat) {
-        const count = (cat as any).assets?.[0]?.count ?? 0;
+        const now = new Date();
+        const mm = String(now.getMonth() + 1).padStart(2, "0");
+        const yy = String(now.getFullYear()).slice(-2);
+        const dateStr = `${mm}${yy}`;
+        // Count existing assets with same prefix and month/year pattern
+        const pattern = `${cat.prefix}${dateStr}-`;
+        const matchingAssets = existingAssets.filter(a => a.asset_code.startsWith(pattern));
+        const nextNum = matchingAssets.length + 1;
         setForm(prev => ({
           ...prev,
-          asset_code: `${cat.prefix}-${String(count + 1).padStart(3, "0")}`,
+          asset_code: `${cat.prefix}${dateStr}-${String(nextNum).padStart(3, "0")}`,
         }));
       }
     }
-  }, [form.category_id, categories]);
+  }, [form.category_id, categories, existingAssets]);
 
   // Auto-set status based on owner
   useEffect(() => {
