@@ -24,6 +24,7 @@ interface ParsedEmployee {
   department: string;
   phone?: string;
   email?: string;
+  birth_date?: string;
   start_date?: string;
   status?: string;
 }
@@ -42,6 +43,7 @@ const EMPLOYEE_COLUMNS = [
   { key: "department", label: "מחלקה", required: true },
   { key: "phone", label: "טלפון", required: false },
   { key: "email", label: "דוא\"ל", required: false },
+  { key: "birth_date", label: "תאריך לידה", required: false },
   { key: "start_date", label: "תאריך התחלה", required: false },
   { key: "status", label: "סטטוס", required: false },
 ];
