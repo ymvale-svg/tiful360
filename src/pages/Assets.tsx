@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Search, Plus, Eye, MoreHorizontal, Boxes } from "lucide-react";
+import { Search, Plus, Eye, MoreHorizontal, Boxes, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAssets, useAssetCategories } from "@/hooks/useData";
 import { AddAssetDialog } from "@/components/AddAssetDialog";
+import { exportToExcel } from "@/lib/exportExcel";
 
 const assetStatusLabels: Record<string, string> = {
   in_use: "בשימוש", in_stock: "במלאי", in_repair: "בתיקון", lost: "אבד",
@@ -33,10 +34,34 @@ export default function Assets() {
           <h1 className="page-title">נכסים וציוד</h1>
           <p className="page-subtitle">ניהול מלאי ומעקב אחר כלל ציוד החברה</p>
         </div>
-        <Button className="gap-2" onClick={() => setAddOpen(true)}>
-          <Plus className="w-4 h-4" />
-          פריט חדש
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" className="gap-2" onClick={() => {
+            if (!assets?.length) return;
+            exportToExcel(assets.map(a => ({
+              ...a,
+              category_name: (a as any).asset_categories?.category_name ?? "",
+              owner_name: (a as any).employees?.full_name ?? "במלאי",
+              status_label: assetStatusLabels[a.status] ?? a.status,
+              expiry_fmt: a.expiry_date ? new Date(a.expiry_date).toLocaleDateString("he-IL") : "",
+            })), [
+              { key: "asset_code", label: "מזהה" },
+              { key: "asset_name", label: "שם פריט" },
+              { key: "category_name", label: "קטגוריה" },
+              { key: "serial_number", label: "מס׳ סידורי" },
+              { key: "owner_name", label: "בעלות" },
+              { key: "status_label", label: "סטטוס" },
+              { key: "expiry_fmt", label: "תפוגה" },
+              { key: "notes", label: "הערות" },
+            ], "רשימת_ציוד");
+          }}>
+            <Download className="w-4 h-4" />
+            ייצוא לאקסל
+          </Button>
+          <Button className="gap-2" onClick={() => setAddOpen(true)}>
+            <Plus className="w-4 h-4" />
+            פריט חדש
+          </Button>
+        </div>
       </div>
 
       {/* Category pills */}

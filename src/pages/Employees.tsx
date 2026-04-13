@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useEmployees } from "@/hooks/useData";
 import { AddEmployeeDialog } from "@/components/AddEmployeeDialog";
 import { ImportExcelDialog } from "@/components/ImportExcelDialog";
+import { exportToExcel } from "@/lib/exportExcel";
 
 type EmployeeStatus = "active" | "onboarding" | "leaving" | "inactive";
 
@@ -43,6 +44,27 @@ export default function Employees() {
           <p className="page-subtitle">{employees?.length ?? 0} עובדים רשומים במערכת</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" className="gap-2" onClick={() => {
+            if (!employees?.length) return;
+            exportToExcel(employees.map(e => ({
+              ...e,
+              status_label: statusLabels[e.status as EmployeeStatus] ?? e.status,
+              start_date_fmt: new Date(e.start_date).toLocaleDateString("he-IL"),
+            })), [
+              { key: "employee_code", label: "מזהה עובד" },
+              { key: "full_name", label: "שם מלא" },
+              { key: "id_number", label: "תעודת זהות" },
+              { key: "role", label: "תפקיד" },
+              { key: "department", label: "מחלקה" },
+              { key: "phone", label: "טלפון" },
+              { key: "email", label: "דוא\"ל" },
+              { key: "start_date_fmt", label: "תאריך התחלה" },
+              { key: "status_label", label: "סטטוס" },
+            ], "רשימת_עובדים");
+          }}>
+            <Download className="w-4 h-4" />
+            ייצוא לאקסל
+          </Button>
           <Button variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
             <Upload className="w-4 h-4" />
             יבוא מאקסל
