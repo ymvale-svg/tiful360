@@ -2,10 +2,18 @@ import {
   Users, Package, AlertTriangle, Shield, TrendingUp, 
   UserMinus, Car, Smartphone, Monitor, Clock, Wrench
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { useDashboardStats, useAlerts, useEmployees, useActivityLog } from "@/hooks/useData";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Dashboard() {
+  const { roles } = useAuth();
+  
+  // Employee-only users should see the portal, not the dashboard
+  const isEmployeeOnly = roles.length > 0 && roles.every(r => r === "employee");
+  if (isEmployeeOnly) {
+    return <Navigate to="/portal" replace />;
+  }
   const { data: stats } = useDashboardStats();
   const { data: alerts } = useAlerts();
   const { data: employees } = useEmployees();
