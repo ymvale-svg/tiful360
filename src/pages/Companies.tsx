@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Building2, Plus, Users, Pencil } from "lucide-react";
+import { Building2, Plus, Users, Pencil, Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { he } from "date-fns/locale";
 
@@ -19,6 +20,7 @@ export default function Companies() {
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [name, setName] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const { data: companies = [], isLoading } = useQuery({
     queryKey: ["companies"],
@@ -67,6 +69,22 @@ export default function Companies() {
     },
     onError: (err: any) => {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("companies").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      toast({ title: "חברה נמחקה בהצלחה" });
+      setDeleteTarget(null);
+    },
+    onError: (err: any) => {
+      toast({ title: "שגיאה במחיקה", description: err.message, variant: "destructive" });
+      setDeleteTarget(null);
     },
   });
 
@@ -177,10 +195,16 @@ export default function Companies() {
                       {format(new Date(c.created_at), "dd/MM/yyyy", { locale: he })}
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(c)} className="gap-1">
-                        <Pencil className="w-3 h-3" />
-                        ערוך
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(c)} className="gap-1">
+                          <Pencil className="w-3 h-3" />
+                          ערוך
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setDeleteTarget({ id: c.id, name: c.name })} className="gap-1 text-destructive hover:text-destructive">
+                          <Trash2 className="w-3 h-3" />
+                          מחק
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -189,6 +213,27 @@ export default function Companies() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>מחיקת חברה</AlertDialogTitle>
+            <AlertDialogDescription>
+              האם אתה בטוח שברצונך למחוק את החברה "{deleteTarget?.name}"? פעולה זו תמחק את כל הנתונים הקשורים ולא ניתנת לביטול.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ביטול</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? "מוחק..." : "מחק"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
