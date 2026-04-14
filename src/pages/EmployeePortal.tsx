@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   Package, Clock, Megaphone, BookOpen, Phone, ExternalLink,
-  Car, Monitor, Smartphone, Wrench, Wifi, HardDrive, Mail,
-  FileText, CalendarDays, AlertCircle, LogOut, Cake, PartyPopper
+  FileText, CalendarDays, AlertCircle, LogOut, Cake, PartyPopper,
+  Box, Wifi
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -22,27 +22,6 @@ const portalTabs = [
   { id: "contacts", label: "אנשי קשר", icon: Phone },
 ];
 
-const myAssets = [
-  { name: 'מחשב נייד Dell Latitude 15"', id: "LAP-089", icon: Monitor },
-  { name: "iPhone 15 Pro", id: "PHN-034", icon: Smartphone },
-  { name: "טויוטה קורולה 2023 (12-345-67)", id: "CAR-012", icon: Car },
-  { name: "מד לייזר Leica", id: "MES-007", icon: Wrench },
-];
-
-const myDigital = [
-  { name: "david.cohen@company.co.il", type: "דוא\"ל", icon: Mail },
-  { name: "VPN - גישה מלאה", type: "VPN", icon: Wifi },
-  { name: "כונן פרויקטים TLV-Tower", type: "כונן רשת", icon: HardDrive },
-];
-
-const attendance = [
-  { date: "07/04/2026", inTime: "08:12", outTime: "17:45", hours: "9:33", source: "משרד" },
-  { date: "06/04/2026", inTime: "07:55", outTime: "18:10", hours: "10:15", source: "שטח" },
-  { date: "03/04/2026", inTime: "08:30", outTime: "17:00", hours: "8:30", source: "משרד" },
-  { date: "02/04/2026", inTime: "07:45", outTime: "16:30", hours: "8:45", source: "שטח" },
-  { date: "01/04/2026", inTime: "08:00", outTime: "17:15", hours: "9:15", source: "משרד" },
-];
-
 export default function EmployeePortal() {
   const [activeTab, setActiveTab] = useState("assets");
   const { user, signOut } = useAuth();
@@ -57,6 +36,72 @@ export default function EmployeePortal() {
 
   const displayName = profile?.display_name || user?.email?.split("@")[0] || "עובד";
   const initials = displayName.split(" ").map(w => w[0]).join("").slice(0, 2);
+
+  // Find employee record linked to current user
+  const { data: myEmployee } = useQuery({
+    queryKey: ["my_employee", activeCompanyId, user?.id],
+    queryFn: async () => {
+      if (!activeCompanyId || !user?.id) return null;
+      const { data, error } = await supabase
+        .from("employees")
+        .select("*")
+        .eq("company_id", activeCompanyId)
+        .eq("linked_user_id", user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!activeCompanyId && !!user?.id,
+  });
+
+  // Fetch assets assigned to my employee
+  const { data: myAssets = [] } = useQuery({
+    queryKey: ["my_assets", myEmployee?.id],
+    queryFn: async () => {
+      if (!myEmployee?.id) return [];
+      const { data, error } = await supabase
+        .from("assets")
+        .select("*, asset_categories(category_name, icon)")
+        .eq("current_owner_id", myEmployee.id)
+        .eq("status", "in_use");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!myEmployee?.id,
+  });
+
+  // Fetch digital access for my employee
+  const { data: myDigitalAccess = [] } = useQuery({
+    queryKey: ["my_digital_access", myEmployee?.id],
+    queryFn: async () => {
+      if (!myEmployee?.id) return [];
+      const { data, error } = await supabase
+        .from("digital_access")
+        .select("*")
+        .eq("employee_id", myEmployee.id)
+        .eq("status", "active");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!myEmployee?.id,
+  });
+
+  // Fetch attendance records for my employee
+  const { data: myAttendance = [] } = useQuery({
+    queryKey: ["my_attendance", myEmployee?.id],
+    queryFn: async () => {
+      if (!myEmployee?.id) return [];
+      const { data, error } = await supabase
+        .from("attendance_records")
+        .select("*")
+        .eq("employee_id", myEmployee.id)
+        .order("date", { ascending: false })
+        .limit(30);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!myEmployee?.id,
+  });
 
   // Fetch portal links from DB
   const { data: portalLinks = [] } = useQuery({
@@ -146,6 +191,20 @@ export default function EmployeePortal() {
     enabled: !!activeCompanyId,
   });
 
+  // Helper: calculate hours between check_in and check_out
+  const calcHours = (checkIn: string | null, checkOut: string | null) => {
+    if (!checkIn || !checkOut) return "—";
+    const [h1, m1] = checkIn.split(":").map(Number);
+    const [h2, m2] = checkOut.split(":").map(Number);
+    const totalMin = (h2 * 60 + m2) - (h1 * 60 + m1);
+    if (totalMin <= 0) return "—";
+    const hrs = Math.floor(totalMin / 60);
+    const mins = totalMin % 60;
+    return `${hrs}:${mins.toString().padStart(2, "0")}`;
+  };
+
+  const employeeName = myEmployee?.full_name || displayName;
+
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Mobile-friendly top bar */}
@@ -155,8 +214,10 @@ export default function EmployeePortal() {
             <span className="text-xs font-bold text-primary-foreground">{initials}</span>
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold leading-tight truncate">שלום, {displayName.split(" ")[0]} 👋</p>
-            <p className="text-[11px] text-muted-foreground">פורטל עובדים</p>
+            <p className="text-sm font-semibold leading-tight truncate">שלום, {employeeName.split(" ")[0]} 👋</p>
+            <p className="text-[11px] text-muted-foreground">
+              {myEmployee ? `${myEmployee.role} • ${myEmployee.department}` : "פורטל עובדים"}
+            </p>
           </div>
         </div>
         <button
@@ -171,7 +232,6 @@ export default function EmployeePortal() {
       <div className="max-w-2xl mx-auto px-4 py-4 space-y-4 overflow-x-hidden">
         {/* Announcements & Birthdays card */}
         <div className="space-y-3">
-          {/* Birthday greetings */}
           {birthdayEmployees.length > 0 && (
             <div className="bg-gradient-to-l from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-xl border border-amber-200/50 dark:border-amber-800/50 p-4">
               <div className="flex items-center gap-2 mb-2">
@@ -193,7 +253,6 @@ export default function EmployeePortal() {
             </div>
           )}
 
-          {/* Latest announcement */}
           {announcements.length > 0 && (
             <div className="bg-card rounded-xl border border-border/50 p-4">
               <div className="flex items-center gap-2 mb-2">
@@ -217,7 +276,7 @@ export default function EmployeePortal() {
           )}
         </div>
 
-        {/* Quick links - wrapping grid instead of scroll */}
+        {/* Quick links */}
         {portalLinks.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {portalLinks.map((link) => (
@@ -235,7 +294,7 @@ export default function EmployeePortal() {
           </div>
         )}
 
-        {/* Tabs - wrapping grid for mobile */}
+        {/* Tabs */}
         <div className="grid grid-cols-3 gap-1.5">
           {portalTabs.map((tab) => (
             <button
@@ -254,78 +313,113 @@ export default function EmployeePortal() {
           ))}
         </div>
 
-        {/* Tab content */}
+        {/* ===== ASSETS TAB ===== */}
         {activeTab === "assets" && (
           <div className="space-y-4 animate-fade-in">
-            <h2 className="font-semibold text-sm">ציוד פיזי</h2>
-            <div className="grid grid-cols-1 gap-3">
-              {myAssets.map((asset) => (
-                <div key={asset.id} className="bg-card rounded-xl border border-border/50 p-3 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    <asset.icon className="w-5 h-5 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{asset.name}</p>
-                    <p className="text-xs text-muted-foreground">{asset.id}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+            {!myEmployee && (
+              <p className="text-center text-sm text-muted-foreground py-4">
+                המשתמש שלך לא מקושר לעובד. פנה למנהל המערכת.
+              </p>
+            )}
 
-            <h2 className="font-semibold text-sm mt-6">הרשאות ומערכות</h2>
-            <div className="grid grid-cols-1 gap-3">
-              {myDigital.map((item, i) => (
-                <div key={i} className="bg-card rounded-xl border border-border/50 p-3 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    <item.icon className="w-5 h-5 text-primary" />
+            {myEmployee && (
+              <>
+                <h2 className="font-semibold text-sm">ציוד פיזי ({myAssets.length})</h2>
+                {myAssets.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-3">
+                    {myAssets.map((asset) => (
+                      <div key={asset.id} className="bg-card rounded-xl border border-border/50 p-3 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                          <Box className="w-5 h-5 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{asset.asset_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {asset.asset_code}
+                            {asset.serial_number && ` • ${asset.serial_number}`}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">{item.type}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ) : (
+                  <p className="text-center text-sm text-muted-foreground py-4">אין ציוד משויך אליך</p>
+                )}
 
-            <Button variant="outline" className="gap-2 w-full text-sm">
-              <AlertCircle className="w-4 h-4" />
-              דווח על ציוד תקול / בקשה לציוד חדש
-            </Button>
+                <h2 className="font-semibold text-sm mt-6">הרשאות ומערכות ({myDigitalAccess.length})</h2>
+                {myDigitalAccess.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-3">
+                    {myDigitalAccess.map((item) => (
+                      <div key={item.id} className="bg-card rounded-xl border border-border/50 p-3 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                          <Wifi className="w-5 h-5 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{item.resource_path}</p>
+                          <p className="text-xs text-muted-foreground">{item.access_type} • {item.permission_level}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center text-sm text-muted-foreground py-4">אין הרשאות דיגיטליות</p>
+                )}
+
+                <Button variant="outline" className="gap-2 w-full text-sm">
+                  <AlertCircle className="w-4 h-4" />
+                  דווח על ציוד תקול / בקשה לציוד חדש
+                </Button>
+              </>
+            )}
           </div>
         )}
 
+        {/* ===== ATTENDANCE TAB ===== */}
         {activeTab === "attendance" && (
           <div className="animate-fade-in space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="font-semibold text-sm">נוכחות - אפריל 2026</h2>
+              <h2 className="font-semibold text-sm">נוכחות</h2>
               <Button variant="outline" size="sm" className="gap-1 text-[11px]">
                 <AlertCircle className="w-3 h-3" />
                 דווח טעות
               </Button>
             </div>
 
-            <div className="space-y-2">
-              {attendance.map((row, i) => (
-                <div key={i} className="bg-card rounded-xl border border-border/50 p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">{row.date}</span>
-                    <span className={cn(
-                      "text-[11px] px-2 py-0.5 rounded-full font-medium",
-                      row.source === "משרד" 
-                        ? "bg-primary/10 text-primary" 
-                        : "bg-accent text-accent-foreground"
-                    )}>
-                      {row.source}
-                    </span>
+            {!myEmployee && (
+              <p className="text-center text-sm text-muted-foreground py-4">
+                המשתמש שלך לא מקושר לעובד. פנה למנהל המערכת.
+              </p>
+            )}
+
+            {myEmployee && myAttendance.length > 0 ? (
+              <div className="space-y-2">
+                {myAttendance.map((row) => (
+                  <div key={row.id} className="bg-card rounded-xl border border-border/50 p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">
+                        {new Date(row.date).toLocaleDateString("he-IL")}
+                      </span>
+                      <span className={cn(
+                        "text-[11px] px-2 py-0.5 rounded-full font-medium",
+                        row.source === "משרד"
+                          ? "bg-primary/10 text-primary"
+                          : "bg-accent text-accent-foreground"
+                      )}>
+                        {row.source}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                      <span>כניסה: <span className="font-mono text-foreground">{row.check_in?.slice(0, 5) || "—"}</span></span>
+                      <span>יציאה: <span className="font-mono text-foreground">{row.check_out?.slice(0, 5) || "—"}</span></span>
+                      <span className="font-semibold text-foreground">{calcHours(row.check_in, row.check_out)} שעות</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                    <span>כניסה: <span className="font-mono text-foreground">{row.inTime}</span></span>
-                    <span>יציאה: <span className="font-mono text-foreground">{row.outTime}</span></span>
-                    <span className="font-semibold text-foreground">{row.hours} שעות</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : myEmployee ? (
+              <p className="text-center text-sm text-muted-foreground py-4">אין רשומות נוכחות</p>
+            ) : null}
+
             <p className="text-[11px] text-muted-foreground flex items-center gap-1">
               <AlertCircle className="w-3 h-3" />
               נתוני הנוכחות הם לקריאה בלבד
@@ -333,6 +427,7 @@ export default function EmployeePortal() {
           </div>
         )}
 
+        {/* ===== HR TAB ===== */}
         {activeTab === "hr" && (
           <div className="space-y-4 animate-fade-in">
             <div className="bg-card rounded-xl border border-border/50 p-4">
@@ -342,15 +437,15 @@ export default function EmployeePortal() {
               </h3>
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col items-center p-3 bg-muted/50 rounded-lg">
-                  <span className="text-2xl font-bold text-primary">12.5</span>
+                  <span className="text-2xl font-bold text-primary">—</span>
                   <span className="text-[11px] text-muted-foreground">ימי חופשה</span>
                 </div>
                 <div className="flex flex-col items-center p-3 bg-muted/50 rounded-lg">
-                  <span className="text-2xl font-bold text-primary">18</span>
+                  <span className="text-2xl font-bold text-primary">—</span>
                   <span className="text-[11px] text-muted-foreground">ימי מחלה</span>
                 </div>
               </div>
-              <p className="text-[11px] text-muted-foreground mt-3">* לקריאה בלבד</p>
+              <p className="text-[11px] text-muted-foreground mt-3">* יתרות חופש/מחלה ותלושי שכר ייטענו ממערכת השכר בעתיד</p>
             </div>
 
             <div className="bg-card rounded-xl border border-border/50 p-4">
@@ -358,21 +453,12 @@ export default function EmployeePortal() {
                 <FileText className="w-4 h-4 text-primary" />
                 תלושי שכר
               </h3>
-              <div className="space-y-2">
-                {["מרץ 2026", "פברואר 2026", "ינואר 2026"].map((month) => (
-                  <div key={month} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <span className="text-sm">{month}</span>
-                    <Button variant="ghost" size="sm" className="text-xs gap-1 h-8">
-                      <FileText className="w-3 h-3" />
-                      הורדה
-                    </Button>
-                  </div>
-                ))}
-              </div>
+              <p className="text-center text-sm text-muted-foreground py-4">יחובר בקרוב למערכת השכר</p>
             </div>
           </div>
         )}
 
+        {/* ===== NEWS TAB ===== */}
         {activeTab === "news" && (
           <div className="space-y-3 animate-fade-in">
             {announcements.length > 0 ? announcements.map((item) => (
@@ -391,6 +477,7 @@ export default function EmployeePortal() {
           </div>
         )}
 
+        {/* ===== KB TAB ===== */}
         {activeTab === "kb" && (
           <div className="space-y-2 animate-fade-in">
             {knowledgeBase.length > 0 ? knowledgeBase.map((doc) => (
@@ -407,6 +494,7 @@ export default function EmployeePortal() {
           </div>
         )}
 
+        {/* ===== CONTACTS TAB ===== */}
         {activeTab === "contacts" && (
           <div className="space-y-2 animate-fade-in">
             {portalContacts.length > 0 ? portalContacts.map((contact) => (
@@ -428,7 +516,6 @@ export default function EmployeePortal() {
           </div>
         )}
 
-        {/* Bottom safe area */}
         <div className="h-6" />
       </div>
     </div>
