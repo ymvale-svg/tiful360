@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import logoImg from "@/assets/logo.png";
@@ -52,26 +51,15 @@ export default function Login() {
     }
   };
 
-  const isLovableHost = window.location.hostname.endsWith(".lovable.app") || window.location.hostname.endsWith(".lovableproject.com");
-
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
-      if (isLovableHost) {
-        const result = await lovable.auth.signInWithOAuth("google", {
-          redirect_uri: window.location.origin,
-        });
-        if (result.error) throw result.error;
-        if (result.redirected) return;
-      } else {
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: "google",
-          options: { redirectTo: `${window.location.origin}/select-company` },
-        });
-        if (error) throw error;
-        return; // browser will redirect
-      }
-      navigate("/select-company");
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/select-company` },
+      });
+      if (error) throw error;
+      // browser will redirect to Google
     } catch (error: any) {
       toast({ title: "שגיאה בהתחברות עם Google", description: error.message, variant: "destructive" });
     } finally {
