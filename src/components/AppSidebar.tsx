@@ -57,7 +57,6 @@ export function AppSidebar() {
 
   const canSee = (item: NavItem) => {
     if (!item.roles) return true;
-    if (roles.length === 0) return true;
     if (isSuperAdmin) return true;
     return item.roles.some((r) => roles.includes(r));
   };
