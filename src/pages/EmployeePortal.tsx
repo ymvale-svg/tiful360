@@ -3,12 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { 
   Package, Clock, Megaphone, BookOpen, Phone, ExternalLink,
   Car, Monitor, Smartphone, Wrench, Wifi, HardDrive, Mail,
-  FileText, CalendarDays, AlertCircle, LogOut, User
+  FileText, CalendarDays, AlertCircle, LogOut, Cake, PartyPopper
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useData";
+import { useCompany } from "@/hooks/useCompany";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 const portalTabs = [
   { id: "assets", label: "הציוד שלי", icon: Package },
@@ -40,23 +43,11 @@ const attendance = [
   { date: "01/04/2026", inTime: "08:00", outTime: "17:15", hours: "9:15", source: "משרד" },
 ];
 
-const news = [
-  { title: "עדכון נהלי בטיחות באתרי בנייה", date: "05/04/2026", content: "נא לעיין בנוהל המעודכן באזור הנהלים." },
-  { title: "אירוע חברה - Q2 Kickoff", date: "03/04/2026", content: "אירוע רבעוני ביום חמישי 17/04 בשעה 18:00." },
-  { title: "שדרוג מערכת VPN", date: "01/04/2026", content: "השדרוג יתבצע ביום שישי 11/04. צפויה הפסקת שירות קצרה." },
-];
-
-const quickLinks = [
-  { label: "CRM", url: "#" },
-  { label: "פורטל ממשלתי", url: "#" },
-  { label: "מערכת שרטוטים", url: "#" },
-  { label: "מערכת דיווח שעות", url: "#" },
-];
-
 export default function EmployeePortal() {
   const [activeTab, setActiveTab] = useState("assets");
   const { user, signOut } = useAuth();
   const { data: profile } = useProfile();
+  const { activeCompanyId } = useCompany();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -67,51 +58,191 @@ export default function EmployeePortal() {
   const displayName = profile?.display_name || user?.email?.split("@")[0] || "עובד";
   const initials = displayName.split(" ").map(w => w[0]).join("").slice(0, 2);
 
+  // Fetch portal links from DB
+  const { data: portalLinks = [] } = useQuery({
+    queryKey: ["portal_links", activeCompanyId],
+    queryFn: async () => {
+      if (!activeCompanyId) return [];
+      const { data, error } = await supabase
+        .from("portal_links")
+        .select("*")
+        .eq("company_id", activeCompanyId)
+        .order("sort_order");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!activeCompanyId,
+  });
+
+  // Fetch portal contacts from DB
+  const { data: portalContacts = [] } = useQuery({
+    queryKey: ["portal_contacts", activeCompanyId],
+    queryFn: async () => {
+      if (!activeCompanyId) return [];
+      const { data, error } = await supabase
+        .from("portal_contacts")
+        .select("*")
+        .eq("company_id", activeCompanyId)
+        .order("sort_order");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!activeCompanyId,
+  });
+
+  // Fetch announcements from DB
+  const { data: announcements = [] } = useQuery({
+    queryKey: ["announcements", activeCompanyId],
+    queryFn: async () => {
+      if (!activeCompanyId) return [];
+      const { data, error } = await supabase
+        .from("announcements")
+        .select("*")
+        .eq("company_id", activeCompanyId)
+        .order("published_at", { ascending: false })
+        .limit(5);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!activeCompanyId,
+  });
+
+  // Fetch birthday employees this month
+  const { data: birthdayEmployees = [] } = useQuery({
+    queryKey: ["birthdays", activeCompanyId],
+    queryFn: async () => {
+      if (!activeCompanyId) return [];
+      const now = new Date();
+      const month = now.getMonth() + 1;
+      const { data, error } = await supabase
+        .from("employees")
+        .select("id, full_name, birth_date")
+        .eq("company_id", activeCompanyId)
+        .eq("status", "active")
+        .not("birth_date", "is", null);
+      if (error) throw error;
+      return (data || []).filter(emp => {
+        if (!emp.birth_date) return false;
+        const bd = new Date(emp.birth_date);
+        return bd.getMonth() + 1 === month;
+      });
+    },
+    enabled: !!activeCompanyId,
+  });
+
+  // Fetch knowledge base
+  const { data: knowledgeBase = [] } = useQuery({
+    queryKey: ["knowledge_base", activeCompanyId],
+    queryFn: async () => {
+      if (!activeCompanyId) return [];
+      const { data, error } = await supabase
+        .from("knowledge_base")
+        .select("*")
+        .eq("company_id", activeCompanyId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!activeCompanyId,
+  });
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Mobile-friendly top bar */}
       <header className="sticky top-0 z-30 bg-card/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center shrink-0">
             <span className="text-xs font-bold text-primary-foreground">{initials}</span>
           </div>
-          <div>
-            <p className="text-sm font-semibold leading-tight">שלום, {displayName.split(" ")[0]} 👋</p>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold leading-tight truncate">שלום, {displayName.split(" ")[0]} 👋</p>
             <p className="text-[11px] text-muted-foreground">פורטל עובדים</p>
           </div>
         </div>
         <button
           onClick={handleSignOut}
-          className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground"
+          className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground shrink-0"
           title="יציאה"
         >
           <LogOut className="w-4 h-4" />
         </button>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 py-4 space-y-4">
-        {/* Quick links - horizontal scroll */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          {quickLinks.map((link) => (
-            <a
-              key={link.label}
-              href={link.url}
-              className="flex items-center gap-1.5 px-3 py-2 bg-card border border-border/50 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors whitespace-nowrap"
-            >
-              <ExternalLink className="w-3 h-3" />
-              {link.label}
-            </a>
-          ))}
+      <div className="max-w-2xl mx-auto px-4 py-4 space-y-4 overflow-x-hidden">
+        {/* Announcements & Birthdays card */}
+        <div className="space-y-3">
+          {/* Birthday greetings */}
+          {birthdayEmployees.length > 0 && (
+            <div className="bg-gradient-to-l from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-xl border border-amber-200/50 dark:border-amber-800/50 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Cake className="w-4 h-4 text-amber-600" />
+                <h3 className="font-semibold text-sm text-amber-800 dark:text-amber-300">🎂 ימי הולדת החודש</h3>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {birthdayEmployees.map((emp) => {
+                  const bd = new Date(emp.birth_date!);
+                  return (
+                    <div key={emp.id} className="flex items-center gap-1.5 bg-white/60 dark:bg-white/10 rounded-lg px-3 py-1.5">
+                      <PartyPopper className="w-3.5 h-3.5 text-amber-600" />
+                      <span className="text-xs font-medium">{emp.full_name}</span>
+                      <span className="text-[10px] text-muted-foreground">({bd.getDate()}/{bd.getMonth() + 1})</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Latest announcement */}
+          {announcements.length > 0 && (
+            <div className="bg-card rounded-xl border border-border/50 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Megaphone className="w-4 h-4 text-primary" />
+                <h3 className="font-semibold text-sm">הודעות חברה</h3>
+              </div>
+              <div className="space-y-2">
+                {announcements.slice(0, 2).map((ann) => (
+                  <div key={ann.id} className="bg-muted/50 rounded-lg p-3">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <p className="text-sm font-medium">{ann.title}</p>
+                      <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                        {new Date(ann.published_at).toLocaleDateString("he-IL")}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-2">{ann.content}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Tabs - mobile bottom-nav style on small screens */}
-        <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4">
+        {/* Quick links - wrapping grid instead of scroll */}
+        {portalLinks.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {portalLinks.map((link) => (
+              <a
+                key={link.id}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-2 bg-card border border-border/50 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              >
+                <ExternalLink className="w-3 h-3 shrink-0" />
+                {link.label}
+              </a>
+            ))}
+          </div>
+        )}
+
+        {/* Tabs - wrapping grid for mobile */}
+        <div className="grid grid-cols-3 gap-1.5">
           {portalTabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "flex flex-col sm:flex-row items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl text-[11px] sm:text-sm font-medium whitespace-nowrap transition-colors min-w-[60px] sm:min-w-0",
+                "flex flex-col items-center gap-1 px-2 py-2.5 rounded-xl text-[11px] font-medium transition-colors",
                 activeTab === tab.id
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -129,7 +260,7 @@ export default function EmployeePortal() {
             <h2 className="font-semibold text-sm">ציוד פיזי</h2>
             <div className="grid grid-cols-1 gap-3">
               {myAssets.map((asset) => (
-                <div key={asset.id} className="bg-card rounded-xl border border-border/50 p-3 sm:p-4 flex items-center gap-3">
+                <div key={asset.id} className="bg-card rounded-xl border border-border/50 p-3 flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                     <asset.icon className="w-5 h-5 text-primary" />
                   </div>
@@ -144,9 +275,9 @@ export default function EmployeePortal() {
             <h2 className="font-semibold text-sm mt-6">הרשאות ומערכות</h2>
             <div className="grid grid-cols-1 gap-3">
               {myDigital.map((item, i) => (
-                <div key={i} className="bg-card rounded-xl border border-border/50 p-3 sm:p-4 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-info/10 flex items-center justify-center shrink-0">
-                    <item.icon className="w-5 h-5 text-info" />
+                <div key={i} className="bg-card rounded-xl border border-border/50 p-3 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <item.icon className="w-5 h-5 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{item.name}</p>
@@ -156,7 +287,7 @@ export default function EmployeePortal() {
               ))}
             </div>
 
-            <Button variant="outline" className="gap-2 w-full sm:w-auto text-sm">
+            <Button variant="outline" className="gap-2 w-full text-sm">
               <AlertCircle className="w-4 h-4" />
               דווח על ציוד תקול / בקשה לציוד חדש
             </Button>
@@ -173,7 +304,6 @@ export default function EmployeePortal() {
               </Button>
             </div>
 
-            {/* Card-based attendance for mobile instead of table */}
             <div className="space-y-2">
               {attendance.map((row, i) => (
                 <div key={i} className="bg-card rounded-xl border border-border/50 p-3">
@@ -188,10 +318,10 @@ export default function EmployeePortal() {
                       {row.source}
                     </span>
                   </div>
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                     <span>כניסה: <span className="font-mono text-foreground">{row.inTime}</span></span>
                     <span>יציאה: <span className="font-mono text-foreground">{row.outTime}</span></span>
-                    <span className="mr-auto font-semibold text-foreground">{row.hours} שעות</span>
+                    <span className="font-semibold text-foreground">{row.hours} שעות</span>
                   </div>
                 </div>
               ))}
@@ -216,7 +346,7 @@ export default function EmployeePortal() {
                   <span className="text-[11px] text-muted-foreground">ימי חופשה</span>
                 </div>
                 <div className="flex flex-col items-center p-3 bg-muted/50 rounded-lg">
-                  <span className="text-2xl font-bold text-info">18</span>
+                  <span className="text-2xl font-bold text-primary">18</span>
                   <span className="text-[11px] text-muted-foreground">ימי מחלה</span>
                 </div>
               </div>
@@ -245,54 +375,60 @@ export default function EmployeePortal() {
 
         {activeTab === "news" && (
           <div className="space-y-3 animate-fade-in">
-            {news.map((item, i) => (
-              <div key={i} className="bg-card rounded-xl border border-border/50 p-4">
+            {announcements.length > 0 ? announcements.map((item) => (
+              <div key={item.id} className="bg-card rounded-xl border border-border/50 p-4">
                 <div className="flex items-start justify-between gap-2 mb-1">
                   <h3 className="font-semibold text-sm">{item.title}</h3>
-                  <span className="text-[11px] text-muted-foreground whitespace-nowrap">{item.date}</span>
+                  <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                    {new Date(item.published_at).toLocaleDateString("he-IL")}
+                  </span>
                 </div>
                 <p className="text-sm text-muted-foreground">{item.content}</p>
               </div>
-            ))}
+            )) : (
+              <p className="text-center text-sm text-muted-foreground py-8">אין הודעות כרגע</p>
+            )}
           </div>
         )}
 
         {activeTab === "kb" && (
           <div className="space-y-2 animate-fade-in">
-            {["נוהל בטיחות באתרי בנייה", "מדריך דיווח שעות", "נוהל שימוש ברכב חברה", "מדיניות אבטחת מידע", "נוהל החזרת ציוד"].map((doc) => (
-              <div key={doc} className="bg-card rounded-xl border border-border/50 p-3 sm:p-4 flex items-center gap-3 hover:bg-muted/30 cursor-pointer transition-colors active:scale-[0.98]">
+            {knowledgeBase.length > 0 ? knowledgeBase.map((doc) => (
+              <div key={doc.id} className="bg-card rounded-xl border border-border/50 p-3 flex items-center gap-3 hover:bg-muted/30 cursor-pointer transition-colors active:scale-[0.98]">
                 <BookOpen className="w-5 h-5 text-primary shrink-0" />
-                <span className="text-sm font-medium">{doc}</span>
+                <div className="min-w-0">
+                  <span className="text-sm font-medium block truncate">{doc.title}</span>
+                  {doc.category && <span className="text-[10px] text-muted-foreground">{doc.category}</span>}
+                </div>
               </div>
-            ))}
+            )) : (
+              <p className="text-center text-sm text-muted-foreground py-8">אין נהלים כרגע</p>
+            )}
           </div>
         )}
 
         {activeTab === "contacts" && (
           <div className="space-y-2 animate-fade-in">
-            {[
-              { name: "נועה ישראלי", role: "מנהלת HR", dept: "משאבי אנוש", phone: "050-9876543" },
-              { name: "משה אברהם", role: "טכנאי מערכות", dept: "IT", phone: "050-1112233" },
-              { name: "יעל לוי", role: "סוכנת שטח", dept: "מכירות", phone: "050-4455667" },
-            ].map((contact) => (
-              <div key={contact.name} className="bg-card rounded-xl border border-border/50 p-3 sm:p-4 flex items-center gap-3">
+            {portalContacts.length > 0 ? portalContacts.map((contact) => (
+              <div key={contact.id} className="bg-card rounded-xl border border-border/50 p-3 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                   <span className="text-sm font-bold text-primary">{contact.name[0]}</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">{contact.name}</p>
-                  <p className="text-[11px] text-muted-foreground">{contact.role} • {contact.dept}</p>
+                  <p className="text-sm font-medium truncate">{contact.name}</p>
+                  <p className="text-[11px] text-muted-foreground">{contact.role} • {contact.department}</p>
                 </div>
-                <a href={`tel:${contact.phone}`} className="flex items-center gap-1 text-xs text-primary hover:underline font-mono shrink-0">
+                <a href={`tel:${contact.phone}`} className="flex items-center gap-1 text-xs text-primary hover:underline shrink-0">
                   <Phone className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{contact.phone}</span>
                 </a>
               </div>
-            ))}
+            )) : (
+              <p className="text-center text-sm text-muted-foreground py-8">אין אנשי קשר כרגע</p>
+            )}
           </div>
         )}
 
-        {/* Bottom safe area padding for mobile */}
+        {/* Bottom safe area */}
         <div className="h-6" />
       </div>
     </div>
