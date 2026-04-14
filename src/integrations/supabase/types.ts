@@ -595,6 +595,82 @@ export type Database = {
           },
         ]
       }
+      portal_contacts: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          department: string
+          id: string
+          name: string
+          phone: string
+          role: string
+          sort_order: number
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          department: string
+          id?: string
+          name: string
+          phone: string
+          role: string
+          sort_order?: number
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          department?: string
+          id?: string
+          name?: string
+          phone?: string
+          role?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_contacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portal_links: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          id: string
+          label: string
+          sort_order: number
+          url: string
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          label: string
+          sort_order?: number
+          url: string
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          label?: string
+          sort_order?: number
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_links_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
