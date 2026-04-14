@@ -37,6 +37,7 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/select-company" element={<SelectCompany />} />
+              <Route path="/portal" element={<ProtectedRoute><EmployeePortal /></ProtectedRoute>} />
               <Route element={
                 <ProtectedRoute>
                   <AppLayout />
@@ -49,7 +50,6 @@ const App = () => (
                 <Route path="/categories" element={<ProtectedRoute requiredRoles={["admin", "super_admin"]}><CategoryManager /></ProtectedRoute>} />
                 <Route path="/it-tickets" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin"]}><ITTickets /></ProtectedRoute>} />
                 <Route path="/alerts" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin"]}><Alerts /></ProtectedRoute>} />
-                <Route path="/portal" element={<EmployeePortal />} />
                 <Route path="/user-management" element={<ProtectedRoute requiredRoles={["admin", "super_admin"]}><UserManagement /></ProtectedRoute>} />
                 <Route path="/companies" element={<ProtectedRoute requiredRoles={["super_admin"]}><Companies /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute requiredRoles={["admin", "super_admin"]}><Settings /></ProtectedRoute>} />
