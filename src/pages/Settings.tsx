@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Settings as SettingsIcon, Bell, Shield, Database, Users,
-  Building2, Save, Upload,
+  Building2, Save, Upload, Smartphone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,6 +10,7 @@ import { useCompany } from "@/hooks/useCompany";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { PortalSettingsTab } from "@/components/PortalSettingsTab";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -33,6 +34,10 @@ export default function Settings() {
             <SettingsIcon className="w-4 h-4" />
             כללי
           </TabsTrigger>
+          <TabsTrigger value="portal" className="gap-1.5">
+            <Smartphone className="w-4 h-4" />
+            פורטל עובדים
+          </TabsTrigger>
           <TabsTrigger value="alerts" className="gap-1.5">
             <Bell className="w-4 h-4" />
             חוקי התראות
@@ -41,6 +46,10 @@ export default function Settings() {
 
         <TabsContent value="general">
           <GeneralSettings />
+        </TabsContent>
+
+        <TabsContent value="portal">
+          <PortalSettingsTab />
         </TabsContent>
 
         <TabsContent value="alerts">
@@ -155,7 +164,6 @@ function AlertRulesSettings() {
   const { activeCompanyId } = useCompany();
   const { toast } = useToast();
 
-  // For now show static rules that can be toggled
   const [rules, setRules] = useState([
     { id: "expiry", label: "התראה על ציוד שפג תוקפו", desc: "שלח התראה 30 יום לפני תפוגת ציוד", enabled: true },
     { id: "leaving", label: "התראה על עובד עוזב", desc: "הצג התראה כשעובד עובר לסטטוס ׳עוזב׳", enabled: true },
