@@ -199,6 +199,10 @@ export default function Companies() {
                         <Pencil className="w-3 h-3" />
                         ערוך
                       </Button>
+                      <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(c)} className="gap-1 text-destructive hover:text-destructive">
+                        <Trash2 className="w-3 h-3" />
+                        מחק
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))
