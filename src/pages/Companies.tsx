@@ -72,6 +72,22 @@ export default function Companies() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (companyId: string) => {
+      const { error } = await supabase.rpc("delete_company_cascade", { _company_id: companyId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      queryClient.invalidateQueries({ queryKey: ["company-access-counts"] });
+      toast({ title: "חברה נמחקה בהצלחה" });
+      setDeleteTarget(null);
+    },
+    onError: (err: any) => {
+      toast({ title: "שגיאה במחיקה", description: err.message, variant: "destructive" });
+    },
+  });
+
   const handleEdit = (company: any) => {
     setEditId(company.id);
     setName(company.name);
