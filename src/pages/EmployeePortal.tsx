@@ -230,6 +230,16 @@ export default function EmployeePortal() {
       </header>
 
       <div className="max-w-2xl mx-auto px-4 py-4 space-y-4 overflow-x-hidden">
+        {/* Welcome banner */}
+        <div className="bg-gradient-to-l from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 rounded-xl border border-primary/20 p-5">
+          <h2 className="text-lg font-bold text-foreground">ברוכים הבאים, {employeeName} 👋</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            {myEmployee 
+              ? `${myEmployee.role} • מחלקת ${myEmployee.department}`
+              : "שמחים לראות אותך בפורטל העובדים"}
+          </p>
+        </div>
+
         {/* Announcements & Birthdays card */}
         <div className="space-y-3">
           {birthdayEmployees.length > 0 && (
