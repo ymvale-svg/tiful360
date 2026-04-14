@@ -275,6 +275,57 @@ export type Database = {
           },
         ]
       }
+      attendance_records: {
+        Row: {
+          check_in: string | null
+          check_out: string | null
+          company_id: string | null
+          created_at: string
+          date: string
+          employee_id: string
+          id: string
+          notes: string | null
+          source: string
+        }
+        Insert: {
+          check_in?: string | null
+          check_out?: string | null
+          company_id?: string | null
+          created_at?: string
+          date: string
+          employee_id: string
+          id?: string
+          notes?: string | null
+          source?: string
+        }
+        Update: {
+          check_in?: string | null
+          check_out?: string | null
+          company_id?: string | null
+          created_at?: string
+          date?: string
+          employee_id?: string
+          id?: string
+          notes?: string | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_records_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       category_fields: {
         Row: {
           category_id: string
