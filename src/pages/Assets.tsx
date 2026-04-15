@@ -20,6 +20,7 @@ export default function Assets() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [search, setSearch] = useState("");
   const [addOpen, setAddOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const filtered = (assets ?? []).filter((a) => {
     const matchCat = selectedCategory === "all" || a.category_id === selectedCategory;
@@ -57,6 +58,10 @@ export default function Assets() {
           }}>
             <Download className="w-4 h-4" />
             ייצוא לאקסל
+          </Button>
+          <Button variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
+            <Upload className="w-4 h-4" />
+            יבוא מאקסל
           </Button>
           <Button className="gap-2" onClick={() => setAddOpen(true)}>
             <Plus className="w-4 h-4" />
