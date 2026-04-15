@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Search, Plus, Eye, MoreHorizontal, Boxes, Download } from "lucide-react";
+import { Search, Plus, Eye, MoreHorizontal, Boxes, Download, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAssets, useAssetCategories } from "@/hooks/useData";
 import { AddAssetDialog } from "@/components/AddAssetDialog";
+import { ImportAssetsExcelDialog } from "@/components/ImportAssetsExcelDialog";
 import { exportToExcel } from "@/lib/exportExcel";
 
 const assetStatusLabels: Record<string, string> = {
@@ -19,6 +20,7 @@ export default function Assets() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [search, setSearch] = useState("");
   const [addOpen, setAddOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const filtered = (assets ?? []).filter((a) => {
     const matchCat = selectedCategory === "all" || a.category_id === selectedCategory;
@@ -56,6 +58,10 @@ export default function Assets() {
           }}>
             <Download className="w-4 h-4" />
             ייצוא לאקסל
+          </Button>
+          <Button variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
+            <Upload className="w-4 h-4" />
+            יבוא מאקסל
           </Button>
           <Button className="gap-2" onClick={() => setAddOpen(true)}>
             <Plus className="w-4 h-4" />
@@ -153,6 +159,7 @@ export default function Assets() {
       </div>
 
       <AddAssetDialog open={addOpen} onOpenChange={setAddOpen} />
+      <ImportAssetsExcelDialog open={importOpen} onOpenChange={setImportOpen} />
     </div>
   );
 }
