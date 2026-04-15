@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAssets, useAssetCategories } from "@/hooks/useData";
 import { AddAssetDialog } from "@/components/AddAssetDialog";
+import { ImportAssetsExcelDialog } from "@/components/ImportAssetsExcelDialog";
 import { exportToExcel } from "@/lib/exportExcel";
 
 const assetStatusLabels: Record<string, string> = {
