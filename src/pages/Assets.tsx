@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Plus, Eye, MoreHorizontal, Boxes, Download } from "lucide-react";
+import { Search, Plus, Eye, MoreHorizontal, Boxes, Download, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAssets, useAssetCategories } from "@/hooks/useData";
