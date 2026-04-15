@@ -159,6 +159,7 @@ export default function Assets() {
       </div>
 
       <AddAssetDialog open={addOpen} onOpenChange={setAddOpen} />
+      <ImportAssetsExcelDialog open={importOpen} onOpenChange={setImportOpen} />
     </div>
   );
 }
