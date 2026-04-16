@@ -61,6 +61,7 @@ const main = { backgroundColor: '#f4f6f9', fontFamily: "'Heebo', Arial, sans-ser
 const container = { maxWidth: '560px', margin: '0 auto' }
 const card = { backgroundColor: '#ffffff', borderRadius: '16px', padding: '40px 32px 32px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '1px solid #e8ecf1' }
 const logoSection = { textAlign: 'center' as const, marginBottom: '8px' }
+const logoLink = { textDecoration: 'none', display: 'inline-block' }
 const logo = { margin: '0 auto', borderRadius: '12px' }
 const brandName = { fontSize: '18px', fontWeight: '700' as const, color: 'hsl(220, 25%, 10%)', margin: '12px 0 0', textAlign: 'center' as const }
 const divider = { borderColor: '#e8ecf1', margin: '24px 0' }
