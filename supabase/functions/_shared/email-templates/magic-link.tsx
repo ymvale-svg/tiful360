@@ -30,7 +30,9 @@ export const MagicLinkEmail = ({
   confirmationUrl,
 }: MagicLinkEmailProps) => (
   <Html lang="he" dir="rtl">
-    <Head />
+    <Head>
+      <meta httpEquiv="Content-Type" content="text/html; charset=UTF-8" />
+    </Head>
     <Preview>קישור כניסה ל-{SYSTEM_NAME}</Preview>
     <Body style={main}>
       <Container style={container}>

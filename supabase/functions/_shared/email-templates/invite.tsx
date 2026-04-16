@@ -34,7 +34,9 @@ export const InviteEmail = ({
   companyName,
 }: InviteEmailProps) => (
   <Html lang="he" dir="rtl">
-    <Head />
+    <Head>
+      <meta httpEquiv="Content-Type" content="text/html; charset=UTF-8" />
+    </Head>
     <Preview>הוזמנת להצטרף ל-{SYSTEM_NAME}{companyName ? ` מטעם ${companyName}` : ''}</Preview>
     <Body style={main}>
       <Container style={container}>

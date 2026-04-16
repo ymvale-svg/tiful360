@@ -30,7 +30,9 @@ export const RecoveryEmail = ({
   confirmationUrl,
 }: RecoveryEmailProps) => (
   <Html lang="he" dir="rtl">
-    <Head />
+    <Head>
+      <meta httpEquiv="Content-Type" content="text/html; charset=UTF-8" />
+    </Head>
     <Preview>איפוס סיסמה ב-{SYSTEM_NAME}</Preview>
     <Body style={main}>
       <Container style={container}>
