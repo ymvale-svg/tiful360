@@ -219,6 +219,22 @@ async function handleWebhook(req: Request): Promise<Response> {
   }
 
   // Build template props from payload.data (HookData structure)
+  let companyName: string | undefined
+  if (emailType === 'invite') {
+    // Try to get company name from user metadata or look it up
+    const userMetadata = payload.data.user_metadata
+    if (userMetadata?.company_name) {
+      companyName = userMetadata.company_name
+    } else if (userMetadata?.company_id) {
+      const { data: company } = await supabase
+        .from('companies')
+        .select('name')
+        .eq('id', userMetadata.company_id)
+        .single()
+      if (company) companyName = company.name
+    }
+  }
+
   const templateProps = {
     siteName: SITE_NAME,
     siteUrl: `https://${ROOT_DOMAIN}`,
@@ -227,6 +243,7 @@ async function handleWebhook(req: Request): Promise<Response> {
     token: payload.data.token,
     email: payload.data.email,
     newEmail: payload.data.new_email,
+    companyName,
   }
 
   // Render React Email to HTML and plain text
