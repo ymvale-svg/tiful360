@@ -26,7 +26,7 @@ interface ReauthenticationEmailProps {
 export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => (
   <Html lang="he" dir="rtl">
     <Head>
-      <meta httpEquiv="Content-Type" content="text/html; charset=UTF-8" />
+      <meta charSet="utf-8" />
     </Head>
     <Preview>קוד האימות שלך ב-{SYSTEM_NAME}</Preview>
     <Body style={main}>
@@ -39,7 +39,7 @@ export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => 
             </Link>
           </Section>
           <Hr style={divider} />
-          <Heading style={h1}>אימות זהות 🔑</Heading>
+          <Heading style={h1}>&#1488;&#1497;&#1502;&#1493;&#1514; &#1494;&#1492;&#1493;&#1514;</Heading>
           <Text style={text}>השתמש בקוד הבא כדי לאמת את זהותך:</Text>
           <Section style={codeBox}>
             <Text style={codeStyle}>{token}</Text>

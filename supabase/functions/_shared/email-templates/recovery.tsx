@@ -31,7 +31,7 @@ export const RecoveryEmail = ({
 }: RecoveryEmailProps) => (
   <Html lang="he" dir="rtl">
     <Head>
-      <meta httpEquiv="Content-Type" content="text/html; charset=UTF-8" />
+      <meta charSet="utf-8" />
     </Head>
     <Preview>איפוס סיסמה ב-{SYSTEM_NAME}</Preview>
     <Body style={main}>
@@ -44,7 +44,7 @@ export const RecoveryEmail = ({
             </Link>
           </Section>
           <Hr style={divider} />
-          <Heading style={h1}>איפוס סיסמה 🔐</Heading>
+          <Heading style={h1}>&#1488;&#1497;&#1508;&#1493;&#1505; &#1505;&#1497;&#1505;&#1502;&#1492;</Heading>
           <Text style={text}>
             קיבלנו בקשה לאיפוס הסיסמה שלך ב-{SYSTEM_NAME}. לחץ על הכפתור למטה כדי לבחור סיסמה חדשה.
           </Text>
