@@ -89,7 +89,6 @@ export function OffboardingDialog({
     const htmlContent = generateProtocolHtml(employee, assets, digitalAccess, endDate);
     const container = document.createElement("div");
     container.innerHTML = htmlContent;
-    // Extract the body content for html2pdf
     const bodyMatch = htmlContent.match(/<body[^>]*>([\s\S]*)<\/body>/i);
     const styleMatch = htmlContent.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
     const wrapper = document.createElement("div");
@@ -345,97 +344,6 @@ function generateProtocolHtml(
 
 <div class="footer">
   מסמך זה הופק אוטומטית ע"י מערכת תפעול 360 בתאריך ${today}. מספר מסמך: OFF-${esc(employee.employee_code)}-${esc(endDate)}
-</div>
-</body>
-</html>`;
-<html dir="rtl" lang="he">
-<head>
-<meta charset="UTF-8">
-<title>פרוטוקול משיכת ציוד - ${employee.full_name}</title>
-<style>
-  body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px; color: #1a1a1a; }
-  h1 { text-align: center; color: #dc2626; border-bottom: 3px solid #dc2626; padding-bottom: 12px; }
-  h2 { color: #374151; margin-top: 24px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; }
-  table { width: 100%; border-collapse: collapse; margin: 12px 0; }
-  th, td { border: 1px solid #d1d5db; padding: 10px 12px; text-align: right; font-size: 14px; }
-  th { background: #f3f4f6; font-weight: 600; }
-  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
-  .info-item { display: flex; gap: 8px; font-size: 14px; }
-  .info-label { color: #6b7280; min-width: 120px; }
-  .signature-row { display: flex; justify-content: space-between; margin-top: 60px; }
-  .signature-box { text-align: center; width: 200px; }
-  .signature-line { border-top: 1px solid #000; margin-top: 60px; padding-top: 8px; font-size: 14px; }
-  .checkbox { display: inline-block; width: 16px; height: 16px; border: 1.5px solid #374151; margin-left: 8px; vertical-align: middle; }
-  .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; text-align: center; }
-  @media print { body { padding: 20px; } }
-</style>
-</head>
-<body>
-<h1>🔒 פרוטוקול משיכת ציוד</h1>
-<p style="text-align:center; color:#6b7280;">תפעול 360 • מסמך ${today}</p>
-
-<h2>פרטי עובד</h2>
-<div class="info-grid">
-  <div class="info-item"><span class="info-label">שם מלא:</span><strong>${employee.full_name}</strong></div>
-  <div class="info-item"><span class="info-label">מזהה:</span>${employee.employee_code}</div>
-  <div class="info-item"><span class="info-label">ת.ז:</span>${employee.id_number}</div>
-  <div class="info-item"><span class="info-label">תפקיד:</span>${employee.role}</div>
-  <div class="info-item"><span class="info-label">מחלקה:</span>${employee.department}</div>
-  <div class="info-item"><span class="info-label">תחילת עבודה:</span>${new Date(employee.start_date).toLocaleDateString("he-IL")}</div>
-  <div class="info-item"><span class="info-label">תאריך סיום:</span><strong style="color:#dc2626;">${endDateFormatted}</strong></div>
-</div>
-
-<h2>ציוד להחזרה (${assets.length} פריטים)</h2>
-<table>
-  <thead>
-    <tr><th>הוחזר</th><th>מזהה</th><th>שם פריט</th><th>קטגוריה</th><th>מספר סידורי</th><th>הערות</th></tr>
-  </thead>
-  <tbody>
-    ${assets.map(a => `<tr>
-      <td style="text-align:center;"><span class="checkbox"></span></td>
-      <td style="font-family:monospace;">${a.asset_code}</td>
-      <td>${a.asset_name}</td>
-      <td>${(a as any).asset_categories?.category_name ?? "—"}</td>
-      <td style="font-family:monospace;">${a.serial_number ?? "—"}</td>
-      <td></td>
-    </tr>`).join("")}
-  </tbody>
-</table>
-
-<h2>הרשאות דיגיטליות לניתוק (${digitalAccess.length})</h2>
-<table>
-  <thead>
-    <tr><th>נותק</th><th>סוג</th><th>משאב</th><th>רמת הרשאה</th></tr>
-  </thead>
-  <tbody>
-    ${digitalAccess.map(da => `<tr>
-      <td style="text-align:center;"><span class="checkbox"></span></td>
-      <td>${da.access_type}</td>
-      <td style="font-family:monospace;">${da.resource_path}</td>
-      <td>${da.permission_level}</td>
-    </tr>`).join("")}
-  </tbody>
-</table>
-
-<h2>הצהרות</h2>
-<p style="font-size:14px;"><span class="checkbox"></span> אני מאשר/ת שהחזרתי את כל הציוד המפורט לעיל במצב תקין.</p>
-<p style="font-size:14px;"><span class="checkbox"></span> אני מאשר/ת שמחקתי את כל המידע האישי מהמכשירים שהוחזרו.</p>
-<p style="font-size:14px;"><span class="checkbox"></span> אני מודע/ת שגישתי לכל מערכות החברה תופסק בתאריך הסיום.</p>
-
-<div class="signature-row">
-  <div class="signature-box">
-    <div class="signature-line">חתימת העובד</div>
-  </div>
-  <div class="signature-box">
-    <div class="signature-line">חתימת מנהל ישיר</div>
-  </div>
-  <div class="signature-box">
-    <div class="signature-line">חתימת מנהל IT</div>
-  </div>
-</div>
-
-<div class="footer">
-  מסמך זה הופק אוטומטית ע"י מערכת תפעול 360 בתאריך ${today}. מספר מסמך: OFF-${employee.employee_code}-${endDate}
 </div>
 </body>
 </html>`;
