@@ -9,40 +9,72 @@ import {
   Head,
   Heading,
   Html,
+  Img,
   Link,
   Preview,
+  Section,
   Text,
+  Hr,
 } from 'npm:@react-email/components@0.0.22'
+
+const LOGO_URL = 'https://rhzmhiknbcipucfvgkok.supabase.co/storage/v1/object/public/email-assets/logo.png'
+const SYSTEM_NAME = 'Tiful360'
 
 interface InviteEmailProps {
   siteName: string
   siteUrl: string
   confirmationUrl: string
+  companyName?: string
 }
 
 export const InviteEmail = ({
   siteName,
   siteUrl,
   confirmationUrl,
+  companyName,
 }: InviteEmailProps) => (
   <Html lang="he" dir="rtl">
     <Head />
-    <Preview>הוזמנת להצטרף ל-{siteName}</Preview>
+    <Preview>הוזמנת להצטרף ל-{SYSTEM_NAME}{companyName ? ` מטעם ${companyName}` : ''}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>הוזמנת להצטרף</Heading>
-        <Text style={text}>
-          הוזמנת להצטרף ל-
-          <Link href={siteUrl} style={link}>
-            <strong>{siteName}</strong>
-          </Link>
-          . לחץ על הכפתור למטה כדי לקבל את ההזמנה וליצור את החשבון שלך.
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          קבל הזמנה
-        </Button>
-        <Text style={footer}>
-          אם לא ציפית להזמנה זו, ניתן להתעלם מהודעה זו.
+        <Section style={card}>
+          <Section style={logoSection}>
+            <Img src={LOGO_URL} width="48" height="48" alt={SYSTEM_NAME} style={logo} />
+            <Text style={brandName}>{SYSTEM_NAME}</Text>
+          </Section>
+          <Hr style={divider} />
+          <Heading style={h1}>הוזמנת להצטרף! 🤝</Heading>
+          {companyName ? (
+            <Text style={text}>
+              <strong>{companyName}</strong> מזמינה אותך להצטרף למערכת{' '}
+              <Link href={siteUrl} style={link}><strong>{SYSTEM_NAME}</strong></Link>.
+              לחץ על הכפתור למטה כדי לקבל את ההזמנה וליצור את החשבון שלך.
+            </Text>
+          ) : (
+            <Text style={text}>
+              הוזמנת להצטרף למערכת{' '}
+              <Link href={siteUrl} style={link}><strong>{SYSTEM_NAME}</strong></Link>.
+              לחץ על הכפתור למטה כדי לקבל את ההזמנה וליצור את החשבון שלך.
+            </Text>
+          )}
+          {companyName && (
+            <Section style={companyBadge}>
+              <Text style={companyBadgeText}>🏢 {companyName}</Text>
+            </Section>
+          )}
+          <Section style={buttonSection}>
+            <Button style={button} href={confirmationUrl}>
+              קבל הזמנה והצטרף
+            </Button>
+          </Section>
+          <Hr style={divider} />
+          <Text style={footer}>
+            אם לא ציפית להזמנה זו, ניתן להתעלם מהודעה זו בבטחה.
+          </Text>
+        </Section>
+        <Text style={bottomFooter}>
+          © {new Date().getFullYear()} {SYSTEM_NAME}. כל הזכויות שמורות.
         </Text>
       </Container>
     </Body>
@@ -51,27 +83,19 @@ export const InviteEmail = ({
 
 export default InviteEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: "'Heebo', Arial, sans-serif" }
-const container = { padding: '20px 25px' }
-const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: 'hsl(220, 25%, 10%)',
-  margin: '0 0 20px',
-}
-const text = {
-  fontSize: '14px',
-  color: 'hsl(215, 15%, 47%)',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
-}
-const link = { color: 'inherit', textDecoration: 'underline' }
-const button = {
-  backgroundColor: 'hsl(215, 90%, 42%)',
-  color: '#ffffff',
-  fontSize: '14px',
-  borderRadius: '0.75rem',
-  padding: '12px 20px',
-  textDecoration: 'none',
-}
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+const main = { backgroundColor: '#f4f6f9', fontFamily: "'Heebo', Arial, sans-serif", padding: '20px 0' }
+const container = { maxWidth: '560px', margin: '0 auto' }
+const card = { backgroundColor: '#ffffff', borderRadius: '16px', padding: '40px 32px 32px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '1px solid #e8ecf1' }
+const logoSection = { textAlign: 'center' as const, marginBottom: '8px' }
+const logo = { margin: '0 auto', borderRadius: '12px' }
+const brandName = { fontSize: '18px', fontWeight: '700' as const, color: 'hsl(220, 25%, 10%)', margin: '12px 0 0', textAlign: 'center' as const }
+const divider = { borderColor: '#e8ecf1', margin: '24px 0' }
+const h1 = { fontSize: '24px', fontWeight: 'bold' as const, color: 'hsl(220, 25%, 10%)', margin: '0 0 16px', textAlign: 'center' as const }
+const text = { fontSize: '15px', color: 'hsl(215, 15%, 47%)', lineHeight: '1.7', margin: '0 0 16px' }
+const link = { color: 'hsl(215, 90%, 42%)', textDecoration: 'none' }
+const companyBadge = { backgroundColor: 'hsl(210, 30%, 93%)', borderRadius: '10px', padding: '12px 16px', margin: '0 0 8px', textAlign: 'center' as const }
+const companyBadgeText = { fontSize: '15px', fontWeight: '600' as const, color: 'hsl(220, 25%, 10%)', margin: '0' }
+const buttonSection = { textAlign: 'center' as const, margin: '24px 0' }
+const button = { backgroundColor: 'hsl(215, 90%, 42%)', color: '#ffffff', fontSize: '15px', fontWeight: '600' as const, borderRadius: '12px', padding: '14px 32px', textDecoration: 'none', display: 'inline-block' }
+const footer = { fontSize: '13px', color: '#999999', margin: '0', textAlign: 'center' as const }
+const bottomFooter = { fontSize: '12px', color: '#b0b0b0', textAlign: 'center' as const, margin: '16px 0 0' }
