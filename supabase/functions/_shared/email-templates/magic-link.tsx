@@ -35,8 +35,10 @@ export const MagicLinkEmail = ({
       <Container style={container}>
         <Section style={card}>
           <Section style={logoSection}>
-            <Img src={LOGO_URL} width="48" height="48" alt={SYSTEM_NAME} style={logo} />
-            <Text style={brandName}>{SYSTEM_NAME}</Text>
+            <Link href={`https://tiful360.com`} style={logoLink}>
+              <Img src={LOGO_URL} width="48" height="48" alt={SYSTEM_NAME} style={logo} />
+              <Text style={brandName}>{SYSTEM_NAME}</Text>
+            </Link>
           </Section>
           <Hr style={divider} />
           <Heading style={h1}>קישור כניסה ✨</Heading>
