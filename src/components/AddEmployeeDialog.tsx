@@ -78,16 +78,12 @@ export function AddEmployeeDialog({ open, onOpenChange }: Props) {
 
     if (!form.id_number.trim()) e.id_number = "שדה חובה";
     else if (!isValidIsraeliId(form.id_number)) e.id_number = "תעודת זהות לא תקינה (ספרת ביקורת)";
-    else if (existingEmployees?.some(emp => emp.id_number === form.id_number))
-      e.id_number = "ת.ז כבר קיימת במערכת";
 
     if (!form.role.trim()) e.role = "שדה חובה";
     if (!form.department.trim()) e.department = "שדה חובה";
 
     if (form.phone && !isValidPhone(form.phone)) e.phone = "פורמט טלפון לא תקין";
     if (form.email && !isValidEmail(form.email)) e.email = "כתובת דוא\"ל לא תקינה";
-    if (form.email && existingEmployees?.some(emp => emp.email === form.email))
-      e.email = "דוא\"ל כבר קיים במערכת";
 
     return e;
   };

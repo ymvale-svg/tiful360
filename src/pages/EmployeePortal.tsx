@@ -152,25 +152,15 @@ export default function EmployeePortal() {
     enabled: !!activeCompanyId,
   });
 
-  // Fetch birthday employees this month
+  // Fetch birthday employees this month via secure RPC
   const { data: birthdayEmployees = [] } = useQuery({
     queryKey: ["birthdays", activeCompanyId],
     queryFn: async () => {
       if (!activeCompanyId) return [];
-      const now = new Date();
-      const month = now.getMonth() + 1;
       const { data, error } = await supabase
-        .from("employees")
-        .select("id, full_name, birth_date")
-        .eq("company_id", activeCompanyId)
-        .eq("status", "active")
-        .not("birth_date", "is", null);
+        .rpc("get_company_birthdays", { _company_id: activeCompanyId });
       if (error) throw error;
-      return (data || []).filter(emp => {
-        if (!emp.birth_date) return false;
-        const bd = new Date(emp.birth_date);
-        return bd.getMonth() + 1 === month;
-      });
+      return data || [];
     },
     enabled: !!activeCompanyId,
   });

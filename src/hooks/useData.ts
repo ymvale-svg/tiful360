@@ -7,7 +7,7 @@ export function useEmployees() {
   return useQuery({
     queryKey: ["employees", activeCompanyId],
     queryFn: async () => {
-      let query = supabase.from("employees").select("*").order("full_name");
+      let query = supabase.from("employees_public").select("*").order("full_name");
       if (activeCompanyId) query = query.eq("company_id", activeCompanyId);
       const { data, error } = await query;
       if (error) throw error;

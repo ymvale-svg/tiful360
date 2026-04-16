@@ -49,17 +49,12 @@ export default function Employees() {
             exportToExcel(employees.map(e => ({
               ...e,
               status_label: statusLabels[e.status as EmployeeStatus] ?? e.status,
-              birth_date_fmt: e.birth_date ? new Date(e.birth_date).toLocaleDateString("he-IL") : "",
               start_date_fmt: new Date(e.start_date).toLocaleDateString("he-IL"),
             })), [
               { key: "employee_code", label: "מזהה עובד" },
               { key: "full_name", label: "שם מלא" },
-              { key: "id_number", label: "תעודת זהות" },
               { key: "role", label: "תפקיד" },
               { key: "department", label: "מחלקה" },
-              { key: "phone", label: "טלפון" },
-              { key: "email", label: "דוא\"ל" },
-              { key: "birth_date_fmt", label: "תאריך לידה" },
               { key: "start_date_fmt", label: "תאריך התחלה" },
               { key: "status_label", label: "סטטוס" },
             ], "רשימת_עובדים");
