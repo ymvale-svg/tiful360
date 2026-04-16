@@ -17,12 +17,12 @@ const corsHeaders = {
 }
 
 const EMAIL_SUBJECTS: Record<string, string> = {
-  signup: 'Confirm your email',
-  invite: "You've been invited",
-  magiclink: 'Your login link',
-  recovery: 'Reset your password',
-  email_change: 'Confirm your new email',
-  reauthentication: 'Your verification code',
+  signup: 'אימות כתובת אימייל - Tiful360',
+  invite: 'הוזמנת להצטרף ל-Tiful360',
+  magiclink: 'קישור כניסה ל-Tiful360',
+  recovery: 'איפוס סיסמה - Tiful360',
+  email_change: 'אישור שינוי אימייל - Tiful360',
+  reauthentication: 'קוד אימות - Tiful360',
 }
 
 // Template mapping
@@ -67,6 +67,7 @@ const SAMPLE_DATA: Record<string, object> = {
     siteName: SITE_NAME,
     siteUrl: SAMPLE_PROJECT_URL,
     confirmationUrl: SAMPLE_PROJECT_URL,
+    companyName: 'חברה לדוגמה',
   },
   email_change: {
     siteName: SITE_NAME,
@@ -218,6 +219,22 @@ async function handleWebhook(req: Request): Promise<Response> {
   }
 
   // Build template props from payload.data (HookData structure)
+  let companyName: string | undefined
+  if (emailType === 'invite') {
+    // Try to get company name from user metadata or look it up
+    const userMetadata = payload.data.user_metadata
+    if (userMetadata?.company_name) {
+      companyName = userMetadata.company_name
+    } else if (userMetadata?.company_id) {
+      const { data: company } = await supabase
+        .from('companies')
+        .select('name')
+        .eq('id', userMetadata.company_id)
+        .single()
+      if (company) companyName = company.name
+    }
+  }
+
   const templateProps = {
     siteName: SITE_NAME,
     siteUrl: `https://${ROOT_DOMAIN}`,
@@ -226,6 +243,7 @@ async function handleWebhook(req: Request): Promise<Response> {
     token: payload.data.token,
     email: payload.data.email,
     newEmail: payload.data.new_email,
+    companyName,
   }
 
   // Render React Email to HTML and plain text
