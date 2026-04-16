@@ -218,10 +218,15 @@ async function handleWebhook(req: Request): Promise<Response> {
     )
   }
 
+  // Create Supabase client first (needed for company lookup and enqueue)
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  )
+
   // Build template props from payload.data (HookData structure)
   let companyName: string | undefined
   if (emailType === 'invite') {
-    // Try to get company name from user metadata or look it up
     const userMetadata = payload.data.user_metadata
     if (userMetadata?.company_name) {
       companyName = userMetadata.company_name
@@ -251,12 +256,6 @@ async function handleWebhook(req: Request): Promise<Response> {
   const text = await renderAsync(React.createElement(EmailTemplate, templateProps), {
     plainText: true,
   })
-
-  // Enqueue email for async processing by the dispatcher (process-email-queue).
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  )
 
   const messageId = crypto.randomUUID()
 

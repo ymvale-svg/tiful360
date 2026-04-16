@@ -34,7 +34,9 @@ export const SignupEmail = ({
   confirmationUrl,
 }: SignupEmailProps) => (
   <Html lang="he" dir="rtl">
-    <Head />
+    <Head>
+      <meta httpEquiv="Content-Type" content="text/html; charset=UTF-8" />
+    </Head>
     <Preview>אשר את כתובת האימייל שלך ב-{SYSTEM_NAME}</Preview>
     <Body style={main}>
       <Container style={container}>
