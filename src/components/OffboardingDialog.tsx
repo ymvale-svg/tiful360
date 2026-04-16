@@ -89,7 +89,6 @@ export function OffboardingDialog({
     const htmlContent = generateProtocolHtml(employee, assets, digitalAccess, endDate);
     const container = document.createElement("div");
     container.innerHTML = htmlContent;
-    // Extract the body content for html2pdf
     const bodyMatch = htmlContent.match(/<body[^>]*>([\s\S]*)<\/body>/i);
     const styleMatch = htmlContent.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
     const wrapper = document.createElement("div");
@@ -242,6 +241,11 @@ export function OffboardingDialog({
   );
 }
 
+function esc(s: string | null | undefined): string {
+  if (!s) return "—";
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
 function generateProtocolHtml(
   employee: OffboardingDialogProps["employee"],
   assets: OffboardingDialogProps["assets"],
@@ -255,7 +259,7 @@ function generateProtocolHtml(
 <html dir="rtl" lang="he">
 <head>
 <meta charset="UTF-8">
-<title>פרוטוקול משיכת ציוד - ${employee.full_name}</title>
+<title>פרוטוקול משיכת ציוד - ${esc(employee.full_name)}</title>
 <style>
   body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px; color: #1a1a1a; }
   h1 { text-align: center; color: #dc2626; border-bottom: 3px solid #dc2626; padding-bottom: 12px; }
@@ -280,11 +284,11 @@ function generateProtocolHtml(
 
 <h2>פרטי עובד</h2>
 <div class="info-grid">
-  <div class="info-item"><span class="info-label">שם מלא:</span><strong>${employee.full_name}</strong></div>
-  <div class="info-item"><span class="info-label">מזהה:</span>${employee.employee_code}</div>
-  <div class="info-item"><span class="info-label">ת.ז:</span>${employee.id_number}</div>
-  <div class="info-item"><span class="info-label">תפקיד:</span>${employee.role}</div>
-  <div class="info-item"><span class="info-label">מחלקה:</span>${employee.department}</div>
+  <div class="info-item"><span class="info-label">שם מלא:</span><strong>${esc(employee.full_name)}</strong></div>
+  <div class="info-item"><span class="info-label">מזהה:</span>${esc(employee.employee_code)}</div>
+  <div class="info-item"><span class="info-label">ת.ז:</span>${esc(employee.id_number)}</div>
+  <div class="info-item"><span class="info-label">תפקיד:</span>${esc(employee.role)}</div>
+  <div class="info-item"><span class="info-label">מחלקה:</span>${esc(employee.department)}</div>
   <div class="info-item"><span class="info-label">תחילת עבודה:</span>${new Date(employee.start_date).toLocaleDateString("he-IL")}</div>
   <div class="info-item"><span class="info-label">תאריך סיום:</span><strong style="color:#dc2626;">${endDateFormatted}</strong></div>
 </div>
@@ -297,10 +301,10 @@ function generateProtocolHtml(
   <tbody>
     ${assets.map(a => `<tr>
       <td style="text-align:center;"><span class="checkbox"></span></td>
-      <td style="font-family:monospace;">${a.asset_code}</td>
-      <td>${a.asset_name}</td>
-      <td>${(a as any).asset_categories?.category_name ?? "—"}</td>
-      <td style="font-family:monospace;">${a.serial_number ?? "—"}</td>
+      <td style="font-family:monospace;">${esc(a.asset_code)}</td>
+      <td>${esc(a.asset_name)}</td>
+      <td>${esc((a as any).asset_categories?.category_name)}</td>
+      <td style="font-family:monospace;">${esc(a.serial_number)}</td>
       <td></td>
     </tr>`).join("")}
   </tbody>
@@ -314,9 +318,9 @@ function generateProtocolHtml(
   <tbody>
     ${digitalAccess.map(da => `<tr>
       <td style="text-align:center;"><span class="checkbox"></span></td>
-      <td>${da.access_type}</td>
-      <td style="font-family:monospace;">${da.resource_path}</td>
-      <td>${da.permission_level}</td>
+      <td>${esc(da.access_type)}</td>
+      <td style="font-family:monospace;">${esc(da.resource_path)}</td>
+      <td>${esc(da.permission_level)}</td>
     </tr>`).join("")}
   </tbody>
 </table>
@@ -334,12 +338,12 @@ function generateProtocolHtml(
     <div class="signature-line">חתימת מנהל ישיר</div>
   </div>
   <div class="signature-box">
-    <div class="signature-line">חתימת מנהל IT</div>
+    <div class="signature-line">חתימת IT</div>
   </div>
 </div>
 
 <div class="footer">
-  מסמך זה הופק אוטומטית ע"י מערכת תפעול 360 בתאריך ${today}. מספר מסמך: OFF-${employee.employee_code}-${endDate}
+  מסמך זה הופק אוטומטית ע"י מערכת תפעול 360 בתאריך ${today}. מספר מסמך: OFF-${esc(employee.employee_code)}-${esc(endDate)}
 </div>
 </body>
 </html>`;
