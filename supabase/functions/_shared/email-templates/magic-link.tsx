@@ -31,7 +31,7 @@ export const MagicLinkEmail = ({
 }: MagicLinkEmailProps) => (
   <Html lang="he" dir="rtl">
     <Head>
-      <meta httpEquiv="Content-Type" content="text/html; charset=UTF-8" />
+      <meta charSet="utf-8" />
     </Head>
     <Preview>קישור כניסה ל-{SYSTEM_NAME}</Preview>
     <Body style={main}>
@@ -44,7 +44,7 @@ export const MagicLinkEmail = ({
             </Link>
           </Section>
           <Hr style={divider} />
-          <Heading style={h1}>קישור כניסה ✨</Heading>
+          <Heading style={h1}>&#1511;&#1497;&#1513;&#1493;&#1512; &#1499;&#1504;&#1497;&#1505;&#1492;</Heading>
           <Text style={text}>
             לחץ על הכפתור למטה כדי להתחבר ל-{SYSTEM_NAME}. שים לב שקישור זה תקף לזמן מוגבל.
           </Text>

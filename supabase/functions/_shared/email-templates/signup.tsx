@@ -35,7 +35,7 @@ export const SignupEmail = ({
 }: SignupEmailProps) => (
   <Html lang="he" dir="rtl">
     <Head>
-      <meta httpEquiv="Content-Type" content="text/html; charset=UTF-8" />
+      <meta charSet="utf-8" />
     </Head>
     <Preview>אשר את כתובת האימייל שלך ב-{SYSTEM_NAME}</Preview>
     <Body style={main}>
@@ -48,7 +48,7 @@ export const SignupEmail = ({
             </Link>
           </Section>
           <Hr style={divider} />
-          <Heading style={h1}>ברוכים הבאים! 🎉</Heading>
+          <Heading style={h1}>&#1489;&#1512;&#1493;&#1499;&#1497;&#1501; &#1492;&#1489;&#1488;&#1497;&#1501;!</Heading>
           <Text style={text}>
             תודה שנרשמת ל-
             <Link href={siteUrl} style={link}>

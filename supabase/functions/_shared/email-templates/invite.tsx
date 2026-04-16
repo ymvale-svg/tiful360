@@ -35,7 +35,7 @@ export const InviteEmail = ({
 }: InviteEmailProps) => (
   <Html lang="he" dir="rtl">
     <Head>
-      <meta httpEquiv="Content-Type" content="text/html; charset=UTF-8" />
+      <meta charSet="utf-8" />
     </Head>
     <Preview>הוזמנת להצטרף ל-{SYSTEM_NAME}{companyName ? ` מטעם ${companyName}` : ''}</Preview>
     <Body style={main}>
@@ -48,7 +48,7 @@ export const InviteEmail = ({
             </Link>
           </Section>
           <Hr style={divider} />
-          <Heading style={h1}>הוזמנת להצטרף! 🤝</Heading>
+          <Heading style={h1}>&#1492;&#1493;&#1494;&#1502;&#1504;&#1514; &#1500;&#1492;&#1510;&#1496;&#1512;&#1507;!</Heading>
           {companyName ? (
             <Text style={text}>
               <strong>{companyName}</strong> מזמינה אותך להצטרף למערכת{' '}
@@ -64,7 +64,7 @@ export const InviteEmail = ({
           )}
           {companyName && (
             <Section style={companyBadge}>
-              <Text style={companyBadgeText}>🏢 {companyName}</Text>
+              <Text style={companyBadgeText}>{companyName}</Text>
             </Section>
           )}
           <Section style={buttonSection}>

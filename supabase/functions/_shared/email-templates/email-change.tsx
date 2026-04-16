@@ -35,7 +35,7 @@ export const EmailChangeEmail = ({
 }: EmailChangeEmailProps) => (
   <Html lang="he" dir="rtl">
     <Head>
-      <meta httpEquiv="Content-Type" content="text/html; charset=UTF-8" />
+      <meta charSet="utf-8" />
     </Head>
     <Preview>אישור שינוי כתובת אימייל ב-{SYSTEM_NAME}</Preview>
     <Body style={main}>
@@ -48,7 +48,7 @@ export const EmailChangeEmail = ({
             </Link>
           </Section>
           <Hr style={divider} />
-          <Heading style={h1}>שינוי כתובת אימייל 📧</Heading>
+          <Heading style={h1}>&#1513;&#1497;&#1504;&#1493;&#1497; &#1499;&#1514;&#1493;&#1489;&#1514; &#1488;&#1497;&#1502;&#1497;&#1497;&#1500;</Heading>
           <Text style={text}>
             ביקשת לשנות את כתובת האימייל שלך ב-{SYSTEM_NAME}:
           </Text>
