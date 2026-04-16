@@ -38,6 +38,28 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const action = url.searchParams.get("action");
 
+    // Helper: get caller's company IDs
+    const getCallerCompanyIds = async () => {
+      const { data } = await adminClient
+        .from("user_company_access")
+        .select("company_id")
+        .eq("user_id", caller.id);
+      return (data ?? []).map((a: any) => a.company_id);
+    };
+
+    // Helper: check if target user shares a company with caller
+    const isInCallerCompanies = async (targetUserId: string) => {
+      const callerCompanyIds = await getCallerCompanyIds();
+      if (callerCompanyIds.length === 0) return false;
+      const { data } = await adminClient
+        .from("user_company_access")
+        .select("id")
+        .eq("user_id", targetUserId)
+        .in("company_id", callerCompanyIds)
+        .limit(1);
+      return (data ?? []).length > 0;
+    };
+
     if (req.method === "GET" && action === "list") {
       const companyId = url.searchParams.get("company_id");
 
@@ -68,7 +90,6 @@ Deno.serve(async (req) => {
           .eq("company_id", companyId);
         companyUserIds = new Set((companyAccess ?? []).map((a: any) => a.user_id));
       } else if (!callerIsSuperAdmin) {
-        // Non-super-admin without company_id: get all users from caller's companies
         const { data: callerCompanyAccess } = await adminClient
           .from("user_company_access")
           .select("company_id")
@@ -112,6 +133,16 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: "user_id and role required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
+      // Only super_admin can assign/remove super_admin role
+      if (role === "super_admin" && !callerIsSuperAdmin) {
+        return new Response(JSON.stringify({ error: "Only super_admin can assign super_admin role" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Non-super-admin can only manage roles for users in their companies
+      if (!callerIsSuperAdmin && !(await isInCallerCompanies(user_id))) {
+        return new Response(JSON.stringify({ error: "No access to this user" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
       if (remove) {
         await adminClient.from("user_roles").delete().eq("user_id", user_id).eq("role", role);
       } else {
@@ -129,6 +160,20 @@ Deno.serve(async (req) => {
 
       if (user_id === caller.id) {
         return new Response(JSON.stringify({ error: "Cannot ban yourself" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Non-super-admin can only ban users in their companies
+      if (!callerIsSuperAdmin && !(await isInCallerCompanies(user_id))) {
+        return new Response(JSON.stringify({ error: "No access to this user" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Prevent banning a super_admin unless caller is also super_admin
+      if (!callerIsSuperAdmin) {
+        const { data: targetRoles } = await adminClient.from("user_roles").select("role").eq("user_id", user_id);
+        const targetIsSuperAdmin = targetRoles?.some((r: any) => r.role === "super_admin");
+        if (targetIsSuperAdmin) {
+          return new Response(JSON.stringify({ error: "Cannot ban a super_admin" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
       }
 
       if (ban) {
