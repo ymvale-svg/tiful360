@@ -17,12 +17,12 @@ const corsHeaders = {
 }
 
 const EMAIL_SUBJECTS: Record<string, string> = {
-  signup: 'Confirm your email',
-  invite: "You've been invited",
-  magiclink: 'Your login link',
-  recovery: 'Reset your password',
-  email_change: 'Confirm your new email',
-  reauthentication: 'Your verification code',
+  signup: 'אימות כתובת אימייל - Tiful360',
+  invite: 'הוזמנת להצטרף ל-Tiful360',
+  magiclink: 'קישור כניסה ל-Tiful360',
+  recovery: 'איפוס סיסמה - Tiful360',
+  email_change: 'אישור שינוי אימייל - Tiful360',
+  reauthentication: 'קוד אימות - Tiful360',
 }
 
 // Template mapping
