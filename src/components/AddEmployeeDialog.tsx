@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -14,7 +14,6 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
-// Israeli ID (Mispar Zehut) validation with Luhn-like check digit
 function isValidIsraeliId(id: string): boolean {
   const trimmed = id.replace(/\D/g, "");
   if (trimmed.length < 5 || trimmed.length > 9) return false;
@@ -37,15 +36,11 @@ function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
 }
 
-function isValidEmployeeCode(code: string): boolean {
-  return /^[A-Za-z]{2,5}-\d{2,5}$/.test(code);
-}
-
 type FieldErrors = Record<string, string>;
 
 export function AddEmployeeDialog({ open, onOpenChange }: Props) {
   const [form, setForm] = useState({
-    employee_code: "",
+    employee_number: "", // numeric part only; we prefix EMP-
     full_name: "",
     id_number: "",
     role: "",
@@ -63,16 +58,29 @@ export function AddEmployeeDialog({ open, onOpenChange }: Props) {
 
   const set = (key: string, value: string) => {
     setForm(prev => ({ ...prev, [key]: value }));
-    // Clear error on change
     setErrors(prev => { const n = { ...prev }; delete n[key]; return n; });
   };
 
+  const departmentOptions = useMemo(() => {
+    const set = new Set<string>();
+    existingEmployees?.forEach(e => e.department && set.add(e.department));
+    return Array.from(set).sort().map(v => ({ value: v, label: v }));
+  }, [existingEmployees]);
+
+  const roleOptions = useMemo(() => {
+    const set = new Set<string>();
+    existingEmployees?.forEach(e => e.role && set.add(e.role));
+    return Array.from(set).sort().map(v => ({ value: v, label: v }));
+  }, [existingEmployees]);
+
+  const fullEmployeeCode = form.employee_number.trim() ? `EMP-${form.employee_number.trim()}` : "";
+
   const validate = (): FieldErrors => {
     const e: FieldErrors = {};
-    if (!form.employee_code.trim()) e.employee_code = "שדה חובה";
-    else if (!isValidEmployeeCode(form.employee_code)) e.employee_code = "פורמט: ABC-001";
-    else if (existingEmployees?.some(emp => emp.employee_code === form.employee_code))
-      e.employee_code = "מזהה כבר קיים במערכת";
+    if (!form.employee_number.trim()) e.employee_number = "שדה חובה";
+    else if (!/^\d{1,6}$/.test(form.employee_number.trim())) e.employee_number = "ספרות בלבד (עד 6)";
+    else if (existingEmployees?.some(emp => emp.employee_code === fullEmployeeCode))
+      e.employee_number = "מזהה כבר קיים במערכת";
 
     if (!form.full_name.trim()) e.full_name = "שדה חובה";
     else if (form.full_name.trim().length < 2) e.full_name = "שם קצר מדי";
@@ -98,15 +106,21 @@ export function AddEmployeeDialog({ open, onOpenChange }: Props) {
     }
     try {
       await mutation.mutateAsync({
-        ...form,
+        employee_code: fullEmployeeCode,
+        full_name: form.full_name,
+        id_number: form.id_number,
+        role: form.role,
+        department: form.department,
         phone: form.phone || undefined,
         email: form.email || undefined,
         birth_date: form.birth_date || undefined,
+        start_date: form.start_date,
+        status: form.status,
       });
       toast({ title: "עובד נוסף בהצלחה" });
       onOpenChange(false);
       setForm({
-        employee_code: "", full_name: "", id_number: "", role: "",
+        employee_number: "", full_name: "", id_number: "", role: "",
         department: "", phone: "", email: "", birth_date: "",
         start_date: new Date().toISOString().split("T")[0], status: "active",
       });
@@ -116,15 +130,17 @@ export function AddEmployeeDialog({ open, onOpenChange }: Props) {
     }
   };
 
-  const fields = [
-    { key: "employee_code", label: "מזהה עובד", placeholder: "EMP-009", required: true, dir: "ltr" as const },
-    { key: "full_name", label: "שם מלא", placeholder: "ישראל ישראלי", required: true },
-    { key: "id_number", label: "תעודת זהות", placeholder: "123456789", required: true, dir: "ltr" as const },
-    { key: "role", label: "תפקיד", placeholder: "מהנדס בניין", required: true },
-    { key: "department", label: "מחלקה", placeholder: "הנדסה", required: true },
-    { key: "phone", label: "טלפון", placeholder: "050-1234567", dir: "ltr" as const },
-    { key: "email", label: 'דוא"ל', placeholder: "user@company.co.il", dir: "ltr" as const },
-  ];
+  const inputCls = (k: string) =>
+    `w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 transition-all ${
+      errors[k] ? "ring-2 ring-destructive/50 focus:ring-destructive/50" : "focus:ring-primary/30"
+    }`;
+
+  const errMsg = (k: string) => errors[k] && (
+    <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+      <AlertCircle className="w-3 h-3" />
+      {errors[k]}
+    </p>
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -138,51 +154,86 @@ export function AddEmployeeDialog({ open, onOpenChange }: Props) {
         </DialogHeader>
 
         <div className="space-y-3 mt-4">
-          {fields.map((f) => (
-            <div key={f.key}>
-              <label className="text-sm font-medium mb-1 block">
-                {f.label}{f.required && <span className="text-destructive mr-1">*</span>}
-              </label>
+          <div>
+            <label className="text-sm font-medium mb-1 block">
+              מס' עובד<span className="text-destructive mr-1">*</span>
+            </label>
+            <div className="flex gap-2 items-center" dir="ltr">
+              <span className="px-3 py-2 bg-muted/60 rounded-lg text-sm font-mono text-muted-foreground select-none">EMP-</span>
               <input
-                value={(form as any)[f.key]}
-                onChange={(e) => set(f.key, e.target.value)}
-                placeholder={f.placeholder}
-                dir={f.dir}
-                className={`w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 transition-all ${
-                  errors[f.key] ? "ring-2 ring-destructive/50 focus:ring-destructive/50" : "focus:ring-primary/30"
-                }`}
+                value={form.employee_number}
+                onChange={(e) => set("employee_number", e.target.value.replace(/\D/g, ""))}
+                placeholder="009"
+                inputMode="numeric"
+                dir="ltr"
+                className={`flex-1 ${inputCls("employee_number")}`}
               />
-              {errors[f.key] && (
-                <p className="text-xs text-destructive mt-1 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  {errors[f.key]}
-                </p>
-              )}
             </div>
-          ))}
+            {errMsg("employee_number")}
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-1 block">שם מלא<span className="text-destructive mr-1">*</span></label>
+            <input value={form.full_name} onChange={(e) => set("full_name", e.target.value)} placeholder="ישראל ישראלי" className={inputCls("full_name")} />
+            {errMsg("full_name")}
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-1 block">תעודת זהות<span className="text-destructive mr-1">*</span></label>
+            <input value={form.id_number} onChange={(e) => set("id_number", e.target.value)} placeholder="123456789" dir="ltr" className={inputCls("id_number")} />
+            {errMsg("id_number")}
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-1 block">תפקיד<span className="text-destructive mr-1">*</span></label>
+            <SearchableSelect
+              value={form.role}
+              onChange={(v) => set("role", v)}
+              options={roleOptions}
+              placeholder="בחר או הוסף תפקיד"
+              searchPlaceholder="חפש או הקלד תפקיד חדש..."
+              allowCreate
+              error={!!errors.role}
+            />
+            {errMsg("role")}
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-1 block">מחלקה<span className="text-destructive mr-1">*</span></label>
+            <SearchableSelect
+              value={form.department}
+              onChange={(v) => set("department", v)}
+              options={departmentOptions}
+              placeholder="בחר או הוסף מחלקה"
+              searchPlaceholder="חפש או הקלד מחלקה חדשה..."
+              allowCreate
+              error={!!errors.department}
+            />
+            {errMsg("department")}
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-1 block">טלפון</label>
+            <input value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="050-1234567" dir="ltr" className={inputCls("phone")} />
+            {errMsg("phone")}
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-1 block">דוא"ל</label>
+            <input value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="user@company.co.il" dir="ltr" className={inputCls("email")} />
+            {errMsg("email")}
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-sm font-medium mb-1 block">תאריך לידה</label>
-              <input
-                type="date"
-                value={form.birth_date}
-                onChange={(e) => set("birth_date", e.target.value)}
-                className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
-                dir="ltr"
-              />
+              <input type="date" value={form.birth_date} onChange={(e) => set("birth_date", e.target.value)} className={inputCls("birth_date")} dir="ltr" />
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">תאריך התחלה</label>
-              <input
-                type="date"
-                value={form.start_date}
-                onChange={(e) => set("start_date", e.target.value)}
-                className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
-                dir="ltr"
-              />
+              <input type="date" value={form.start_date} onChange={(e) => set("start_date", e.target.value)} className={inputCls("start_date")} dir="ltr" />
             </div>
-            <div>
+            <div className="col-span-2">
               <label className="text-sm font-medium mb-1 block">סטטוס</label>
               <SearchableSelect
                 value={form.status}

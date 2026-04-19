@@ -18,6 +18,8 @@ interface Props {
   className?: string;
   error?: boolean;
   dir?: "rtl" | "ltr";
+  allowCreate?: boolean;
+  createLabel?: (q: string) => string;
 }
 
 export function SearchableSelect({
@@ -30,6 +32,8 @@ export function SearchableSelect({
   className,
   error,
   dir = "rtl",
+  allowCreate = false,
+  createLabel = (q) => `הוסף "${q}"`,
 }: Props) {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
@@ -53,8 +57,8 @@ export function SearchableSelect({
           )}
           dir={dir}
         >
-          <span className={cn("truncate", !selected && "text-muted-foreground")}>
-            {selected?.label ?? placeholder}
+          <span className={cn("truncate", !value && "text-muted-foreground")}>
+            {selected?.label ?? (value || placeholder)}
           </span>
           <ChevronDown className="w-4 h-4 opacity-50 shrink-0" />
         </button>
@@ -79,27 +83,39 @@ export function SearchableSelect({
           />
         </div>
         <div className="max-h-[260px] overflow-y-auto p-1">
-          {filtered.length === 0 ? (
+          {filtered.length === 0 && !(allowCreate && query.trim()) ? (
             <div className="py-6 text-center text-sm text-muted-foreground">{emptyText}</div>
           ) : (
-            filtered.map((opt) => {
-              const isSelected = opt.value === value;
-              return (
+            <>
+              {filtered.map((opt) => {
+                const isSelected = opt.value === value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => { onChange(opt.value); setOpen(false); setQuery(""); }}
+                    className={cn(
+                      "w-full text-right flex items-center justify-between gap-2 rounded-sm px-2 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground",
+                      isSelected && "bg-accent/50",
+                    )}
+                    dir={dir}
+                  >
+                    <span className="truncate">{opt.label}</span>
+                    {isSelected && <Check className="w-4 h-4 text-primary shrink-0" />}
+                  </button>
+                );
+              })}
+              {allowCreate && query.trim() && !options.some(o => o.label.toLowerCase() === query.trim().toLowerCase()) && (
                 <button
-                  key={opt.value}
                   type="button"
-                  onClick={() => { onChange(opt.value); setOpen(false); setQuery(""); }}
-                  className={cn(
-                    "w-full text-right flex items-center justify-between gap-2 rounded-sm px-2 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground",
-                    isSelected && "bg-accent/50",
-                  )}
+                  onClick={() => { onChange(query.trim()); setOpen(false); setQuery(""); }}
+                  className="w-full text-right flex items-center gap-2 rounded-sm px-2 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground text-primary"
                   dir={dir}
                 >
-                  <span className="truncate">{opt.label}</span>
-                  {isSelected && <Check className="w-4 h-4 text-primary shrink-0" />}
+                  + {createLabel(query.trim())}
                 </button>
-              );
-            })
+              )}
+            </>
           )}
         </div>
       </PopoverContent>
