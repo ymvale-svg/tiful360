@@ -57,8 +57,8 @@ export function SearchableSelect({
           )}
           dir={dir}
         >
-          <span className={cn("truncate", !selected && "text-muted-foreground")}>
-            {selected?.label ?? placeholder}
+          <span className={cn("truncate", !value && "text-muted-foreground")}>
+            {selected?.label ?? (value || placeholder)}
           </span>
           <ChevronDown className="w-4 h-4 opacity-50 shrink-0" />
         </button>
