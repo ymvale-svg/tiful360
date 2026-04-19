@@ -1,7 +1,7 @@
 import { useParams, Link } from "react-router-dom";
-import { 
-  ArrowRight, Shield, Key, Clock, AlertTriangle, UserMinus, 
-  FileText, RefreshCw, Package
+import {
+  ArrowRight, Shield, Key, Clock, AlertTriangle, UserMinus,
+  FileText, RefreshCw, Package, User, Mail, Phone, Calendar, Building2, IdCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -12,8 +12,10 @@ import { TransferAssetDialog } from "@/components/TransferAssetDialog";
 import { HandoverFormsList } from "@/components/HandoverFormsList";
 
 const tabs = [
-  { id: "assets", label: "משאבים חומריים", icon: Package },
-  { id: "digital", label: "הרשאות דיגיטליות", icon: Key },
+  { id: "personal", label: "פרטים אישיים", icon: User },
+  { id: "assets", label: "ציוד משויך", icon: Package },
+  { id: "digital", label: "גישות דיגיטליות", icon: Key },
+  { id: "forms", label: "טפסים חתומים", icon: FileText },
   { id: "history", label: "היסטוריית פעילות", icon: Clock },
 ];
 
@@ -33,9 +35,21 @@ const permissionLabels: Record<string, string> = {
   read: "קריאה", write: "עריכה", admin: "מנהל",
 };
 
+function InfoRow({ icon: Icon, label, value, mono }: { icon: any; label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex items-start gap-3">
+      <Icon className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+      <div className="min-w-0">
+        <dt className="text-xs text-muted-foreground">{label}</dt>
+        <dd className={cn("text-sm font-medium mt-0.5 break-words", mono && "font-mono")}>{value || "—"}</dd>
+      </div>
+    </div>
+  );
+}
+
 export default function EmployeeDetail() {
   const { id } = useParams();
-  const [activeTab, setActiveTab] = useState("assets");
+  const [activeTab, setActiveTab] = useState("personal");
   const [offboardingOpen, setOffboardingOpen] = useState(false);
   const [transferAsset, setTransferAsset] = useState<any>(null);
   const { data: employee, isLoading } = useEmployee(id!);
@@ -166,6 +180,50 @@ export default function EmployeeDetail() {
             )}
           </div>
 
+        </div>
+      )}
+
+      {/* Personal info tab */}
+      {activeTab === "personal" && (
+        <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 animate-fade-in">
+          <h2 className="text-base font-semibold mb-4 flex items-center gap-2">
+            <User className="w-4 h-4 text-primary" />
+            פרטים אישיים
+          </h2>
+          <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+            <InfoRow icon={User} label="שם מלא" value={employee.full_name} />
+            <InfoRow icon={IdCard} label="מספר עובד" value={employee.employee_code} mono />
+            <InfoRow icon={IdCard} label="תעודת זהות" value={employee.id_number} mono />
+            <InfoRow icon={Building2} label="מחלקה" value={employee.department} />
+            <InfoRow icon={Shield} label="תפקיד" value={employee.role} />
+            <InfoRow icon={Mail} label="אימייל" value={(employee as any).email ?? "—"} />
+            <InfoRow icon={Phone} label="טלפון" value={(employee as any).phone ?? "—"} />
+            <InfoRow
+              icon={Calendar}
+              label="תאריך התחלה"
+              value={new Date(employee.start_date).toLocaleDateString("he-IL")}
+            />
+            {employee.birth_date && (
+              <InfoRow
+                icon={Calendar}
+                label="תאריך לידה"
+                value={new Date(employee.birth_date).toLocaleDateString("he-IL")}
+              />
+            )}
+            {employee.end_date && (
+              <InfoRow
+                icon={Calendar}
+                label="תאריך סיום"
+                value={new Date(employee.end_date).toLocaleDateString("he-IL")}
+              />
+            )}
+          </dl>
+        </div>
+      )}
+
+      {/* Forms tab */}
+      {activeTab === "forms" && (
+        <div className="animate-fade-in">
           <HandoverFormsList employeeId={id!} />
         </div>
       )}
