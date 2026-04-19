@@ -7,6 +7,7 @@ import { RefreshCw, ArrowLeft } from "lucide-react";
 import { useTransferAsset } from "@/hooks/useMutations";
 import { useEmployees } from "@/hooks/useData";
 import { useToast } from "@/hooks/use-toast";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
 interface Props {
   open: boolean;
