@@ -29,6 +29,7 @@ export default function Assets() {
   const { data: categories } = useAssetCategories();
   const deleteMutation = useDeleteAsset();
   const { toast } = useToast();
+  const qc = useQueryClient();
 
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [search, setSearch] = useState("");
@@ -54,6 +55,22 @@ export default function Assets() {
       setDeleteTarget(null);
     } catch (err: any) {
       toast({ title: "שגיאה במחיקה", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleUnassign = async () => {
+    if (!unassignTarget) return;
+    try {
+      const { error } = await supabase
+        .from("assets")
+        .update({ current_owner_id: null, status: "in_stock" })
+        .eq("id", unassignTarget.id);
+      if (error) throw error;
+      toast({ title: "השיוך בוטל", description: `${unassignTarget.asset_name} הוחזר למלאי` });
+      qc.invalidateQueries({ queryKey: ["assets"] });
+      setUnassignTarget(null);
+    } catch (err: any) {
+      toast({ title: "שגיאה בביטול שיוך", description: err.message, variant: "destructive" });
     }
   };
 
