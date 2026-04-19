@@ -299,7 +299,7 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
                 className="flex-1"
                 disabled={!employeeId || busy}
                 onClick={() => {
-                  if (method === "manager_present" && attachment) {
+                  if (attachment) {
                     setConfirmOpen(true);
                   } else if (method === "portal") {
                     handleSendToPortal();
@@ -310,7 +310,7 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
               >
                 {busy
                   ? "שומר..."
-                  : method === "manager_present" && attachment
+                  : attachment
                     ? "שמור"
                     : method === "portal"
                       ? "שלח לפורטל"
