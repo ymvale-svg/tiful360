@@ -1,7 +1,7 @@
 import { useParams, Link } from "react-router-dom";
-import { 
-  ArrowRight, Shield, Key, Clock, AlertTriangle, UserMinus, 
-  FileText, RefreshCw, Package
+import {
+  ArrowRight, Shield, Key, Clock, AlertTriangle, UserMinus,
+  FileText, RefreshCw, Package, User, Mail, Phone, Calendar, Building2, IdCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -12,8 +12,10 @@ import { TransferAssetDialog } from "@/components/TransferAssetDialog";
 import { HandoverFormsList } from "@/components/HandoverFormsList";
 
 const tabs = [
-  { id: "assets", label: "משאבים חומריים", icon: Package },
-  { id: "digital", label: "הרשאות דיגיטליות", icon: Key },
+  { id: "personal", label: "פרטים אישיים", icon: User },
+  { id: "assets", label: "ציוד משויך", icon: Package },
+  { id: "digital", label: "גישות דיגיטליות", icon: Key },
+  { id: "forms", label: "טפסים חתומים", icon: FileText },
   { id: "history", label: "היסטוריית פעילות", icon: Clock },
 ];
 
