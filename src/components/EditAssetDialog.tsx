@@ -38,6 +38,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
   const { data: employees } = useEmployees();
   const mutation = useUpdateAsset();
   const { toast } = useToast();
+  const [handoverOpen, setHandoverOpen] = useState(false);
 
   const [form, setForm] = useState({
     asset_name: "", category_id: "", serial_number: "", current_owner_id: "",
