@@ -275,8 +275,12 @@ export default function Employees() {
                 {filtered.map((emp) => {
                   const hasEmail = !!emailById.get(emp.id);
                   return (
-                    <tr key={emp.id}>
-                      <td>
+                    <tr
+                      key={emp.id}
+                      onClick={() => navigate(`/employees/${emp.id}`)}
+                      className="cursor-pointer hover:bg-muted/50"
+                    >
+                      <td onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={selected.has(emp.id)}
                           onCheckedChange={() => toggleOne(emp.id)}
