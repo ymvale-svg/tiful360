@@ -410,6 +410,70 @@ export default function EmployeeDetail() {
           currentOwnerName={employee.full_name}
         />
       )}
+
+      {/* Edit employee */}
+      <EditEmployeeDialog
+        open={editEmployeeOpen}
+        onOpenChange={setEditEmployeeOpen}
+        employee={employee}
+      />
+
+      {/* Add/edit digital access */}
+      <AddDigitalAccessDialog
+        open={addAccessOpen}
+        onOpenChange={(o) => { setAddAccessOpen(o); if (!o) setEditAccess(null); }}
+        employeeId={id!}
+        existing={editAccess}
+      />
+
+      {/* Upload signed form */}
+      <UploadSignedFormDialog
+        open={uploadFormOpen}
+        onOpenChange={setUploadFormOpen}
+        employeeId={id!}
+      />
+
+      {/* Pick available asset to assign */}
+      <Dialog open={pickerOpen} onOpenChange={(o) => { setPickerOpen(o); if (!o) setPickAssetId(""); }}>
+        <DialogContent dir="rtl" className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>בחר פריט ציוד לשיוך</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <SearchableSelect
+              value={pickAssetId}
+              onChange={setPickAssetId}
+              options={stockAssets.map((a: any) => ({
+                value: a.id,
+                label: `${a.asset_name} (${a.asset_code})`,
+              }))}
+              placeholder="בחר פריט מהמלאי..."
+            />
+            {stockAssets.length === 0 && (
+              <p className="text-xs text-muted-foreground">אין פריטים פנויים במלאי</p>
+            )}
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setPickerOpen(false)}>ביטול</Button>
+              <Button
+                className="flex-1"
+                disabled={!pickAssetId}
+                onClick={() => { setPickerOpen(false); setAssignAssetOpen(true); }}
+              >
+                המשך
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign with form (preassigned to this employee) */}
+      {pickedAsset && (
+        <AssignAssetWithFormDialog
+          open={assignAssetOpen}
+          onOpenChange={(o) => { setAssignAssetOpen(o); if (!o) setPickAssetId(""); }}
+          asset={{ ...pickedAsset, current_owner_id: id! } as any}
+        />
+      )}
     </div>
   );
 }
