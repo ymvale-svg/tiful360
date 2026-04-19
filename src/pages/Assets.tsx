@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Search, Plus, Boxes, Download, Upload, FileSignature, Trash2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Search, Plus, Boxes, Download, Upload, FileSignature, Trash2, UserMinus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAssets, useAssetCategories } from "@/hooks/useData";
@@ -27,6 +29,7 @@ export default function Assets() {
   const { data: categories } = useAssetCategories();
   const deleteMutation = useDeleteAsset();
   const { toast } = useToast();
+  const qc = useQueryClient();
 
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [search, setSearch] = useState("");
@@ -35,6 +38,7 @@ export default function Assets() {
   const [editAsset, setEditAsset] = useState<any>(null);
   const [assignAsset, setAssignAsset] = useState<any>(null);
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [unassignTarget, setUnassignTarget] = useState<any>(null);
 
   const filtered = (assets ?? []).filter((a) => {
     const matchCat = selectedCategory === "all" || a.category_id === selectedCategory;
@@ -51,6 +55,22 @@ export default function Assets() {
       setDeleteTarget(null);
     } catch (err: any) {
       toast({ title: "שגיאה במחיקה", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleUnassign = async () => {
+    if (!unassignTarget) return;
+    try {
+      const { error } = await supabase
+        .from("assets")
+        .update({ current_owner_id: null, status: "in_stock" })
+        .eq("id", unassignTarget.id);
+      if (error) throw error;
+      toast({ title: "השיוך בוטל", description: `${unassignTarget.asset_name} הוחזר למלאי` });
+      qc.invalidateQueries({ queryKey: ["assets"] });
+      setUnassignTarget(null);
+    } catch (err: any) {
+      toast({ title: "שגיאה בביטול שיוך", description: err.message, variant: "destructive" });
     }
   };
 
@@ -189,6 +209,17 @@ export default function Assets() {
                       >
                         <FileSignature className="w-4 h-4 text-primary" />
                       </Button>
+                      {asset.current_owner_id && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title="ביטול שיוך — החזרה למלאי"
+                          onClick={(e) => { e.stopPropagation(); setUnassignTarget(asset); }}
+                        >
+                          <UserMinus className="w-4 h-4 text-warning" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -240,6 +271,25 @@ export default function Assets() {
             >
               מחק
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!unassignTarget} onOpenChange={(o) => !o && setUnassignTarget(null)}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>ביטול שיוך</AlertDialogTitle>
+            <AlertDialogDescription>
+              האם לבטל את השיוך של <strong>{unassignTarget?.asset_name}</strong>{" "}
+              ({unassignTarget?.asset_code}) מהעובד{" "}
+              <strong>{(unassignTarget as any)?.employees?.full_name ?? "—"}</strong>?
+              <br />
+              הפריט יחזור למלאי.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>חזרה</AlertDialogCancel>
+            <AlertDialogAction onClick={handleUnassign}>בטל שיוך</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
