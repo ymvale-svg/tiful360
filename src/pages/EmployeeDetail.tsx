@@ -37,7 +37,7 @@ const permissionLabels: Record<string, string> = {
 
 export default function EmployeeDetail() {
   const { id } = useParams();
-  const [activeTab, setActiveTab] = useState("assets");
+  const [activeTab, setActiveTab] = useState("personal");
   const [offboardingOpen, setOffboardingOpen] = useState(false);
   const [transferAsset, setTransferAsset] = useState<any>(null);
   const { data: employee, isLoading } = useEmployee(id!);
