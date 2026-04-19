@@ -83,27 +83,39 @@ export function SearchableSelect({
           />
         </div>
         <div className="max-h-[260px] overflow-y-auto p-1">
-          {filtered.length === 0 ? (
+          {filtered.length === 0 && !(allowCreate && query.trim()) ? (
             <div className="py-6 text-center text-sm text-muted-foreground">{emptyText}</div>
           ) : (
-            filtered.map((opt) => {
-              const isSelected = opt.value === value;
-              return (
+            <>
+              {filtered.map((opt) => {
+                const isSelected = opt.value === value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => { onChange(opt.value); setOpen(false); setQuery(""); }}
+                    className={cn(
+                      "w-full text-right flex items-center justify-between gap-2 rounded-sm px-2 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground",
+                      isSelected && "bg-accent/50",
+                    )}
+                    dir={dir}
+                  >
+                    <span className="truncate">{opt.label}</span>
+                    {isSelected && <Check className="w-4 h-4 text-primary shrink-0" />}
+                  </button>
+                );
+              })}
+              {allowCreate && query.trim() && !options.some(o => o.label.toLowerCase() === query.trim().toLowerCase()) && (
                 <button
-                  key={opt.value}
                   type="button"
-                  onClick={() => { onChange(opt.value); setOpen(false); setQuery(""); }}
-                  className={cn(
-                    "w-full text-right flex items-center justify-between gap-2 rounded-sm px-2 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground",
-                    isSelected && "bg-accent/50",
-                  )}
+                  onClick={() => { onChange(query.trim()); setOpen(false); setQuery(""); }}
+                  className="w-full text-right flex items-center gap-2 rounded-sm px-2 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground text-primary"
                   dir={dir}
                 >
-                  <span className="truncate">{opt.label}</span>
-                  {isSelected && <Check className="w-4 h-4 text-primary shrink-0" />}
+                  + {createLabel(query.trim())}
                 </button>
-              );
-            })
+              )}
+            </>
           )}
         </div>
       </PopoverContent>
