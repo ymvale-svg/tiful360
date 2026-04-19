@@ -64,6 +64,58 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
     }
   }, [asset]);
 
+  // History of past owners — derived from signed handover forms for this asset
+  const { data: handoverHistory } = useQuery({
+    queryKey: ["asset-history", asset?.id],
+    enabled: !!asset?.id && open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("asset_handover_forms")
+        .select("id, employee_id, signed_at, created_at, status, pdf_url, attached_document_url")
+        .eq("asset_id", asset!.id)
+        .eq("status", "signed")
+        .order("signed_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const empById = useMemo(() => {
+    const m = new Map<string, { full_name: string; employee_code: string }>();
+    for (const e of employees ?? []) m.set(e.id, { full_name: e.full_name, employee_code: e.employee_code });
+    return m;
+  }, [employees]);
+
+  // Build ownership periods: each signed form starts a new ownership; previous one ends at next signed_at
+  const historyPeriods = useMemo(() => {
+    const sorted = [...(handoverHistory ?? [])].sort((a, b) => {
+      const ad = new Date(a.signed_at ?? a.created_at).getTime();
+      const bd = new Date(b.signed_at ?? b.created_at).getTime();
+      return bd - ad;
+    });
+    return sorted.map((row, idx) => {
+      const startedAt = row.signed_at ?? row.created_at;
+      // The previous (more recent) period in the array ends this one — but since sorted desc,
+      // the row at idx-1 started after this one, so this period ended at sorted[idx-1].signed_at
+      const endedAt = idx === 0
+        ? null // most recent — still active if matches current owner
+        : (sorted[idx - 1].signed_at ?? sorted[idx - 1].created_at);
+      const emp = empById.get(row.employee_id);
+      const isCurrent = idx === 0 && row.employee_id === asset?.current_owner_id;
+      return {
+        id: row.id,
+        employee_id: row.employee_id,
+        employee_name: emp?.full_name ?? "עובד לא ידוע",
+        employee_code: emp?.employee_code ?? "",
+        startedAt,
+        endedAt: isCurrent ? null : endedAt,
+        isCurrent,
+        document_url: row.pdf_url ?? row.attached_document_url ?? null,
+      };
+    });
+  }, [handoverHistory, empById, asset?.current_owner_id]);
+
+
   const handleSubmit = async () => {
     if (!asset) return;
     try {
