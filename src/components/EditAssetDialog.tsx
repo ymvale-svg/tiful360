@@ -3,11 +3,12 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Package } from "lucide-react";
+import { Package, FileSignature } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useAssetCategories, useEmployees } from "@/hooks/useData";
 import { useUpdateAsset } from "@/hooks/useMutations";
 import { useToast } from "@/hooks/use-toast";
+import { AssignAssetWithFormDialog } from "./AssignAssetWithFormDialog";
 
 interface Asset {
   id: string;
@@ -21,6 +22,9 @@ interface Asset {
   condition?: string | null;
   expiry_date: string | null;
   notes: string | null;
+  company_id?: string | null;
+  asset_categories?: { category_name?: string | null } | null;
+  employees?: { full_name?: string | null } | null;
 }
 
 interface Props {
@@ -34,6 +38,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
   const { data: employees } = useEmployees();
   const mutation = useUpdateAsset();
   const { toast } = useToast();
+  const [handoverOpen, setHandoverOpen] = useState(false);
 
   const [form, setForm] = useState({
     asset_name: "", category_id: "", serial_number: "", current_owner_id: "",
@@ -173,6 +178,28 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
             </div>
           </div>
 
+          {form.current_owner_id && (
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
+              <div className="text-sm font-medium flex items-center gap-2">
+                <FileSignature className="w-4 h-4 text-primary" />
+                טופס מסירת ציוד
+              </div>
+              <p className="text-xs text-muted-foreground">
+                ניתן להפיק טופס חתימה על מסירת הציוד: שליחה לפורטל העובד, חתימה מול מנהל, או צירוף מסמך חתום.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-2 w-full"
+                onClick={() => setHandoverOpen(true)}
+              >
+                <FileSignature className="w-4 h-4" />
+                הפק טופס מסירה
+              </Button>
+            </div>
+          )}
+
           <div>
             <label className="text-sm font-medium mb-1 block">הערות</label>
             <textarea
@@ -191,6 +218,22 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
           </div>
         </div>
       </DialogContent>
+
+      <AssignAssetWithFormDialog
+        open={handoverOpen}
+        onOpenChange={setHandoverOpen}
+        asset={asset ? {
+          id: asset.id,
+          asset_code: asset.asset_code,
+          asset_name: asset.asset_name,
+          manufacturer_model: asset.manufacturer_model ?? null,
+          condition: asset.condition ?? null,
+          company_id: asset.company_id ?? null,
+          current_owner_id: form.current_owner_id || asset.current_owner_id,
+          asset_categories: asset.asset_categories ?? null,
+          employees: asset.employees ?? null,
+        } : null}
+      />
     </Dialog>
   );
 }
