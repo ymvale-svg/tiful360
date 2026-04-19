@@ -107,7 +107,7 @@ export function useUpdateAsset() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...patch }: { id: string } & Record<string, any>) => {
-      const { error } = await supabase.from("assets").update(patch).eq("id", id);
+      const { error } = await (supabase.from("assets") as any).update(patch).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
