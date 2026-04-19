@@ -118,6 +118,78 @@ export function useUpdateAsset() {
   });
 }
 
+export function useUpdateEmployee() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...patch }: { id: string } & Record<string, any>) => {
+      const { error } = await (supabase.from("employees") as any).update(patch).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["employees"] });
+      queryClient.invalidateQueries({ queryKey: ["employee", vars.id] });
+    },
+  });
+}
+
+export function useUpsertDigitalAccess() {
+  const queryClient = useQueryClient();
+  const { activeCompanyId } = useCompany();
+  return useMutation({
+    mutationFn: async (params: {
+      id?: string;
+      employee_id: string;
+      access_type: string;
+      resource_path: string;
+      permission_level: "read" | "write" | "admin";
+      status: "active" | "suspended" | "blocked";
+      notes?: string;
+    }) => {
+      if (params.id) {
+        const { id, ...patch } = params;
+        const { error } = await (supabase.from("digital_access") as any).update(patch).eq("id", id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("digital_access").insert({ ...params, company_id: activeCompanyId });
+        if (error) throw error;
+      }
+    },
+    onSuccess: (_d, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["employee-digital-access", vars.employee_id] });
+    },
+  });
+}
+
+export function useDeleteDigitalAccess() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id }: { id: string; employee_id: string }) => {
+      const { error } = await supabase.from("digital_access").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["employee-digital-access", vars.employee_id] });
+    },
+  });
+}
+
+export function useUnassignAsset() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (assetId: string) => {
+      const { error } = await supabase
+        .from("assets")
+        .update({ current_owner_id: null, status: "in_stock" })
+        .eq("id", assetId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["assets"] });
+      queryClient.invalidateQueries({ queryKey: ["employee-assets"] });
+    },
+  });
+}
+
 export function useDeleteAsset() {
   const queryClient = useQueryClient();
   return useMutation({

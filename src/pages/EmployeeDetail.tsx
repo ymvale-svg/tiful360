@@ -2,14 +2,23 @@ import { useParams, Link } from "react-router-dom";
 import {
   ArrowRight, Shield, Key, Clock, AlertTriangle, UserMinus,
   FileText, RefreshCw, Package, User, Mail, Phone, Calendar, Building2, IdCard,
+  Pencil, Plus, Trash2, Upload, Unlink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { useEmployee, useEmployeeAssets, useEmployeeDigitalAccess, useActivityLog } from "@/hooks/useData";
+import { useEmployee, useEmployeeAssets, useEmployeeDigitalAccess, useActivityLog, useAssets } from "@/hooks/useData";
+import { useDeleteDigitalAccess, useUnassignAsset } from "@/hooks/useMutations";
+import { useToast } from "@/hooks/use-toast";
 import { OffboardingDialog } from "@/components/OffboardingDialog";
 import { TransferAssetDialog } from "@/components/TransferAssetDialog";
 import { HandoverFormsList } from "@/components/HandoverFormsList";
+import { EditEmployeeDialog } from "@/components/EditEmployeeDialog";
+import { AddDigitalAccessDialog } from "@/components/AddDigitalAccessDialog";
+import { UploadSignedFormDialog } from "@/components/UploadSignedFormDialog";
+import { AssignAssetWithFormDialog } from "@/components/AssignAssetWithFormDialog";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const tabs = [
   { id: "personal", label: "פרטים אישיים", icon: User },
@@ -49,13 +58,27 @@ function InfoRow({ icon: Icon, label, value, mono }: { icon: any; label: string;
 
 export default function EmployeeDetail() {
   const { id } = useParams();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("personal");
   const [offboardingOpen, setOffboardingOpen] = useState(false);
   const [transferAsset, setTransferAsset] = useState<any>(null);
+  const [editEmployeeOpen, setEditEmployeeOpen] = useState(false);
+  const [addAccessOpen, setAddAccessOpen] = useState(false);
+  const [editAccess, setEditAccess] = useState<any>(null);
+  const [uploadFormOpen, setUploadFormOpen] = useState(false);
+  const [assignAssetOpen, setAssignAssetOpen] = useState(false);
+  const [pickAssetId, setPickAssetId] = useState("");
+  const [pickerOpen, setPickerOpen] = useState(false);
   const { data: employee, isLoading } = useEmployee(id!);
   const { data: assets } = useEmployeeAssets(id!);
+  const { data: allAssets } = useAssets();
   const { data: digitalAccess } = useEmployeeDigitalAccess(id!);
   const { data: activityLog } = useActivityLog(id);
+  const deleteAccess = useDeleteDigitalAccess();
+  const unassignAsset = useUnassignAsset();
+
+  const stockAssets = (allAssets ?? []).filter((a: any) => !a.current_owner_id);
+  const pickedAsset = stockAssets.find((a: any) => a.id === pickAssetId) ?? null;
 
   if (isLoading) {
     return <div className="flex items-center justify-center p-12 text-muted-foreground">טוען...</div>;
@@ -148,6 +171,12 @@ export default function EmployeeDetail() {
       {/* Assets tab */}
       {activeTab === "assets" && (
         <div className="space-y-4 animate-fade-in">
+          <div className="flex justify-end">
+            <Button size="sm" className="gap-1.5" onClick={() => setPickerOpen(true)}>
+              <Plus className="w-4 h-4" />
+              שייך ציוד חדש
+            </Button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {(assets ?? []).map((asset) => (
               <div key={asset.id} className="bg-card rounded-xl border border-border/50 shadow-card p-5 hover:shadow-md transition-shadow">
@@ -172,6 +201,23 @@ export default function EmployeeDetail() {
                     <RefreshCw className="w-3 h-3" />
                     העבר בעלות
                   </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 text-xs"
+                    onClick={async () => {
+                      if (!confirm(`לבטל את שיוך הפריט "${asset.asset_name}"?`)) return;
+                      try {
+                        await unassignAsset.mutateAsync(asset.id);
+                        toast({ title: "השיוך בוטל" });
+                      } catch (err: any) {
+                        toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+                      }
+                    }}
+                  >
+                    <Unlink className="w-3 h-3" />
+                    בטל שיוך
+                  </Button>
                 </div>
               </div>
             ))}
@@ -186,10 +232,16 @@ export default function EmployeeDetail() {
       {/* Personal info tab */}
       {activeTab === "personal" && (
         <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 animate-fade-in">
-          <h2 className="text-base font-semibold mb-4 flex items-center gap-2">
-            <User className="w-4 h-4 text-primary" />
-            פרטים אישיים
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-semibold flex items-center gap-2">
+              <User className="w-4 h-4 text-primary" />
+              פרטים אישיים
+            </h2>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setEditEmployeeOpen(true)}>
+              <Pencil className="w-4 h-4" />
+              ערוך
+            </Button>
+          </div>
           <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
             <InfoRow icon={User} label="שם מלא" value={employee.full_name} />
             <InfoRow icon={IdCard} label="מספר עובד" value={employee.employee_code} mono />
@@ -223,37 +275,80 @@ export default function EmployeeDetail() {
 
       {/* Forms tab */}
       {activeTab === "forms" && (
-        <div className="animate-fade-in">
+        <div className="space-y-4 animate-fade-in">
+          <div className="flex justify-end">
+            <Button size="sm" className="gap-1.5" onClick={() => setUploadFormOpen(true)}>
+              <Upload className="w-4 h-4" />
+              העלה טופס חתום
+            </Button>
+          </div>
           <HandoverFormsList employeeId={id!} />
         </div>
       )}
 
       {/* Digital access tab */}
       {activeTab === "digital" && (
-        <div className="bg-card rounded-xl border border-border/50 shadow-card overflow-hidden animate-fade-in">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>סוג גישה</th>
-                <th>משאב</th>
-                <th>רמת הרשאה</th>
-                <th>סטטוס</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(digitalAccess ?? []).map((access) => (
-                <tr key={access.id}>
-                  <td>{access.access_type}</td>
-                  <td className="font-mono text-xs">{access.resource_path}</td>
-                  <td>{permissionLabels[access.permission_level] ?? access.permission_level}</td>
-                  <td><span className="status-badge status-active">{accessStatusLabels[access.status] ?? access.status}</span></td>
+        <div className="space-y-4 animate-fade-in">
+          <div className="flex justify-end">
+            <Button size="sm" className="gap-1.5" onClick={() => { setEditAccess(null); setAddAccessOpen(true); }}>
+              <Plus className="w-4 h-4" />
+              הוסף גישה
+            </Button>
+          </div>
+          <div className="bg-card rounded-xl border border-border/50 shadow-card overflow-hidden">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>סוג גישה</th>
+                  <th>משאב</th>
+                  <th>רמת הרשאה</th>
+                  <th>סטטוס</th>
+                  <th className="w-32">פעולות</th>
                 </tr>
-              ))}
-              {(!digitalAccess || digitalAccess.length === 0) && (
-                <tr><td colSpan={4} className="text-center py-8 text-muted-foreground">אין הרשאות</td></tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(digitalAccess ?? []).map((access) => (
+                  <tr key={access.id}>
+                    <td>{access.access_type}</td>
+                    <td className="font-mono text-xs">{access.resource_path}</td>
+                    <td>{permissionLabels[access.permission_level] ?? access.permission_level}</td>
+                    <td><span className="status-badge status-active">{accessStatusLabels[access.status] ?? access.status}</span></td>
+                    <td>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          onClick={() => { setEditAccess(access); setAddAccessOpen(true); }}
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-destructive"
+                          onClick={async () => {
+                            if (!confirm("למחוק את הגישה?")) return;
+                            try {
+                              await deleteAccess.mutateAsync({ id: access.id, employee_id: id! });
+                              toast({ title: "הגישה נמחקה" });
+                            } catch (err: any) {
+                              toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+                            }
+                          }}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {(!digitalAccess || digitalAccess.length === 0) && (
+                  <tr><td colSpan={5} className="text-center py-8 text-muted-foreground">אין הרשאות</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -313,6 +408,70 @@ export default function EmployeeDetail() {
           onOpenChange={(open) => { if (!open) setTransferAsset(null); }}
           asset={transferAsset}
           currentOwnerName={employee.full_name}
+        />
+      )}
+
+      {/* Edit employee */}
+      <EditEmployeeDialog
+        open={editEmployeeOpen}
+        onOpenChange={setEditEmployeeOpen}
+        employee={employee}
+      />
+
+      {/* Add/edit digital access */}
+      <AddDigitalAccessDialog
+        open={addAccessOpen}
+        onOpenChange={(o) => { setAddAccessOpen(o); if (!o) setEditAccess(null); }}
+        employeeId={id!}
+        existing={editAccess}
+      />
+
+      {/* Upload signed form */}
+      <UploadSignedFormDialog
+        open={uploadFormOpen}
+        onOpenChange={setUploadFormOpen}
+        employeeId={id!}
+      />
+
+      {/* Pick available asset to assign */}
+      <Dialog open={pickerOpen} onOpenChange={(o) => { setPickerOpen(o); if (!o) setPickAssetId(""); }}>
+        <DialogContent dir="rtl" className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>בחר פריט ציוד לשיוך</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <SearchableSelect
+              value={pickAssetId}
+              onChange={setPickAssetId}
+              options={stockAssets.map((a: any) => ({
+                value: a.id,
+                label: `${a.asset_name} (${a.asset_code})`,
+              }))}
+              placeholder="בחר פריט מהמלאי..."
+            />
+            {stockAssets.length === 0 && (
+              <p className="text-xs text-muted-foreground">אין פריטים פנויים במלאי</p>
+            )}
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setPickerOpen(false)}>ביטול</Button>
+              <Button
+                className="flex-1"
+                disabled={!pickAssetId}
+                onClick={() => { setPickerOpen(false); setAssignAssetOpen(true); }}
+              >
+                המשך
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign with form (preassigned to this employee) */}
+      {pickedAsset && (
+        <AssignAssetWithFormDialog
+          open={assignAssetOpen}
+          onOpenChange={(o) => { setAssignAssetOpen(o); if (!o) setPickAssetId(""); }}
+          asset={{ ...pickedAsset, current_owner_id: id! } as any}
         />
       )}
     </div>
