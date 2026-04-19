@@ -123,16 +123,13 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
           {/* Category */}
           <div>
             <label className="text-sm font-medium mb-1 block">קטגוריה<span className="text-destructive mr-1">*</span></label>
-            <select
+            <SearchableSelect
               value={form.category_id}
-              onChange={(e) => { set("category_id", e.target.value); setCustomFields({}); }}
-              className={`w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 ${errors.category_id ? "ring-2 ring-destructive/50" : "focus:ring-primary/30"}`}
-            >
-              <option value="">בחר קטגוריה...</option>
-              {(categories ?? []).map(c => (
-                <option key={c.id} value={c.id}>{c.category_name}</option>
-              ))}
-            </select>
+              onChange={(v) => { set("category_id", v); setCustomFields({}); }}
+              options={(categories ?? []).map(c => ({ value: c.id, label: c.category_name }))}
+              placeholder="בחר קטגוריה..."
+              error={!!errors.category_id}
+            />
             {errors.category_id && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.category_id}</p>}
           </div>
 
