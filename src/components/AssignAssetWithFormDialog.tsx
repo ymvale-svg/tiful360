@@ -140,14 +140,15 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
     if (!asset || !employee || !activeCompanyId || !formRef.current) return;
     const issuer = issuerSigRef.current?.getDataUrl();
     const receiver = receiverSigRef.current?.getDataUrl();
-    if (!receiver) {
-      toast({ title: "חסרה חתימת המושך", variant: "destructive" });
+    const hasUploaded = !!attachment;
+    if (!receiver && !hasUploaded) {
+      toast({ title: "חסרה חתימה או מסמך חתום מצורף", variant: "destructive" });
       return;
     }
     setBusy(true);
     try {
       setIssuerDataUrl(issuer ?? null);
-      setReceiverDataUrl(receiver);
+      setReceiverDataUrl(receiver ?? null);
       // Wait one frame so the form view re-renders with signatures
       await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
@@ -162,8 +163,14 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
         attachedUrl = supabase.storage.from("handover-forms").getPublicUrl(path).data.publicUrl;
       }
 
-      const pdfPath = `${activeCompanyId}/${employee.id}/${asset.id}-${Date.now()}.pdf`;
-      const pdfUrl = await generateAndUploadHandoverPdf(formRef.current, pdfPath);
+      // If a signed PDF was uploaded — use it as the canonical PDF; otherwise generate one from the form.
+      let pdfUrl: string;
+      if (attachedUrl && attachment?.type === "application/pdf") {
+        pdfUrl = attachedUrl;
+      } else {
+        const pdfPath = `${activeCompanyId}/${employee.id}/${asset.id}-${Date.now()}.pdf`;
+        pdfUrl = await generateAndUploadHandoverPdf(formRef.current, pdfPath);
+      }
 
       const { error } = await supabase.from("asset_handover_forms").insert({
         company_id: activeCompanyId,
@@ -193,6 +200,7 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
     } finally {
       setBusy(false);
+      setConfirmOpen(false);
     }
   };
 
