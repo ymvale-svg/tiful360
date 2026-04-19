@@ -21,6 +21,7 @@ import UserManagement from "@/pages/UserManagement";
 import Companies from "@/pages/Companies";
 import SelectCompany from "@/pages/SelectCompany";
 import ResetPassword from "@/pages/ResetPassword";
+import SignHandover from "@/pages/SignHandover";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/handover/:token" element={<SignHandover />} />
               <Route path="/select-company" element={<SelectCompany />} />
               <Route path="/portal" element={<ProtectedRoute><EmployeePortal /></ProtectedRoute>} />
               <Route element={
