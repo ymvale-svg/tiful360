@@ -66,6 +66,24 @@ export default function Employees() {
   const [importOpen, setImportOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
+  // Emails are not exposed via employees_public; fetch them separately (admin/IT only per RLS)
+  const { data: emailRows } = useQuery({
+    queryKey: ["employees-emails", activeCompanyId],
+    queryFn: async () => {
+      let q = supabase.from("employees").select("id,email");
+      if (activeCompanyId) q = q.eq("company_id", activeCompanyId);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data as Array<{ id: string; email: string | null }>;
+    },
+    enabled: !!activeCompanyId,
+  });
+  const emailById = useMemo(() => {
+    const m = new Map<string, string | null>();
+    for (const r of emailRows ?? []) m.set(r.id, r.email);
+    return m;
+  }, [emailRows]);
+
   const filtered = (employees ?? []).filter((emp) => {
     const matchSearch = emp.full_name.includes(search) || emp.employee_code.includes(search) || emp.role.includes(search);
     const matchStatus = statusFilter === "all" || emp.status === statusFilter;
