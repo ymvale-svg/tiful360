@@ -35,6 +35,18 @@ const permissionLabels: Record<string, string> = {
   read: "קריאה", write: "עריכה", admin: "מנהל",
 };
 
+function InfoRow({ icon: Icon, label, value, mono }: { icon: any; label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex items-start gap-3">
+      <Icon className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+      <div className="min-w-0">
+        <dt className="text-xs text-muted-foreground">{label}</dt>
+        <dd className={cn("text-sm font-medium mt-0.5 break-words", mono && "font-mono")}>{value || "—"}</dd>
+      </div>
+    </div>
+  );
+}
+
 export default function EmployeeDetail() {
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState("personal");
