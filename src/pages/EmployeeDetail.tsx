@@ -168,6 +168,50 @@ export default function EmployeeDetail() {
             )}
           </div>
 
+        </div>
+      )}
+
+      {/* Personal info tab */}
+      {activeTab === "personal" && (
+        <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 animate-fade-in">
+          <h2 className="text-base font-semibold mb-4 flex items-center gap-2">
+            <User className="w-4 h-4 text-primary" />
+            פרטים אישיים
+          </h2>
+          <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+            <InfoRow icon={User} label="שם מלא" value={employee.full_name} />
+            <InfoRow icon={IdCard} label="מספר עובד" value={employee.employee_code} mono />
+            <InfoRow icon={IdCard} label="תעודת זהות" value={employee.id_number} mono />
+            <InfoRow icon={Building2} label="מחלקה" value={employee.department} />
+            <InfoRow icon={Shield} label="תפקיד" value={employee.role} />
+            <InfoRow icon={Mail} label="אימייל" value={(employee as any).email ?? "—"} />
+            <InfoRow icon={Phone} label="טלפון" value={(employee as any).phone ?? "—"} />
+            <InfoRow
+              icon={Calendar}
+              label="תאריך התחלה"
+              value={new Date(employee.start_date).toLocaleDateString("he-IL")}
+            />
+            {employee.birth_date && (
+              <InfoRow
+                icon={Calendar}
+                label="תאריך לידה"
+                value={new Date(employee.birth_date).toLocaleDateString("he-IL")}
+              />
+            )}
+            {employee.end_date && (
+              <InfoRow
+                icon={Calendar}
+                label="תאריך סיום"
+                value={new Date(employee.end_date).toLocaleDateString("he-IL")}
+              />
+            )}
+          </dl>
+        </div>
+      )}
+
+      {/* Forms tab */}
+      {activeTab === "forms" && (
+        <div className="animate-fade-in">
           <HandoverFormsList employeeId={id!} />
         </div>
       )}
