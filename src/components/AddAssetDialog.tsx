@@ -170,16 +170,17 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-sm font-medium mb-1 block">שיוך לעובד</label>
-              <select
+              <SearchableSelect
                 value={form.current_owner_id}
-                onChange={(e) => set("current_owner_id", e.target.value)}
-                className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
-              >
-                <option value="">במלאי (ללא שיוך)</option>
-                {(employees ?? []).filter(e => e.status === "active" || e.status === "onboarding").map(e => (
-                  <option key={e.id} value={e.id}>{e.full_name} ({e.employee_code})</option>
-                ))}
-              </select>
+                onChange={(v) => set("current_owner_id", v)}
+                options={[
+                  { value: "", label: "במלאי (ללא שיוך)" },
+                  ...(employees ?? [])
+                    .filter(e => e.status === "active" || e.status === "onboarding")
+                    .map(e => ({ value: e.id, label: `${e.full_name} (${e.employee_code})` })),
+                ]}
+                placeholder="במלאי (ללא שיוך)"
+              />
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">תאריך תפוגה</label>
