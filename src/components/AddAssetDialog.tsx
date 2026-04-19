@@ -8,6 +8,7 @@ import { useCreateAsset } from "@/hooks/useMutations";
 import { useAssetCategories, useEmployees, useAssets } from "@/hooks/useData";
 import { useCategoryFields } from "@/hooks/useCategories";
 import { useToast } from "@/hooks/use-toast";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
 interface Props {
   open: boolean;
