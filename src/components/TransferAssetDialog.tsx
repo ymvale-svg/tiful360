@@ -82,18 +82,18 @@ export function TransferAssetDialog({ open, onOpenChange, asset, currentOwnerNam
 
           <div>
             <label className="text-sm font-medium mb-1 block">העבר לעובד</label>
-            <select
+            <SearchableSelect
               value={newOwnerId}
-              onChange={(e) => setNewOwnerId(e.target.value)}
-              className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
-            >
-              <option value="">החזר למלאי</option>
-              {availableEmployees.map(e => (
-                <option key={e.id} value={e.id}>
-                  {e.full_name} ({e.employee_code}) — {e.department}
-                </option>
-              ))}
-            </select>
+              onChange={setNewOwnerId}
+              options={[
+                { value: "", label: "החזר למלאי" },
+                ...availableEmployees.map(e => ({
+                  value: e.id,
+                  label: `${e.full_name} (${e.employee_code}) — ${e.department}`,
+                })),
+              ]}
+              placeholder="בחר עובד..."
+            />
           </div>
 
           <div className="flex gap-3 pt-2">
