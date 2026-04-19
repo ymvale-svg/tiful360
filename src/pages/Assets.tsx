@@ -209,6 +209,17 @@ export default function Assets() {
                       >
                         <FileSignature className="w-4 h-4 text-primary" />
                       </Button>
+                      {asset.current_owner_id && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title="ביטול שיוך — החזרה למלאי"
+                          onClick={(e) => { e.stopPropagation(); setUnassignTarget(asset); }}
+                        >
+                          <UserMinus className="w-4 h-4 text-warning" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
