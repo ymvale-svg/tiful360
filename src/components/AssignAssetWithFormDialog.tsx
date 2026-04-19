@@ -2,8 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { FileSignature, Send, PenTool, Upload, AlertCircle } from "lucide-react";
+import { FileSignature, Send, PenTool, Upload, AlertCircle, FileCheck2 } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useEmployees } from "@/hooks/useData";
 import { useCompany } from "@/hooks/useCompany";
@@ -44,6 +48,10 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
   const [step, setStep] = useState<"choose" | "sign">("choose");
   const [attachment, setAttachment] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const attachmentPreview = attachment
+    ? { url: URL.createObjectURL(attachment), isImage: attachment.type.startsWith("image/") }
+    : null;
 
   const formRef = useRef<HTMLDivElement>(null);
   const issuerSigRef = useRef<SignaturePadHandle>(null);
@@ -132,14 +140,15 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
     if (!asset || !employee || !activeCompanyId || !formRef.current) return;
     const issuer = issuerSigRef.current?.getDataUrl();
     const receiver = receiverSigRef.current?.getDataUrl();
-    if (!receiver) {
-      toast({ title: "חסרה חתימת המושך", variant: "destructive" });
+    const hasUploaded = !!attachment;
+    if (!receiver && !hasUploaded) {
+      toast({ title: "חסרה חתימה או מסמך חתום מצורף", variant: "destructive" });
       return;
     }
     setBusy(true);
     try {
       setIssuerDataUrl(issuer ?? null);
-      setReceiverDataUrl(receiver);
+      setReceiverDataUrl(receiver ?? null);
       // Wait one frame so the form view re-renders with signatures
       await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
@@ -154,8 +163,14 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
         attachedUrl = supabase.storage.from("handover-forms").getPublicUrl(path).data.publicUrl;
       }
 
-      const pdfPath = `${activeCompanyId}/${employee.id}/${asset.id}-${Date.now()}.pdf`;
-      const pdfUrl = await generateAndUploadHandoverPdf(formRef.current, pdfPath);
+      // If a signed PDF was uploaded — use it as the canonical PDF; otherwise generate one from the form.
+      let pdfUrl: string;
+      if (attachedUrl && attachment?.type === "application/pdf") {
+        pdfUrl = attachedUrl;
+      } else {
+        const pdfPath = `${activeCompanyId}/${employee.id}/${asset.id}-${Date.now()}.pdf`;
+        pdfUrl = await generateAndUploadHandoverPdf(formRef.current, pdfPath);
+      }
 
       const { error } = await supabase.from("asset_handover_forms").insert({
         company_id: activeCompanyId,
@@ -185,6 +200,7 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
     } finally {
       setBusy(false);
+      setConfirmOpen(false);
     }
   };
 
@@ -299,20 +315,81 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <SignaturePad ref={issuerSigRef} label="חתימת גורם מנפק (אופציונלי)" />
-              <SignaturePad ref={receiverSigRef} label={`חתימת המושך — ${employee?.full_name ?? ""}`} />
-            </div>
+            {attachment ? (
+              <div className="rounded-lg border bg-muted/40 p-3 flex items-center gap-2 text-sm">
+                <FileCheck2 className="w-5 h-5 text-primary shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">{attachment.name}</div>
+                  <div className="text-xs text-muted-foreground">
+                    מסמך חתום מצורף — לא נדרשת חתימה דיגיטלית
+                  </div>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => setAttachment(null)}>הסר</Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                <SignaturePad ref={issuerSigRef} label="חתימת גורם מנפק (אופציונלי)" />
+                <SignaturePad ref={receiverSigRef} label={`חתימת המושך — ${employee?.full_name ?? ""}`} />
+              </div>
+            )}
 
             <div className="flex gap-2 pt-2">
               <Button variant="outline" className="flex-1" onClick={() => setStep("choose")}>חזור</Button>
-              <Button className="flex-1" disabled={busy} onClick={handleManagerSign}>
-                {busy ? "שומר ויוצר PDF..." : "שמור חתימה"}
+              <Button
+                className="flex-1"
+                disabled={busy}
+                onClick={() => {
+                  if (attachment) {
+                    setConfirmOpen(true);
+                  } else {
+                    handleManagerSign();
+                  }
+                }}
+              >
+                {busy ? "שומר..." : attachment ? "אישור ושמירה" : "שמור חתימה"}
               </Button>
             </div>
           </div>
         )}
       </DialogContent>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>אישור הטופס המצורף</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-right">
+                <p>האם הטופס המצורף חתום על ידי העובד?</p>
+                {attachmentPreview && (
+                  <div className="rounded-md border overflow-hidden bg-muted/30">
+                    {attachmentPreview.isImage ? (
+                      <img
+                        src={attachmentPreview.url}
+                        alt="תצוגה מקדימה"
+                        className="max-h-64 w-full object-contain"
+                      />
+                    ) : (
+                      <div className="p-3 text-sm flex items-center gap-2">
+                        <FileCheck2 className="w-4 h-4" />
+                        <span className="truncate">{attachment?.name}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  לאחר אישור — המסמך ייוסף לתיק העובד וישמש כראיה לקבלת הציוד.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>חזרה</AlertDialogCancel>
+            <AlertDialogAction disabled={busy} onClick={(e) => { e.preventDefault(); handleManagerSign(); }}>
+              {busy ? "שומר..." : "אישור ושמירה"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
