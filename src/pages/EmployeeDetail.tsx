@@ -58,13 +58,27 @@ function InfoRow({ icon: Icon, label, value, mono }: { icon: any; label: string;
 
 export default function EmployeeDetail() {
   const { id } = useParams();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("personal");
   const [offboardingOpen, setOffboardingOpen] = useState(false);
   const [transferAsset, setTransferAsset] = useState<any>(null);
+  const [editEmployeeOpen, setEditEmployeeOpen] = useState(false);
+  const [addAccessOpen, setAddAccessOpen] = useState(false);
+  const [editAccess, setEditAccess] = useState<any>(null);
+  const [uploadFormOpen, setUploadFormOpen] = useState(false);
+  const [assignAssetOpen, setAssignAssetOpen] = useState(false);
+  const [pickAssetId, setPickAssetId] = useState("");
+  const [pickerOpen, setPickerOpen] = useState(false);
   const { data: employee, isLoading } = useEmployee(id!);
   const { data: assets } = useEmployeeAssets(id!);
+  const { data: allAssets } = useAssets();
   const { data: digitalAccess } = useEmployeeDigitalAccess(id!);
   const { data: activityLog } = useActivityLog(id);
+  const deleteAccess = useDeleteDigitalAccess();
+  const unassignAsset = useUnassignAsset();
+
+  const stockAssets = (allAssets ?? []).filter((a: any) => !a.current_owner_id);
+  const pickedAsset = stockAssets.find((a: any) => a.id === pickAssetId) ?? null;
 
   if (isLoading) {
     return <div className="flex items-center justify-center p-12 text-muted-foreground">טוען...</div>;
