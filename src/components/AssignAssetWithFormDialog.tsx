@@ -206,17 +206,26 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
 
         {step === "choose" && (
           <div className="space-y-4 mt-2">
-            <div>
-              <label className="text-sm font-medium mb-1 block">בחר עובד מקבל</label>
-              <SearchableSelect
-                value={employeeId}
-                onChange={setEmployeeId}
-                options={(employees ?? [])
-                  .filter((e: any) => e.status === "active" || e.status === "onboarding")
-                  .map((e: any) => ({ value: e.id, label: `${e.full_name} (${e.employee_code})` }))}
-                placeholder="בחר עובד..."
-              />
-            </div>
+            {isPreassigned ? (
+              <div className="rounded-lg border bg-muted/40 p-3">
+                <div className="text-xs text-muted-foreground mb-0.5">עובד משויך</div>
+                <div className="text-sm font-medium">
+                  {asset?.employees?.full_name ?? employee?.full_name ?? "—"}
+                </div>
+              </div>
+            ) : (
+              <div>
+                <label className="text-sm font-medium mb-1 block">בחר עובד מקבל</label>
+                <SearchableSelect
+                  value={employeeId}
+                  onChange={setEmployeeId}
+                  options={(employees ?? [])
+                    .filter((e: any) => e.status === "active" || e.status === "onboarding")
+                    .map((e: any) => ({ value: e.id, label: `${e.full_name} (${e.employee_code})` }))}
+                  placeholder="בחר עובד..."
+                />
+              </div>
+            )}
 
             <div>
               <label className="text-sm font-medium mb-2 block">מסלול חתימה</label>
