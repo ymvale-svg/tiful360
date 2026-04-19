@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -21,7 +21,9 @@ interface Asset {
   manufacturer_model?: string | null;
   condition?: string | null;
   company_id?: string | null;
+  current_owner_id?: string | null;
   asset_categories?: { category_name?: string | null } | null;
+  employees?: { full_name?: string | null } | null;
 }
 
 interface Props {
@@ -36,6 +38,7 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
   const { toast } = useToast();
   const qc = useQueryClient();
 
+  const preassignedOwnerId = asset?.current_owner_id ?? "";
   const [employeeId, setEmployeeId] = useState("");
   const [method, setMethod] = useState<"portal" | "manager_present">("portal");
   const [step, setStep] = useState<"choose" | "sign">("choose");
@@ -48,14 +51,20 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
   const [issuerDataUrl, setIssuerDataUrl] = useState<string | null>(null);
   const [receiverDataUrl, setReceiverDataUrl] = useState<string | null>(null);
 
+  // Auto-select current owner when asset is already assigned
+  useEffect(() => {
+    if (open && preassignedOwnerId) setEmployeeId(preassignedOwnerId);
+  }, [open, preassignedOwnerId]);
+
   const reset = () => {
-    setEmployeeId(""); setMethod("portal"); setStep("choose");
+    setEmployeeId(preassignedOwnerId); setMethod("portal"); setStep("choose");
     setAttachment(null); setIssuerDataUrl(null); setReceiverDataUrl(null);
   };
 
   const close = () => { reset(); onOpenChange(false); };
 
   const employee = employees?.find((e: any) => e.id === employeeId);
+  const isPreassigned = !!preassignedOwnerId;
 
   const formData: HandoverFormData | null = asset && employee && activeCompany ? {
     company_name: activeCompany.name,
@@ -197,17 +206,26 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
 
         {step === "choose" && (
           <div className="space-y-4 mt-2">
-            <div>
-              <label className="text-sm font-medium mb-1 block">בחר עובד מקבל</label>
-              <SearchableSelect
-                value={employeeId}
-                onChange={setEmployeeId}
-                options={(employees ?? [])
-                  .filter((e: any) => e.status === "active" || e.status === "onboarding")
-                  .map((e: any) => ({ value: e.id, label: `${e.full_name} (${e.employee_code})` }))}
-                placeholder="בחר עובד..."
-              />
-            </div>
+            {isPreassigned ? (
+              <div className="rounded-lg border bg-muted/40 p-3">
+                <div className="text-xs text-muted-foreground mb-0.5">עובד משויך</div>
+                <div className="text-sm font-medium">
+                  {asset?.employees?.full_name ?? employee?.full_name ?? "—"}
+                </div>
+              </div>
+            ) : (
+              <div>
+                <label className="text-sm font-medium mb-1 block">בחר עובד מקבל</label>
+                <SearchableSelect
+                  value={employeeId}
+                  onChange={setEmployeeId}
+                  options={(employees ?? [])
+                    .filter((e: any) => e.status === "active" || e.status === "onboarding")
+                    .map((e: any) => ({ value: e.id, label: `${e.full_name} (${e.employee_code})` }))}
+                  placeholder="בחר עובד..."
+                />
+              </div>
+            )}
 
             <div>
               <label className="text-sm font-medium mb-2 block">מסלול חתימה</label>
