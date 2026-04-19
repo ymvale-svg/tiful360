@@ -2,8 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { FileSignature, Send, PenTool, Upload, AlertCircle } from "lucide-react";
+import { FileSignature, Send, PenTool, Upload, AlertCircle, FileCheck2 } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useEmployees } from "@/hooks/useData";
 import { useCompany } from "@/hooks/useCompany";
