@@ -178,6 +178,28 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
             </div>
           </div>
 
+          {form.current_owner_id && (
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
+              <div className="text-sm font-medium flex items-center gap-2">
+                <FileSignature className="w-4 h-4 text-primary" />
+                טופס מסירת ציוד
+              </div>
+              <p className="text-xs text-muted-foreground">
+                ניתן להפיק טופס חתימה על מסירת הציוד: שליחה לפורטל העובד, חתימה מול מנהל, או צירוף מסמך חתום.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-2 w-full"
+                onClick={() => setHandoverOpen(true)}
+              >
+                <FileSignature className="w-4 h-4" />
+                הפק טופס מסירה
+              </Button>
+            </div>
+          )}
+
           <div>
             <label className="text-sm font-medium mb-1 block">הערות</label>
             <textarea
