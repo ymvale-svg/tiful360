@@ -32,6 +32,8 @@ export function SearchableSelect({
   className,
   error,
   dir = "rtl",
+  allowCreate = false,
+  createLabel = (q) => `הוסף "${q}"`,
 }: Props) {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
