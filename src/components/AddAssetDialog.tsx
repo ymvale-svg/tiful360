@@ -206,16 +206,15 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
                       {cf.is_required && <span className="text-destructive mr-1">*</span>}
                     </label>
                     {cf.field_type === "list" ? (
-                      <select
+                      <SearchableSelect
                         value={customFields[cf.field_name] ?? ""}
-                        onChange={(e) => setCustomFields(prev => ({ ...prev, [cf.field_name]: e.target.value }))}
-                        className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
-                      >
-                        <option value="">בחר...</option>
-                        {(Array.isArray(cf.field_options) ? cf.field_options : []).map((opt: any, i: number) => (
-                          <option key={i} value={String(opt)}>{String(opt)}</option>
-                        ))}
-                      </select>
+                        onChange={(v) => setCustomFields(prev => ({ ...prev, [cf.field_name]: v }))}
+                        options={(Array.isArray(cf.field_options) ? cf.field_options : []).map((opt: any) => ({
+                          value: String(opt),
+                          label: String(opt),
+                        }))}
+                        placeholder="בחר..."
+                      />
                     ) : (
                       <input
                         type={cf.field_type === "number" ? "number" : cf.field_type === "date" ? "date" : "text"}
