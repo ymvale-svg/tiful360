@@ -301,7 +301,7 @@ export default function Employees() {
                       <td className="text-muted-foreground">
                         {new Date(emp.start_date).toLocaleDateString("he-IL")}
                       </td>
-                      <td>
+                      <td onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-1">
                           <Tooltip>
                             <TooltipTrigger asChild>
