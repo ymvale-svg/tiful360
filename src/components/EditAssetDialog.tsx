@@ -22,6 +22,9 @@ interface Asset {
   condition?: string | null;
   expiry_date: string | null;
   notes: string | null;
+  company_id?: string | null;
+  asset_categories?: { category_name?: string | null } | null;
+  employees?: { full_name?: string | null } | null;
 }
 
 interface Props {
