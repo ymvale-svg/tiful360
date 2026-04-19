@@ -218,6 +218,22 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
           </div>
         </div>
       </DialogContent>
+
+      <AssignAssetWithFormDialog
+        open={handoverOpen}
+        onOpenChange={setHandoverOpen}
+        asset={asset ? {
+          id: asset.id,
+          asset_code: asset.asset_code,
+          asset_name: asset.asset_name,
+          manufacturer_model: asset.manufacturer_model ?? null,
+          condition: asset.condition ?? null,
+          company_id: asset.company_id ?? null,
+          current_owner_id: form.current_owner_id || asset.current_owner_id,
+          asset_categories: asset.asset_categories ?? null,
+          employees: asset.employees ?? null,
+        } : null}
+      />
     </Dialog>
   );
 }
