@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Search, Plus, Download, Eye, UserMinus, Upload, Mail, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -60,6 +60,7 @@ export default function Employees() {
   const { activeCompanyId } = useCompany();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<EmployeeStatus | "all">("all");
   const [addOpen, setAddOpen] = useState(false);
@@ -274,8 +275,12 @@ export default function Employees() {
                 {filtered.map((emp) => {
                   const hasEmail = !!emailById.get(emp.id);
                   return (
-                    <tr key={emp.id}>
-                      <td>
+                    <tr
+                      key={emp.id}
+                      onClick={() => navigate(`/employees/${emp.id}`)}
+                      className="cursor-pointer hover:bg-muted/50"
+                    >
+                      <td onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={selected.has(emp.id)}
                           onCheckedChange={() => toggleOne(emp.id)}
@@ -296,7 +301,7 @@ export default function Employees() {
                       <td className="text-muted-foreground">
                         {new Date(emp.start_date).toLocaleDateString("he-IL")}
                       </td>
-                      <td>
+                      <td onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-1">
                           <Tooltip>
                             <TooltipTrigger asChild>
