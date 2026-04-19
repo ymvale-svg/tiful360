@@ -1,14 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Package, FileSignature } from "lucide-react";
+import { Package, FileSignature, History, FileText } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useAssetCategories, useEmployees } from "@/hooks/useData";
 import { useUpdateAsset } from "@/hooks/useMutations";
 import { useToast } from "@/hooks/use-toast";
 import { AssignAssetWithFormDialog } from "./AssignAssetWithFormDialog";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Asset {
   id: string;
@@ -61,6 +63,58 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
       });
     }
   }, [asset]);
+
+  // History of past owners — derived from signed handover forms for this asset
+  const { data: handoverHistory } = useQuery({
+    queryKey: ["asset-history", asset?.id],
+    enabled: !!asset?.id && open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("asset_handover_forms")
+        .select("id, employee_id, signed_at, created_at, status, pdf_url, attached_document_url")
+        .eq("asset_id", asset!.id)
+        .eq("status", "signed")
+        .order("signed_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const empById = useMemo(() => {
+    const m = new Map<string, { full_name: string; employee_code: string }>();
+    for (const e of employees ?? []) m.set(e.id, { full_name: e.full_name, employee_code: e.employee_code });
+    return m;
+  }, [employees]);
+
+  // Build ownership periods: each signed form starts a new ownership; previous one ends at next signed_at
+  const historyPeriods = useMemo(() => {
+    const sorted = [...(handoverHistory ?? [])].sort((a, b) => {
+      const ad = new Date(a.signed_at ?? a.created_at).getTime();
+      const bd = new Date(b.signed_at ?? b.created_at).getTime();
+      return bd - ad;
+    });
+    return sorted.map((row, idx) => {
+      const startedAt = row.signed_at ?? row.created_at;
+      // The previous (more recent) period in the array ends this one — but since sorted desc,
+      // the row at idx-1 started after this one, so this period ended at sorted[idx-1].signed_at
+      const endedAt = idx === 0
+        ? null // most recent — still active if matches current owner
+        : (sorted[idx - 1].signed_at ?? sorted[idx - 1].created_at);
+      const emp = empById.get(row.employee_id);
+      const isCurrent = idx === 0 && row.employee_id === asset?.current_owner_id;
+      return {
+        id: row.id,
+        employee_id: row.employee_id,
+        employee_name: emp?.full_name ?? "עובד לא ידוע",
+        employee_code: emp?.employee_code ?? "",
+        startedAt,
+        endedAt: isCurrent ? null : endedAt,
+        isCurrent,
+        document_url: row.pdf_url ?? row.attached_document_url ?? null,
+      };
+    });
+  }, [handoverHistory, empById, asset?.current_owner_id]);
+
 
   const handleSubmit = async () => {
     if (!asset) return;
@@ -199,6 +253,62 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
               </Button>
             </div>
           )}
+
+          <div className="rounded-lg border bg-card p-3 space-y-2">
+            <div className="text-sm font-medium flex items-center gap-2">
+              <History className="w-4 h-4 text-primary" />
+              היסטוריית בעלות
+              {historyPeriods.length > 0 && (
+                <span className="text-xs text-muted-foreground font-normal">
+                  ({historyPeriods.length} רישומים)
+                </span>
+              )}
+            </div>
+            {historyPeriods.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                אין היסטוריית מסירות חתומות לפריט זה.
+              </p>
+            ) : (
+              <ul className="space-y-1.5 max-h-48 overflow-y-auto">
+                {historyPeriods.map((p) => (
+                  <li
+                    key={p.id}
+                    className="flex items-start justify-between gap-2 text-xs border-b border-border/50 last:border-0 pb-1.5 last:pb-0"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-foreground flex items-center gap-1.5 flex-wrap">
+                        {p.employee_name}
+                        {p.employee_code && (
+                          <span className="text-muted-foreground font-mono">({p.employee_code})</span>
+                        )}
+                        {p.isCurrent && (
+                          <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px]">
+                            נוכחי
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-muted-foreground mt-0.5">
+                        {new Date(p.startedAt).toLocaleDateString("he-IL")}
+                        {" — "}
+                        {p.endedAt ? new Date(p.endedAt).toLocaleDateString("he-IL") : "כיום"}
+                      </div>
+                    </div>
+                    {p.document_url && (
+                      <a
+                        href={p.document_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground shrink-0"
+                        title="צפה בטופס"
+                      >
+                        <FileText className="w-4 h-4" />
+                      </a>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
 
           <div>
             <label className="text-sm font-medium mb-1 block">הערות</label>
