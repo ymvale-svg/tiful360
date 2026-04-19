@@ -1,51 +1,87 @@
 
+## תכנית סופית: שיוך ציוד עם טופס חתימה דיגיטלי
 
-## תוכנית: הגנה על מידע PII בטבלת employees
+### החלטות שאושרו
+1. **יצרן ומודל** → הוסף שדה `manufacturer_model` ל-`assets`
+2. **מצב הציוד** → הוסף שדה `condition` ל-`assets` (חדש/תקין/בינוני)
+3. **פרטי חברה בפוטר** → להשמיט (לא מוסיפים address/phone/email)
+4. **מס׳ סידורי בטופס** → ימשך אוטומטית מ-`assets.asset_code` (המזהה), לא מ-`serial_number`
 
-### הבעיה
-כל משתמש מאומת השייך לחברה יכול לקרוא את כל העמודות בטבלת `employees`, כולל `id_number` (תעודת זהות), `birth_date`, `phone`, `email`. זה חושף מידע אישי רגיש לכל עובד בחברה.
+### שינויי בסיס נתונים
 
-### הגישה
-יצירת View שמחביא את השדות הרגישים, והגבלת גישה ישירה לטבלה רק לאדמינים ו-IT.
+```sql
+ALTER TABLE assets
+  ADD COLUMN manufacturer_model text,
+  ADD COLUMN condition text NOT NULL DEFAULT 'good';  -- 'new' | 'good' | 'fair'
 
-### שינויים
-
-**1. מיגרציה (SQL)**
-- יצירת View בשם `employees_public` עם `security_invoker=on` שמכיל את כל העמודות **חוץ מ-** `id_number`, `birth_date`, `phone`, `email`
-- שינוי ה-SELECT policy של `employees`:
-  - אדמינים ו-IT managers רואים הכל (כמו היום)
-  - עובדים רגילים — `USING (false)` על הטבלה הישירה
-- הוספת SELECT policy על ה-View (כל משתמשי החברה יכולים לקרוא)
-
-**2. קוד — שינויים בקבצים**
-
-| קובץ | שינוי |
-|---|---|
-| `src/hooks/useData.ts` — `useEmployees()` | שאילתה מ-`employees_public` במקום `employees` |
-| `src/pages/Employees.tsx` | הסרת עמודות `id_number`, `birth_date`, `phone`, `email` מהטבלה (יוצגו רק לאדמינים בדף פרטי עובד) |
-| `src/pages/EmployeeDetail.tsx` | שאילתה מ-`employees` (ישירות) — נגיש רק לאדמין/IT בזכות ה-RLS |
-| `src/pages/EmployeePortal.tsx` | שאילתת `birth_date` — צריך לעבור לפונקציית DB מסוג `security_definer` שמחזירה רק ימי הולדת בחודש הנוכחי |
-| `src/components/OffboardingDialog.tsx` | כבר עובד עם עובד ספציפי — אדמין בלבד, בסדר |
-
-**3. פונקציית DB חדשה**
-- `get_company_birthdays(_company_id uuid)` — `SECURITY DEFINER`, מחזירה `id, full_name, birth_date` רק לעובדים פעילים עם יום הולדת בחודש הנוכחי. מונעת חשיפה גורפת של תאריכי לידה.
-
-### פרטים טכניים
-
-```text
-┌─────────────────┐
-│   employees     │  ← RLS: SELECT only for admin/IT + super_admin
-│ (full table)    │  ← Used by: EmployeeDetail, OffboardingDialog, mutations
-└────────┬────────┘
-         │
-┌────────▼────────┐
-│ employees_public│  ← View (no id_number, birth_date, phone, email)
-│ (security_inv.) │  ← RLS inherited from base table — but base denies non-admin
-└─────────────────┘     So view needs its own permissive policy via GRANT
+CREATE TABLE asset_handover_forms (
+  id uuid PK, company_id, asset_id, employee_id,
+  delivery_method text,           -- 'portal' | 'manager_present'
+  status text DEFAULT 'pending',  -- 'pending' | 'signed' | 'cancelled'
+  sign_token text UNIQUE,
+  form_snapshot jsonb,            -- שם, מחלקה, פרטי ציוד, תאריך
+  signature_data text,            -- Base64 PNG
+  attached_document_url text,
+  signed_at, created_at, created_by
+);
+-- RLS: admin/it_manager של החברה + עובד עם linked_user_id רואה/מעדכן את שלו
 ```
 
-### תוצאה
-- עובדים רגילים רואים רשימת עובדים **ללא** תעודת זהות, טלפון, מייל ותאריך לידה
-- אדמינים ו-IT רואים הכל בדף פרטי עובד
-- ימי הולדת בפורטל עובדים — רק החודש הנוכחי, דרך פונקציה מאובטחת
+**Bucket חדש** `handover-forms` (private) — מסמכים מצורפים + PDF סופי.
 
+### שינויי UI במסך נכסים
+
+- **לחיצה על שורה** → פתיחת `EditAssetDialog`
+- **עמודת פעולות (שמאל):**
+  - אייקון `FileSignature` — שיוך לעובד עם טופס חתימה
+  - אייקון `Trash2` — מחיקה (עם `AlertDialog`)
+  - שני האייקונים עם `e.stopPropagation()`
+
+### דיאלוג שיוך + מסלולי חתימה
+
+`AssignAssetWithFormDialog`:
+1. בחירת עובד (`SearchableSelect`) — הוא גם החותם
+2. בחירת מסלול:
+   - **(א) שליחה לאזור האישי** — נשמר עם `delivery_method='portal'`, אימייל לעובד, מופיע בפורטל לחתימה
+   - **(ב) חתימה מול מנהל תפעול** — נפתח מסך מלא עם הטופס + קנבס חתימה במקום
+3. אופציה להעלאת מסמך מצורף חתום בכל מסלול
+
+### הטופס (`HandoverFormView`)
+
+מבנה זהה לטמפלייט שהועלה:
+- **כותרת:** לוגו (`companies.logo_url`) משמאל · "בס״ד" מימין · תאריך
+- **כותרת מרכזית:** "הצהרת קבלת ציוד"
+- **פרטי המקבל:** שם מלא · מחלקה · תאריך משיכה
+- **טבלה:** תיאור הפריט · יצרן ומודל · מס׳ סידורי (=`asset_code`) · מצב הציוד
+- **4 סעיפי ההצהרה** (טקסט מדויק מהטמפלייט)
+- **תחתית:** חתימת הגורם המנפק + חתימת המושך
+- ❌ **בלי פוטר חברה**
+
+### שמירה לתיק העובד
+
+לאחר חתימה — יצירת PDF (jsPDF + html2canvas) ב-RTL והעלאה ל-`handover-forms/<company>/<employee>/<asset>.pdf`. הקובץ יוצג ב-`EmployeeDetail` תחת לשונית "ציוד וטפסים" עם הורדה.
+
+### דף חתימה ציבורי
+
+`/handover/:token` — לא דורש התחברות, מציג את ה-snapshot + קנבס חתימה + אופציית העלאת מסמך, מעדכן סטטוס ל-`signed`.
+
+### קבצים
+
+**חדשים:**
+- `src/components/AssignAssetWithFormDialog.tsx`
+- `src/components/HandoverFormView.tsx` (תצוגה/חתימה/יצוא)
+- `src/components/SignaturePad.tsx`
+- `src/components/EditAssetDialog.tsx`
+- `src/pages/SignHandover.tsx` + ניתוב ב-`App.tsx`
+- `src/lib/generateHandoverPdf.ts`
+- מיגרציה (טבלה + bucket + RLS)
+
+**יעודכנו:**
+- `src/pages/Assets.tsx` — onClick + עמודת אייקונים + מחיקה
+- `src/components/AddAssetDialog.tsx` — הוספת `manufacturer_model`, `condition`, `current_owner_id`
+- `src/pages/EmployeePortal.tsx` — מקטע "טפסי ציוד לחתימה"
+- `src/pages/EmployeeDetail.tsx` — לשונית טפסים חתומים
+- `src/hooks/useMutations.ts` — מוטציות `updateAsset`, `deleteAsset`, `createHandoverForm`, `signHandover`
+
+### תלויות חדשות
+`react-signature-canvas`, `jspdf`, `html2canvas`
