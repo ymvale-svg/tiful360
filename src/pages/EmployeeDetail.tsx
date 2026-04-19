@@ -2,14 +2,23 @@ import { useParams, Link } from "react-router-dom";
 import {
   ArrowRight, Shield, Key, Clock, AlertTriangle, UserMinus,
   FileText, RefreshCw, Package, User, Mail, Phone, Calendar, Building2, IdCard,
+  Pencil, Plus, Trash2, Upload, Unlink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { useEmployee, useEmployeeAssets, useEmployeeDigitalAccess, useActivityLog } from "@/hooks/useData";
+import { useEmployee, useEmployeeAssets, useEmployeeDigitalAccess, useActivityLog, useAssets } from "@/hooks/useData";
+import { useDeleteDigitalAccess, useUnassignAsset } from "@/hooks/useMutations";
+import { useToast } from "@/hooks/use-toast";
 import { OffboardingDialog } from "@/components/OffboardingDialog";
 import { TransferAssetDialog } from "@/components/TransferAssetDialog";
 import { HandoverFormsList } from "@/components/HandoverFormsList";
+import { EditEmployeeDialog } from "@/components/EditEmployeeDialog";
+import { AddDigitalAccessDialog } from "@/components/AddDigitalAccessDialog";
+import { UploadSignedFormDialog } from "@/components/UploadSignedFormDialog";
+import { AssignAssetWithFormDialog } from "@/components/AssignAssetWithFormDialog";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const tabs = [
   { id: "personal", label: "פרטים אישיים", icon: User },
