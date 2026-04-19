@@ -7,6 +7,7 @@ import { UserPlus, AlertCircle } from "lucide-react";
 import { useCreateEmployee } from "@/hooks/useMutations";
 import { useEmployees } from "@/hooks/useData";
 import { useToast } from "@/hooks/use-toast";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
 interface Props {
   open: boolean;
