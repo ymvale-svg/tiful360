@@ -1,14 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Package, FileSignature } from "lucide-react";
+import { Package, FileSignature, History, FileText } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useAssetCategories, useEmployees } from "@/hooks/useData";
 import { useUpdateAsset } from "@/hooks/useMutations";
 import { useToast } from "@/hooks/use-toast";
 import { AssignAssetWithFormDialog } from "./AssignAssetWithFormDialog";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Asset {
   id: string;
