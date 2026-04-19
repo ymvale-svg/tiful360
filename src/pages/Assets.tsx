@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Search, Plus, Boxes, Download, Upload, FileSignature, Trash2, UserMinus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -36,8 +38,6 @@ export default function Assets() {
   const [assignAsset, setAssignAsset] = useState<any>(null);
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const [unassignTarget, setUnassignTarget] = useState<any>(null);
-
-  const queryClient = (window as any).__qc; // unused — kept inline below
 
   const filtered = (assets ?? []).filter((a) => {
     const matchCat = selectedCategory === "all" || a.category_id === selectedCategory;
