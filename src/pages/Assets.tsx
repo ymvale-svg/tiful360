@@ -1,11 +1,19 @@
 import { useState } from "react";
-import { Search, Plus, Eye, MoreHorizontal, Boxes, Download, Upload } from "lucide-react";
+import { Search, Plus, Boxes, Download, Upload, FileSignature, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAssets, useAssetCategories } from "@/hooks/useData";
+import { useDeleteAsset } from "@/hooks/useMutations";
 import { AddAssetDialog } from "@/components/AddAssetDialog";
+import { EditAssetDialog } from "@/components/EditAssetDialog";
+import { AssignAssetWithFormDialog } from "@/components/AssignAssetWithFormDialog";
 import { ImportAssetsExcelDialog } from "@/components/ImportAssetsExcelDialog";
 import { exportToExcel } from "@/lib/exportExcel";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const assetStatusLabels: Record<string, string> = {
   in_use: "בשימוש", in_stock: "במלאי", in_repair: "בתיקון", lost: "אבד",
@@ -17,17 +25,34 @@ const assetStatusClasses: Record<string, string> = {
 export default function Assets() {
   const { data: assets, isLoading } = useAssets();
   const { data: categories } = useAssetCategories();
+  const deleteMutation = useDeleteAsset();
+  const { toast } = useToast();
+
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [search, setSearch] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [editAsset, setEditAsset] = useState<any>(null);
+  const [assignAsset, setAssignAsset] = useState<any>(null);
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
   const filtered = (assets ?? []).filter((a) => {
     const matchCat = selectedCategory === "all" || a.category_id === selectedCategory;
-    const matchSearch = a.asset_name.includes(search) || a.asset_code.includes(search) || 
+    const matchSearch = a.asset_name.includes(search) || a.asset_code.includes(search) ||
       ((a as any).employees?.full_name ?? "").includes(search);
     return matchCat && matchSearch;
   });
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      toast({ title: "פריט נמחק בהצלחה" });
+      setDeleteTarget(null);
+    } catch (err: any) {
+      toast({ title: "שגיאה במחיקה", description: err.message, variant: "destructive" });
+    }
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -131,11 +156,16 @@ export default function Assets() {
                 <th>בעלות</th>
                 <th>סטטוס</th>
                 <th>תפוגה</th>
+                <th className="text-left">פעולות</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((asset) => (
-                <tr key={asset.id}>
+                <tr
+                  key={asset.id}
+                  onClick={() => setEditAsset(asset)}
+                  className="cursor-pointer hover:bg-muted/40 transition-colors"
+                >
                   <td className="font-mono text-xs text-muted-foreground">{asset.asset_code}</td>
                   <td className="font-medium">{asset.asset_name}</td>
                   <td>{(asset as any).asset_categories?.category_name ?? "—"}</td>
@@ -148,10 +178,32 @@ export default function Assets() {
                   <td className="text-muted-foreground text-xs">
                     {asset.expiry_date ? new Date(asset.expiry_date).toLocaleDateString("he-IL") : "—"}
                   </td>
+                  <td onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        title="שיוך לעובד וחתימה"
+                        onClick={(e) => { e.stopPropagation(); setAssignAsset(asset); }}
+                      >
+                        <FileSignature className="w-4 h-4 text-primary" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        title="מחיקה"
+                        onClick={(e) => { e.stopPropagation(); setDeleteTarget(asset); }}
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </td>
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={6} className="text-center py-8 text-muted-foreground">לא נמצאו פריטים</td></tr>
+                <tr><td colSpan={7} className="text-center py-8 text-muted-foreground">לא נמצאו פריטים</td></tr>
               )}
             </tbody>
           </table>
@@ -160,6 +212,37 @@ export default function Assets() {
 
       <AddAssetDialog open={addOpen} onOpenChange={setAddOpen} />
       <ImportAssetsExcelDialog open={importOpen} onOpenChange={setImportOpen} />
+      <EditAssetDialog
+        open={!!editAsset}
+        onOpenChange={(o) => !o && setEditAsset(null)}
+        asset={editAsset}
+      />
+      <AssignAssetWithFormDialog
+        open={!!assignAsset}
+        onOpenChange={(o) => !o && setAssignAsset(null)}
+        asset={assignAsset}
+      />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>מחיקת פריט ציוד</AlertDialogTitle>
+            <AlertDialogDescription>
+              האם למחוק את <strong>{deleteTarget?.asset_name}</strong> ({deleteTarget?.asset_code})?
+              פעולה זו אינה ניתנת לביטול.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ביטול</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90"
+              onClick={handleDelete}
+            >
+              מחק
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

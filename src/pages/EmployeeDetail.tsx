@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useEmployee, useEmployeeAssets, useEmployeeDigitalAccess, useActivityLog } from "@/hooks/useData";
 import { OffboardingDialog } from "@/components/OffboardingDialog";
 import { TransferAssetDialog } from "@/components/TransferAssetDialog";
+import { HandoverFormsList } from "@/components/HandoverFormsList";
 
 const tabs = [
   { id: "assets", label: "משאבים חומריים", icon: Package },
@@ -132,36 +133,40 @@ export default function EmployeeDetail() {
 
       {/* Assets tab */}
       {activeTab === "assets" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in">
-          {(assets ?? []).map((asset) => (
-            <div key={asset.id} className="bg-card rounded-xl border border-border/50 shadow-card p-5 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="font-medium">{asset.asset_name}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {(asset as any).asset_categories?.category_name} • {asset.asset_code}
-                  </p>
-                  {asset.serial_number && <p className="text-xs text-muted-foreground">SN: {asset.serial_number}</p>}
+        <div className="space-y-4 animate-fade-in">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {(assets ?? []).map((asset) => (
+              <div key={asset.id} className="bg-card rounded-xl border border-border/50 shadow-card p-5 hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="font-medium">{asset.asset_name}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {(asset as any).asset_categories?.category_name} • {asset.asset_code}
+                    </p>
+                    {asset.serial_number && <p className="text-xs text-muted-foreground">SN: {asset.serial_number}</p>}
+                  </div>
+                  <span className="status-badge status-active">{assetStatusLabels[asset.status] ?? asset.status}</span>
                 </div>
-                <span className="status-badge status-active">{assetStatusLabels[asset.status] ?? asset.status}</span>
-              </div>
-              {asset.expiry_date && (
-                <div className="mt-3 pt-3 border-t border-border/50 flex items-center gap-2 text-xs text-muted-foreground">
-                  <AlertTriangle className="w-3 h-3 text-warning" />
-                  <span>תפוגה: {new Date(asset.expiry_date).toLocaleDateString("he-IL")}</span>
+                {asset.expiry_date && (
+                  <div className="mt-3 pt-3 border-t border-border/50 flex items-center gap-2 text-xs text-muted-foreground">
+                    <AlertTriangle className="w-3 h-3 text-warning" />
+                    <span>תפוגה: {new Date(asset.expiry_date).toLocaleDateString("he-IL")}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 mt-3">
+                  <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setTransferAsset(asset)}>
+                    <RefreshCw className="w-3 h-3" />
+                    העבר בעלות
+                  </Button>
                 </div>
-              )}
-              <div className="flex items-center gap-2 mt-3">
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setTransferAsset(asset)}>
-                  <RefreshCw className="w-3 h-3" />
-                  העבר בעלות
-                </Button>
               </div>
-            </div>
-          ))}
-          {(!assets || assets.length === 0) && (
-            <div className="col-span-2 text-center py-8 text-muted-foreground">אין ציוד רשום</div>
-          )}
+            ))}
+            {(!assets || assets.length === 0) && (
+              <div className="col-span-2 text-center py-8 text-muted-foreground">אין ציוד רשום</div>
+            )}
+          </div>
+
+          <HandoverFormsList employeeId={id!} />
         </div>
       )}
 

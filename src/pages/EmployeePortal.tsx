@@ -12,6 +12,7 @@ import { useProfile } from "@/hooks/useData";
 import { useCompany } from "@/hooks/useCompany";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { PendingHandoverForms } from "@/components/PendingHandoverForms";
 
 const portalTabs = [
   { id: "assets", label: "הציוד שלי", icon: Package },
@@ -324,6 +325,7 @@ export default function EmployeePortal() {
 
             {myEmployee && (
               <>
+                <PendingHandoverForms employeeId={myEmployee.id} />
                 <h2 className="font-semibold text-sm">ציוד פיזי ({myAssets.length})</h2>
                 {myAssets.length > 0 ? (
                   <div className="grid grid-cols-1 gap-3">
