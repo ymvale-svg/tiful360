@@ -60,6 +60,7 @@ export default function Employees() {
   const { activeCompanyId } = useCompany();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<EmployeeStatus | "all">("all");
   const [addOpen, setAddOpen] = useState(false);
