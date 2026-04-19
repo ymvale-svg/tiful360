@@ -274,6 +274,25 @@ export default function Assets() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={!!unassignTarget} onOpenChange={(o) => !o && setUnassignTarget(null)}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>ביטול שיוך</AlertDialogTitle>
+            <AlertDialogDescription>
+              האם לבטל את השיוך של <strong>{unassignTarget?.asset_name}</strong>{" "}
+              ({unassignTarget?.asset_code}) מהעובד{" "}
+              <strong>{(unassignTarget as any)?.employees?.full_name ?? "—"}</strong>?
+              <br />
+              הפריט יחזור למלאי.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>חזרה</AlertDialogCancel>
+            <AlertDialogAction onClick={handleUnassign}>בטל שיוך</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
