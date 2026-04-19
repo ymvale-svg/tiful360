@@ -3,11 +3,12 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Package } from "lucide-react";
+import { Package, FileSignature } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useAssetCategories, useEmployees } from "@/hooks/useData";
 import { useUpdateAsset } from "@/hooks/useMutations";
 import { useToast } from "@/hooks/use-toast";
+import { AssignAssetWithFormDialog } from "./AssignAssetWithFormDialog";
 
 interface Asset {
   id: string;
