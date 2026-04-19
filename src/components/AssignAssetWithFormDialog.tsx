@@ -21,7 +21,9 @@ interface Asset {
   manufacturer_model?: string | null;
   condition?: string | null;
   company_id?: string | null;
+  current_owner_id?: string | null;
   asset_categories?: { category_name?: string | null } | null;
+  employees?: { full_name?: string | null } | null;
 }
 
 interface Props {
@@ -36,6 +38,7 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
   const { toast } = useToast();
   const qc = useQueryClient();
 
+  const preassignedOwnerId = asset?.current_owner_id ?? "";
   const [employeeId, setEmployeeId] = useState("");
   const [method, setMethod] = useState<"portal" | "manager_present">("portal");
   const [step, setStep] = useState<"choose" | "sign">("choose");
@@ -48,14 +51,20 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
   const [issuerDataUrl, setIssuerDataUrl] = useState<string | null>(null);
   const [receiverDataUrl, setReceiverDataUrl] = useState<string | null>(null);
 
+  // Auto-select current owner when asset is already assigned
+  useEffect(() => {
+    if (open && preassignedOwnerId) setEmployeeId(preassignedOwnerId);
+  }, [open, preassignedOwnerId]);
+
   const reset = () => {
-    setEmployeeId(""); setMethod("portal"); setStep("choose");
+    setEmployeeId(preassignedOwnerId); setMethod("portal"); setStep("choose");
     setAttachment(null); setIssuerDataUrl(null); setReceiverDataUrl(null);
   };
 
   const close = () => { reset(); onOpenChange(false); };
 
   const employee = employees?.find((e: any) => e.id === employeeId);
+  const isPreassigned = !!preassignedOwnerId;
 
   const formData: HandoverFormData | null = asset && employee && activeCompany ? {
     company_name: activeCompany.name,
