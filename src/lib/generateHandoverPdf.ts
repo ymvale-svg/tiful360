@@ -2,13 +2,46 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { supabase } from "@/integrations/supabase/client";
 
+/** Convert all <img> in container to data URLs to bypass CORS taint in html2canvas. */
+async function inlineImages(root: HTMLElement) {
+  const imgs = Array.from(root.querySelectorAll("img"));
+  await Promise.all(
+    imgs.map(async (img) => {
+      const src = img.getAttribute("src");
+      if (!src || src.startsWith("data:")) return;
+      try {
+        const res = await fetch(src, { mode: "cors" });
+        const blob = await res.blob();
+        const dataUrl: string = await new Promise((resolve, reject) => {
+          const r = new FileReader();
+          r.onloadend = () => resolve(r.result as string);
+          r.onerror = reject;
+          r.readAsDataURL(blob);
+        });
+        img.setAttribute("src", dataUrl);
+        img.removeAttribute("crossorigin");
+        await new Promise((res2) => {
+          if ((img as HTMLImageElement).complete) return res2(null);
+          img.onload = () => res2(null);
+          img.onerror = () => res2(null);
+        });
+      } catch {
+        // ignore — keep original src
+      }
+    }),
+  );
+}
+
 export async function generateAndUploadHandoverPdf(
   el: HTMLElement,
   path: string,
 ): Promise<string> {
+  await inlineImages(el);
+
   const canvas = await html2canvas(el, {
     scale: 2,
     useCORS: true,
+    allowTaint: false,
     backgroundColor: "#ffffff",
     logging: false,
   });

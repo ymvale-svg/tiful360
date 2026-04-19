@@ -7,6 +7,7 @@ export interface HandoverFormData {
   employee_department: string;
   date: string; // ISO or formatted
   asset_name: string;
+  category_name?: string | null;
   manufacturer_model?: string | null;
   asset_code: string;
   condition: string; // 'new' | 'good' | 'fair'
@@ -87,8 +88,8 @@ export const HandoverFormView = forwardRef<HTMLDivElement, Props>(({ data }, ref
         </thead>
         <tbody>
           <tr>
-            <td className="border border-gray-400 p-2">{data.asset_name}</td>
-            <td className="border border-gray-400 p-2">{data.manufacturer_model || "—"}</td>
+            <td className="border border-gray-400 p-2">{data.category_name || data.asset_name}</td>
+            <td className="border border-gray-400 p-2">{data.manufacturer_model || data.asset_name || "—"}</td>
             <td className="border border-gray-400 p-2 font-mono" dir="ltr">{data.asset_code}</td>
             <td className="border border-gray-400 p-2">{conditionLabels[data.condition] ?? data.condition}</td>
           </tr>

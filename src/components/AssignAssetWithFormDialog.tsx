@@ -21,6 +21,7 @@ interface Asset {
   manufacturer_model?: string | null;
   condition?: string | null;
   company_id?: string | null;
+  asset_categories?: { category_name?: string | null } | null;
 }
 
 interface Props {
@@ -63,6 +64,7 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
     employee_department: (employee as any).department ?? "—",
     date: new Date().toISOString(),
     asset_name: asset.asset_name,
+    category_name: asset.asset_categories?.category_name ?? null,
     manufacturer_model: asset.manufacturer_model,
     asset_code: asset.asset_code,
     condition: asset.condition || "good",
