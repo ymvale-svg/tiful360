@@ -112,12 +112,7 @@ export default function Employees() {
     },
   });
 
-  const inviteWithEmailMap = useMemo(
-    () => new Map((employees ?? []).map((e) => [e.id, e])),
-    [employees]
-  );
-
-  const selectableInPage = filtered.filter((e) => !!e.email);
+  const selectableInPage = filtered.filter((e) => !!emailById.get(e.id));
   const allSelected = selectableInPage.length > 0 && selectableInPage.every((e) => selected.has(e.id));
 
   const toggleAll = () => {
@@ -137,12 +132,21 @@ export default function Employees() {
     });
   };
 
+  const empById = useMemo(
+    () => new Map((employees ?? []).map((e) => [e.id, e])),
+    [employees]
+  );
+
   const handleBulkInvite = () => {
     if (!activeCompanyId || selected.size === 0) return;
     const list = Array.from(selected)
-      .map((id) => inviteWithEmailMap.get(id))
-      .filter((e): e is NonNullable<typeof e> => !!e && !!e.email)
-      .map((e) => ({ employee_id: e.id, email: e.email!, full_name: e.full_name }));
+      .map((id) => {
+        const emp = empById.get(id);
+        const email = emailById.get(id);
+        if (!emp || !email) return null;
+        return { employee_id: emp.id, email, full_name: emp.full_name };
+      })
+      .filter((x): x is { employee_id: string; email: string; full_name: string } => !!x);
     if (list.length === 0) {
       toast({ title: "אין נמענים תקפים", description: "לעובדים שנבחרו אין כתובת מייל", variant: "destructive" });
       return;
@@ -150,11 +154,12 @@ export default function Employees() {
     inviteMutation.mutate({ company_id: activeCompanyId, employees: list });
   };
 
-  const handleSingleInvite = (emp: { id: string; email: string | null; full_name: string }) => {
-    if (!activeCompanyId || !emp.email) return;
+  const handleSingleInvite = (empId: string, fullName: string) => {
+    const email = emailById.get(empId);
+    if (!activeCompanyId || !email) return;
     inviteMutation.mutate({
       company_id: activeCompanyId,
-      employees: [{ employee_id: emp.id, email: emp.email, full_name: emp.full_name }],
+      employees: [{ employee_id: empId, email, full_name: fullName }],
     });
   };
 
