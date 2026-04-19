@@ -393,7 +393,3 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
     </Dialog>
   );
 }
-      </DialogContent>
-    </Dialog>
-  );
-}
