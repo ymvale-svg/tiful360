@@ -243,33 +243,35 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
               </div>
             )}
 
-            <div>
-              <label className="text-sm font-medium mb-2 block">מסלול חתימה</label>
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  onClick={() => setMethod("portal")}
-                  className={`w-full text-right p-3 rounded-lg border-2 transition-colors flex items-center gap-3 ${method === "portal" ? "border-primary bg-primary/5" : "border-border hover:bg-muted"}`}
-                >
-                  <Send className="w-5 h-5 text-primary shrink-0" />
-                  <div className="flex-1">
-                    <div className="font-medium text-sm">שליחה לאזור האישי בפורטל</div>
-                    <div className="text-xs text-muted-foreground">העובד יחתום מתוך הפורטל שלו</div>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMethod("manager_present")}
-                  className={`w-full text-right p-3 rounded-lg border-2 transition-colors flex items-center gap-3 ${method === "manager_present" ? "border-primary bg-primary/5" : "border-border hover:bg-muted"}`}
-                >
-                  <PenTool className="w-5 h-5 text-primary shrink-0" />
-                  <div className="flex-1">
-                    <div className="font-medium text-sm">חתימה מול מנהל התפעול</div>
-                    <div className="text-xs text-muted-foreground">העובד חותם כעת על המכשיר</div>
-                  </div>
-                </button>
+            {!attachment && (
+              <div>
+                <label className="text-sm font-medium mb-2 block">מסלול חתימה</label>
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => setMethod("portal")}
+                    className={`w-full text-right p-3 rounded-lg border-2 transition-colors flex items-center gap-3 ${method === "portal" ? "border-primary bg-primary/5" : "border-border hover:bg-muted"}`}
+                  >
+                    <Send className="w-5 h-5 text-primary shrink-0" />
+                    <div className="flex-1">
+                      <div className="font-medium text-sm">שליחה לאזור האישי בפורטל</div>
+                      <div className="text-xs text-muted-foreground">העובד יחתום מתוך הפורטל שלו</div>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMethod("manager_present")}
+                    className={`w-full text-right p-3 rounded-lg border-2 transition-colors flex items-center gap-3 ${method === "manager_present" ? "border-primary bg-primary/5" : "border-border hover:bg-muted"}`}
+                  >
+                    <PenTool className="w-5 h-5 text-primary shrink-0" />
+                    <div className="flex-1">
+                      <div className="font-medium text-sm">חתימה מול מנהל התפעול</div>
+                      <div className="text-xs text-muted-foreground">העובד חותם כעת על המכשיר</div>
+                    </div>
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             <div>
               <label className="text-sm font-medium mb-1 block">מסמך חתום מצורף (אופציונלי)</label>
