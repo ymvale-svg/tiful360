@@ -7,6 +7,7 @@ import { UserPlus, AlertCircle } from "lucide-react";
 import { useCreateEmployee } from "@/hooks/useMutations";
 import { useEmployees } from "@/hooks/useData";
 import { useToast } from "@/hooks/use-toast";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
 interface Props {
   open: boolean;
@@ -183,14 +184,14 @@ export function AddEmployeeDialog({ open, onOpenChange }: Props) {
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">סטטוס</label>
-              <select
+              <SearchableSelect
                 value={form.status}
-                onChange={(e) => set("status", e.target.value)}
-                className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
-              >
-                <option value="active">פעיל</option>
-                <option value="onboarding">בקליטה</option>
-              </select>
+                onChange={(v) => set("status", v)}
+                options={[
+                  { value: "active", label: "פעיל" },
+                  { value: "onboarding", label: "בקליטה" },
+                ]}
+              />
             </div>
           </div>
 

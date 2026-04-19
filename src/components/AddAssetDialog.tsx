@@ -8,6 +8,7 @@ import { useCreateAsset } from "@/hooks/useMutations";
 import { useAssetCategories, useEmployees, useAssets } from "@/hooks/useData";
 import { useCategoryFields } from "@/hooks/useCategories";
 import { useToast } from "@/hooks/use-toast";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
 interface Props {
   open: boolean;
@@ -122,16 +123,13 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
           {/* Category */}
           <div>
             <label className="text-sm font-medium mb-1 block">קטגוריה<span className="text-destructive mr-1">*</span></label>
-            <select
+            <SearchableSelect
               value={form.category_id}
-              onChange={(e) => { set("category_id", e.target.value); setCustomFields({}); }}
-              className={`w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 ${errors.category_id ? "ring-2 ring-destructive/50" : "focus:ring-primary/30"}`}
-            >
-              <option value="">בחר קטגוריה...</option>
-              {(categories ?? []).map(c => (
-                <option key={c.id} value={c.id}>{c.category_name}</option>
-              ))}
-            </select>
+              onChange={(v) => { set("category_id", v); setCustomFields({}); }}
+              options={(categories ?? []).map(c => ({ value: c.id, label: c.category_name }))}
+              placeholder="בחר קטגוריה..."
+              error={!!errors.category_id}
+            />
             {errors.category_id && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.category_id}</p>}
           </div>
 
@@ -172,16 +170,17 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-sm font-medium mb-1 block">שיוך לעובד</label>
-              <select
+              <SearchableSelect
                 value={form.current_owner_id}
-                onChange={(e) => set("current_owner_id", e.target.value)}
-                className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
-              >
-                <option value="">במלאי (ללא שיוך)</option>
-                {(employees ?? []).filter(e => e.status === "active" || e.status === "onboarding").map(e => (
-                  <option key={e.id} value={e.id}>{e.full_name} ({e.employee_code})</option>
-                ))}
-              </select>
+                onChange={(v) => set("current_owner_id", v)}
+                options={[
+                  { value: "", label: "במלאי (ללא שיוך)" },
+                  ...(employees ?? [])
+                    .filter(e => e.status === "active" || e.status === "onboarding")
+                    .map(e => ({ value: e.id, label: `${e.full_name} (${e.employee_code})` })),
+                ]}
+                placeholder="במלאי (ללא שיוך)"
+              />
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">תאריך תפוגה</label>
@@ -207,16 +206,15 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
                       {cf.is_required && <span className="text-destructive mr-1">*</span>}
                     </label>
                     {cf.field_type === "list" ? (
-                      <select
+                      <SearchableSelect
                         value={customFields[cf.field_name] ?? ""}
-                        onChange={(e) => setCustomFields(prev => ({ ...prev, [cf.field_name]: e.target.value }))}
-                        className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
-                      >
-                        <option value="">בחר...</option>
-                        {(Array.isArray(cf.field_options) ? cf.field_options : []).map((opt: any, i: number) => (
-                          <option key={i} value={String(opt)}>{String(opt)}</option>
-                        ))}
-                      </select>
+                        onChange={(v) => setCustomFields(prev => ({ ...prev, [cf.field_name]: v }))}
+                        options={(Array.isArray(cf.field_options) ? cf.field_options : []).map((opt: any) => ({
+                          value: String(opt),
+                          label: String(opt),
+                        }))}
+                        placeholder="בחר..."
+                      />
                     ) : (
                       <input
                         type={cf.field_type === "number" ? "number" : cf.field_type === "date" ? "date" : "text"}
