@@ -48,6 +48,10 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
   const [step, setStep] = useState<"choose" | "sign">("choose");
   const [attachment, setAttachment] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const attachmentPreview = attachment
+    ? { url: URL.createObjectURL(attachment), isImage: attachment.type.startsWith("image/") }
+    : null;
 
   const formRef = useRef<HTMLDivElement>(null);
   const issuerSigRef = useRef<SignaturePadHandle>(null);
