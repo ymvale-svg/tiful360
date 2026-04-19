@@ -80,8 +80,8 @@ export function PendingHandoverForms({ employeeId }: Props) {
 
   return (
     <>
-      <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 space-y-2">
-        <div className="flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-400">
+      <div className="bg-warning/10 border border-warning/30 rounded-xl p-3 space-y-2">
+        <div className="flex items-center gap-2 text-sm font-semibold text-warning">
           <FileSignature className="w-4 h-4" />
           טפסי קבלת ציוד לחתימה ({pending.length})
         </div>
