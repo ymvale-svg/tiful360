@@ -152,6 +152,116 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    if (req.method === "POST" && action === "invite") {
+      const body = await req.json();
+      const company_id: string | undefined = body.company_id;
+      const default_role: string = body.role || "employee";
+      const employees: Array<{ employee_id?: string; email: string; full_name?: string }> =
+        Array.isArray(body.employees) ? body.employees : [];
+
+      if (!company_id) {
+        return new Response(JSON.stringify({ error: "company_id required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      if (employees.length === 0) {
+        return new Response(JSON.stringify({ error: "employees array required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Verify caller has access to the company
+      if (!callerIsSuperAdmin) {
+        const { data: callerAccess } = await adminClient
+          .from("user_company_access")
+          .select("id")
+          .eq("user_id", caller.id)
+          .eq("company_id", company_id)
+          .limit(1);
+        if (!callerAccess || callerAccess.length === 0) {
+          return new Response(JSON.stringify({ error: "No access to this company" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+      }
+
+      // Lookup company name (used by invite email template)
+      const { data: companyRow } = await adminClient
+        .from("companies")
+        .select("name")
+        .eq("id", company_id)
+        .maybeSingle();
+      const companyName = companyRow?.name ?? "";
+
+      const origin = req.headers.get("origin") || req.headers.get("referer")?.replace(/\/$/, "") || "";
+      const redirectTo = origin ? `${origin}/` : undefined;
+
+      const results: Array<{ email: string; status: string; error?: string; employee_id?: string }> = [];
+
+      // Pre-fetch existing users to detect duplicates
+      const { data: { users: existingUsers } } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
+      const emailToUser = new Map<string, any>();
+      for (const u of existingUsers ?? []) {
+        if (u.email) emailToUser.set(u.email.toLowerCase(), u);
+      }
+
+      for (const emp of employees) {
+        const email = (emp.email || "").trim().toLowerCase();
+        if (!email) {
+          results.push({ email: emp.email || "", status: "skipped", error: "no email", employee_id: emp.employee_id });
+          continue;
+        }
+
+        try {
+          let userId: string | null = null;
+          const existing = emailToUser.get(email);
+
+          if (existing) {
+            userId = existing.id;
+            results.push({ email, status: "already_exists", employee_id: emp.employee_id });
+          } else {
+            const { data: invited, error: inviteErr } = await adminClient.auth.admin.inviteUserByEmail(email, {
+              data: { full_name: emp.full_name || null, company_name: companyName },
+              redirectTo,
+            });
+            if (inviteErr || !invited?.user) {
+              results.push({ email, status: "failed", error: inviteErr?.message || "invite failed", employee_id: emp.employee_id });
+              continue;
+            }
+            userId = invited.user.id;
+            results.push({ email, status: "invited", employee_id: emp.employee_id });
+          }
+
+          if (userId) {
+            // Grant company access
+            await adminClient.from("user_company_access").upsert(
+              { user_id: userId, company_id, role: default_role as any },
+              { onConflict: "user_id,company_id" },
+            );
+            // Grant app role
+            await adminClient.from("user_roles").upsert(
+              { user_id: userId, role: default_role as any },
+              { onConflict: "user_id,role" },
+            );
+            // Link employee record if provided
+            if (emp.employee_id) {
+              await adminClient
+                .from("employees")
+                .update({ linked_user_id: userId })
+                .eq("id", emp.employee_id)
+                .eq("company_id", company_id);
+            }
+          }
+        } catch (e: any) {
+          results.push({ email, status: "failed", error: e?.message || "unknown error", employee_id: emp.employee_id });
+        }
+      }
+
+      const summary = {
+        total: employees.length,
+        invited: results.filter((r) => r.status === "invited").length,
+        already_exists: results.filter((r) => r.status === "already_exists").length,
+        skipped: results.filter((r) => r.status === "skipped").length,
+        failed: results.filter((r) => r.status === "failed").length,
+      };
+
+      return new Response(JSON.stringify({ success: true, summary, results }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     if (req.method === "POST" && action === "ban") {
       const { user_id, ban } = await req.json();
       if (!user_id) {
