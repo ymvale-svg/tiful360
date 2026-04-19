@@ -272,7 +272,7 @@ export default function Employees() {
               </thead>
               <tbody>
                 {filtered.map((emp) => {
-                  const hasEmail = !!emp.email;
+                  const hasEmail = !!emailById.get(emp.id);
                   return (
                     <tr key={emp.id}>
                       <td>
@@ -306,7 +306,7 @@ export default function Employees() {
                                   size="icon"
                                   className="h-8 w-8"
                                   disabled={!hasEmail || inviteMutation.isPending}
-                                  onClick={() => handleSingleInvite(emp)}
+                                  onClick={() => handleSingleInvite(emp.id, emp.full_name)}
                                   aria-label="שלח הזמנה"
                                 >
                                   <Mail className="w-4 h-4" />
