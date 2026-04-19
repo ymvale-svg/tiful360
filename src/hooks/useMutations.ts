@@ -47,6 +47,8 @@ export function useCreateAsset() {
       custom_fields?: Record<string, any>;
       expiry_date?: string;
       notes?: string;
+      manufacturer_model?: string;
+      condition?: string;
     }) => {
       const { data, error } = await supabase
         .from("assets")
