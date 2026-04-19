@@ -171,6 +171,12 @@ export default function EmployeeDetail() {
       {/* Assets tab */}
       {activeTab === "assets" && (
         <div className="space-y-4 animate-fade-in">
+          <div className="flex justify-end">
+            <Button size="sm" className="gap-1.5" onClick={() => setPickerOpen(true)}>
+              <Plus className="w-4 h-4" />
+              שייך ציוד חדש
+            </Button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {(assets ?? []).map((asset) => (
               <div key={asset.id} className="bg-card rounded-xl border border-border/50 shadow-card p-5 hover:shadow-md transition-shadow">
@@ -195,6 +201,23 @@ export default function EmployeeDetail() {
                     <RefreshCw className="w-3 h-3" />
                     העבר בעלות
                   </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 text-xs"
+                    onClick={async () => {
+                      if (!confirm(`לבטל את שיוך הפריט "${asset.asset_name}"?`)) return;
+                      try {
+                        await unassignAsset.mutateAsync(asset.id);
+                        toast({ title: "השיוך בוטל" });
+                      } catch (err: any) {
+                        toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+                      }
+                    }}
+                  >
+                    <Unlink className="w-3 h-3" />
+                    בטל שיוך
+                  </Button>
                 </div>
               </div>
             ))}
@@ -209,10 +232,16 @@ export default function EmployeeDetail() {
       {/* Personal info tab */}
       {activeTab === "personal" && (
         <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 animate-fade-in">
-          <h2 className="text-base font-semibold mb-4 flex items-center gap-2">
-            <User className="w-4 h-4 text-primary" />
-            פרטים אישיים
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-semibold flex items-center gap-2">
+              <User className="w-4 h-4 text-primary" />
+              פרטים אישיים
+            </h2>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setEditEmployeeOpen(true)}>
+              <Pencil className="w-4 h-4" />
+              ערוך
+            </Button>
+          </div>
           <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
             <InfoRow icon={User} label="שם מלא" value={employee.full_name} />
             <InfoRow icon={IdCard} label="מספר עובד" value={employee.employee_code} mono />
@@ -246,37 +275,80 @@ export default function EmployeeDetail() {
 
       {/* Forms tab */}
       {activeTab === "forms" && (
-        <div className="animate-fade-in">
+        <div className="space-y-4 animate-fade-in">
+          <div className="flex justify-end">
+            <Button size="sm" className="gap-1.5" onClick={() => setUploadFormOpen(true)}>
+              <Upload className="w-4 h-4" />
+              העלה טופס חתום
+            </Button>
+          </div>
           <HandoverFormsList employeeId={id!} />
         </div>
       )}
 
       {/* Digital access tab */}
       {activeTab === "digital" && (
-        <div className="bg-card rounded-xl border border-border/50 shadow-card overflow-hidden animate-fade-in">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>סוג גישה</th>
-                <th>משאב</th>
-                <th>רמת הרשאה</th>
-                <th>סטטוס</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(digitalAccess ?? []).map((access) => (
-                <tr key={access.id}>
-                  <td>{access.access_type}</td>
-                  <td className="font-mono text-xs">{access.resource_path}</td>
-                  <td>{permissionLabels[access.permission_level] ?? access.permission_level}</td>
-                  <td><span className="status-badge status-active">{accessStatusLabels[access.status] ?? access.status}</span></td>
+        <div className="space-y-4 animate-fade-in">
+          <div className="flex justify-end">
+            <Button size="sm" className="gap-1.5" onClick={() => { setEditAccess(null); setAddAccessOpen(true); }}>
+              <Plus className="w-4 h-4" />
+              הוסף גישה
+            </Button>
+          </div>
+          <div className="bg-card rounded-xl border border-border/50 shadow-card overflow-hidden">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>סוג גישה</th>
+                  <th>משאב</th>
+                  <th>רמת הרשאה</th>
+                  <th>סטטוס</th>
+                  <th className="w-32">פעולות</th>
                 </tr>
-              ))}
-              {(!digitalAccess || digitalAccess.length === 0) && (
-                <tr><td colSpan={4} className="text-center py-8 text-muted-foreground">אין הרשאות</td></tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(digitalAccess ?? []).map((access) => (
+                  <tr key={access.id}>
+                    <td>{access.access_type}</td>
+                    <td className="font-mono text-xs">{access.resource_path}</td>
+                    <td>{permissionLabels[access.permission_level] ?? access.permission_level}</td>
+                    <td><span className="status-badge status-active">{accessStatusLabels[access.status] ?? access.status}</span></td>
+                    <td>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          onClick={() => { setEditAccess(access); setAddAccessOpen(true); }}
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-destructive"
+                          onClick={async () => {
+                            if (!confirm("למחוק את הגישה?")) return;
+                            try {
+                              await deleteAccess.mutateAsync({ id: access.id, employee_id: id! });
+                              toast({ title: "הגישה נמחקה" });
+                            } catch (err: any) {
+                              toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+                            }
+                          }}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {(!digitalAccess || digitalAccess.length === 0) && (
+                  <tr><td colSpan={5} className="text-center py-8 text-muted-foreground">אין הרשאות</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
