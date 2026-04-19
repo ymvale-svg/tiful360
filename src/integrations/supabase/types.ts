@@ -219,17 +219,70 @@ export type Database = {
           },
         ]
       }
+      asset_handover_forms: {
+        Row: {
+          asset_id: string
+          attached_document_url: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          delivery_method: string
+          employee_id: string
+          form_snapshot: Json
+          id: string
+          pdf_url: string | null
+          sign_token: string
+          signature_data: string | null
+          signed_at: string | null
+          status: string
+        }
+        Insert: {
+          asset_id: string
+          attached_document_url?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          delivery_method?: string
+          employee_id: string
+          form_snapshot?: Json
+          id?: string
+          pdf_url?: string | null
+          sign_token?: string
+          signature_data?: string | null
+          signed_at?: string | null
+          status?: string
+        }
+        Update: {
+          asset_id?: string
+          attached_document_url?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          delivery_method?: string
+          employee_id?: string
+          form_snapshot?: Json
+          id?: string
+          pdf_url?: string | null
+          sign_token?: string
+          signature_data?: string | null
+          signed_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       assets: {
         Row: {
           asset_code: string
           asset_name: string
           category_id: string
           company_id: string | null
+          condition: string
           created_at: string
           current_owner_id: string | null
           custom_fields: Json | null
           expiry_date: string | null
           id: string
+          manufacturer_model: string | null
           notes: string | null
           serial_number: string | null
           status: Database["public"]["Enums"]["asset_status"]
@@ -240,11 +293,13 @@ export type Database = {
           asset_name: string
           category_id: string
           company_id?: string | null
+          condition?: string
           created_at?: string
           current_owner_id?: string | null
           custom_fields?: Json | null
           expiry_date?: string | null
           id?: string
+          manufacturer_model?: string | null
           notes?: string | null
           serial_number?: string | null
           status?: Database["public"]["Enums"]["asset_status"]
@@ -255,11 +310,13 @@ export type Database = {
           asset_name?: string
           category_id?: string
           company_id?: string | null
+          condition?: string
           created_at?: string
           current_owner_id?: string | null
           custom_fields?: Json | null
           expiry_date?: string | null
           id?: string
+          manufacturer_model?: string | null
           notes?: string | null
           serial_number?: string | null
           status?: Database["public"]["Enums"]["asset_status"]
