@@ -18,6 +18,8 @@ interface Props {
   className?: string;
   error?: boolean;
   dir?: "rtl" | "ltr";
+  allowCreate?: boolean;
+  createLabel?: (q: string) => string;
 }
 
 export function SearchableSelect({
