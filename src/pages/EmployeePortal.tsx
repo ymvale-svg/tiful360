@@ -13,6 +13,10 @@ import { useCompany } from "@/hooks/useCompany";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { PendingHandoverForms } from "@/components/PendingHandoverForms";
+import { NewLeaveRequestDialog } from "@/components/NewLeaveRequestDialog";
+import { LeaveRequestsList } from "@/components/LeaveRequestsList";
+import { useMyLeaveRequests } from "@/hooks/useLeaveRequests";
+import { Plus } from "lucide-react";
 
 const portalTabs = [
   { id: "assets", label: "הציוד שלי", icon: Package },
@@ -25,6 +29,7 @@ const portalTabs = [
 
 export default function EmployeePortal() {
   const [activeTab, setActiveTab] = useState("assets");
+  const [newLeaveOpen, setNewLeaveOpen] = useState(false);
   const { user, signOut } = useAuth();
   const { data: profile } = useProfile();
   const { activeCompanyId } = useCompany();
@@ -181,6 +186,8 @@ export default function EmployeePortal() {
     },
     enabled: !!activeCompanyId,
   });
+
+  const { data: myLeaveRequests = [] } = useMyLeaveRequests(myEmployee?.id);
 
   // Helper: calculate hours between check_in and check_out
   const calcHours = (checkIn: string | null, checkOut: string | null) => {
@@ -451,6 +458,20 @@ export default function EmployeePortal() {
             </div>
 
             <div className="bg-card rounded-xl border border-border/50 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-sm flex items-center gap-2">
+                  <CalendarDays className="w-4 h-4 text-primary" />
+                  בקשות חופשה ומחלה
+                </h3>
+                <Button size="sm" className="gap-1 h-8 text-xs" onClick={() => setNewLeaveOpen(true)} disabled={!myEmployee}>
+                  <Plus className="w-3 h-3" />
+                  בקשה חדשה
+                </Button>
+              </div>
+              <LeaveRequestsList requests={myLeaveRequests} allowCancel />
+            </div>
+
+            <div className="bg-card rounded-xl border border-border/50 p-4">
               <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
                 <FileText className="w-4 h-4 text-primary" />
                 תלושי שכר
@@ -520,6 +541,15 @@ export default function EmployeePortal() {
 
         <div className="h-6" />
       </div>
+
+      {myEmployee && (
+        <NewLeaveRequestDialog
+          open={newLeaveOpen}
+          onOpenChange={setNewLeaveOpen}
+          employeeId={myEmployee.id}
+          managerId={myEmployee.direct_manager_id ?? null}
+        />
+      )}
     </div>
   );
 }
