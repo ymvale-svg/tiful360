@@ -56,7 +56,7 @@ export default function Login() {
     setGoogleLoading(true);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: `${window.location.origin}/select-company`,
+        redirect_uri: window.location.origin,
       });
 
       if (result.redirected) {
@@ -65,6 +65,8 @@ export default function Login() {
 
       const { error } = result;
       if (error) throw error;
+
+      navigate("/select-company");
     } catch (error: any) {
       toast({ title: "שגיאה בהתחברות עם Google", description: error.message, variant: "destructive" });
     } finally {
