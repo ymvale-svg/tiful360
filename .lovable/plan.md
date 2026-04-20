@@ -1,75 +1,49 @@
 
-המשתמש אישר את שני הפרטים. סיכום מעודכן ומשולב לכל המהלך (בקשות חופשה/מחלה + אימיילים אוטומטיים):
+המשתמש מבקש למפות את כל שגיאות הכניסה (login errors) במערכת ולתרגם אותן לעברית. כרגע ב-`Login.tsx` השגיאות מוצגות עם `error.message` הגולמי שמגיע מ-Supabase/Google באנגלית (למשל "Invalid login credentials", "Email not confirmed", "redirect_uri_mismatch" וכו').
 
-## 1. סכימה (מיגרציה)
+### המטרה
+להחליף את ההצגה הגולמית של הודעות שגיאה במיפוי לעברית ידידותי למשתמש, עבור 3 הזרימות בקובץ `src/pages/Login.tsx`:
+1. כניסה עם דוא"ל + סיסמה
+2. שכחתי סיסמה
+3. כניסה עם Google
 
-**טבלה חדשה `leave_requests`**: id, company_id, employee_id, manager_id (snapshot), request_type (`vacation`/`sick`/`personal`/`other`), start_date, end_date, total_days, reason, attachment_url, status (`pending`/`approved`/`rejected`/`cancelled`), manager_note, reviewed_by, reviewed_at, signed_pdf_url, manager_notified_at, payroll_notified_at, created_at, updated_at.
+### גישה
+ליצור פונקציית עזר חדשה `src/lib/authErrors.ts` עם מילון מיפוי קודי/הודעות שגיאה נפוצות מ-Supabase Auth ו-Google OAuth ל-טקסט בעברית. הפונקציה תקבל את אובייקט השגיאה ותחזיר מחרוזת בעברית. אם השגיאה לא מוכרת — תוחזר הודעת ברירת מחדל גנרית בעברית ("אירעה שגיאה. נסה שוב.").
 
-**הרחבת `companies`**: הוספת `payroll_emails TEXT` (כתובת אחת או כמה מופרדות בפסיק).
+### מיפוי השגיאות המתוכנן
 
-**Buckets פרטיים חדשים**: `leave-attachments` (אישורי מחלה), `leave-documents` (PDF טפסים חתומים).
-
-**RLS**:
-- עובד: SELECT/INSERT/UPDATE(cancel) רק על שלו (`linked_user_id`).
-- מנהל ישיר: SELECT/UPDATE על כפיפים (`employees.direct_manager_id`).
-- Admin/IT של החברה: גישה מלאה.
-- Storage policies מקבילות לפי `employee_id` בנתיב.
-
-## 2. תשתית אימייל
-
-- שימוש בתשתית הקיימת (`process-email-queue` + `email-assets`).
-- בדיקת דומיין מוגדר → אם לא, פתיחת זרימת הגדרת דומיין.
-- Edge function חדשה `send-leave-request-email` → מקבלת `request_id` + `event` (`submitted`/`approved`/`rejected`), מחוללת PDF במקרה אישור, מעלה ל-`leave-documents`, ומכניסה לתור.
-
-**תבניות (HTML, RTL, ממותג)**:
-| תבנית | נמען | טריגר |
-|---|---|---|
-| `leave_submitted_to_manager` | מנהל ישיר | חופשה/אישי/אחר → "פתח לאישור" |
-| `leave_sick_notice_to_manager` | מנהל ישיר | מחלה (אינפורמטיבי, מצורף אישור אם הועלה) |
-| `leave_approved_to_payroll` | `companies.payroll_emails` (מפוצל בפסיק) | אישור — PDF חתום + אישור מחלה כ-attachments |
-| `leave_approved_to_employee` | העובד | אישור |
-| `leave_rejected_to_employee` | העובד | דחייה (כולל סיבה) |
-
-## 3. UI — צד עובד (`EmployeePortal.tsx`)
-
-קלף "בקשות חופשה ומחלה":
-- כפתור "בקשה חדשה" → `NewLeaveRequestDialog`: סוג, תאריכים (חישוב ימים אוטו'), סיבה, העלאת קובץ.
-- **מחלה ללא קובץ**: לא חוסם — מציג AlertDialog לאישור: "זיכוי הימים מותנה בהמצאת אישור מחלה לימים שהוצהרו. להמשיך?". רק לאחר אישור — שליחה.
-- רשימת בקשות עם סטטוס + תגובת מנהל + כפתור ביטול ל-pending.
-
-## 4. UI — צד מנהל
-
-**א. עמוד חדש `LeaveRequests.tsx`** (סיידבר עם badge ל-pending) — רשימת בקשות לאישור, פילטר סטטוס, צפייה בקובץ, כפתורי אשר/דחה + הערה.
-
-**ב. טאב חדש בתיק העובד** — היסטוריית כל הבקשות + הורדת קבצים + הורדת PDF חתום.
-
-## 5. UI — מסך הגדרות חברה
-
-שדה "כתובות אימייל מחלקת שכר" עם helper text: "ניתן להזין מספר כתובות מופרדות בפסיק". ולידציה לכל כתובת.
-
-## 6. Hooks
-
-`useMyLeaveRequests`, `useTeamLeaveRequests`, `useEmployeeLeaveRequests(id)`, `useCreateLeaveRequest` (כולל upload), `useReviewLeaveRequest` (מפעיל edge function), `useCancelLeaveRequest`.
-
-## 7. קבצים
-
-| קובץ | פעולה |
+**שגיאות סיסמה/דוא"ל (Supabase Auth):**
+| הודעה באנגלית | תרגום לעברית |
 |---|---|
-| מיגרציה SQL | חדש — טבלה, enums, `companies.payroll_emails`, buckets + policies |
-| `supabase/functions/send-leave-request-email/index.ts` | חדש |
-| `src/lib/generateLeaveRequestPdf.ts` | חדש |
-| `src/components/NewLeaveRequestDialog.tsx` | חדש (כולל AlertDialog למחלה ללא קובץ) |
-| `src/components/LeaveRequestsList.tsx` | חדש |
-| `src/components/ReviewLeaveRequestDialog.tsx` | חדש |
-| `src/pages/LeaveRequests.tsx` | חדש |
-| `src/pages/EmployeePortal.tsx` | עריכה |
-| `src/pages/EmployeeDetail.tsx` | עריכה — טאב חדש |
-| `src/pages/Settings.tsx` | עריכה — שדה payroll_emails |
-| `src/components/AppSidebar.tsx` | עריכה — פריט + badge |
-| `src/App.tsx` | עריכה — route |
-| `src/hooks/useMutations.ts` + `useData.ts` | עריכה |
+| Invalid login credentials | פרטי הכניסה שגויים. בדוק את הדוא"ל והסיסמה |
+| Email not confirmed | הדוא"ל טרם אומת. בדוק את תיבת הדואר שלך |
+| User not found | משתמש לא נמצא במערכת |
+| Invalid email | כתובת דוא"ל לא תקינה |
+| Password should be at least 6 characters | הסיסמה חייבת להכיל לפחות 6 תווים |
+| Email rate limit exceeded | יותר מדי ניסיונות. נסה שוב בעוד מספר דקות |
+| Too many requests | יותר מדי בקשות. נסה שוב מאוחר יותר |
+| User already registered | משתמש זה כבר רשום במערכת |
+| Network request failed | בעיית תקשורת. בדוק את חיבור האינטרנט |
 
-## טיפול בקצוות
-- מנהל ללא אימייל ב-`employees.email` → toast אזהרה למבצע + רישום ב-`activity_log`, הבקשה נשמרת.
-- אין `payroll_emails` בעת אישור → toast "האישור נשמר; יש להגדיר כתובות שכר בהגדרות החברה". פעולה לא נחסמת.
-- כשלון שליחת אימייל לא חוסם DB.
+**שגיאות איפוס סיסמה:**
+| הודעה באנגלית | תרגום לעברית |
+|---|---|
+| For security purposes, you can only request this once every 60 seconds | מטעמי אבטחה ניתן לבקש איפוס פעם ב-60 שניות בלבד |
+| Unable to validate email address | כתובת הדוא"ל לא תקינה |
+
+**שגיאות Google OAuth:**
+| הודעה / קוד | תרגום לעברית |
+|---|---|
+| redirect_uri_mismatch | בעיה בהגדרות הכניסה עם Google. פנה למנהל המערכת |
+| access_denied | הכניסה עם Google בוטלה |
+| popup_closed_by_user | חלון הכניסה נסגר לפני השלמת התהליך |
+| OAuth provider not enabled | הכניסה עם Google אינה זמינה כרגע |
+| invalid_client | בעיה בהגדרות הלקוח של Google. פנה למנהל המערכת |
+| Network error / fetch failed | בעיית תקשורת בכניסה עם Google |
+
+### שינויים בקבצים
+1. **קובץ חדש** `src/lib/authErrors.ts` — פונקציה `translateAuthError(error)` עם המילון
+2. **עריכה** `src/pages/Login.tsx` — בכל 3 ה-`catch` להחליף `description: error.message` ב-`description: translateAuthError(error)`
+
+### הערה חשובה
+התרגום לא יפתור את שגיאת ה-`redirect_uri_mismatch` שאתה מתמודד איתה ב-Google OAuth — זו בעיית הגדרה שדורשת תיקון נפרד (מעבר ל-Managed OAuth או הוספת ה-callback URL הנכון של Lovable ב-Google Cloud Console). התרגום רק יציג את השגיאה בעברית במקום באנגלית.
