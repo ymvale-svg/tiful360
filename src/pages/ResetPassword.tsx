@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Building2, Lock, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { translateAuthError } from "@/lib/authErrors";
 
 export default function ResetPassword() {
   const [password, setPassword] = useState("");
@@ -46,7 +47,7 @@ export default function ResetPassword() {
       toast({ title: "הסיסמה עודכנה בהצלחה", description: "כעת תוכל להתחבר עם האימייל והסיסמה החדשה" });
       navigate("/login");
     } catch (error: any) {
-      toast({ title: "שגיאה", description: error.message, variant: "destructive" });
+      toast({ title: "שגיאה", description: translateAuthError(error), variant: "destructive" });
     } finally {
       setLoading(false);
     }
