@@ -6,6 +6,7 @@ import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import logoImg from "@/assets/logo.png";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { translateAuthError } from "@/lib/authErrors";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -25,7 +26,7 @@ export default function Login() {
       if (error) throw error;
       navigate("/select-company");
     } catch (error: any) {
-      toast({ title: "שגיאה", description: error.message, variant: "destructive" });
+      toast({ title: "שגיאה", description: translateAuthError(error), variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -46,7 +47,7 @@ export default function Login() {
       toast({ title: "נשלח בהצלחה", description: "קישור לאיפוס סיסמה נשלח לכתובת הדוא\"ל שלך" });
       setForgotMode(false);
     } catch (error: any) {
-      toast({ title: "שגיאה", description: error.message, variant: "destructive" });
+      toast({ title: "שגיאה", description: translateAuthError(error), variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -68,7 +69,7 @@ export default function Login() {
 
       navigate("/select-company");
     } catch (error: any) {
-      toast({ title: "שגיאה בהתחברות עם Google", description: error.message, variant: "destructive" });
+      toast({ title: "שגיאה בהתחברות עם Google", description: translateAuthError(error), variant: "destructive" });
     } finally {
       setGoogleLoading(false);
     }
