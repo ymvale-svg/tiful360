@@ -135,14 +135,19 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
     }
   };
 
-  // ---- Action: Sign in front of manager ----
+  // ---- Action: Sign in front of manager / Save attached ----
   const handleManagerSign = async () => {
-    if (!asset || !employee || !activeCompanyId || !formRef.current) return;
+    if (!asset || !employee || !activeCompanyId) return;
     const issuer = issuerSigRef.current?.getDataUrl();
     const receiver = receiverSigRef.current?.getDataUrl();
     const hasUploaded = !!attachment;
     if (!receiver && !hasUploaded) {
       toast({ title: "חסרה חתימה או מסמך חתום מצורף", variant: "destructive" });
+      return;
+    }
+    // When generating PDF from the form view, we need formRef to be mounted
+    if (!hasUploaded && !formRef.current) {
+      toast({ title: "שגיאה פנימית — לא נטען טופס לחתימה", variant: "destructive" });
       return;
     }
     setBusy(true);
@@ -164,10 +169,13 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
       }
 
       // If a signed PDF was uploaded — use it as the canonical PDF; otherwise generate one from the form.
-      let pdfUrl: string;
+      let pdfUrl: string | null = null;
       if (attachedUrl && attachment?.type === "application/pdf") {
         pdfUrl = attachedUrl;
-      } else {
+      } else if (attachedUrl) {
+        // Image attachment — keep it as the attached doc; no generated PDF needed
+        pdfUrl = null;
+      } else if (formRef.current) {
         const pdfPath = `${activeCompanyId}/${employee.id}/${asset.id}-${Date.now()}.pdf`;
         pdfUrl = await generateAndUploadHandoverPdf(formRef.current, pdfPath);
       }
@@ -176,9 +184,9 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
         company_id: activeCompanyId,
         asset_id: asset.id,
         employee_id: employee.id,
-        delivery_method: "manager_present",
+        delivery_method: hasUploaded && !receiver ? "manual_upload" : "manager_present",
         status: "signed",
-        form_snapshot: { ...formData!, issuer_signature: issuer, receiver_signature: receiver } as any,
+        form_snapshot: { ...(formData ?? {}), issuer_signature: issuer, receiver_signature: receiver } as any,
         signature_data: receiver,
         attached_document_url: attachedUrl,
         pdf_url: pdfUrl,
