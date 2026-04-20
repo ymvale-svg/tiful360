@@ -22,6 +22,7 @@ import Companies from "@/pages/Companies";
 import SelectCompany from "@/pages/SelectCompany";
 import ResetPassword from "@/pages/ResetPassword";
 import SignHandover from "@/pages/SignHandover";
+import LeaveRequests from "@/pages/LeaveRequests";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -54,6 +55,7 @@ const App = () => (
                 <Route path="/alerts" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin"]}><Alerts /></ProtectedRoute>} />
                 <Route path="/user-management" element={<ProtectedRoute requiredRoles={["admin", "super_admin"]}><UserManagement /></ProtectedRoute>} />
                 <Route path="/companies" element={<ProtectedRoute requiredRoles={["super_admin"]}><Companies /></ProtectedRoute>} />
+                <Route path="/leave-requests" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin"]}><LeaveRequests /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute requiredRoles={["admin", "super_admin"]}><Settings /></ProtectedRoute>} />
               </Route>
               <Route path="*" element={<NotFound />} />

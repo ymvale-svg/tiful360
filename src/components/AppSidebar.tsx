@@ -13,6 +13,7 @@ import {
   Boxes,
   LogOut,
   Crown,
+  CalendarDays,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -34,6 +35,7 @@ const mainNav: NavItem[] = [
   { label: "נכסים וציוד", icon: Package, path: "/assets", roles: ["admin", "it_manager", "super_admin"] },
   { label: "קטגוריות ציוד", icon: Boxes, path: "/categories", roles: ["admin", "super_admin"] },
   { label: "משימות IT", icon: Shield, path: "/it-tickets", roles: ["admin", "it_manager", "super_admin"] },
+  { label: "בקשות חופשה ומחלה", icon: CalendarDays, path: "/leave-requests", roles: ["admin", "it_manager", "super_admin"] },
   { label: "התראות", icon: Bell, path: "/alerts", roles: ["admin", "it_manager", "super_admin"] },
   { label: "ניהול משתמשים", icon: Users, path: "/user-management", roles: ["admin", "super_admin"] },
 ];

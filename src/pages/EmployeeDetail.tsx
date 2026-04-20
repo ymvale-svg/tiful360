@@ -2,17 +2,19 @@ import { useParams, Link } from "react-router-dom";
 import {
   ArrowRight, Shield, Key, Clock, AlertTriangle, UserMinus,
   FileText, RefreshCw, Package, User, Mail, Phone, Calendar, Building2, IdCard,
-  Pencil, Plus, Trash2, Upload, Unlink,
+  Pencil, Plus, Trash2, Upload, Unlink, CalendarDays,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useEmployee, useEmployeeAssets, useEmployeeDigitalAccess, useActivityLog, useAssets } from "@/hooks/useData";
 import { useDeleteDigitalAccess, useUnassignAsset } from "@/hooks/useMutations";
+import { useEmployeeLeaveRequests } from "@/hooks/useLeaveRequests";
 import { useToast } from "@/hooks/use-toast";
 import { OffboardingDialog } from "@/components/OffboardingDialog";
 import { TransferAssetDialog } from "@/components/TransferAssetDialog";
 import { HandoverFormsList } from "@/components/HandoverFormsList";
+import { LeaveRequestsList } from "@/components/LeaveRequestsList";
 import { EditEmployeeDialog } from "@/components/EditEmployeeDialog";
 import { AddDigitalAccessDialog } from "@/components/AddDigitalAccessDialog";
 import { UploadSignedFormDialog } from "@/components/UploadSignedFormDialog";
@@ -25,6 +27,7 @@ const tabs = [
   { id: "assets", label: "ציוד משויך", icon: Package },
   { id: "digital", label: "גישות דיגיטליות", icon: Key },
   { id: "forms", label: "טפסים חתומים", icon: FileText },
+  { id: "leave", label: "חופשה ומחלה", icon: CalendarDays },
   { id: "history", label: "היסטוריית פעילות", icon: Clock },
 ];
 
@@ -76,6 +79,7 @@ export default function EmployeeDetail() {
   const { data: activityLog } = useActivityLog(id);
   const deleteAccess = useDeleteDigitalAccess();
   const unassignAsset = useUnassignAsset();
+  const { data: leaveRequests } = useEmployeeLeaveRequests(id!);
 
   const stockAssets = (allAssets ?? []).filter((a: any) => !a.current_owner_id);
   const pickedAsset = stockAssets.find((a: any) => a.id === pickAssetId) ?? null;
@@ -283,6 +287,17 @@ export default function EmployeeDetail() {
             </Button>
           </div>
           <HandoverFormsList employeeId={id!} />
+        </div>
+      )}
+
+      {/* Leave tab */}
+      {activeTab === "leave" && (
+        <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 animate-fade-in">
+          <h2 className="text-base font-semibold flex items-center gap-2 mb-4">
+            <CalendarDays className="w-4 h-4 text-primary" />
+            בקשות חופשה ומחלה
+          </h2>
+          <LeaveRequestsList requests={leaveRequests ?? []} />
         </div>
       )}
 
