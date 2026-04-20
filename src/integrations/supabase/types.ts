@@ -469,6 +469,7 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
+          payroll_emails: string | null
           updated_at: string
         }
         Insert: {
@@ -477,6 +478,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name: string
+          payroll_emails?: string | null
           updated_at?: string
         }
         Update: {
@@ -485,6 +487,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name?: string
+          payroll_emails?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -839,6 +842,108 @@ export type Database = {
           },
         ]
       }
+      leave_requests: {
+        Row: {
+          attachment_url: string | null
+          company_id: string
+          created_at: string
+          employee_id: string
+          end_date: string
+          id: string
+          manager_id: string | null
+          manager_note: string | null
+          manager_notified_at: string | null
+          payroll_notified_at: string | null
+          reason: string | null
+          request_type: Database["public"]["Enums"]["leave_request_type"]
+          reviewed_at: string | null
+          reviewed_by: string | null
+          signed_pdf_url: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["leave_request_status"]
+          total_days: number
+          updated_at: string
+        }
+        Insert: {
+          attachment_url?: string | null
+          company_id: string
+          created_at?: string
+          employee_id: string
+          end_date: string
+          id?: string
+          manager_id?: string | null
+          manager_note?: string | null
+          manager_notified_at?: string | null
+          payroll_notified_at?: string | null
+          reason?: string | null
+          request_type: Database["public"]["Enums"]["leave_request_type"]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          signed_pdf_url?: string | null
+          start_date: string
+          status?: Database["public"]["Enums"]["leave_request_status"]
+          total_days?: number
+          updated_at?: string
+        }
+        Update: {
+          attachment_url?: string | null
+          company_id?: string
+          created_at?: string
+          employee_id?: string
+          end_date?: string
+          id?: string
+          manager_id?: string | null
+          manager_note?: string | null
+          manager_notified_at?: string | null
+          payroll_notified_at?: string | null
+          reason?: string | null
+          request_type?: Database["public"]["Enums"]["leave_request_type"]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          signed_pdf_url?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["leave_request_status"]
+          total_days?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "employees_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       portal_contacts: {
         Row: {
           company_id: string | null
@@ -1124,6 +1229,14 @@ export type Database = {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
       }
+      is_direct_manager_of: {
+        Args: { _employee_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_my_employee_record: {
+        Args: { _employee_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       move_to_dlq: {
         Args: {
@@ -1151,6 +1264,8 @@ export type Database = {
       asset_status: "in_use" | "in_stock" | "in_repair" | "lost"
       employee_status: "active" | "onboarding" | "leaving" | "inactive"
       field_type: "text" | "number" | "date" | "list"
+      leave_request_status: "pending" | "approved" | "rejected" | "cancelled"
+      leave_request_type: "vacation" | "sick" | "personal" | "other"
       permission_level: "read" | "write" | "admin"
       system_role: "admin" | "it" | "employee"
       ticket_priority: "critical" | "high" | "medium" | "low"
@@ -1289,6 +1404,8 @@ export const Constants = {
       asset_status: ["in_use", "in_stock", "in_repair", "lost"],
       employee_status: ["active", "onboarding", "leaving", "inactive"],
       field_type: ["text", "number", "date", "list"],
+      leave_request_status: ["pending", "approved", "rejected", "cancelled"],
+      leave_request_type: ["vacation", "sick", "personal", "other"],
       permission_level: ["read", "write", "admin"],
       system_role: ["admin", "it", "employee"],
       ticket_priority: ["critical", "high", "medium", "low"],
