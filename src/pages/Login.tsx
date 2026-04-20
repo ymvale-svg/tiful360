@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import logoImg from "@/assets/logo.png";
@@ -54,12 +55,16 @@ export default function Login() {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: `${window.location.origin}/select-company` },
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: `${window.location.origin}/select-company`,
       });
+
+      if (result.redirected) {
+        return;
+      }
+
+      const { error } = result;
       if (error) throw error;
-      // browser will redirect to Google
     } catch (error: any) {
       toast({ title: "שגיאה בהתחברות עם Google", description: error.message, variant: "destructive" });
     } finally {
