@@ -23,12 +23,14 @@ interface OffboardingDialogProps {
     department: string;
     id_number: string;
     start_date: string;
+    company_id?: string | null;
   };
   assets: Array<{
     id: string;
     asset_name: string;
     asset_code: string;
     serial_number: string | null;
+    manufacturer_model?: string | null;
     asset_categories?: { category_name: string } | null;
   }>;
   digitalAccess: Array<{
