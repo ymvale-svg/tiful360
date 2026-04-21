@@ -41,6 +41,7 @@ export interface Tax101FormData {
   marital_status: "single" | "married" | "divorced" | "widowed" | "";
   is_israeli_resident: boolean;
   health_fund_member: boolean;
+  health_fund_name: string;
   spouse_name: string;
   spouse_id: string;
   spouse_works: boolean;
@@ -80,6 +81,7 @@ const emptyForm = (employee?: any): Tax101FormData => {
     marital_status: employee?.marital_status ?? "",
     is_israeli_resident: employee?.is_israeli_resident ?? true,
     health_fund_member: employee?.health_fund_member ?? true,
+    health_fund_name: employee?.health_fund_name ?? "",
     spouse_name: "",
     spouse_id: "",
     spouse_works: false,
@@ -179,6 +181,7 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
     if (step === 1) {
       if (!data.city || !data.street) return "יש למלא כתובת מלאה";
       if (!data.marital_status) return "יש לבחור מצב משפחתי";
+      if (data.health_fund_member && !data.health_fund_name) return "יש לבחור שם קופת חולים";
     }
     return null;
   };
@@ -358,10 +361,46 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                     <Checkbox checked={data.is_israeli_resident} onCheckedChange={(v) => update("is_israeli_resident", !!v)} />
                     תושב/ת ישראל
                   </label>
-                  <label className="flex items-center gap-2 text-sm">
-                    <Checkbox checked={data.health_fund_member} onCheckedChange={(v) => update("health_fund_member", !!v)} />
-                    חבר/ה בקופ"ח
+                </div>
+              </div>
+
+              <div className="space-y-2 p-3 bg-muted/30 rounded-lg">
+                <Label>חבר/ה בקופת חולים</Label>
+                <div className="flex items-center gap-6">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="radio"
+                      name="health_fund_member"
+                      checked={!data.health_fund_member}
+                      onChange={() => {
+                        update("health_fund_member", false);
+                        update("health_fund_name", "");
+                      }}
+                    />
+                    לא
                   </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="radio"
+                      name="health_fund_member"
+                      checked={data.health_fund_member}
+                      onChange={() => update("health_fund_member", true)}
+                    />
+                    כן, שם הקופה:
+                  </label>
+                  {data.health_fund_member && (
+                    <select
+                      className="h-10 px-3 rounded-md bg-background border border-input text-sm"
+                      value={data.health_fund_name}
+                      onChange={(e) => update("health_fund_name", e.target.value)}
+                    >
+                      <option value="">בחר קופה...</option>
+                      <option value="כללית">כללית</option>
+                      <option value="מכבי">מכבי</option>
+                      <option value="מאוחדת">מאוחדת</option>
+                      <option value="לאומית">לאומית</option>
+                    </select>
+                  )}
                 </div>
               </div>
 
@@ -574,7 +613,7 @@ const Tax101Preview = forwardRef<HTMLDivElement, { data: Tax101FormData; taxYear
         {data.po_box && fieldRow("ת.ד.", data.po_box)}
         {fieldRow("מצב משפחתי", { single: "רווק/ה", married: "נשוי/אה", divorced: "גרוש/ה", widowed: "אלמן/ה" }[data.marital_status] || "—")}
         {fieldRow("תושב ישראל", data.is_israeli_resident ? "כן" : "לא")}
-        {fieldRow("חבר קופ\"ח", data.health_fund_member ? "כן" : "לא")}
+        {fieldRow("חבר קופ\"ח", data.health_fund_member ? `כן — ${data.health_fund_name || "—"}` : "לא")}
         {data.marital_status === "married" && (
           <>
             {fieldRow("שם בן/בת זוג", data.spouse_name)}
