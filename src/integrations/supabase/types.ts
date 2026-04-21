@@ -642,6 +642,8 @@ export type Database = {
       }
       employees: {
         Row: {
+          balances_source: string | null
+          balances_updated_at: string | null
           birth_date: string | null
           company_id: string | null
           created_at: string
@@ -654,13 +656,18 @@ export type Database = {
           id: string
           id_number: string
           linked_user_id: string | null
+          michpal_code: string | null
           phone: string | null
           role: string
+          sick_balance: number
           start_date: string
           status: Database["public"]["Enums"]["employee_status"]
           updated_at: string
+          vacation_balance: number
         }
         Insert: {
+          balances_source?: string | null
+          balances_updated_at?: string | null
           birth_date?: string | null
           company_id?: string | null
           created_at?: string
@@ -673,13 +680,18 @@ export type Database = {
           id?: string
           id_number: string
           linked_user_id?: string | null
+          michpal_code?: string | null
           phone?: string | null
           role: string
+          sick_balance?: number
           start_date?: string
           status?: Database["public"]["Enums"]["employee_status"]
           updated_at?: string
+          vacation_balance?: number
         }
         Update: {
+          balances_source?: string | null
+          balances_updated_at?: string | null
           birth_date?: string | null
           company_id?: string | null
           created_at?: string
@@ -692,11 +704,14 @@ export type Database = {
           id?: string
           id_number?: string
           linked_user_id?: string | null
+          michpal_code?: string | null
           phone?: string | null
           role?: string
+          sick_balance?: number
           start_date?: string
           status?: Database["public"]["Enums"]["employee_status"]
           updated_at?: string
+          vacation_balance?: number
         }
         Relationships: [
           {
@@ -997,6 +1012,157 @@ export type Database = {
           status?: string
         }
         Relationships: []
+      }
+      payslip_batches: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          failed_count: number
+          id: string
+          matched_count: number
+          notes: string | null
+          original_filename: string | null
+          period_month: number
+          period_year: number
+          status: string
+          total_pages: number
+          unmatched_count: number
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          failed_count?: number
+          id?: string
+          matched_count?: number
+          notes?: string | null
+          original_filename?: string | null
+          period_month: number
+          period_year: number
+          status?: string
+          total_pages?: number
+          unmatched_count?: number
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          failed_count?: number
+          id?: string
+          matched_count?: number
+          notes?: string | null
+          original_filename?: string | null
+          period_month?: number
+          period_year?: number
+          status?: string
+          total_pages?: number
+          unmatched_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payslip_batches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payslips: {
+        Row: {
+          batch_id: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          employee_id: string | null
+          employee_name_detected: string | null
+          extraction_notes: string | null
+          extraction_status: string
+          gross_salary: number | null
+          id: string
+          michpal_code_detected: string | null
+          net_salary: number | null
+          pdf_url: string | null
+          period_month: number
+          period_year: number
+          sick_balance: number | null
+          vacation_balance: number | null
+          work_days: number | null
+          work_hours: number | null
+        }
+        Insert: {
+          batch_id?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string | null
+          employee_name_detected?: string | null
+          extraction_notes?: string | null
+          extraction_status?: string
+          gross_salary?: number | null
+          id?: string
+          michpal_code_detected?: string | null
+          net_salary?: number | null
+          pdf_url?: string | null
+          period_month: number
+          period_year: number
+          sick_balance?: number | null
+          vacation_balance?: number | null
+          work_days?: number | null
+          work_hours?: number | null
+        }
+        Update: {
+          batch_id?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string | null
+          employee_name_detected?: string | null
+          extraction_notes?: string | null
+          extraction_status?: string
+          gross_salary?: number | null
+          id?: string
+          michpal_code_detected?: string | null
+          net_salary?: number | null
+          pdf_url?: string | null
+          period_month?: number
+          period_year?: number
+          sick_balance?: number | null
+          vacation_balance?: number | null
+          work_days?: number | null
+          work_hours?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payslips_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "payslip_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payslips_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payslips_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payslips_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_public"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       portal_contacts: {
         Row: {

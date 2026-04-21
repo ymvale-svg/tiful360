@@ -31,6 +31,7 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
         birth_date: employee.birth_date ?? "",
         start_date: employee.start_date ?? "",
         status: employee.status ?? "active",
+        michpal_code: employee.michpal_code ?? "",
       });
     }
   }, [employee, open]);
@@ -43,6 +44,7 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
       if (!payload.birth_date) delete payload.birth_date;
       if (!payload.email) delete payload.email;
       if (!payload.phone) delete payload.phone;
+      if (payload.michpal_code === "") payload.michpal_code = null;
       await update.mutateAsync({ id: employee.id, ...payload });
       toast({ title: "פרטי העובד נשמרו" });
       onOpenChange(false);
@@ -93,6 +95,10 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
           <div>
             <Label>תאריך תחילת עבודה</Label>
             <Input type="date" value={form.start_date ?? ""} onChange={(e) => set("start_date", e.target.value)} />
+          </div>
+          <div>
+            <Label>מס׳ עובד במיכפל</Label>
+            <Input value={form.michpal_code ?? ""} onChange={(e) => set("michpal_code", e.target.value)} placeholder="0024" dir="ltr" />
           </div>
           <div>
             <Label>סטטוס</Label>

@@ -21,6 +21,8 @@ import { UploadSignedFormDialog } from "@/components/UploadSignedFormDialog";
 import { AssignAssetWithFormDialog } from "@/components/AssignAssetWithFormDialog";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { EmployeePayslipsTab } from "@/components/EmployeePayslipsTab";
+import { useAuth } from "@/hooks/useAuth";
 
 const tabs = [
   { id: "personal", label: "פרטים אישיים", icon: User },
@@ -28,6 +30,7 @@ const tabs = [
   { id: "digital", label: "גישות דיגיטליות", icon: Key },
   { id: "forms", label: "טפסים חתומים", icon: FileText },
   { id: "leave", label: "חופשה ומחלה", icon: CalendarDays },
+  { id: "payslips", label: "תלושי שכר", icon: FileText },
   { id: "history", label: "היסטוריית פעילות", icon: Clock },
 ];
 
@@ -80,6 +83,7 @@ export default function EmployeeDetail() {
   const deleteAccess = useDeleteDigitalAccess();
   const unassignAsset = useUnassignAsset();
   const { data: leaveRequests } = useEmployeeLeaveRequests(id!);
+  const { isAdmin } = useAuth();
 
   const stockAssets = (allAssets ?? []).filter((a: any) => !a.current_owner_id);
   const pickedAsset = stockAssets.find((a: any) => a.id === pickAssetId) ?? null;
@@ -299,6 +303,11 @@ export default function EmployeeDetail() {
           </h2>
           <LeaveRequestsList requests={leaveRequests ?? []} />
         </div>
+      )}
+
+      {/* Payslips tab */}
+      {activeTab === "payslips" && (
+        <EmployeePayslipsTab employeeId={id!} employee={employee} canSeeSalary={isAdmin} />
       )}
 
       {/* Digital access tab */}

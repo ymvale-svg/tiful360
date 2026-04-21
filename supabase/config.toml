@@ -5,3 +5,5 @@ project_id = "rhzmhiknbcipucfvgkok"
     verify_jwt = false
   [functions.process-email-queue]
     verify_jwt = true
+  [functions.split-payslips]
+    verify_jwt = true

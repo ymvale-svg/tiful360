@@ -50,6 +50,7 @@ export function AddEmployeeDialog({ open, onOpenChange }: Props) {
     birth_date: "",
     start_date: new Date().toISOString().split("T")[0],
     status: "active" as "active" | "onboarding",
+    michpal_code: "",
   });
   const [errors, setErrors] = useState<FieldErrors>({});
   const mutation = useCreateEmployee();
@@ -116,13 +117,15 @@ export function AddEmployeeDialog({ open, onOpenChange }: Props) {
         birth_date: form.birth_date || undefined,
         start_date: form.start_date,
         status: form.status,
-      });
+        michpal_code: form.michpal_code.trim() || undefined,
+      } as any);
       toast({ title: "עובד נוסף בהצלחה" });
       onOpenChange(false);
       setForm({
         employee_number: "", full_name: "", id_number: "", role: "",
         department: "", phone: "", email: "", birth_date: "",
         start_date: new Date().toISOString().split("T")[0], status: "active",
+        michpal_code: "",
       });
       setErrors({});
     } catch (err: any) {
@@ -222,6 +225,12 @@ export function AddEmployeeDialog({ open, onOpenChange }: Props) {
             <label className="text-sm font-medium mb-1 block">דוא"ל</label>
             <input value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="user@company.co.il" dir="ltr" className={inputCls("email")} />
             {errMsg("email")}
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-1 block">מס׳ עובד במיכפל</label>
+            <input value={form.michpal_code} onChange={(e) => set("michpal_code", e.target.value.replace(/\D/g, ""))} placeholder="0024" inputMode="numeric" dir="ltr" className={inputCls("michpal_code")} />
+            <p className="text-[11px] text-muted-foreground mt-1">משמש לזיהוי אוטומטי בהעלאת תלושי שכר חודשיים</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
