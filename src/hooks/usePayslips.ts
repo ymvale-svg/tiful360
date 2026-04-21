@@ -6,7 +6,7 @@ export interface Payslip {
   id: string;
   company_id: string;
   employee_id: string | null;
-  michpal_code_detected: string | null;
+  id_number_detected: string | null;
   employee_name_detected: string | null;
   period_year: number;
   period_month: number;
