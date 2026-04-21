@@ -5,7 +5,7 @@ import {
   Pencil, Plus, Trash2, Upload, Unlink, CalendarDays,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useEmployee, useEmployeeAssets, useEmployeeDigitalAccess, useActivityLog, useAssets } from "@/hooks/useData";
 import { useDeleteDigitalAccess, useUnassignAsset } from "@/hooks/useMutations";
@@ -24,7 +24,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { EmployeePayslipsTab } from "@/components/EmployeePayslipsTab";
 import { useAuth } from "@/hooks/useAuth";
 
-const tabs = [
+const allTabs = [
   { id: "personal", label: "פרטים אישיים", icon: User },
   { id: "assets", label: "ציוד משויך", icon: Package },
   { id: "digital", label: "גישות דיגיטליות", icon: Key },
@@ -83,7 +83,19 @@ export default function EmployeeDetail() {
   const deleteAccess = useDeleteDigitalAccess();
   const unassignAsset = useUnassignAsset();
   const { data: leaveRequests } = useEmployeeLeaveRequests(id!);
-  const { isAdmin } = useAuth();
+  const { isAdmin, isSuperAdmin, isPayroll, user } = useAuth();
+
+  const canSeePayslips =
+    isSuperAdmin || isAdmin || isPayroll ||
+    (!!employee?.linked_user_id && employee.linked_user_id === user?.id);
+
+  const tabs = canSeePayslips ? allTabs : allTabs.filter((t) => t.id !== "payslips");
+
+  useEffect(() => {
+    if (activeTab === "payslips" && !canSeePayslips) {
+      setActiveTab("personal");
+    }
+  }, [activeTab, canSeePayslips]);
 
   const stockAssets = (allAssets ?? []).filter((a: any) => !a.current_owner_id);
   const pickedAsset = stockAssets.find((a: any) => a.id === pickAssetId) ?? null;
