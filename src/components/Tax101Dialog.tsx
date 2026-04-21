@@ -247,6 +247,10 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
   const sigRef = useRef<SignaturePadHandle>(null);
   const previewRef = useRef<HTMLDivElement>(null);
 
+  // Live validation against the official 0101/130 requirements.
+  // Recomputed on every change so step 5 always shows the current state.
+  const validation = useMemo(() => validateTax101(data), [data]);
+
   // Load employer (sub_employer if set, else company) for the PDF
   useEffect(() => {
     if (!open || !employee) return;
