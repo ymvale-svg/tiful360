@@ -783,9 +783,24 @@ const Tax101Preview = forwardRef<HTMLDivElement, { data: Tax101FormData; taxYear
         {fieldRow("חבר קיבוץ/מושב שיתופי", { no: "לא", yes_transferred: "כן — הכנסות מועברות לקיבוץ", yes_not_transferred: "כן — הכנסות אינן מועברות לקיבוץ" }[data.kibbutz_member] || "—")}
         {data.marital_status === "married" && (
           <>
-            {fieldRow("שם בן/בת זוג", data.spouse_name)}
-            {fieldRow("ת\"ז בן/בת זוג", data.spouse_id)}
-            {fieldRow("בן/בת הזוג עובד/ת", data.spouse_works ? "כן" : "לא")}
+            {fieldRow("שם בן/בת זוג", `${data.spouse_last_name} ${data.spouse_first_name}`.trim())}
+            {fieldRow("ת\"ז בן/בת זוג", data.spouse_id || data.spouse_passport)}
+            {data.spouse_birth_date && fieldRow("תאריך לידה", data.spouse_birth_date)}
+            {data.spouse_aliyah_date && fieldRow("תאריך עליה", data.spouse_aliyah_date)}
+            {fieldRow(
+              "הכנסות בן/בת הזוג",
+              data.spouse_income_status === "no_income"
+                ? "אין הכנסה"
+                : data.spouse_income_status === "has_income"
+                ? `יש הכנסה מ: ${[
+                    data.spouse_income_sources.work && "עבודה",
+                    data.spouse_income_sources.pension && "קצבה",
+                    data.spouse_income_sources.business && "עסק",
+                  ].filter(Boolean).join(", ") || "—"}`
+                : data.spouse_income_status === "other_income"
+                ? "הכנסה אחרת"
+                : "—"
+            )}
           </>
         )}
 
