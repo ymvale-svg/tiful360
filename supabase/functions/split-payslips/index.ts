@@ -139,17 +139,19 @@ Deno.serve(async (req) => {
     const sourceDoc = await PDFDocument.load(binary, { ignoreEncryption: true });
     const totalPages = sourceDoc.getPageCount();
 
-    // Extract text per page using unpdf
+    // Extract text for ALL pages once (avoids O(n²) re-extraction)
     const pdfProxy = await getDocumentProxy(binary);
+    let allTexts: string[] = [];
+    try {
+      const { text } = await extractText(pdfProxy, { mergePages: false });
+      allTexts = Array.isArray(text) ? text : [text ?? ''];
+    } catch (e) {
+      console.error('extractText failed:', e);
+      allTexts = new Array(totalPages).fill('');
+    }
     const pages: PageInfo[] = [];
     for (let i = 0; i < totalPages; i++) {
-      let pageText = '';
-      try {
-        const { text } = await extractText(pdfProxy, { mergePages: false });
-        pageText = Array.isArray(text) ? (text[i] ?? '') : (text ?? '');
-      } catch (_e) {
-        pageText = '';
-      }
+      const pageText = allTexts[i] ?? '';
       const fields = extractFields(pageText);
       pages.push({ pageIndex: i, text: pageText, ...fields });
     }
