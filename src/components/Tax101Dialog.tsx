@@ -132,8 +132,41 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
   const [step, setStep] = useState(0);
   const [data, setData] = useState<Tax101FormData>(() => emptyForm(employee));
   const [submitting, setSubmitting] = useState(false);
+  const [employerInfo, setEmployerInfo] = useState<{ name: string; tax_id: string; address?: string } | null>(null);
   const sigRef = useRef<SignaturePadHandle>(null);
   const previewRef = useRef<HTMLDivElement>(null);
+
+  // Load employer (sub_employer if set, else company) for the PDF
+  useEffect(() => {
+    if (!open || !employee) return;
+    (async () => {
+      try {
+        if (employee.sub_employer_id) {
+          const { data: se } = await (supabase as any)
+            .from("sub_employers")
+            .select("legal_name, tax_id, address, city")
+            .eq("id", employee.sub_employer_id)
+            .maybeSingle();
+          if (se) {
+            setEmployerInfo({
+              name: se.legal_name,
+              tax_id: se.tax_id,
+              address: [se.address, se.city].filter(Boolean).join(", "),
+            });
+            return;
+          }
+        }
+        if (employee.company_id) {
+          const { data: c } = await supabase
+            .from("companies")
+            .select("name")
+            .eq("id", employee.company_id)
+            .maybeSingle();
+          if (c) setEmployerInfo({ name: c.name, tax_id: "", address: "" });
+        }
+      } catch { /* ignore */ }
+    })();
+  }, [open, employee]);
 
   const draftKey = `tax101-draft-${formId}`;
 
@@ -585,7 +618,7 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
               {/* Hidden preview for PDF generation */}
               <div className="border border-border rounded-lg overflow-hidden" style={{ maxHeight: 300, overflowY: "auto" }}>
                 <p className="text-[10px] text-muted-foreground p-2 bg-muted/40">תצוגה מקדימה</p>
-                <Tax101Preview ref={previewRef} data={data} taxYear={taxYear} signatureRef={sigRef} />
+                <Tax101Preview ref={previewRef} data={data} taxYear={taxYear} signatureRef={sigRef} employerInfo={employerInfo} />
               </div>
             </div>
           )}
