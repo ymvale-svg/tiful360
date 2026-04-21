@@ -381,6 +381,16 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
   const prev = () => setStep((s) => Math.max(s - 1, 0));
 
   const handleSubmit = async () => {
+    // Block on official-form validation errors before producing the PDF.
+    if (!validation.ok) {
+      const first = validation.errors[0];
+      toast({
+        title: "לא ניתן ליצא PDF — חסרים שדות חובה",
+        description: first ? `דוגמה: ${first.message}` : "יש לתקן את השגיאות המסומנות בתחתית המסך",
+        variant: "destructive",
+      });
+      return;
+    }
     const sig = sigRef.current?.getDataUrl();
     if (!sig) {
       toast({ title: "נדרשת חתימה", description: "אנא חתום על הטופס לפני השליחה", variant: "destructive" });
