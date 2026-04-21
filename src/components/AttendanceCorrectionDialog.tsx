@@ -52,7 +52,7 @@ export function AttendanceCorrectionDialog({ open, onClose, employeeId, managerI
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg" dir="rtl">
         <DialogHeader>
           <DialogTitle>בקשת תיקון שעון נוכחות</DialogTitle>
         </DialogHeader>
