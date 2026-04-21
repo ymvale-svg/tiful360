@@ -68,7 +68,7 @@ export function SearchableSelect({
         align="start"
         side="bottom"
         sideOffset={4}
-        avoidCollisions={false}
+        collisionPadding={8}
         dir={dir}
       >
         <div className="flex items-center border-b px-3" dir={dir}>
@@ -82,7 +82,7 @@ export function SearchableSelect({
             dir={dir}
           />
         </div>
-        <div className="max-h-[260px] overflow-y-auto p-1">
+        <div className="max-h-[min(260px,var(--radix-popover-content-available-height))] overflow-y-auto p-1">
           {filtered.length === 0 && !(allowCreate && query.trim()) ? (
             <div className="py-6 text-center text-sm text-muted-foreground">{emptyText}</div>
           ) : (
