@@ -262,6 +262,71 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ success: true, summary, results }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    if (req.method === "POST" && action === "invite-external") {
+      const body = await req.json();
+      const email: string = (body.email || "").trim().toLowerCase();
+      const full_name: string = (body.full_name || "").trim();
+      const role: string = body.role;
+      const company_ids: string[] = Array.isArray(body.company_ids) ? body.company_ids : [];
+
+      const allowedRoles = new Set(["admin", "it_manager", "payroll", "operations", "direct_manager"]);
+      if (!email || !role || !allowedRoles.has(role) || company_ids.length === 0) {
+        return new Response(JSON.stringify({ error: "email, valid role, and at least one company required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Verify caller has access to ALL requested companies (unless super_admin)
+      if (!callerIsSuperAdmin) {
+        const { data: callerAccess } = await adminClient
+          .from("user_company_access")
+          .select("company_id")
+          .eq("user_id", caller.id)
+          .in("company_id", company_ids);
+        const accessibleIds = new Set((callerAccess ?? []).map((a: any) => a.company_id));
+        if (company_ids.some((id) => !accessibleIds.has(id))) {
+          return new Response(JSON.stringify({ error: "No access to one or more companies" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+      }
+
+      const origin = req.headers.get("origin") || req.headers.get("referer")?.replace(/\/$/, "") || "";
+      const redirectTo = origin ? `${origin}/` : undefined;
+
+      // Check if user already exists
+      const { data: { users: existingUsers } } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
+      let userId: string | null = null;
+      let status = "invited";
+      const existing = (existingUsers ?? []).find((u: any) => u.email?.toLowerCase() === email);
+
+      if (existing) {
+        userId = existing.id;
+        status = "already_exists";
+      } else {
+        const { data: invited, error: inviteErr } = await adminClient.auth.admin.inviteUserByEmail(email, {
+          data: { full_name: full_name || null },
+          redirectTo,
+        });
+        if (inviteErr || !invited?.user) {
+          return new Response(JSON.stringify({ error: inviteErr?.message || "invite failed" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        userId = invited.user.id;
+      }
+
+      // Assign role (NOT employee — external user)
+      await adminClient.from("user_roles").upsert(
+        { user_id: userId!, role: role as any },
+        { onConflict: "user_id,role" },
+      );
+
+      // Grant access to each requested company
+      for (const cid of company_ids) {
+        await adminClient.from("user_company_access").upsert(
+          { user_id: userId!, company_id: cid, role: role as any },
+          { onConflict: "user_id,company_id" },
+        );
+      }
+
+      return new Response(JSON.stringify({ success: true, status, user_id: userId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     if (req.method === "POST" && action === "ban") {
       const { user_id, ban } = await req.json();
       if (!user_id) {
