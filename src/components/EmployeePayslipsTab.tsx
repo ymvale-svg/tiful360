@@ -53,8 +53,8 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary }: Prop
     window.open(url, "_blank");
   };
 
-  const lastUpdate = employee?.balances_updated_at
-    ? new Date(employee.balances_updated_at).toLocaleDateString("he-IL")
+  const lastUpdate = emp?.balances_updated_at
+    ? new Date(emp.balances_updated_at).toLocaleDateString("he-IL")
     : null;
 
   return (
@@ -67,7 +67,7 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary }: Prop
             יתרת חופשה
           </div>
           <p className="text-3xl font-bold mt-2 text-primary">
-            {Number(employee?.vacation_balance ?? 0).toFixed(2)}
+            {Number(emp?.vacation_balance ?? 0).toFixed(2)}
           </p>
           <p className="text-xs text-muted-foreground mt-1">ימים</p>
         </div>
@@ -77,7 +77,7 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary }: Prop
             יתרת מחלה
           </div>
           <p className="text-3xl font-bold mt-2 text-info">
-            {Number(employee?.sick_balance ?? 0).toFixed(2)}
+            {Number(emp?.sick_balance ?? 0).toFixed(2)}
           </p>
           <p className="text-xs text-muted-foreground mt-1">ימים</p>
         </div>
@@ -88,7 +88,7 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary }: Prop
           </div>
           <p className="text-lg font-bold mt-2">{lastUpdate ?? "—"}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            מקור: {employee?.balances_source === "payslip" ? "תלוש שכר" : "ידני"}
+            מקור: {emp?.balances_source === "payslip" ? "תלוש שכר" : "ידני"}
           </p>
         </div>
       </div>
@@ -106,7 +106,7 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary }: Prop
         ) : (payslips?.length ?? 0) === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             עדיין לא הועלו תלושים לעובד זה.
-            {!employee?.id_number && (
+            {!emp?.id_number && (
               <p className="text-xs mt-2">טיפ: ודא שתעודת הזהות מוגדרת בכרטיס העובד כדי שהמערכת תזהה אוטומטית.</p>
             )}
           </div>
