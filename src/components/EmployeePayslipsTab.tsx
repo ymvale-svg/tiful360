@@ -1,9 +1,13 @@
 import { useState } from "react";
-import { useEmployeePayslips, getPayslipSignedUrl } from "@/hooks/usePayslips";
-import { Download, Calendar, TrendingUp, Stethoscope, FileText, Eye } from "lucide-react";
+import { useEmployeePayslips, getPayslipSignedUrl, useDeletePayslip } from "@/hooks/usePayslips";
+import { Download, Calendar, TrendingUp, Stethoscope, FileText, Eye, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { PayslipSummaryDialog } from "@/components/PayslipSummaryDialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Props {
   employeeId: string;
@@ -17,9 +21,10 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary }: Prop
   const { data: payslips, isLoading } = useEmployeePayslips(employeeId);
   const { toast } = useToast();
   const [summaryPayslip, setSummaryPayslip] = useState<any | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+  const deleteMutation = useDeletePayslip();
 
   const openPayslip = async (p: any) => {
-    // Prefer the per-employee split PDF; fall back to the shared source with a page anchor.
     const usingSplit = !!p.pdf_url && p.pdf_url !== p.source_pdf_url;
     const path = p.pdf_url ?? p.source_pdf_url;
     if (!path) return;
@@ -99,7 +104,7 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary }: Prop
                 <th>יתרת חופשה</th>
                 <th>יתרת מחלה</th>
                 <th>ימי עבודה</th>
-                <th className="w-24">פעולות</th>
+                <th className="w-28">פעולות</th>
               </tr>
             </thead>
             <tbody>
@@ -120,6 +125,17 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary }: Prop
                       <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="הורדה" onClick={() => openPayslip(p)}>
                         <Download className="w-4 h-4" />
                       </Button>
+                      {canSeeSalary && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          title="מחיקה"
+                          onClick={() => setDeleteTarget(p)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -136,6 +152,34 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary }: Prop
         employeeName={employee?.full_name}
         canSeeSalary={canSeeSalary}
       />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>למחוק את התלוש?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget && `תלוש ${MONTHS[deleteTarget.period_month - 1]} ${deleteTarget.period_year} יימחק לצמיתות מהמערכת ומאחסון הקבצים. פעולה זו לא ניתנת לביטול.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ביטול</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                try {
+                  await deleteMutation.mutateAsync(deleteTarget.id);
+                  toast({ title: "התלוש נמחק" });
+                  setDeleteTarget(null);
+                } catch (e: any) {
+                  toast({ title: "שגיאה במחיקה", description: e.message, variant: "destructive" });
+                }
+              }}
+            >
+              מחק
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
