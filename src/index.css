@@ -145,11 +145,11 @@
   }
 
   .data-table th {
-    @apply text-right font-medium text-muted-foreground bg-muted/50 px-4 py-3 border-b;
+    @apply text-start font-medium text-muted-foreground bg-muted/50 px-4 py-3 border-b;
   }
 
   .data-table td {
-    @apply px-4 py-3 border-b border-border/50;
+    @apply text-start px-4 py-3 border-b border-border/50;
   }
 
   .data-table tr:hover td {
