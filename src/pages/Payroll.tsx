@@ -1,9 +1,9 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
-import { Wallet, FileText, Stethoscope, Calendar, Clock4, Upload, LayoutDashboard, FolderOpen, UserSearch } from "lucide-react";
+import { Wallet, FileText, Stethoscope, Calendar, Clock4, Upload, LayoutDashboard, FolderOpen, UserSearch, Settings as SettingsIcon, Save, Mail } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { PayslipsUploadDialog } from "@/components/PayslipsUploadDialog";
@@ -54,6 +54,10 @@ export default function Payroll() {
             <UserSearch className="w-4 h-4" />
             תלושי עובד
           </TabsTrigger>
+          <TabsTrigger value="settings" className="gap-1.5">
+            <SettingsIcon className="w-4 h-4" />
+            הגדרות שכר
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
@@ -67,7 +71,91 @@ export default function Payroll() {
         <TabsContent value="employee">
           <EmployeeLookupTab />
         </TabsContent>
+
+        <TabsContent value="settings">
+          <PayrollSettingsTab />
+        </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+// ============================
+// Payroll Settings Tab
+// ============================
+function PayrollSettingsTab() {
+  const { activeCompanyId } = useCompany();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [payrollEmails, setPayrollEmails] = useState("");
+  const [loaded, setLoaded] = useState(false);
+
+  const { data: companyFull } = useQuery({
+    queryKey: ["company-full", activeCompanyId],
+    queryFn: async () => {
+      if (!activeCompanyId) return null;
+      const { data } = await supabase.from("companies").select("*").eq("id", activeCompanyId).single();
+      return data;
+    },
+    enabled: !!activeCompanyId,
+  });
+
+  useEffect(() => {
+    if (companyFull && !loaded) {
+      setPayrollEmails((companyFull as any).payroll_emails ?? "");
+      setLoaded(true);
+    }
+  }, [companyFull, loaded]);
+
+  const updateMutation = useMutation({
+    mutationFn: async () => {
+      if (!activeCompanyId) throw new Error("לא נבחרה חברה");
+      const emailsList = payrollEmails.split(",").map((s) => s.trim()).filter(Boolean);
+      const invalid = emailsList.filter((e) => !/^\S+@\S+\.\S+$/.test(e));
+      if (invalid.length > 0) throw new Error(`כתובות לא תקינות: ${invalid.join(", ")}`);
+
+      const { error } = await supabase
+        .from("companies")
+        .update({ payroll_emails: emailsList.length > 0 ? emailsList.join(",") : null })
+        .eq("id", activeCompanyId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["company-full"] });
+      toast({ title: "הגדרות שכר נשמרו בהצלחה" });
+    },
+    onError: (err: any) => {
+      toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+    },
+  });
+
+  if (!activeCompanyId) {
+    return <div className="text-center py-8 text-muted-foreground">לא נבחרה חברה</div>;
+  }
+
+  return (
+    <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 space-y-4 max-w-xl">
+      <div className="flex items-center gap-3 mb-2">
+        <Mail className="w-5 h-5 text-primary" />
+        <h3 className="font-semibold">כתובות אימייל מחלקת שכר</h3>
+      </div>
+      <div>
+        <label className="text-sm font-medium mb-1.5 block">כתובות אימייל</label>
+        <input
+          value={payrollEmails}
+          onChange={(e) => setPayrollEmails(e.target.value)}
+          placeholder="payroll@company.com, hr@company.com"
+          className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 font-mono"
+          dir="ltr"
+        />
+        <p className="text-[11px] text-muted-foreground mt-1">
+          ניתן להזין מספר כתובות מופרדות בפסיק. אישורי בקשות חופשה ומחלה יישלחו אוטומטית לכתובות אלו.
+        </p>
+      </div>
+      <Button className="gap-1.5" onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>
+        <Save className="w-4 h-4" />
+        {updateMutation.isPending ? "שומר..." : "שמור שינויים"}
+      </Button>
     </div>
   );
 }
@@ -77,6 +165,7 @@ export default function Payroll() {
 // ============================
 function OverviewTab() {
   const { activeCompanyId } = useCompany();
+  const [uploadOpen, setUploadOpen] = useState(false);
 
   const { data: monthBatches = [] } = useQuery({
     queryKey: ["payroll-batches-recent", activeCompanyId],
@@ -151,10 +240,22 @@ function OverviewTab() {
             <FileText className="w-4 h-4 text-primary" />
             אצוות תלושים אחרונות
           </h2>
-          <Link to="/payroll?tab=batches" className="text-xs text-primary hover:underline">לניהול תלושים →</Link>
+          <div className="flex items-center gap-3">
+            <Button size="sm" className="gap-1.5" onClick={() => setUploadOpen(true)}>
+              <Upload className="w-4 h-4" />
+              העלאת אצוות תלושים
+            </Button>
+            <Link to="/payroll?tab=batches" className="text-xs text-primary hover:underline">לניהול תלושים →</Link>
+          </div>
         </div>
         {monthBatches.length === 0 ? (
-          <div className="p-8 text-center text-sm text-muted-foreground">טרם הועלו אצוות תלושים</div>
+          <div className="p-8 text-center text-sm text-muted-foreground space-y-3">
+            <p>טרם הועלו אצוות תלושים</p>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setUploadOpen(true)}>
+              <Upload className="w-4 h-4" />
+              העלה אצווה ראשונה
+            </Button>
+          </div>
         ) : (
           <table className="data-table">
             <thead>
@@ -175,6 +276,8 @@ function OverviewTab() {
           </table>
         )}
       </section>
+
+      <PayslipsUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <section className="bg-card rounded-xl border border-border/50 shadow-card overflow-hidden">

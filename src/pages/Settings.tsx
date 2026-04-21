@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCompany } from "@/hooks/useCompany";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { PortalSettingsTab } from "@/components/PortalSettingsTab";
 
 export default function Settings() {
@@ -91,50 +91,26 @@ function GeneralSettings() {
   const queryClient = useQueryClient();
   const [name, setName] = useState(activeCompany?.name ?? "");
   const [logoUrl, setLogoUrl] = useState(activeCompany?.logo_url ?? "");
-  const [payrollEmails, setPayrollEmails] = useState("");
-
-  // Load full company (including payroll_emails)
-  const { data: companyFull } = useQuery({
-    queryKey: ["company-full", activeCompanyId],
-    queryFn: async () => {
-      if (!activeCompanyId) return null;
-      const { data } = await supabase.from("companies").select("*").eq("id", activeCompanyId).single();
-      return data;
-    },
-    enabled: !!activeCompanyId,
-  });
 
   useState(() => {
     setName(activeCompany?.name ?? "");
     setLogoUrl(activeCompany?.logo_url ?? "");
   });
 
-  // Sync payroll_emails when loaded
-  if (companyFull && payrollEmails === "" && (companyFull as any).payroll_emails) {
-    setPayrollEmails((companyFull as any).payroll_emails);
-  }
-
   const updateMutation = useMutation({
     mutationFn: async () => {
       if (!activeCompanyId) throw new Error("לא נבחרה חברה");
-      // Validate payroll emails
-      const emailsList = payrollEmails.split(",").map((s) => s.trim()).filter(Boolean);
-      const invalid = emailsList.filter((e) => !/^\S+@\S+\.\S+$/.test(e));
-      if (invalid.length > 0) throw new Error(`כתובות לא תקינות: ${invalid.join(", ")}`);
-
       const { error } = await supabase
         .from("companies")
         .update({
           name,
           logo_url: logoUrl || null,
-          payroll_emails: emailsList.length > 0 ? emailsList.join(",") : null,
         })
         .eq("id", activeCompanyId);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["companies"] });
-      queryClient.invalidateQueries({ queryKey: ["company-full"] });
       toast({ title: "הגדרות נשמרו בהצלחה" });
     },
     onError: (err: any) => {
@@ -174,19 +150,6 @@ function GeneralSettings() {
             <img src={logoUrl} alt="לוגו" className="max-w-full max-h-full object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
           </div>
         )}
-      </div>
-      <div>
-        <label className="text-sm font-medium mb-1.5 block">כתובות אימייל מחלקת שכר</label>
-        <input
-          value={payrollEmails}
-          onChange={(e) => setPayrollEmails(e.target.value)}
-          placeholder="payroll@company.com, hr@company.com"
-          className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 font-mono"
-          dir="ltr"
-        />
-        <p className="text-[11px] text-muted-foreground mt-1">
-          ניתן להזין מספר כתובות מופרדות בפסיק. אישורי בקשות חופשה/מחלה יישלחו אוטומטית לכתובות אלו.
-        </p>
       </div>
       <Button className="gap-1.5" onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>
         <Save className="w-4 h-4" />
