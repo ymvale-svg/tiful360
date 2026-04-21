@@ -194,19 +194,19 @@ export function PayslipsUploadDialog({ open, onOpenChange }: Props) {
               </div>
             </div>
 
-            {result.unmatched_codes?.length > 0 && (
+            {result.unmatched_id_numbers?.length > 0 && (
               <div className="border border-warning/30 rounded-lg p-3 space-y-2">
                 <p className="text-sm font-medium flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 text-warning" />
-                  קודי מיכפל לא מוכרים במערכת:
+                  מספרי תעודת זהות לא מוכרים במערכת:
                 </p>
                 <div className="flex flex-wrap gap-1">
-                  {result.unmatched_codes.map((c: string) => (
+                  {result.unmatched_id_numbers.map((c: string) => (
                     <span key={c} className="text-xs font-mono bg-muted px-2 py-1 rounded">{c}</span>
                   ))}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  שייך אותם ידנית במסך הגדרות → שכר ותלושים → תלושים לא משויכים, או הוסף את מספר המיכפל לעובדים הקיימים.
+                  שייך אותם ידנית במסך הגדרות → שכר ותלושים → תלושים לא משויכים, או ודא שתעודת הזהות בכרטיס העובד תואמת לזו שבתלוש.
                 </p>
               </div>
             )}

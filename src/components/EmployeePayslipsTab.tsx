@@ -81,8 +81,8 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary }: Prop
         ) : (payslips?.length ?? 0) === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             עדיין לא הועלו תלושים לעובד זה.
-            {!employee?.michpal_code && (
-              <p className="text-xs mt-2">טיפ: ודא שמספר העובד במיכפל מוגדר בכרטיס העובד כדי שהמערכת תזהה אוטומטית.</p>
+            {!employee?.id_number && (
+              <p className="text-xs mt-2">טיפ: ודא שתעודת הזהות מוגדרת בכרטיס העובד כדי שהמערכת תזהה אוטומטית.</p>
             )}
           </div>
         ) : (

@@ -1,4 +1,5 @@
-// Split Michpal monthly payslip PDF into per-employee PDFs and extract balances.
+// Split monthly payslip PDF into per-employee PDFs and extract balances.
+// Matching is done by Israeli ID number (תעודת זהות) detected in each page.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { PDFDocument } from 'https://esm.sh/pdf-lib@1.17.1';
 import { extractText, getDocumentProxy } from 'https://esm.sh/unpdf@0.12.1';
@@ -12,7 +13,7 @@ const corsHeaders = {
 interface PageInfo {
   pageIndex: number;
   text: string;
-  michpalCode: string | null;
+  idNumber: string | null;
   year: number | null;
   month: number | null;
   vacationBalance: number | null;
@@ -31,11 +32,22 @@ function parseNumber(s: string | undefined | null): number | null {
   return isNaN(n) ? null : n;
 }
 
+function normalizeIdNumber(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const digits = String(raw).replace(/\D/g, '');
+  if (digits.length < 5 || digits.length > 9) return null;
+  return digits.padStart(9, '0');
+}
+
 function extractFields(text: string): Omit<PageInfo, 'pageIndex' | 'text'> {
   // Normalize whitespace (Hebrew PDFs often have lots of NBSPs)
   const t = text.replace(/\u00a0/g, ' ').replace(/[ \t]+/g, ' ');
 
-  const codeM = t.match(/מספר\s*העובד\s*:?\s*(\d+)/);
+  // ID number: ת.ז. / ת"ז / תעודת זהות / מספר זהות followed by 5-9 digits
+  const idM =
+    t.match(/(?:ת\s*[.״"']?\s*ז\s*[.״"']?|תעודת\s*זהות|מספר\s*זהות)\s*[:\-]?\s*(\d{5,9})/) ||
+    t.match(/\bז\s*[.״"']?\s*ת\s*[.״"']?\s*[:\-]?\s*(\d{5,9})/);
+
   const periodM = t.match(/תלוש\s*שכר\s*לחודש\s*(\d{1,2})\s*\/\s*(\d{4})/);
   const grossM = t.match(/סה["״]כ\s*תשלומים\s*([\d,]+\.?\d*)/);
   const netM = t.match(/שכר\s*נטו\s*([\d,]+\.?\d*)/);
@@ -52,7 +64,7 @@ function extractFields(text: string): Omit<PageInfo, 'pageIndex' | 'text'> {
   if (nameM) employeeName = nameM[1].trim().slice(0, 100);
 
   return {
-    michpalCode: codeM ? codeM[1] : null,
+    idNumber: normalizeIdNumber(idM?.[1]),
     month: periodM ? parseInt(periodM[1], 10) : null,
     year: periodM ? parseInt(periodM[2], 10) : null,
     grossSalary: parseNumber(grossM?.[1]),
@@ -133,7 +145,6 @@ Deno.serve(async (req) => {
     for (let i = 0; i < totalPages; i++) {
       let pageText = '';
       try {
-        // unpdf extractText supports per-page extraction
         const { text } = await extractText(pdfProxy, { mergePages: false });
         pageText = Array.isArray(text) ? (text[i] ?? '') : (text ?? '');
       } catch (_e) {
@@ -143,19 +154,18 @@ Deno.serve(async (req) => {
       pages.push({ pageIndex: i, text: pageText, ...fields });
     }
 
-    // Group consecutive pages by michpalCode (a payslip can span multiple pages)
-    const groups: { code: string; pageIndices: number[]; primary: PageInfo }[] = [];
+    // Group consecutive pages by idNumber (a payslip can span multiple pages).
+    // Pages without an ID are appended as continuation of the previous group.
+    const groups: { idNumber: string; pageIndices: number[]; primary: PageInfo }[] = [];
     let currentGroup: typeof groups[0] | null = null;
     for (const p of pages) {
-      const code = p.michpalCode;
-      if (!code) {
-        // Append to current group as continuation
+      const id = p.idNumber;
+      if (!id) {
         if (currentGroup) currentGroup.pageIndices.push(p.pageIndex);
         continue;
       }
-      if (currentGroup && currentGroup.code === code) {
+      if (currentGroup && currentGroup.idNumber === id) {
         currentGroup.pageIndices.push(p.pageIndex);
-        // Merge fields if the primary page is missing them
         const cur = currentGroup.primary;
         currentGroup.primary = {
           ...cur,
@@ -168,23 +178,22 @@ Deno.serve(async (req) => {
           employeeName: cur.employeeName ?? p.employeeName,
         };
       } else {
-        currentGroup = { code, pageIndices: [p.pageIndex], primary: p };
+        currentGroup = { idNumber: id, pageIndices: [p.pageIndex], primary: p };
         groups.push(currentGroup);
       }
     }
 
-    // Lookup employees of this company
+    // Lookup employees of this company by id_number
     const { data: employees } = await admin
       .from('employees')
-      .select('id, full_name, michpal_code')
+      .select('id, full_name, id_number')
       .eq('company_id', company_id)
-      .not('michpal_code', 'is', null);
+      .not('id_number', 'is', null);
 
-    const codeMap = new Map<string, { id: string; full_name: string }>();
+    const idMap = new Map<string, { id: string; full_name: string }>();
     for (const e of employees ?? []) {
-      // Normalize: trim leading zeros for matching but keep both
-      codeMap.set(String(e.michpal_code).trim(), { id: e.id, full_name: e.full_name });
-      codeMap.set(String(e.michpal_code).trim().replace(/^0+/, ''), { id: e.id, full_name: e.full_name });
+      const norm = normalizeIdNumber(e.id_number);
+      if (norm) idMap.set(norm, { id: e.id, full_name: e.full_name });
     }
 
     // Create batch row
@@ -203,7 +212,7 @@ Deno.serve(async (req) => {
     let matchedCount = 0;
     let unmatchedCount = 0;
     let failedCount = 0;
-    const unmatchedCodes: string[] = [];
+    const unmatchedIdNumbers: string[] = [];
     const balanceChanges: any[] = [];
 
     for (const group of groups) {
@@ -214,12 +223,12 @@ Deno.serve(async (req) => {
         copied.forEach((p) => newDoc.addPage(p));
         const pdfBytes = await newDoc.save();
 
-        const normalizedCode = group.code.trim();
-        const matched = codeMap.get(normalizedCode) ?? codeMap.get(normalizedCode.replace(/^0+/, ''));
+        const normalizedId = group.idNumber;
+        const matched = idMap.get(normalizedId);
 
         const filenameSafe = (matched?.full_name ?? group.primary.employeeName ?? 'unknown')
           .replace(/[^ \u0590-\u05FFa-zA-Z0-9 _-]/g, '').replace(/\s+/g, '_').slice(0, 40);
-        const storagePath = `${company_id}/${period_year}-${String(period_month).padStart(2, '0')}/${normalizedCode}_${filenameSafe}.pdf`;
+        const storagePath = `${company_id}/${period_year}-${String(period_month).padStart(2, '0')}/${normalizedId}_${filenameSafe}.pdf`;
 
         // Upload
         const { error: uploadErr } = await admin.storage
@@ -237,7 +246,7 @@ Deno.serve(async (req) => {
           const { error: psErr } = await admin.from('payslips').upsert({
             company_id,
             employee_id: matched.id,
-            michpal_code_detected: normalizedCode,
+            id_number_detected: normalizedId,
             employee_name_detected: group.primary.employeeName,
             period_year,
             period_month,
@@ -275,7 +284,7 @@ Deno.serve(async (req) => {
           await admin.from('payslips').insert({
             company_id,
             employee_id: null,
-            michpal_code_detected: normalizedCode,
+            id_number_detected: normalizedId,
             employee_name_detected: group.primary.employeeName,
             period_year,
             period_month,
@@ -291,10 +300,10 @@ Deno.serve(async (req) => {
             created_by: user.id,
           });
           unmatchedCount++;
-          if (!unmatchedCodes.includes(normalizedCode)) unmatchedCodes.push(normalizedCode);
+          if (!unmatchedIdNumbers.includes(normalizedId)) unmatchedIdNumbers.push(normalizedId);
         }
       } catch (e) {
-        console.error('Group failed:', group.code, e);
+        console.error('Group failed:', group.idNumber, e);
         failedCount++;
       }
     }
@@ -324,7 +333,7 @@ Deno.serve(async (req) => {
       matched: matchedCount,
       unmatched: unmatchedCount,
       failed: failedCount,
-      unmatched_codes: unmatchedCodes,
+      unmatched_id_numbers: unmatchedIdNumbers,
       balance_changes: balanceChanges,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
