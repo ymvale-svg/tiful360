@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { OffboardingDialog } from "@/components/OffboardingDialog";
 import { TransferAssetDialog } from "@/components/TransferAssetDialog";
 import { HandoverFormsList } from "@/components/HandoverFormsList";
+import { EmployeeTax101FormsList } from "@/components/EmployeeTax101FormsList";
 import { LeaveRequestsList } from "@/components/LeaveRequestsList";
 import { EditEmployeeDialog } from "@/components/EditEmployeeDialog";
 import { AddDigitalAccessDialog } from "@/components/AddDigitalAccessDialog";
@@ -303,6 +304,7 @@ export default function EmployeeDetail() {
             </Button>
           </div>
           <HandoverFormsList employeeId={id!} />
+          <EmployeeTax101FormsList employeeId={id!} />
         </div>
       )}
 
