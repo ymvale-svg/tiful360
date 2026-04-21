@@ -7,7 +7,12 @@ import { Wallet, FileText, Stethoscope, Calendar, Clock4, Upload, LayoutDashboar
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { PayslipsUploadDialog } from "@/components/PayslipsUploadDialog";
-import { usePayslipBatches, useUnmatchedPayslips, useAssignPayslipToEmployee } from "@/hooks/usePayslips";
+import { usePayslipBatches, useUnmatchedPayslips, useAssignPayslipToEmployee, useBatchPayslips, useDeletePayslip, useDeleteBatch } from "@/hooks/usePayslips";
+import { Trash2 } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useEmployees } from "@/hooks/useData";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { EmployeePayslipsTab } from "@/components/EmployeePayslipsTab";
