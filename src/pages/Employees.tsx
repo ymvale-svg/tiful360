@@ -324,11 +324,10 @@ export default function Employees() {
                       <th>שם מלא</th>
                       <th>תפקיד</th>
                       <th>מחלקה</th>
-                      <th>מנהל ישיר</th>
+                      <th className="min-w-[200px]">מנהל ישיר</th>
                       <th>גישה למערכת</th>
                       <th>בקשר</th>
                       <th>סטטוס</th>
-                      <th>פעולות</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -337,7 +336,7 @@ export default function Employees() {
                       const hasEmail = !!full?.email;
                       const hasAccount = !!full?.linked_user_id;
                       const inContacts = !full?.exclude_from_contacts;
-                      const managerName = full?.direct_manager_id ? nameById.get(full.direct_manager_id) : null;
+                      const currentManagerId = full?.direct_manager_id ?? "__none__";
                       return (
                         <tr
                           key={emp.id}
@@ -356,7 +355,17 @@ export default function Employees() {
                           <td className="font-medium">{emp.full_name}</td>
                           <td>{emp.role}</td>
                           <td>{emp.department}</td>
-                          <td className="text-sm text-muted-foreground">{managerName || "—"}</td>
+                          <td onClick={(e) => e.stopPropagation()} className="min-w-[200px]">
+                            <SearchableSelect
+                              value={currentManagerId}
+                              onChange={(v) => handleManagerChange(emp.id, v)}
+                              options={managerOptions.filter((o) => o.value !== emp.id)}
+                              placeholder="ללא מנהל"
+                              searchPlaceholder="חיפוש מנהל..."
+                              emptyText="לא נמצאו עובדים"
+                              className="h-8 text-xs"
+                            />
+                          </td>
                           <td onClick={(e) => e.stopPropagation()}>
                             {hasAccount ? (
                               <Badge variant="outline" className="gap-1 text-[11px] bg-success/10 text-success border-success/20">
@@ -398,16 +407,6 @@ export default function Employees() {
                               {emp.status === "leaving" && <UserMinus className="w-3 h-3" />}
                               {statusLabels[emp.status as EmployeeStatus] ?? emp.status}
                             </span>
-                          </td>
-                          <td onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center gap-1">
-                              <Link
-                                to={`/employees/${emp.id}`}
-                                className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground inline-block"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </Link>
-                            </div>
                           </td>
                         </tr>
                       );
