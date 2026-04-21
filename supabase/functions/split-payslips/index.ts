@@ -1,6 +1,6 @@
 // Split monthly payslip PDF into per-employee PDFs and extract balances.
 // Matching is done by Israeli ID number (תעודת זהות) detected in each page.
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.103.0';
 import { PDFDocument } from 'https://esm.sh/pdf-lib@1.17.1';
 import { extractText, getDocumentProxy } from 'https://esm.sh/unpdf@0.12.1';
 
