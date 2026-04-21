@@ -1,48 +1,45 @@
 
-## הסרת קוד מיכפל מהמערכת
+## מיזוג טאב "תלושי שכר" מהגדרות למסך שכר ותלושים
 
-הסרה מלאה של ההסתמכות על `michpal_code` — שיוך תלושים יתבצע אך ורק לפי תעודת זהות.
+הסרת הטאב **"תלושי שכר"** ממסך **`/settings`** ומיזוג הפונקציונליות שלו (העלאת אצוות PDF, ניהול תלושים) למסך **`/payroll`**.
 
-### מסד נתונים (מיגרציה)
+### בדיקה מקדימה
+לפני ביצוע — לוודא ב-`src/pages/Settings.tsx` מה בדיוק נמצא בטאב "תלושי שכר" כיום (סביר להניח: כפתור העלאה דרך `PayslipsUploadDialog`, רשימת אצוות, ניהול unmatched).
 
-```sql
--- הסרת אינדקסים שמשתמשים בעמודות
-DROP INDEX IF EXISTS idx_payslips_michpal_code_detected;
+### שינויים
 
--- הסרת העמודות
-ALTER TABLE public.employees DROP COLUMN IF EXISTS michpal_code;
-ALTER TABLE public.payslips  DROP COLUMN IF EXISTS michpal_code_detected;
-```
+#### 1. `src/pages/Payroll.tsx` — הרחבה לטאבים
+המסך יהפוך למסך עם טאבים:
 
-(תלוי במיגרציה הקודמת שמוסיפה `id_number_detected` — מבוצעת לפניה או באותה מיגרציה.)
+- **טאב "סקירה"** (default) — התוכן הקיים (אצוות אחרונות, מחלות, חופשות, תיקוני שעון).
+- **טאב "ניהול תלושים"** — חדש, מכיל:
+  - כפתור **"העלאת אצוות תלושים חדשה"** → פותח את `PayslipsUploadDialog`.
+  - **רשימה מלאה של כל אצוות התלושים** (לא רק 6 האחרונות) עם פילטר לפי חודש/שנה.
+  - **תלושים לא משויכים** (`useUnmatchedPayslips`) עם אפשרות הקצאה ידנית.
+  - לכל אצווה: סטטוס, מספר עמודים, מותאמים/לא מותאמים, תאריך, פעולות (צפייה/מחיקה אם רלוונטי).
+- **טאב "תלושי עובד"** — בחירת עובד והצגת `<EmployeePayslipsTab />` (אם רלוונטי, אופציונלי בשלב הזה).
 
-### Edge function — `supabase/functions/split-payslips/index.ts`
+תמיכה ב-deep-link: `/payroll?tab=batches`.
 
-- הסרת חילוץ `michpalCode` מ-`extractFields`.
-- `PageInfo` — הסרת השדה `michpalCode`, נשאר רק `idNumber`.
-- קיבוץ עמודים לפי `idNumber` בלבד; עמודי המשך ללא ת.ז. מצורפים לקבוצה הקודמת.
-- lookup עובדים: `select('id, full_name, id_number')` בלבד; הסרת `codeMap`.
-- שמירה ב-`payslips`: רק `id_number_detected`.
-- `unmatched_codes` בתשובה מוחלף ב-`unmatched_id_numbers` בלבד.
+#### 2. `src/pages/Settings.tsx` — הסרת הטאב
+- הסרת הטאב "תלושי שכר" ממערך הטאבים.
+- הסרת הקומפוננטה/הבלוק שמרנדר אותו.
+- הסרת imports לא בשימוש (`PayslipsUploadDialog` אם נטען רק שם).
+- אם הטאב היה default — לעדכן ברירת מחדל לטאב הבא (משתמשים והרשאות / אנשי קשר חיצוניים).
 
-### Frontend
+#### 3. הרשאות
+- `/payroll` כבר מוגן ב-`App.tsx` ל-`admin/super_admin/payroll` — חשב השכר יראה את הכל במקום אחד.
+- `/settings` — חשב שכר כבר לא צריך לגשת אליו רק בשביל תלושים.
+
+### קבצים מושפעים
 
 | קובץ | שינוי |
 |---|---|
-| `src/hooks/usePayslips.ts` | הסרת `michpal_code_detected` מה-interface `Payslip`, הוספת `id_number_detected` |
-| `src/components/PayslipsUploadDialog.tsx` | הצגת ת.ז. במקום קוד מיכפל ב-summary ובהקצאה ידנית; הודעות "ת.ז. לא מוכר" במקום "קוד מיכפל לא מוכר" |
-| `src/components/AddEmployeeDialog.tsx` | הסרת שדה "קוד מיכפל" |
-| `src/components/EditEmployeeDialog.tsx` | הסרת שדה "קוד מיכפל" |
-| `src/components/ImportExcelDialog.tsx` | הסרת `michpal_code` מתבנית הייבוא, מהוולידציה ומה-INSERT |
-| `src/components/EmployeePayslipsTab.tsx` | הסרת הטיפ "ודא שמספר העובד במיכפל מוגדר…" — להחליף ב"ודא שתעודת הזהות מוגדרת בכרטיס העובד" |
-| `src/hooks/useMutations.ts` | הסרת `michpal_code` מ-`useCreateEmployee` / update |
-| `src/pages/Employees.tsx` | הסרת עמודת "קוד מיכפל" אם מוצגת |
-| `src/integrations/supabase/types.ts` | מתעדכן אוטומטית אחרי המיגרציה |
-
-חיפוש גלובלי אחר `michpal_code` / `michpalCode` / "מיכפל" יבוצע כדי לוודא שאין שאריות.
+| `src/pages/Payroll.tsx` | מבנה טאבים + טאב "ניהול תלושים" עם העלאה, רשימת אצוות, unmatched |
+| `src/pages/Settings.tsx` | הסרת טאב "תלושי שכר" + cleanup |
 
 ### הערות
 
-- **שינוי הרסני**: כל ערכי `michpal_code` הקיימים יימחקו לצמיתות. אם המשתמש רוצה לשמור היסטוריה — יש לבצע export לפני המיגרציה.
-- תלושים שכבר נשמרו ושויכו לעובד (`employee_id` קיים) נשארים משויכים — רק שדה ה-detection נמחק.
-- תלושים שהיו unmatched לפי קוד מיכפל בלבד יישארו unmatched אם אין ת.ז. שזוהה.
+- אין שינוי ב-DB, ב-edge functions, ב-hooks או ב-`PayslipsUploadDialog` עצמו — רק העברת מיקום ה-UI.
+- `EmployeePayslipsTab` בתיק העובד נשאר כפי שהוא (לא חלק מבקשה זו).
+- `RoleGuard` הקיים על `/payroll` מבטיח שרק חשב שכר/admin רואים.
