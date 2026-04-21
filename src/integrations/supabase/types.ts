@@ -727,7 +727,6 @@ export type Database = {
           id: string
           id_number: string
           linked_user_id: string | null
-          michpal_code: string | null
           phone: string | null
           role: string
           sick_balance: number
@@ -753,7 +752,6 @@ export type Database = {
           id?: string
           id_number: string
           linked_user_id?: string | null
-          michpal_code?: string | null
           phone?: string | null
           role: string
           sick_balance?: number
@@ -779,7 +777,6 @@ export type Database = {
           id?: string
           id_number?: string
           linked_user_id?: string | null
-          michpal_code?: string | null
           phone?: string | null
           role?: string
           sick_balance?: number
@@ -1156,7 +1153,7 @@ export type Database = {
           extraction_status: string
           gross_salary: number | null
           id: string
-          michpal_code_detected: string | null
+          id_number_detected: string | null
           net_salary: number | null
           pdf_url: string | null
           period_month: number
@@ -1177,7 +1174,7 @@ export type Database = {
           extraction_status?: string
           gross_salary?: number | null
           id?: string
-          michpal_code_detected?: string | null
+          id_number_detected?: string | null
           net_salary?: number | null
           pdf_url?: string | null
           period_month: number
@@ -1198,7 +1195,7 @@ export type Database = {
           extraction_status?: string
           gross_salary?: number | null
           id?: string
-          michpal_code_detected?: string | null
+          id_number_detected?: string | null
           net_salary?: number | null
           pdf_url?: string | null
           period_month?: number
