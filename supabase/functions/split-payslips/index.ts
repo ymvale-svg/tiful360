@@ -35,20 +35,51 @@ function parseNumber(s: string | undefined | null): number | null {
 function normalizeIdNumber(raw: string | null | undefined): string | null {
   if (!raw) return null;
   const digits = String(raw).replace(/\D/g, '');
-  if (digits.length < 5 || digits.length > 9) return null;
+  if (digits.length < 7 || digits.length > 9) return null;
   return digits.padStart(9, '0');
 }
 
-function extractFields(text: string): Omit<PageInfo, 'pageIndex' | 'text'> {
-  const t = text.replace(/\u00a0/g, ' ').replace(/[ \t]+/g, ' ');
+// Label patterns for "ID number" in Hebrew. unpdf returns text in visual order,
+// so the label may appear as "מספר זהות", "זהות מספר" (reversed), or with
+// suffix letters like "מספרו" / "זהותו". Colons can appear between the words.
+const ID_LABEL = '(?:מספר[ו]?\\s*[:\\-]?\\s*זהות[ו]?|זהות[ו]?\\s*[:\\-]?\\s*מספר[ו]?|תעודת\\s*זהות)';
 
-  // unpdf may return Hebrew text in visual order — number can appear
-  // BEFORE the label. Try multiple patterns in order.
-  const idM =
-    t.match(/(?:מספר\s*זהות|תעודת\s*זהות|ת\s*[.״"'`]?\s*ז\s*[.״"'`]?)\s*[:\-]?\s*(\d{5,9})/) ||
-    t.match(/(\d{5,9})\s*(?:מספר\s*זהות|תעודת\s*זהות|ת\s*[.״"'`]?\s*ז\s*[.״"'`]?)/) ||
-    t.match(/\bז\s*[.״"'`]?\s*ת\s*[.״"'`]?\s*[:\-]?\s*(\d{5,9})/) ||
-    t.match(/\b(\d{9})\b/);
+function isNoiseContext(text: string, captured: string): boolean {
+  const escaped = captured.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const noisePatterns = [
+    new RegExp(`תיק\\s*ניכויים\\s*[:\\-]?\\s*${escaped}`),
+    new RegExp(`${escaped}\\s*[:\\-]?\\s*תיק\\s*ניכויים`),
+    new RegExp(`מספר\\s*תאגיד\\s*[:\\-]?\\s*${escaped}`),
+    new RegExp(`${escaped}\\s*[:\\-]?\\s*תאגיד`),
+    new RegExp(`תיק\\s*ב[י'"\`]?\\s*ל\\s*[:\\-]?\\s*${escaped}`),
+    new RegExp(`${escaped}\\s*[:\\-]?\\s*תיק\\s*ב[י'"\`]?\\s*ל`),
+    new RegExp(`מספר\\s*העובד\\s*[:\\-]?\\s*${escaped}`),
+    new RegExp(`${escaped}\\s*[:\\-]?\\s*העובד`),
+    new RegExp(`חשבון\\s*[:\\-]?\\s*${escaped}`),
+  ];
+  return noisePatterns.some((p) => p.test(text));
+}
+
+function findIdNumber(t: string): string | null {
+  // Try each pattern; if it captures a noise number, advance and retry.
+  const patterns: RegExp[] = [
+    // Label-before-number: "מספר זהות: NNNNNNN" or "זהות: מספרו NNNNNNN"
+    new RegExp(`${ID_LABEL}\\s*[:\\-]?\\s*(\\d{7,9})\\b`, 'g'),
+    // Number-before-label: "NNNNNNN מספר זהות" or "NNNNNNN זהות: מספרו"
+    new RegExp(`\\b(\\d{7,9})\\s*[:\\-]?\\s*${ID_LABEL}`, 'g'),
+    // ת.ז / ז.ת abbreviations
+    /\bת\s*[.״"'`]\s*ז\s*[.״"'`]?\s*[:\-]?\s*(\d{7,9})\b/g,
+    /\b(\d{7,9})\s*[:\-]?\s*ת\s*[.״"'`]\s*ז\s*[.״"'`]?/g,
+  ];
+  for (const re of patterns) {
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(t)) !== null) {
+      const captured = m[1];
+      if (!isNoiseContext(t, captured)) return captured;
+    }
+  }
+  return null;
+}
 
   const periodM = t.match(/תלוש\s*שכר\s*לחודש\s*(\d{1,2})\s*\/\s*(\d{4})/);
   const grossM = t.match(/סה["״]כ\s*תשלומים\s*([\d,]+\.?\d*)/);
