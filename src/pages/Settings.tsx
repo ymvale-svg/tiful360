@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Settings as SettingsIcon, Bell, Shield, Database, Users,
-  Building2, Save, Upload, Smartphone, FileText, Download,
+  Building2, Save, Upload, Smartphone, FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -312,16 +312,10 @@ function PayrollSettings() {
               <p className="text-xs text-muted-foreground mt-0.5">העלאת קובץ PDF מאוחד מ-מיכפל ופיצול אוטומטי לעובדים</p>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={exportMissingMichpalCodes}>
-              <Download className="w-4 h-4" />
-              ייצא חסרי מיכפל
-            </Button>
-            <Button className="gap-1.5" onClick={() => setUploadOpen(true)}>
-              <Upload className="w-4 h-4" />
-              העלה תלושים
-            </Button>
-          </div>
+          <Button className="gap-1.5" onClick={() => setUploadOpen(true)}>
+            <Upload className="w-4 h-4" />
+            העלה תלושים
+          </Button>
         </div>
 
         <div className="border border-border rounded-lg overflow-hidden">
