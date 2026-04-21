@@ -1,36 +1,48 @@
 
-## משימות שנותרו להשלמת התכנית
+## הסרת קוד מיכפל מהמערכת
 
-### 1. דיאלוג "הוסף עובד" (`AddEmployeeDialog.tsx`)
-- הפיכת שדה **email לחובה**.
-- הוספת שדה **תפקיד מערכת** (`app_role`) — ברירת מחדל `employee`, עם חסימת `admin/payroll/super_admin` למשתמשי operations.
-- צ'קבוקס **"שלח הזמנה במייל"** (default on).
-- צ'קבוקס **"אל תכלול ברשימת אנשי הקשר"** (default off).
-- זרימת יצירה: INSERT עובד → קריאה ל-`manage-users` (action=invite) → UPDATE `linked_user_id`. כישלון בהזמנה ≠ ביטול יצירת העובד.
+הסרה מלאה של ההסתמכות על `michpal_code` — שיוך תלושים יתבצע אך ורק לפי תעודת זהות.
 
-### 2. ייבוא מאקסל (`ImportExcelDialog.tsx`, mode=employees)
-- הרחבת התבנית: `email*`, `system_role`, `direct_manager`, `exclude_from_contacts`.
-- ולידציה: email חובה, system_role חוקי, אכיפת הרשאות operations.
-- **lookup מנהל ישיר** לפי `full_name`/`employee_code` בעובדי החברה הקיימים, עם אזהרה ב-preview אם לא נמצא.
-- **סבב שני (self-reference)** לקישור מנהלים שמופיעים באותו קובץ הייבוא.
-- **הזמנה אוטומטית** לכל עובד מיובא + עדכון `linked_user_id`, סיכום כישלונות בסוף.
-- עדכון תבנית "הורד תבנית" לפי mode.
+### מסד נתונים (מיגרציה)
 
-### 3. אנשי קשר בפורטל
-- **hook חדש `useCompanyContacts`** ב-`src/hooks/useData.ts` — שילוב של `get_company_contacts(company_id)` (עובדים פעילים שלא הוסתרו) + `portal_contacts` (אנשי קשר חיצוניים), עם מיון `contact_sort_order` → `department` → `full_name`.
-- החלפת כל קריאה ישירה ל-`portal_contacts` בפורטל (`EmployeePortal.tsx` וכל מסך אנשי קשר נוסף) ב-hook החדש.
+```sql
+-- הסרת אינדקסים שמשתמשים בעמודות
+DROP INDEX IF EXISTS idx_payslips_michpal_code_detected;
 
-### 4. `PortalSettingsTab.tsx`
-- שינוי כותרת הסקציה ל-**"אנשי קשר חיצוניים"**.
-- הוספת טקסט הסבר: *"עובדי החברה מופיעים אוטומטית. כאן ניתן להוסיף ספקים/יועצים בלבד."*
-- קישור ניווט: **"לניהול עובדים → /employees"**.
+-- הסרת העמודות
+ALTER TABLE public.employees DROP COLUMN IF EXISTS michpal_code;
+ALTER TABLE public.payslips  DROP COLUMN IF EXISTS michpal_code_detected;
+```
 
-### קבצים שיושפעו
-- `src/components/AddEmployeeDialog.tsx`
-- `src/components/ImportExcelDialog.tsx`
-- `src/hooks/useData.ts`
-- `src/pages/EmployeePortal.tsx` (וכל מסך נוסף שמציג אנשי קשר)
-- `src/components/PortalSettingsTab.tsx`
+(תלוי במיגרציה הקודמת שמוסיפה `id_number_detected` — מבוצעת לפניה או באותה מיגרציה.)
 
-### מה כבר בוצע (לא חוזר על עצמו)
-מיגרציית DB (`exclude_from_contacts`, `contact_sort_order`, `get_company_contacts`), טאבים ב-`Employees.tsx` עם עמודות חדשות, `EditEmployeeDialog` (מנהל ישיר + exclude + בלוק גישה), פיצול ל-`UsersAndRolesTab`, redirect מ-`/user-management`, תיקון state חסר.
+### Edge function — `supabase/functions/split-payslips/index.ts`
+
+- הסרת חילוץ `michpalCode` מ-`extractFields`.
+- `PageInfo` — הסרת השדה `michpalCode`, נשאר רק `idNumber`.
+- קיבוץ עמודים לפי `idNumber` בלבד; עמודי המשך ללא ת.ז. מצורפים לקבוצה הקודמת.
+- lookup עובדים: `select('id, full_name, id_number')` בלבד; הסרת `codeMap`.
+- שמירה ב-`payslips`: רק `id_number_detected`.
+- `unmatched_codes` בתשובה מוחלף ב-`unmatched_id_numbers` בלבד.
+
+### Frontend
+
+| קובץ | שינוי |
+|---|---|
+| `src/hooks/usePayslips.ts` | הסרת `michpal_code_detected` מה-interface `Payslip`, הוספת `id_number_detected` |
+| `src/components/PayslipsUploadDialog.tsx` | הצגת ת.ז. במקום קוד מיכפל ב-summary ובהקצאה ידנית; הודעות "ת.ז. לא מוכר" במקום "קוד מיכפל לא מוכר" |
+| `src/components/AddEmployeeDialog.tsx` | הסרת שדה "קוד מיכפל" |
+| `src/components/EditEmployeeDialog.tsx` | הסרת שדה "קוד מיכפל" |
+| `src/components/ImportExcelDialog.tsx` | הסרת `michpal_code` מתבנית הייבוא, מהוולידציה ומה-INSERT |
+| `src/components/EmployeePayslipsTab.tsx` | הסרת הטיפ "ודא שמספר העובד במיכפל מוגדר…" — להחליף ב"ודא שתעודת הזהות מוגדרת בכרטיס העובד" |
+| `src/hooks/useMutations.ts` | הסרת `michpal_code` מ-`useCreateEmployee` / update |
+| `src/pages/Employees.tsx` | הסרת עמודת "קוד מיכפל" אם מוצגת |
+| `src/integrations/supabase/types.ts` | מתעדכן אוטומטית אחרי המיגרציה |
+
+חיפוש גלובלי אחר `michpal_code` / `michpalCode` / "מיכפל" יבוצע כדי לוודא שאין שאריות.
+
+### הערות
+
+- **שינוי הרסני**: כל ערכי `michpal_code` הקיימים יימחקו לצמיתות. אם המשתמש רוצה לשמור היסטוריה — יש לבצע export לפני המיגרציה.
+- תלושים שכבר נשמרו ושויכו לעובד (`employee_id` קיים) נשארים משויכים — רק שדה ה-detection נמחק.
+- תלושים שהיו unmatched לפי קוד מיכפל בלבד יישארו unmatched אם אין ת.ז. שזוהה.
