@@ -184,7 +184,7 @@ export function CreateTax101BatchDialog({ open, onOpenChange }: Props) {
                       <p className="text-sm font-medium truncate">{e.full_name}</p>
                       <p className="text-xs text-muted-foreground">
                         {e.employee_code} • {e.department}
-                        {!e.email && <span className="text-warning"> • אין מייל</span>}
+                        {!emailMap[e.id] && <span className="text-warning"> • אין מייל</span>}
                       </p>
                     </div>
                   </label>
