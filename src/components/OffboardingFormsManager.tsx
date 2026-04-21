@@ -60,7 +60,7 @@ interface RowState {
 export function OffboardingFormsManager({ employee, assets }: Props) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { currentCompany } = useCompany();
+  const { activeCompany } = useCompany();
 
   const [rows, setRows] = useState<Record<string, RowState>>({});
   const [creating, setCreating] = useState(false);
@@ -126,8 +126,8 @@ export function OffboardingFormsManager({ employee, assets }: Props) {
       const formSnapshot = {
         form_type: "asset_return",
         form_index: nextIndex,
-        company_name: currentCompany?.name ?? "",
-        company_logo_url: currentCompany?.logo_url ?? null,
+        company_name: activeCompany?.name ?? "",
+        company_logo_url: activeCompany?.logo_url ?? null,
         employee_name: employee.full_name,
         employee_id_number: employee.id_number,
         employee_department: employee.department,
