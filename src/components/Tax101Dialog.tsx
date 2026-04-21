@@ -43,8 +43,14 @@ export interface Tax101FormData {
   health_fund_member: boolean;
   health_fund_name: string;
   kibbutz_member: "no" | "yes_transferred" | "yes_not_transferred" | "";
-  spouse_name: string;
+  spouse_last_name: string;
+  spouse_first_name: string;
   spouse_id: string;
+  spouse_passport: string;
+  spouse_birth_date: string;
+  spouse_aliyah_date: string;
+  spouse_income_status: "no_income" | "has_income" | "other_income" | "";
+  spouse_income_sources: { work: boolean; pension: boolean; business: boolean };
   spouse_works: boolean;
   // Dependents
   dependents: Dependent[];
