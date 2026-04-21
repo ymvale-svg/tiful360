@@ -273,29 +273,7 @@ function PayrollSettings() {
 
   const MONTHS = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
 
-  const exportMissingMichpalCodes = async () => {
-    if (!activeCompanyId) return;
-    const { data } = await supabase
-      .from("employees")
-      .select("employee_code, full_name, id_number, michpal_code")
-      .eq("company_id", activeCompanyId)
-      .is("michpal_code", null);
-    if (!data || data.length === 0) {
-      toast({ title: "כל העובדים כבר משויכים למספר מיכפל" });
-      return;
-    }
-    const XLSX = await import("xlsx");
-    const ws = XLSX.utils.json_to_sheet(data.map((e: any) => ({
-      "מס׳ עובד": e.employee_code,
-      "שם מלא": e.full_name,
-      "ת.ז.": e.id_number,
-      "מספר מיכפל (למילוי)": "",
-    })));
-    const wb = XLSX.utils.book_new();
-    wb.Workbook = { Views: [{ RTL: true }] };
-    XLSX.utils.book_append_sheet(wb, ws, "עובדים ללא מיכפל");
-    XLSX.writeFile(wb, "עובדים_ללא_מספר_מיכפל.xlsx");
-  };
+
 
   if (!activeCompanyId) {
     return <div className="text-center py-8 text-muted-foreground">לא נבחרה חברה</div>;
