@@ -1,57 +1,83 @@
 
 
-## תיקון שגיאת UPSERT בתלושי שכר — Partial Unique Index
+## פיצול אמיתי לקובץ-פר-עובד + תיקון חילוץ נתונים בעברית RTL
 
-### האבחנה (מה קורה בפועל)
+### אבחנה (לפי הצילום והלוגים)
 
-הזיהוי עובד מצוין — 22 מתוך 22 עמודים זוהו עם ת"ז נכונה (`033204439`, `203242904`, `056055486` וכו'), נוצרו 22 קבוצות, נטענו 31 עובדים. אבל **כל 22 הקבוצות נכשלות** בשמירה ל-DB עם:
+**בעיה 1 — "כל התלושים מצורפים לכל עובד":**  
+ה-Edge Function שומר `pdf_url = source_pdf_url = _source_<batchId>.pdf` — כלומר **כל העובדים מקבלים מצביע לאותו קובץ של 22 העמודים**. כשלוחצים "צפייה/הורדה" נפתח כל ה-PDF (עם `#page=N` שזה רק הצבעה לעמוד הראשון, אבל המסמך המלא נחשף). זה מפר פרטיות וזו לא דרישת המשתמש.
 
+**בעיה 2 — "—" בכל השדות (חופשה/מחלה/ברוטו/נטו/ימי עבודה/חודש):**  
+unpdf מחזיר עברית בסדר וויזואלי הפוך:
+- לוג בפועל: `"33204439 זהות: מספרו"` (מספר לפני תווית)
+- לוג בפועל: `"תלוש שכר לחוד / / 26 בתאריך הודפס"` — חודש/שנה הפוכים
+- וכן הלאה לכל השדות
+
+ה-regex הנוכחי מחפש `תלוש\s*שכר\s*לחודש\s*MM\/YYYY`, `סה"כ תשלומים N`, `יתרה חדשה N` — כולם בכיוון LTR שלא תואם לטקסט הנקלט. **אף שדה לא נתפס** → כל הרשומות נשמרות עם NULL → המסך מציג "—". כיוון שגם החודש לא נתפס, בכל מקרה נופל ל-`period_month/year` שנבחרו בטופס (מרץ 2026), ולכן הצילום מראה רק שורה אחת לחודש שבחרת.
+
+---
+
+### תיקון
+
+#### חלק 1 — פיצול אמיתי של ה-PDF לקובץ נפרד לכל עובד
+ה-Edge Function `split-payslips/index.ts` ייצור PDF קטן לכל קבוצה באמצעות `pdf-lib` (`copyPages` + `save`) **אבל** באופן יעיל:
+
+- **טעינת המסמך פעם אחת** ב-`PDFDocument.load(binary)`.
+- ללולאה על groups: ליצור `PDFDocument.create()`, להעתיק רק את `pageIndices` של הקבוצה, לשמור, להעלות ל-storage כ-`<companyId>/<period>/<batchId>_<idNumber>.pdf`.
+- **לעקוף את WORKER_RESOURCE_LIMIT שראינו בעבר**: לעבד באצוות של 5 (`Promise.all` של 5 בכל איטרציה), ולהוסיף `await new Promise(r=>setTimeout(r,0))` בין אצוות כדי לאפשר GC.
+- **להשאיר את ה-source גם** (לשרידות/דיבוג), אבל `pdf_url` של כל רשומה יצביע לקובץ הפיצול הספציפי שלה. שדה `source_pdf_url` יישאר כגיבוי.
+
+תוצאה: עובד שלוחץ "צפייה" יראה רק את העמודים שלו.
+
+#### חלק 2 — תיקון regexes לעברית RTL
+
+לעדכן את `extractFields` להכיר בשני סדרים (לפני התווית ואחרי), בדומה למה שנעשה כבר עם ת"ז:
+
+| שדה | תבנית קיימת (LTR) | להוסיף תבנית RTL |
+|---|---|---|
+| תקופה | `תלוש שכר לחודש (MM)/(YYYY)` | `(MM)\s*[/\-]\s*(YYYY)\s*לחוד[ש]?\s*שכר\s*תלוש` ובנוסף `(YYYY)\s*[/\-]\s*(MM)` (RTL מהפך גם ספרות) — נבחר את הצמד הסביר (חודש 1-12) |
+| ברוטו | `סה"כ תשלומים N` | `N\s*תשלומים\s*סה[״"]כ` |
+| נטו | `שכר נטו N` | `N\s*נטו\s*שכר` |
+| ימי עבודה | `ימי עבודה N` | `N\s*עבודה\s*ימי` |
+| שעות | `שעות עבודה N` | `N\s*עבודה\s*שעות` |
+| יתרת חופשה | `חשבון חופשה ... יתרה חדשה N` | חיפוש `N\s*חדשה\s*יתרה[\s\S]{0,400}?חופשה\s*חשבון` |
+| יתרת מחלה | אנלוגי | אנלוגי |
+
+מבנה הקוד:
+```ts
+function tryMatch(t: string, ltr: RegExp, rtl: RegExp): RegExpMatchArray | null {
+  return t.match(ltr) ?? t.match(rtl);
+}
 ```
-code: "42P10"
-message: "there is no unique or exclusion constraint matching the ON CONFLICT specification"
+ניסיון ראשון LTR, אם נכשל — RTL.
+
+#### חלק 3 — לוג אבחון מורחב
+להוסיף לוג של השדות שנקלטו לכל קבוצה:
+```ts
+console.log(`group ${normalizedId}: vac=${primary.vacationBalance} sick=${primary.sickBalance} gross=${primary.grossSalary} workDays=${primary.workDays} period=${primary.month}/${primary.year}`);
 ```
+כדי שאם משהו עדיין לא נתפס — נראה איזה שדה ספציפי.
 
-**הסיבה**: ה-Edge Function משתמש ב-`upsert(..., { onConflict: 'employee_id,period_year,period_month' })`. בטבלה קיים אינדקס בשם `payslips_employee_period_uniq` שהוא **partial unique index**:
+#### חלק 4 — UI: שימוש ב-`pdf_url` (הקובץ המפוצל) במקום `source_pdf_url`
+ב-`EmployeePayslipsTab.openPayslip` וב-`EmployeePortal` (אם רלוונטי): להחליף את הסדר ל-`p.pdf_url ?? p.source_pdf_url`. לבטל את הוספת `#page=N` כי הקובץ המפוצל מתחיל בעמוד 1.
 
-```sql
-CREATE UNIQUE INDEX payslips_employee_period_uniq 
-ON payslips (employee_id, period_year, period_month) 
-WHERE (employee_id IS NOT NULL);
-```
+`getPayslipSignedUrl` יקבל אופציונלית `pageIndices` אבל לא ישתמש בו אם הקובץ הוא הקובץ המפוצל הספציפי.
 
-PostgreSQL לא מקבל partial unique indexes ב-`ON CONFLICT (cols)` — דורש constraint מלא או ציון מפורש של ה-`WHERE` בפסוקית. PostgREST/supabase-js לא תומך בציון ה-`WHERE`, ולכן ה-upsert נכשל לחלוטין → 22 נכשלים, 0 הותאמו.
-
-### השינוי
-
-**שתי עבודות מקבילות:**
-
-#### 1. מיגרציה ב-DB
-ליצור UNIQUE CONSTRAINT אמיתי (לא partial) על `(employee_id, period_year, period_month)`. כדי שזה יעבוד עם רשומות `unmatched` (employee_id=NULL):
-- ב-PostgreSQL, NULL נחשב unique תמיד — כלומר ניתן להכניס מספר רשומות עם `employee_id=NULL` בלי בעיה גם תחת UNIQUE constraint רגיל.
-- לכן ניתן להוריד את ה-WHERE ולהפוך את האינדקס ל-constraint מלא:
-
-```sql
-DROP INDEX IF EXISTS payslips_employee_period_uniq;
-ALTER TABLE payslips 
-  ADD CONSTRAINT payslips_employee_period_uniq 
-  UNIQUE (employee_id, period_year, period_month);
-```
-
-זה יוצר constraint שניתן להפניה ב-`onConflict`, ובו זמנית מאפשר רשומות unmatched (NULL) מרובות באותה תקופה.
-
-#### 2. תיקון ב-Edge Function (גיבוי בטיחות)
-לעטוף את ה-upsert ב-try/catch שאם `onConflict` נכשל — לבדוק אם רשומה קיימת ולעשות `update` או `insert` ידנית. זה גיבוי במקרה שהמיגרציה תיכשל מסיבה כלשהי.
+---
 
 ### קבצים מושפעים
 
 | קובץ | שינוי |
 |---|---|
-| מיגרציה חדשה | DROP partial index + ADD UNIQUE constraint על `payslips(employee_id, period_year, period_month)` |
-| `supabase/functions/split-payslips/index.ts` | (אופציונלי) fallback ידני ל-update/insert במקרה שה-upsert נכשל |
+| `supabase/functions/split-payslips/index.ts` | + import `pdf-lib`, פיצול PDF פיזי בקבוצות של 5, regexes RTL לכל השדות, לוג אבחון מורחב |
+| `src/hooks/usePayslips.ts` | פונקציה `getPayslipSignedUrl` תעדיף `pdf_url` ולא תוסיף `#page=` כשזה הקובץ המפוצל |
+| `src/components/EmployeePayslipsTab.tsx` | להעדיף `p.pdf_url` (הקובץ הפרטי של העובד) |
+| `src/pages/EmployeePortal.tsx` | אם פותח תלוש — להעדיף `pdf_url` |
 
 ### בדיקה לאחר ביצוע
-1. להעלות שוב את אותו PDF (T2091b32.pdf — 22 עמודים).
-2. **תוצאה צפויה**: `groups=22`, `matched=N` (כמה ת"ז קיימות בעובדים), `unmatched=22-N`, **`failed=0`**.
-3. הכרטיס האדום "נכשלו" אמור להציג 0.
-4. לבדוק שיתרות חופשה/מחלה התעדכנו לעובדים שהותאמו.
+1. להעלות שוב את `T2091b32.pdf` (22 עמודים).
+2. לוודא ב-storage: כ-22 קבצים `<batchId>_<id>.pdf` נפרדים, כל אחד בגודל סביר (1-3 עמודים).
+3. לפתוח עובד שהותאם → לראות **רק את העמודים שלו** ב-PDF.
+4. לוודא שעמודות חופשה/מחלה/ברוטו/נטו/ימי עבודה מציגות מספרים, לא "—".
+5. לוודא שהחודש המוצג בטבלה תואם למה שכתוב ב-PDF (לא רק חודש שנבחר בטופס).
 
