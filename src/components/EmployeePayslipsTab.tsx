@@ -26,6 +26,21 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary }: Prop
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
   const deleteMutation = useDeletePayslip();
 
+  // Fetch fresh employee record with balance fields (employees_public view doesn't expose balances)
+  const { data: empFull } = useQuery({
+    queryKey: ["employee-balances", employeeId],
+    enabled: !!employeeId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("employees")
+        .select("vacation_balance, sick_balance, balances_source, balances_updated_at, id_number, full_name")
+        .eq("id", employeeId)
+        .maybeSingle();
+      return data;
+    },
+  });
+  const emp: any = { ...(employee ?? {}), ...(empFull ?? {}) };
+
   const openPayslip = async (p: any) => {
     const usingSplit = !!p.pdf_url && p.pdf_url !== p.source_pdf_url;
     const path = p.pdf_url ?? p.source_pdf_url;
