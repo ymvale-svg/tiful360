@@ -193,6 +193,7 @@ Deno.serve(async (req) => {
       const pageText = allTexts[i] ?? '';
       const fields = extractFields(pageText);
       pages.push({ pageIndex: i, text: pageText, ...fields });
+      console.log(`split-payslips: page ${i} idDetected=${fields.idNumber} firstChars=${pageText.slice(0, 150)}`);
     }
 
     // Group consecutive pages by idNumber
