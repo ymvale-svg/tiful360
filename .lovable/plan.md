@@ -1,55 +1,61 @@
 
-## תוכנית מקיפה: ארגון מסך "שכר ותלושים" + ניקוי קוד מת
+## יישור RTL אחיד לכל הטבלאות
 
-### חלק א' — מבנה סופי של `/payroll`
+### הבעיה
+במסך עובדים (וטבלאות אחרות) הכותרות (`<th>`) מיושרות עם `text-right` (ימין פיזי), אבל תאי הנתונים (`<td>`) ללא יישור מפורש — מקבלים את ברירת המחדל של הדפדפן שיכולה להיות `start` או להיות מושפעת מתוכן (font-mono, badges, אלמנטים inline-flex). התוצאה: חוסר יישור חזותי בין הכותרת לערכים, במיוחד בעמודות עם תוכן קצר/LTR כמו `EMP-400`.
 
-מסך אחד עם 4 טאבים, deep-link דרך `?tab=`:
+### הפתרון — כלל CSS גלובלי אחד
 
-| טאב | key | תוכן |
-|---|---|---|
-| סקירה | `overview` (ברירת מחדל) | KPIs, אצוות אחרונות (6), מחלות/חופשות פעילות, תיקוני שעון פתוחים, **כפתור "העלאת אצוות תלושים"** + empty-state CTA |
-| ניהול תלושים | `batches` | רשימת כל האצוות עם פילטר חודש/שנה, תלושים לא משויכים (`useUnmatchedPayslips`) עם הקצאה ידנית, מחיקה |
-| תלושי עובד | `employee` | בחירת עובד + `<EmployeePayslipsTab />` |
-| הגדרות שכר | `settings` | שדה `payroll_emails` (מופרד פסיקים), וולידציה, שמירה ל-`companies.payroll_emails` |
+#### `src/index.css` — עדכון `.data-table`
+החלפה של `text-right` ב-`text-start` (לוגי, נכון ל-RTL ול-LTR), והוספה של אותו כלל ל-`td`:
 
-### חלק ב' — הסרה מ-`/settings`
+```css
+.data-table th {
+  @apply text-start font-medium text-muted-foreground bg-muted/50 px-4 py-3 border-b;
+}
 
-#### `src/pages/Settings.tsx`
-- הסרת טאב "תלושי שכר" אם נותר.
-- מתוך `GeneralSettings` (טאב "כללי"):
-  - מחיקת state `payrollEmails` + סנכרון מה-query.
-  - מחיקת בלוק JSX של השדה (label + input + הסבר).
-  - מחיקת לוגיקת validate emails.
-  - הסרת `payroll_emails` מ-payload של `updateMutation`.
+.data-table td {
+  @apply text-start px-4 py-3 border-b border-border/50;
+}
+```
 
-### חלק ג' — ניקוי קוד מת
+זה מבטיח שכל טבלה שמשתמשת ב-class `data-table` (Employees, Assets, EmployeeDetail, EmployeePayslipsTab, Payroll × 3) תהיה מיושרת אחיד מימין.
 
-#### ב-`src/pages/Settings.tsx`
-- imports שלא בשימוש: `PayslipsUploadDialog`, `usePayslipBatches`, `useUnmatchedPayslips`, אייקונים שהיו רק לבלוקים שהוסרו (`Upload`, `FileText` וכו').
-- פונקציות עזר שנשארו יתומות (validate email helper) — להעביר ל-`/payroll` או למחוק אם משוכפלות.
+### ניקוי `text-right` מיותר בטבלאות `data-table`
+ב-`src/pages/Payroll.tsx` יש כמה תאים עם `className="font-mono"` בלבד — אלה כבר ירשו את היישור החדש. אין צורך לגעת.
 
-#### ב-`src/pages/Payroll.tsx`
-- וידוא שאין כפילות בין `OverviewTab` ל-`BatchesTab` בשליפת `usePayslipBatches` (למשל key/limit שונים במקום אחד מקור).
-- מחיקת imports יתומים שנותרו מאיטרציות קודמות.
+### תיקונים נקודתיים בטבלאות שלא משתמשות ב-`data-table`
 
-#### חיפוש כללי בפרויקט
-- `grep` ל-`payroll_emails` — לוודא שהשימוש היחיד הוא ב-`/payroll` ובקריאות edge functions.
-- `grep` ל-`PayslipsUploadDialog` — שייובא רק במקומות הרלוונטיים (`Payroll.tsx`).
-- הסרת תרגומים/מחרוזות יתומות אם קיים קובץ i18n.
+טבלאות שמשתמשות ב-`text-right` עם רכיבי `Table`/`TableHead` של shadcn או טבלאות מותאמות — לעבור ל-`text-start` לעקביות:
 
-### חלק ד' — הרשאות (ללא שינוי, וידוא בלבד)
+| קובץ | מיקום |
+|---|---|
+| `src/pages/Companies.tsx` | `<TableHead className="text-right">` × 4 → `text-start` |
+| `src/components/OffboardingFormsManager.tsx` | `<th className="p-2 text-right">` × 5 → `text-start` |
+| `src/components/ImportAssetsExcelDialog.tsx` | `<th className="p-2 text-right">` × 5 + tds → `text-start` |
+| `src/components/HandoverFormsList.tsx` | אם יש `text-right` בטבלאות — להחליף |
+| `src/components/ImportExcelDialog.tsx` | אותו טיפול אם רלוונטי |
+| `src/components/OffboardingFormView.tsx` / `HandoverFormView.tsx` | טפסי PDF — להישאר עם `text-right` (נדרש ל-print/PDF, לא תלוי `dir`) |
 
-- `/payroll`: `admin`, `super_admin`, `payroll`
-- `/settings`: `admin`, `super_admin`
-- חשב שכר מקבל גישה מלאה לכל מה שצריך מתוך `/payroll`.
+### בדיקה רוחבית (grep)
+לאחר השינוי — `grep` ל-`text-right` בכל `src/`:
+- בטבלאות UI אינטראקטיביות → להחליף ל-`text-start`.
+- בטפסי PDF/Print (`OffboardingFormView`, `HandoverFormView`, `generate*Pdf.ts`) → להשאיר.
+- ב-form labels / input alignment → להשאיר אם מיועד לכוון ספציפי.
 
 ### קבצים מושפעים
 
 | קובץ | שינוי |
 |---|---|
-| `src/pages/Payroll.tsx` | מבנה 4 טאבים סופי, כפתור Upload בסקירה + empty-state, טאב "הגדרות שכר" |
-| `src/pages/Settings.tsx` | הסרה מלאה של תלושים/payroll_emails + ניקוי imports |
+| `src/index.css` | `.data-table th/td` → `text-start` |
+| `src/pages/Companies.tsx` | `TableHead text-right` → `text-start` |
+| `src/components/OffboardingFormsManager.tsx` | `th text-right` → `text-start` |
+| `src/components/ImportAssetsExcelDialog.tsx` | `th text-right` → `text-start` |
+| `src/components/ImportExcelDialog.tsx` | בדיקה + החלפה אם רלוונטי |
+| `src/components/HandoverFormsList.tsx` | בדיקה + החלפה אם רלוונטי |
 
 ### הערות
-- אין שינוי DB / hooks / edge functions.
-- לאחר ביצוע — בדיקה ידנית: `/payroll?tab=settings` עובד, שמירת אימיילים מעדכנת את ה-DB, התראות חופשה/מחלה ממשיכות להישלח לכתובות שהוגדרו.
+- אין שינוי DB / hooks / לוגיקה — שינוי ויזואלי בלבד.
+- `text-start` הוא CSS logical property — בדפדפנים מודרניים נתמך מלא (Chrome/Edge/Safari/Firefox).
+- טפסי PDF/Print נשארים עם `text-right` כי הם לא תלויים ב-`dir` של ה-document.
+- לאחר ביצוע — בדיקה ידנית: עובדים, נכסים, תלושים, חברות, טופסי החזרה — כל הכותרות והתאים מיושרים לקצה ימין באופן זהה.
