@@ -74,6 +74,75 @@ export function useUnmatchedPayslips(batchId: string | undefined) {
   });
 }
 
+export function useDeletePayslip() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payslipId: string) => {
+      // Try to remove the split PDF from storage (best effort)
+      const { data: row } = await supabase
+        .from("payslips")
+        .select("pdf_url, source_pdf_url")
+        .eq("id", payslipId)
+        .maybeSingle();
+      if (row?.pdf_url && row.pdf_url !== row.source_pdf_url) {
+        await supabase.storage.from("payslips").remove([row.pdf_url]);
+      }
+      const { error } = await supabase.from("payslips").delete().eq("id", payslipId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["payslips"] });
+      qc.invalidateQueries({ queryKey: ["payslip-batches"] });
+      qc.invalidateQueries({ queryKey: ["batch-payslips"] });
+    },
+  });
+}
+
+export function useBatchPayslips(batchId: string | undefined) {
+  return useQuery({
+    queryKey: ["batch-payslips", batchId],
+    enabled: !!batchId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("payslips")
+        .select("*, employee:employees!payslips_employee_id_fkey(full_name, id_number)")
+        .eq("batch_id", batchId!)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data as any[];
+    },
+  });
+}
+
+export function useDeleteBatch() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (batchId: string) => {
+      // Fetch all payslips for the batch to remove their split PDFs
+      const { data: rows } = await supabase
+        .from("payslips")
+        .select("pdf_url, source_pdf_url")
+        .eq("batch_id", batchId);
+      const paths = (rows ?? [])
+        .filter((r: any) => r.pdf_url && r.pdf_url !== r.source_pdf_url)
+        .map((r: any) => r.pdf_url as string);
+      if (paths.length > 0) {
+        await supabase.storage.from("payslips").remove(paths);
+      }
+      // Delete payslips, then batch
+      const { error: e1 } = await supabase.from("payslips").delete().eq("batch_id", batchId);
+      if (e1) throw e1;
+      const { error: e2 } = await supabase.from("payslip_batches").delete().eq("id", batchId);
+      if (e2) throw e2;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["payslips"] });
+      qc.invalidateQueries({ queryKey: ["payslip-batches"] });
+      qc.invalidateQueries({ queryKey: ["payroll-batches-recent"] });
+    },
+  });
+}
+
 export function useAssignPayslipToEmployee() {
   const qc = useQueryClient();
   return useMutation({
