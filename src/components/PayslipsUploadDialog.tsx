@@ -80,6 +80,8 @@ export function PayslipsUploadDialog({ open, onOpenChange }: Props) {
       qc.invalidateQueries({ queryKey: ["payslip-batches"] });
       qc.invalidateQueries({ queryKey: ["payslips"] });
       qc.invalidateQueries({ queryKey: ["employees"] });
+      qc.invalidateQueries({ queryKey: ["employee-balances"] });
+      qc.invalidateQueries({ queryKey: ["employee"] });
       if ((data?.groups ?? 0) === 0) {
         toast({
           title: "לא זוהו תעודות זהות בקובץ",

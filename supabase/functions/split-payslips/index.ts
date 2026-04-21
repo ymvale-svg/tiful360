@@ -388,12 +388,12 @@ Deno.serve(async (req) => {
                 messages: [
                   {
                     role: 'system',
-                    content: 'אתה מחלץ נתוני תלוש שכר ישראלי. החזר אך ורק קריאה לפונקציה extract_payslip עם הערכים המדויקים שמופיעים במסמך. אם שדה לא מופיע — החזר null. אל תמציא ערכים.',
+                    content: 'אתה מחלץ נתוני תלוש שכר ישראלי. החזר אך ורק קריאה לפונקציה extract_payslip עם הערכים המדויקים שמופיעים במסמך. אם שדה לא מופיע — החזר null. אל תמציא ערכים. שים לב להבדל בין "ימי עבודה" (מספר קטן, בד״כ 17-26) לבין "שעות עבודה" (מספר גדול יותר, בד״כ 100-200). אל תחליף ביניהם.',
                   },
                   {
                     role: 'user',
                     content: [
-                      { type: 'text', text: 'חלץ את הנתונים מתלוש השכר המצורף.' },
+                      { type: 'text', text: 'חלץ את הנתונים מתלוש השכר המצורף. ודא שאתה מחזיר ימי עבודה (לא שעות) בשדה work_days, ושעות עבודה (לא ימים) בשדה work_hours.' },
                       { type: 'image_url', image_url: { url: dataUrl } },
                     ],
                   },
@@ -413,8 +413,8 @@ Deno.serve(async (req) => {
                           period_month: { type: ['number', 'null'], description: 'חודש התלוש (1-12)' },
                           gross_salary: { type: ['number', 'null'], description: 'סה"כ תשלומים / שכר ברוטו' },
                           net_salary: { type: ['number', 'null'], description: 'שכר נטו לתשלום' },
-                          work_days: { type: ['number', 'null'], description: 'ימי עבודה בפועל' },
-                          work_hours: { type: ['number', 'null'], description: 'שעות עבודה בפועל' },
+                          work_days: { type: ['number', 'null'], description: 'ימי עבודה בפועל (מספר ימים, בד"כ 17-26). אל תחזיר שעות כאן.' },
+                          work_hours: { type: ['number', 'null'], description: 'סך שעות עבודה בפועל בחודש (בד"כ 100-200 שעות). אל תחזיר ימים כאן.' },
                           vacation_balance: { type: ['number', 'null'], description: 'יתרת חופשה חדשה (בימים)' },
                           sick_balance: { type: ['number', 'null'], description: 'יתרת מחלה חדשה (בימים)' },
                         },

@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { useEmployeePayslips, getPayslipSignedUrl, useDeletePayslip } from "@/hooks/usePayslips";
 import { Download, Calendar, TrendingUp, Stethoscope, FileText, Eye, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,6 +26,21 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary }: Prop
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
   const deleteMutation = useDeletePayslip();
 
+  // Fetch fresh employee record with balance fields (employees_public view doesn't expose balances)
+  const { data: empFull } = useQuery({
+    queryKey: ["employee-balances", employeeId],
+    enabled: !!employeeId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("employees")
+        .select("vacation_balance, sick_balance, balances_source, balances_updated_at, id_number, full_name")
+        .eq("id", employeeId)
+        .maybeSingle();
+      return data;
+    },
+  });
+  const emp: any = { ...(employee ?? {}), ...(empFull ?? {}) };
+
   const openPayslip = async (p: any) => {
     const usingSplit = !!p.pdf_url && p.pdf_url !== p.source_pdf_url;
     const path = p.pdf_url ?? p.source_pdf_url;
@@ -36,8 +53,8 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary }: Prop
     window.open(url, "_blank");
   };
 
-  const lastUpdate = employee?.balances_updated_at
-    ? new Date(employee.balances_updated_at).toLocaleDateString("he-IL")
+  const lastUpdate = emp?.balances_updated_at
+    ? new Date(emp.balances_updated_at).toLocaleDateString("he-IL")
     : null;
 
   return (
@@ -50,7 +67,7 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary }: Prop
             יתרת חופשה
           </div>
           <p className="text-3xl font-bold mt-2 text-primary">
-            {Number(employee?.vacation_balance ?? 0).toFixed(2)}
+            {Number(emp?.vacation_balance ?? 0).toFixed(2)}
           </p>
           <p className="text-xs text-muted-foreground mt-1">ימים</p>
         </div>
@@ -60,7 +77,7 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary }: Prop
             יתרת מחלה
           </div>
           <p className="text-3xl font-bold mt-2 text-info">
-            {Number(employee?.sick_balance ?? 0).toFixed(2)}
+            {Number(emp?.sick_balance ?? 0).toFixed(2)}
           </p>
           <p className="text-xs text-muted-foreground mt-1">ימים</p>
         </div>
@@ -71,7 +88,7 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary }: Prop
           </div>
           <p className="text-lg font-bold mt-2">{lastUpdate ?? "—"}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            מקור: {employee?.balances_source === "payslip" ? "תלוש שכר" : "ידני"}
+            מקור: {emp?.balances_source === "payslip" ? "תלוש שכר" : "ידני"}
           </p>
         </div>
       </div>
@@ -89,7 +106,7 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary }: Prop
         ) : (payslips?.length ?? 0) === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             עדיין לא הועלו תלושים לעובד זה.
-            {!employee?.id_number && (
+            {!emp?.id_number && (
               <p className="text-xs mt-2">טיפ: ודא שתעודת הזהות מוגדרת בכרטיס העובד כדי שהמערכת תזהה אוטומטית.</p>
             )}
           </div>
@@ -149,7 +166,7 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary }: Prop
         open={!!summaryPayslip}
         onClose={() => setSummaryPayslip(null)}
         payslip={summaryPayslip}
-        employeeName={employee?.full_name}
+        employeeName={emp?.full_name}
         canSeeSalary={canSeeSalary}
       />
 
