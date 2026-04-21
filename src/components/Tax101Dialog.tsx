@@ -1167,33 +1167,89 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
 // Official 0101/130 PDF Preview
 // ============================
 
+// CSS-drawn checkbox — does not depend on Unicode font availability,
+// so html2canvas always renders ☒/☐ identically.
 const CB = ({ on }: { on?: boolean }) => (
-  <span style={{ display: "inline-block", fontFamily: "Arial Unicode MS, Arial, sans-serif", fontSize: 13, lineHeight: 1, marginInlineEnd: 4 }}>
-    {on ? "☒" : "☐"}
+  <span
+    style={{
+      display: "inline-block",
+      width: 11,
+      height: 11,
+      border: "1.2px solid #000",
+      verticalAlign: "-2px",
+      marginInlineEnd: 4,
+      position: "relative",
+      background: "#fff",
+      boxSizing: "border-box",
+    }}
+  >
+    {on && (
+      <span
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 13,
+          lineHeight: 1,
+          fontWeight: 900,
+          color: "#000",
+          // Use a simple "X" — universally available, no glyph fallback issues.
+          fontFamily: "Arial, sans-serif",
+        }}
+      >
+        ✕
+      </span>
+    )}
   </span>
 );
 
 const Section: React.FC<{ title: string; children: React.ReactNode; pageBreak?: boolean }> = ({ title, children, pageBreak }) => (
-  <div style={{ marginTop: 8, pageBreakBefore: pageBreak ? "always" : "auto" }}>
-    <div style={{
-      background: "#e5e7eb",
-      border: "1px solid #000",
-      padding: "3px 6px",
-      fontWeight: 700,
-      fontSize: 11,
-    }}>{title}</div>
-    <div style={{ border: "1px solid #000", borderTop: "none", padding: 6, fontSize: 10, lineHeight: 1.5 }}>
+  <div
+    style={{
+      marginTop: 8,
+      pageBreakBefore: pageBreak ? "always" : "auto",
+      // Keep each section together when slicing the rendered canvas
+      breakInside: "avoid",
+      pageBreakInside: "avoid",
+    } as React.CSSProperties}
+  >
+    <div
+      style={{
+        background: "#e5e7eb",
+        border: "1px solid #000",
+        padding: "3px 6px",
+        fontWeight: 700,
+        fontSize: 11,
+      }}
+    >
+      {title}
+    </div>
+    <div style={{ border: "1px solid #000", borderTop: "none", padding: 6, fontSize: 10, lineHeight: 1.55 }}>
       {children}
     </div>
   </div>
 );
 
 const Field: React.FC<{ label: string; value?: string | null; minWidth?: number }> = ({ label, value, minWidth = 80 }) => (
-  <span style={{ display: "inline-flex", alignItems: "baseline", marginLeft: 10, marginBottom: 3 }}>
+  <span
+    style={{
+      display: "inline-flex",
+      alignItems: "baseline",
+      marginLeft: 10,
+      marginBottom: 3,
+      // Don't let a field wrap awkwardly in the middle of label/value
+      whiteSpace: "nowrap",
+    }}
+  >
     <span style={{ fontWeight: 600, marginInlineEnd: 4 }}>{label}:</span>
-    <span style={{ minWidth, borderBottom: "1px solid #000", padding: "0 4px", display: "inline-block" }}>{value || "\u00A0"}</span>
+    <span style={{ minWidth, borderBottom: "1px solid #000", padding: "0 4px", display: "inline-block" }}>
+      {value || "\u00A0"}
+    </span>
   </span>
 );
+
 
 const Tax101Preview = forwardRef<
   HTMLDivElement,
