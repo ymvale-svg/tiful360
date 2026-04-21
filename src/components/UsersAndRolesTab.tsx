@@ -10,8 +10,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
-import { Users, ShieldCheck, ShieldOff, Ban, CheckCircle, RefreshCw, Upload } from "lucide-react";
+import { Users, ShieldCheck, ShieldOff, Ban, CheckCircle, RefreshCw, Upload, UserPlus } from "lucide-react";
 import { ImportExcelDialog } from "@/components/ImportExcelDialog";
+import { InviteExternalUserDialog } from "@/components/InviteExternalUserDialog";
 import { format } from "date-fns";
 import { he } from "date-fns/locale";
 
@@ -79,6 +80,7 @@ export function UsersAndRolesTab() {
   const { activeCompanyId } = useCompany();
   const queryClient = useQueryClient();
   const [importOpen, setImportOpen] = useState(false);
+  const [inviteExternalOpen, setInviteExternalOpen] = useState(false);
 
   // Operations-only users (no admin/super_admin) cannot manage sensitive roles
   const restrictRoles = isOperations && !isAdmin && !isSuperAdmin;
@@ -86,6 +88,17 @@ export function UsersAndRolesTab() {
   const { data: users = [], isLoading, refetch } = useQuery({
     queryKey: ["managed-users", activeCompanyId],
     queryFn: () => fetchUsers(activeCompanyId),
+  });
+
+  // Linked employee user IDs for the active company (to mark "external" vs "employee")
+  const { data: linkedUserIds = new Set<string>() } = useQuery({
+    queryKey: ["linked-employee-user-ids", activeCompanyId],
+    queryFn: async () => {
+      let q = supabase.from("employees").select("linked_user_id").not("linked_user_id", "is", null);
+      if (activeCompanyId) q = q.eq("company_id", activeCompanyId);
+      const { data } = await q;
+      return new Set((data ?? []).map((e: any) => e.linked_user_id).filter(Boolean));
+    },
   });
 
   const roleMutation = useMutation({
@@ -152,10 +165,18 @@ export function UsersAndRolesTab() {
           <h2 className="text-lg font-semibold text-foreground">משתמשים ותפקידים</h2>
           <p className="text-sm text-muted-foreground">צפייה, שינוי תפקידים והשהיית חשבונות</p>
         </div>
-        <Button variant="outline" onClick={() => refetch()} className="gap-2">
-          <RefreshCw className="w-4 h-4" />
-          רענון
-        </Button>
+        <div className="flex items-center gap-2">
+          {(isAdmin || isSuperAdmin) && (
+            <Button onClick={() => setInviteExternalOpen(true)} className="gap-2">
+              <UserPlus className="w-4 h-4" />
+              הזמן משתמש חיצוני
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => refetch()} className="gap-2">
+            <RefreshCw className="w-4 h-4" />
+            רענון
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -195,6 +216,7 @@ export function UsersAndRolesTab() {
             <TableHeader>
               <TableRow>
                 <TableHead className="text-start">משתמש</TableHead>
+                <TableHead className="text-start">סוג</TableHead>
                 <TableHead className="text-start">ספק אימות</TableHead>
                 <TableHead className="text-start">תפקידים</TableHead>
                 <TableHead className="text-start">כניסה אחרונה</TableHead>
@@ -205,13 +227,13 @@ export function UsersAndRolesTab() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     טוען משתמשים...
                   </TableCell>
                 </TableRow>
               ) : users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     לא נמצאו משתמשים
                   </TableCell>
                 </TableRow>
@@ -231,6 +253,13 @@ export function UsersAndRolesTab() {
                           <p className="text-xs text-muted-foreground">{u.email || u.phone || "—"}</p>
                         </div>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {linkedUserIds.has(u.id) ? (
+                        <Badge variant="outline" className="text-xs bg-secondary text-secondary-foreground border-secondary">עובד</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs bg-accent text-accent-foreground border-accent">חיצוני</Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-xs">
@@ -312,6 +341,7 @@ export function UsersAndRolesTab() {
         </CardContent>
       </Card>
       <ImportExcelDialog open={importOpen} onOpenChange={setImportOpen} mode="employees" />
+      <InviteExternalUserDialog open={inviteExternalOpen} onOpenChange={setInviteExternalOpen} />
     </div>
   );
 }
