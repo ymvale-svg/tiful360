@@ -8,7 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import { useProfile } from "@/hooks/useData";
+import { useProfile, useCompanyContacts } from "@/hooks/useData";
 import { useCompany } from "@/hooks/useCompany";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -129,21 +129,8 @@ export default function EmployeePortal() {
     enabled: !!activeCompanyId,
   });
 
-  // Fetch portal contacts from DB
-  const { data: portalContacts = [] } = useQuery({
-    queryKey: ["portal_contacts", activeCompanyId],
-    queryFn: async () => {
-      if (!activeCompanyId) return [];
-      const { data, error } = await supabase
-        .from("portal_contacts")
-        .select("*")
-        .eq("company_id", activeCompanyId)
-        .order("sort_order");
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!activeCompanyId,
-  });
+  // Fetch merged company contacts (employees + external) via secure hook
+  const { data: portalContacts = [] } = useCompanyContacts();
 
   // Fetch announcements from DB
   const { data: announcements = [] } = useQuery({
