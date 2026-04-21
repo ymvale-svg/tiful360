@@ -12,6 +12,7 @@ import { useCompany } from "@/hooks/useCompany";
 import { supabase } from "@/integrations/supabase/client";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Switch } from "@/components/ui/switch";
+import { useSubEmployers } from "@/hooks/useSubEmployers";
 
 interface Props {
   open: boolean;
@@ -62,6 +63,7 @@ export function AddEmployeeDialog({ open, onOpenChange }: Props) {
     role: "",
     department: "",
     direct_manager_id: "",
+    sub_employer_id: "",
     phone: "",
     email: "",
     birth_date: "",
@@ -76,7 +78,8 @@ export function AddEmployeeDialog({ open, onOpenChange }: Props) {
   const { data: existingEmployees } = useEmployees();
   const { toast } = useToast();
   const { isOperations, isAdmin, isSuperAdmin } = useAuth();
-  const { activeCompanyId } = useCompany();
+  const { activeCompanyId, activeCompany } = useCompany();
+  const { data: subEmployers = [] } = useSubEmployers(true);
 
   const set = (key: string, value: any) => {
     setForm(prev => ({ ...prev, [key]: value }));
@@ -157,6 +160,7 @@ export function AddEmployeeDialog({ open, onOpenChange }: Props) {
         start_date: form.start_date,
         status: form.status,
         direct_manager_id: form.direct_manager_id || null,
+        sub_employer_id: form.sub_employer_id || null,
         exclude_from_contacts: form.exclude_from_contacts,
       } as any);
 
@@ -193,7 +197,7 @@ export function AddEmployeeDialog({ open, onOpenChange }: Props) {
       onOpenChange(false);
       setForm({
         employee_number: "", full_name: "", id_number: "", role: "",
-        department: "", direct_manager_id: "", phone: "", email: "", birth_date: "",
+        department: "", direct_manager_id: "", sub_employer_id: "", phone: "", email: "", birth_date: "",
         start_date: new Date().toISOString().split("T")[0], status: "active",
         system_role: "employee", send_invite: true, exclude_from_contacts: false,
       });
@@ -294,6 +298,23 @@ export function AddEmployeeDialog({ open, onOpenChange }: Props) {
               placeholder="בחר מנהל ישיר (אופציונלי)"
               searchPlaceholder="חפש עובד..."
             />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-1 block">מעסיק</label>
+            <SearchableSelect
+              value={form.sub_employer_id}
+              onChange={(v) => set("sub_employer_id", v)}
+              options={[
+                { value: "", label: `החברה הראשית — ${activeCompany?.name ?? ""}` },
+                ...subEmployers.map((s) => ({ value: s.id, label: `${s.legal_name} (${s.tax_id})` })),
+              ]}
+              placeholder="החברה הראשית"
+              searchPlaceholder="חפש מעסיק..."
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              קובע באיזה ישות משפטית ייצא טופס 101 של העובד
+            </p>
           </div>
 
           <div>

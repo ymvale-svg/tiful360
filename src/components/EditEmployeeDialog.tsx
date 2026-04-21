@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ShieldCheck, ShieldAlert, Mail } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useSubEmployers } from "@/hooks/useSubEmployers";
 
 interface Props {
   open: boolean;
@@ -25,7 +26,8 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
   const { toast } = useToast();
   const update = useUpdateEmployee();
   const { data: allEmployees } = useEmployees();
-  const { activeCompanyId } = useCompany();
+  const { activeCompanyId, activeCompany } = useCompany();
+  const { data: subEmployers = [] } = useSubEmployers(true);
   const queryClient = useQueryClient();
   const [form, setForm] = useState<any>({});
 
@@ -43,6 +45,7 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
         start_date: employee.start_date ?? "",
         status: employee.status ?? "active",
         direct_manager_id: employee.direct_manager_id ?? "",
+        sub_employer_id: employee.sub_employer_id ?? "",
         exclude_from_contacts: !!employee.exclude_from_contacts,
       });
     }
@@ -103,6 +106,9 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
       if (!payload.phone) delete payload.phone;
       if (!payload.direct_manager_id || payload.direct_manager_id === "__none__") {
         payload.direct_manager_id = null;
+      }
+      if (!payload.sub_employer_id || payload.sub_employer_id === "__main__") {
+        payload.sub_employer_id = null;
       }
       await update.mutateAsync({ id: employee.id, ...payload });
       queryClient.invalidateQueries({ queryKey: ["employees-full"] });
@@ -179,6 +185,19 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
               options={managerOptions}
               placeholder="בחר מנהל ישיר"
               searchPlaceholder="חפש עובד..."
+            />
+          </div>
+          <div className="md:col-span-2">
+            <Label>מעסיק (לטופס 101)</Label>
+            <SearchableSelect
+              value={form.sub_employer_id || "__main__"}
+              onChange={(v) => set("sub_employer_id", v === "__main__" ? "" : v)}
+              options={[
+                { value: "__main__", label: `החברה הראשית — ${activeCompany?.name ?? ""}` },
+                ...subEmployers.map((s) => ({ value: s.id, label: `${s.legal_name} (${s.tax_id})` })),
+              ]}
+              placeholder="החברה הראשית"
+              searchPlaceholder="חפש מעסיק..."
             />
           </div>
         </div>

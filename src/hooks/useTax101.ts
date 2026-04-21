@@ -132,12 +132,22 @@ export function useCreateTax101Batch() {
       sendInvites: boolean;
     }) => {
       if (!activeCompanyId) throw new Error("No active company");
+      // Fetch employees to get their sub_employer_id
+      const { data: emps, error: empErr } = await (supabase as any)
+        .from("employees")
+        .select("id, sub_employer_id")
+        .in("id", employeeIds);
+      if (empErr) throw empErr;
+      const subMap = new Map<string, string | null>();
+      (emps ?? []).forEach((e: any) => subMap.set(e.id, e.sub_employer_id ?? null));
+
       const rows = employeeIds.map((eid) => ({
         employee_id: eid,
         company_id: activeCompanyId,
         tax_year: taxYear,
         status: "pending",
         created_by: user?.id ?? null,
+        sub_employer_id: subMap.get(eid) ?? null,
       }));
       // Upsert on conflict (employee_id, tax_year) — keep existing if any
       const { data, error } = await supabase

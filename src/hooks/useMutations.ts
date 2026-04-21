@@ -18,6 +18,7 @@ export function useCreateEmployee() {
       birth_date?: string;
       status?: "active" | "onboarding";
       direct_manager_id?: string | null;
+      sub_employer_id?: string | null;
       exclude_from_contacts?: boolean;
     }) => {
       const { data, error } = await supabase
