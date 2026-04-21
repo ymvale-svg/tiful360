@@ -496,7 +496,16 @@ Deno.serve(async (req) => {
         const recordYear = group.primary.year ?? period_year;
         const recordMonth = group.primary.month ?? period_month;
 
-        console.log(`group ${normalizedId}: vac=${group.primary.vacationBalance} sick=${group.primary.sickBalance} gross=${group.primary.grossSalary} net=${group.primary.netSalary} workDays=${group.primary.workDays} period=${recordMonth}/${recordYear} pdfPath=${groupPdfPath}`);
+        const aiUsed = (group as any)._aiUsed === true;
+        const aiNotes = (group as any)._aiNotes as string | undefined;
+        const filledCount = [
+          group.primary.grossSalary, group.primary.netSalary,
+          group.primary.vacationBalance, group.primary.sickBalance,
+          group.primary.workDays, group.primary.workHours,
+        ].filter((v) => v != null).length;
+        const status = filledCount >= 4 ? 'success' : (filledCount > 0 ? 'partial' : 'failed');
+
+        console.log(`group ${normalizedId}: vac=${group.primary.vacationBalance} sick=${group.primary.sickBalance} gross=${group.primary.grossSalary} net=${group.primary.netSalary} workDays=${group.primary.workDays} period=${recordMonth}/${recordYear} aiUsed=${aiUsed} status=${status} pdfPath=${groupPdfPath}`);
 
         if (matched) {
           const { data: prevEmp } = await admin.from('employees')
@@ -519,7 +528,8 @@ Deno.serve(async (req) => {
             net_salary: group.primary.netSalary,
             work_days: group.primary.workDays,
             work_hours: group.primary.workHours,
-            extraction_status: (group.primary.vacationBalance != null && group.primary.sickBalance != null) ? 'success' : 'partial',
+            extraction_status: status,
+            extraction_notes: aiNotes || (aiUsed ? 'extracted via AI' : null),
             batch_id: batchId,
             created_by: user.id,
           }, { onConflict: 'employee_id,period_year,period_month' });
