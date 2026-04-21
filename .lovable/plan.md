@@ -1,53 +1,55 @@
 
 
-## תיקון פיצול תלושים — אחסון PDF מקורי + טווחי עמודים
+## תיקון זיהוי ת"ז: תמיכה ב"מספר זהות" עם RTL
 
 ### האבחנה
-המסך מציג 0/0/0 כי הפונקציה הנוכחית עדיין מבצעת `pdf-lib` `copyPages` + `save` לכל קבוצה — פעולה עתירת CPU שגורמת ל-`WORKER_RESOURCE_LIMIT` באמצע הלולאה. גם אם `extractText` מצליח, השלב של בניית PDF נפרד לכל עובד מתרסק לפני שמשהו נשמר. בנוסף, אם `extractText` נכשל על המסמך כולו — אף קבוצה לא נוצרת ומחזירים 0/0/0.
+ה-Regex הנוכחי ב-`split-payslips/index.ts` מחפש `מספר\s*זהות` ואז מצפה למספר **אחרי** התווית. אבל ב-PDF בעברית, `unpdf` מחזיר את הטקסט בסדר התצוגה הוויזואלי — כלומר המספר מופיע **לפני** התווית בטקסט המחולץ (לדוגמה: `123456789 מספר זהות` במקום `מספר זהות 123456789`). לכן הביטוי לא תופס, אף עמוד לא מקבל ת"ז, ומסך הסיכום מציג 0/0/0.
 
-לפי הבחירה המאושרת: **לא לפצל את ה-PDF.** לשמור את ה-PDF המקורי פעם אחת, ולשמור לכל עובד טווח עמודים בלבד. הצפייה תרנדר רק את העמודים שלו מתוך הקובץ המקורי.
+### השינוי
 
-### שינוי סכימה (`payslips`)
-שתי עמודות חדשות:
-- `source_pdf_url text` — נתיב לקובץ המקורי המשותף בכל הקבוצה.
-- `page_indices integer[]` — אינדקסי העמודים של העובד בתוך הקובץ.
-`pdf_url` יישאר אופציונלי לתאימות לאחור.
+**קובץ יחיד**: `supabase/functions/split-payslips/index.ts` — פונקציית `extractFields` (איזור חילוץ ת"ז).
 
-### שינוי ב-Edge Function `split-payslips`
-1. **להעלות את ה-PDF המקורי פעם אחת** ל-`payslips/{company}/{year}-{month}/_source_{batchId}.pdf`.
-2. **לחלץ טקסט פעם אחת** (כבר עושים) ולקבץ עמודים לפי ת"ז (כבר עושים).
-3. **למחוק את כל ה-block של `PDFDocument.create()`/`copyPages`/`save`/`upload` לכל קבוצה.**
-4. לכל קבוצה — רק `INSERT/UPSERT` ל-`payslips` עם `source_pdf_url` + `page_indices` + ערכים מחולצים.
-5. להסיר את ה-import של `pdf-lib` לחלוטין (לא נחוץ יותר). לשמור רק את `unpdf` לחילוץ טקסט.
+**להחליף את לוגיקת ה-regex של ת"ז במנגנון מדורג:**
 
-תוצאה: O(1) פעולות PDF במקום O(n) — אפס סיכון ל-CPU limit.
+1. **ניסיון 1 — תווית לפני המספר** (LTR רגיל):
+   ```js
+   /(?:מספר\s*זהות|תעודת\s*זהות|ת\s*[.״"'`]?\s*ז\s*[.״"'`]?)\s*[:\-]?\s*(\d{5,9})/
+   ```
 
-### שינוי בצד הלקוח — צפייה בתלוש בודד
-- `getPayslipSignedUrl(path)` ב-`src/hooks/usePayslips.ts` יקבל אופציונלית `pageIndices`. אם יש — מוסיפים ל-URL את ה-fragment `#page={firstPage+1}` (תקן PDF.js/Chrome מציג מהעמוד הזה).
-- `EmployeePayslipsTab.tsx` ו-`EmployeePortal` ייקראו ל-helper עם `payslip.source_pdf_url ?? payslip.pdf_url` ועם `payslip.page_indices`.
-- **הערה למשתמש**: הצופה יפתח על העמוד הראשון של העובד, אבל המשתמש יוכל לגלול לעמודים סמוכים של עובדים אחרים בקובץ המקורי. זו פשרה הכרחית כדי להימנע מ-CPU limit. אם רוצים בידוד מלא — נדרש שירות חיצוני (iLovePDF) שכרוך ב-API key ועלות.
+2. **ניסיון 2 — מספר לפני התווית** (RTL כפי ש-unpdf מחזיר):
+   ```js
+   /(\d{5,9})\s*(?:מספר\s*זהות|תעודת\s*זהות|ת\s*[.״"'`]?\s*ז\s*[.״"'`]?)/
+   ```
 
-### `EmployeePayslipsTab` — תצוגה
-לעדכן את הקישור כך שיפתח טאב חדש עם ה-fragment `#page=N#toolbar=0`, וישלח ל-PDF viewer של הדפדפן ישירות לעמוד הנכון.
+3. **ניסיון 3 — fallback** של 9 ספרות עצמאיות בעמוד (אם אין שום תווית):
+   ```js
+   /\b(\d{9})\b/
+   ```
 
-### ניקוי
-- `pdf-lib` import מוסר מ-`split-payslips/index.ts`.
-- אם יש שורות `payslip.pdf_url` ישנות בלי `source_pdf_url` — הקוד נופל חזרה ל-`pdf_url` (תאימות).
+הראשון שתופס — נלקח. נירמול ל-9 ספרות עם `padStart` נשאר.
+
+### דיאגנוסטיקה (לוגים זמניים)
+להוסיף ב-edge function אחרי `extractText`:
+```js
+console.log("split-payslips: totalPages=", totalPages,
+            "page1 first 300 chars:", (allTexts[0] ?? "").slice(0, 300));
+console.log("split-payslips: groups=", groups.length,
+            "employees loaded=", employees.length);
+```
+כדי שאם עדיין נכשל — נראה בלוגים את הטקסט המדויק שחוזר ונוכל להתאים regex ספציפי.
+
+### הודעת שגיאה ידידותית
+ב-`PayslipsUploadDialog.tsx`: אם התשובה מחזירה `groups === 0` (אין שום ת"ז שזוהתה) — להציג toast: "לא זוהו תעודות זהות בקובץ. ייתכן שה-PDF סרוק (תמונה) או שהפורמט שונה." במקום סיכום שקט של 0/0/0.
 
 ### קבצים מושפעים
 
 | קובץ | שינוי |
 |---|---|
-| migration חדשה | `ALTER TABLE payslips ADD COLUMN source_pdf_url text, page_indices integer[]` |
-| `supabase/functions/split-payslips/index.ts` | להוריד pdf-lib, להעלות source PDF פעם אחת, לשמור page_indices בלבד |
-| `src/hooks/usePayslips.ts` | `getPayslipSignedUrl` מקבל `pageIndices?` ומחזיר URL עם `#page=N` |
-| `src/components/EmployeePayslipsTab.tsx` | להשתמש ב-`source_pdf_url` + `page_indices` |
-| `src/pages/EmployeePortal.tsx` | אותו עדכון בצד העובד |
-| `src/integrations/supabase/types.ts` | ייווצר אוטומטית מהמיגרציה |
+| `supabase/functions/split-payslips/index.ts` | regex מדורג לת"ז (3 ניסיונות) + לוגים דיאגנוסטיים |
+| `src/components/PayslipsUploadDialog.tsx` | toast שגיאה ברור כש-`groups=0` |
 
 ### בדיקה לאחר ביצוע
-1. להעלות PDF מאוחד גדול (10+ עמודים).
-2. לוודא שה-batch מסתיים ב-`done` עם `matched > 0`.
-3. ללחוץ "צפייה בתלוש" בכרטיס עובד — לוודא ש-PDF נפתח ומציג את העמוד הנכון.
-4. לוודא שיתרות חופשה/מחלה התעדכנו.
+1. להעלות שוב את אותו PDF.
+2. לוודא שה-summary מציג `groups>0` ו-`matched>0`.
+3. אם עדיין 0 — לקרוא את לוגי ה-edge function ולראות את 300 התווים הראשונים של עמוד 1 כדי להתאים regex סופי.
 
