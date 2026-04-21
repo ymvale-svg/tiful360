@@ -651,8 +651,8 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
 // ============================
 import { forwardRef } from "react";
 
-const Tax101Preview = forwardRef<HTMLDivElement, { data: Tax101FormData; taxYear: number; signatureRef: React.RefObject<SignaturePadHandle> }>(
-  ({ data, taxYear, signatureRef }, ref) => {
+const Tax101Preview = forwardRef<HTMLDivElement, { data: Tax101FormData; taxYear: number; signatureRef: React.RefObject<SignaturePadHandle>; employerInfo?: { name: string; tax_id: string; address?: string } | null }>(
+  ({ data, taxYear, signatureRef, employerInfo }, ref) => {
     const fieldRow = (label: string, value: any) => (
       <div className="grid grid-cols-3 gap-2 py-1 border-b border-gray-200">
         <span className="text-xs font-semibold text-gray-700 col-span-1">{label}</span>
