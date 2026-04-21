@@ -111,54 +111,56 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary }: Prop
             )}
           </div>
         ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>חודש</th>
-                <th>שנה</th>
-                {canSeeSalary && <th>ברוטו</th>}
-                {canSeeSalary && <th>נטו</th>}
-                <th>יתרת חופשה</th>
-                <th>יתרת מחלה</th>
-                <th>ימי עבודה</th>
-                <th className="w-28">פעולות</th>
-              </tr>
-            </thead>
-            <tbody>
-              {payslips!.map((p) => (
-                <tr key={p.id}>
-                  <td>{MONTHS[p.period_month - 1]}</td>
-                  <td>{p.period_year}</td>
-                  {canSeeSalary && <td className="font-mono">{p.gross_salary?.toLocaleString("he-IL") ?? "—"}</td>}
-                  {canSeeSalary && <td className="font-mono">{p.net_salary?.toLocaleString("he-IL") ?? "—"}</td>}
-                  <td className="font-mono">{p.vacation_balance ?? "—"}</td>
-                  <td className="font-mono">{p.sick_balance ?? "—"}</td>
-                  <td className="font-mono">{p.work_days ?? "—"}</td>
-                  <td>
-                    <div className="flex gap-1">
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="סיכום" onClick={() => setSummaryPayslip(p)}>
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="הורדה" onClick={() => openPayslip(p)}>
-                        <Download className="w-4 h-4" />
-                      </Button>
-                      {canSeeSalary && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                          title="מחיקה"
-                          onClick={() => setDeleteTarget(p)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="data-table min-w-[640px]">
+              <thead>
+                <tr>
+                  <th>חודש</th>
+                  <th>שנה</th>
+                  {canSeeSalary && <th>ברוטו</th>}
+                  {canSeeSalary && <th>נטו</th>}
+                  <th>יתרת חופשה</th>
+                  <th>יתרת מחלה</th>
+                  <th>ימי עבודה</th>
+                  <th className="w-28">פעולות</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {payslips!.map((p) => (
+                  <tr key={p.id}>
+                    <td>{MONTHS[p.period_month - 1]}</td>
+                    <td>{p.period_year}</td>
+                    {canSeeSalary && <td className="font-mono">{p.gross_salary?.toLocaleString("he-IL") ?? "—"}</td>}
+                    {canSeeSalary && <td className="font-mono">{p.net_salary?.toLocaleString("he-IL") ?? "—"}</td>}
+                    <td className="font-mono">{p.vacation_balance ?? "—"}</td>
+                    <td className="font-mono">{p.sick_balance ?? "—"}</td>
+                    <td className="font-mono">{p.work_days ?? "—"}</td>
+                    <td>
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="סיכום" onClick={() => setSummaryPayslip(p)}>
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="הורדה" onClick={() => openPayslip(p)}>
+                          <Download className="w-4 h-4" />
+                        </Button>
+                        {canSeeSalary && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                            title="מחיקה"
+                            onClick={() => setDeleteTarget(p)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
