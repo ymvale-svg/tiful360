@@ -159,6 +159,26 @@ export default function Employees() {
 
   const empById = useMemo(() => new Map((employees ?? []).map((e) => [e.id, e])), [employees]);
 
+  const managerOptions = useMemo(() => {
+    const opts = (employees ?? [])
+      .filter((e) => e.status === "active")
+      .map((e) => ({ value: e.id, label: `${e.full_name}${e.role ? ` — ${e.role}` : ""}` }));
+    return [{ value: "__none__", label: "ללא מנהל" }, ...opts];
+  }, [employees]);
+
+  const handleManagerChange = async (employeeId: string, newManagerId: string) => {
+    try {
+      await updateEmployee.mutateAsync({
+        id: employeeId,
+        direct_manager_id: newManagerId === "__none__" ? null : newManagerId,
+      });
+      toast({ title: "מנהל ישיר עודכן" });
+      queryClient.invalidateQueries({ queryKey: ["employees-full"] });
+    } catch (e: any) {
+      toast({ title: "שגיאה בעדכון", description: e.message, variant: "destructive" });
+    }
+  };
+
   const handleBulkInvite = () => {
     if (!activeCompanyId || selected.size === 0) return;
     const list = Array.from(selected)
