@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Search, Plus, Boxes, Download, Upload, FileSignature, Trash2, UserMinus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useAssets, useAssetCategories } from "@/hooks/useData";
 import { useDeleteAsset } from "@/hooks/useMutations";
@@ -10,6 +12,7 @@ import { AddAssetDialog } from "@/components/AddAssetDialog";
 import { EditAssetDialog } from "@/components/EditAssetDialog";
 import { AssignAssetWithFormDialog } from "@/components/AssignAssetWithFormDialog";
 import { ImportAssetsExcelDialog } from "@/components/ImportAssetsExcelDialog";
+import CategoryManager from "@/pages/CategoryManager";
 import { exportToExcel } from "@/lib/exportExcel";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -74,8 +77,18 @@ export default function Assets() {
     }
   };
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") === "categories" ? "categories" : "assets";
+
   return (
     <div className="space-y-6 animate-fade-in">
+      <Tabs value={activeTab} onValueChange={(v) => setSearchParams(v === "assets" ? {} : { tab: v })}>
+        <TabsList>
+          <TabsTrigger value="assets">נכסים</TabsTrigger>
+          <TabsTrigger value="categories">קטגוריות</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="assets" className="space-y-6 mt-4">
       <div className="flex items-start justify-between">
         <div className="page-header">
           <h1 className="page-title">נכסים וציוד</h1>
@@ -240,6 +253,12 @@ export default function Assets() {
           </table>
         )}
       </div>
+        </TabsContent>
+
+        <TabsContent value="categories" className="mt-4">
+          <CategoryManager />
+        </TabsContent>
+      </Tabs>
 
       <AddAssetDialog open={addOpen} onOpenChange={setAddOpen} />
       <ImportAssetsExcelDialog open={importOpen} onOpenChange={setImportOpen} />
