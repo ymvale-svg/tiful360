@@ -10,8 +10,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
-import { Users, ShieldCheck, ShieldOff, Ban, CheckCircle, RefreshCw, Upload } from "lucide-react";
+import { Users, ShieldCheck, ShieldOff, Ban, CheckCircle, RefreshCw, Upload, UserPlus } from "lucide-react";
 import { ImportExcelDialog } from "@/components/ImportExcelDialog";
+import { InviteExternalUserDialog } from "@/components/InviteExternalUserDialog";
 import { format } from "date-fns";
 import { he } from "date-fns/locale";
 
