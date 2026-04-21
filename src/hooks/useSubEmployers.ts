@@ -79,10 +79,10 @@ export function useDeleteSubEmployer() {
   return useMutation({
     mutationFn: async (id: string) => {
       // Check no employees linked
-      const { count, error: countErr } = await supabase
+      const { count, error: countErr } = await (supabase as any)
         .from("employees")
         .select("id", { count: "exact", head: true })
-        .eq("sub_employer_id" as any, id);
+        .eq("sub_employer_id", id);
       if (countErr) throw countErr;
       if ((count ?? 0) > 0) {
         throw new Error(`לא ניתן למחוק — ${count} עובדים משויכים לתת-חברה זו. שייך אותם מחדש קודם.`);
@@ -103,11 +103,11 @@ export function useSubEmployerEmployeeCounts() {
     queryKey: ["sub_employers_counts", activeCompanyId],
     queryFn: async () => {
       if (!activeCompanyId) return {} as Record<string, number>;
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("employees")
         .select("sub_employer_id")
         .eq("company_id", activeCompanyId)
-        .not("sub_employer_id" as any, "is", null);
+        .not("sub_employer_id", "is", null);
       if (error) throw error;
       const counts: Record<string, number> = {};
       (data ?? []).forEach((e: any) => {
