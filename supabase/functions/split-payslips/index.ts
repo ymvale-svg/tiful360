@@ -319,6 +319,7 @@ Deno.serve(async (req) => {
     // Load source once with pdf-lib, then copyPages into a fresh doc per group.
     const sourceDoc = await PDFDocument.load(binary);
     const groupPdfPaths = new Map<number, string>(); // groupIndex -> storage path
+    const groupPdfBytes = new Map<number, Uint8Array>(); // groupIndex -> raw bytes (for AI)
 
     const BATCH = 5;
     for (let i = 0; i < groups.length; i += BATCH) {
@@ -342,12 +343,140 @@ Deno.serve(async (req) => {
             return;
           }
           groupPdfPaths.set(groupIndex, path);
+          groupPdfBytes.set(groupIndex, bytes);
         } catch (e) {
           console.error('split failed for group:', group.idNumber, e);
         }
       }));
       // yield to event loop
       await new Promise((r) => setTimeout(r, 0));
+    }
+
+    // === AI EXTRACTION: send each per-group PDF to Lovable AI for structured field extraction ===
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const aiResults = new Map<number, any>(); // groupIndex -> ai-extracted fields
+
+    if (LOVABLE_API_KEY) {
+      const AI_BATCH = 3;
+      for (let i = 0; i < groups.length; i += AI_BATCH) {
+        const slice = groups.slice(i, i + AI_BATCH);
+        await Promise.all(slice.map(async (_group, idxInSlice) => {
+          const groupIndex = i + idxInSlice;
+          const bytes = groupPdfBytes.get(groupIndex);
+          if (!bytes) return;
+          try {
+            // base64 encode
+            let bin = '';
+            const chunkSize = 0x8000;
+            for (let j = 0; j < bytes.length; j += chunkSize) {
+              bin += String.fromCharCode.apply(null, Array.from(bytes.subarray(j, j + chunkSize)) as any);
+            }
+            const b64 = btoa(bin);
+            const dataUrl = `data:application/pdf;base64,${b64}`;
+
+            const ctrl = new AbortController();
+            const tid = setTimeout(() => ctrl.abort(), 45000);
+            const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${LOVABLE_API_KEY}`,
+                'Content-Type': 'application/json',
+              },
+              signal: ctrl.signal,
+              body: JSON.stringify({
+                model: 'google/gemini-2.5-flash',
+                messages: [
+                  {
+                    role: 'system',
+                    content: 'אתה מחלץ נתוני תלוש שכר ישראלי. החזר אך ורק קריאה לפונקציה extract_payslip עם הערכים המדויקים שמופיעים במסמך. אם שדה לא מופיע — החזר null. אל תמציא ערכים.',
+                  },
+                  {
+                    role: 'user',
+                    content: [
+                      { type: 'text', text: 'חלץ את הנתונים מתלוש השכר המצורף.' },
+                      { type: 'image_url', image_url: { url: dataUrl } },
+                    ],
+                  },
+                ],
+                tools: [
+                  {
+                    type: 'function',
+                    function: {
+                      name: 'extract_payslip',
+                      description: 'Extract structured payslip fields',
+                      parameters: {
+                        type: 'object',
+                        properties: {
+                          id_number: { type: ['string', 'null'], description: 'תעודת זהות של העובד (9 ספרות)' },
+                          employee_name: { type: ['string', 'null'], description: 'שם מלא של העובד' },
+                          period_year: { type: ['number', 'null'], description: 'שנת התלוש (YYYY)' },
+                          period_month: { type: ['number', 'null'], description: 'חודש התלוש (1-12)' },
+                          gross_salary: { type: ['number', 'null'], description: 'סה"כ תשלומים / שכר ברוטו' },
+                          net_salary: { type: ['number', 'null'], description: 'שכר נטו לתשלום' },
+                          work_days: { type: ['number', 'null'], description: 'ימי עבודה בפועל' },
+                          work_hours: { type: ['number', 'null'], description: 'שעות עבודה בפועל' },
+                          vacation_balance: { type: ['number', 'null'], description: 'יתרת חופשה חדשה (בימים)' },
+                          sick_balance: { type: ['number', 'null'], description: 'יתרת מחלה חדשה (בימים)' },
+                        },
+                        required: ['id_number', 'gross_salary', 'net_salary', 'vacation_balance', 'sick_balance'],
+                        additionalProperties: false,
+                      },
+                    },
+                  },
+                ],
+                tool_choice: { type: 'function', function: { name: 'extract_payslip' } },
+              }),
+            });
+            clearTimeout(tid);
+
+            if (!resp.ok) {
+              const txt = await resp.text();
+              console.error(`AI extraction failed [${resp.status}] for group ${groupIndex}:`, txt.slice(0, 300));
+              return;
+            }
+            const data = await resp.json();
+            const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
+            if (!toolCall?.function?.arguments) {
+              console.warn(`AI returned no tool call for group ${groupIndex}`);
+              return;
+            }
+            const args = JSON.parse(toolCall.function.arguments);
+            aiResults.set(groupIndex, args);
+            console.log(`AI group ${groupIndex} (${groups[groupIndex].idNumber}):`, JSON.stringify(args));
+          } catch (e) {
+            console.error(`AI call failed for group ${groupIndex}:`, e instanceof Error ? e.message : e);
+          }
+        }));
+        await new Promise((r) => setTimeout(r, 200));
+      }
+    } else {
+      console.warn('LOVABLE_API_KEY not set — skipping AI extraction');
+    }
+
+    // Merge AI results into group.primary (AI wins where present)
+    for (let gi = 0; gi < groups.length; gi++) {
+      const ai = aiResults.get(gi);
+      if (!ai) continue;
+      const cur = groups[gi].primary;
+      const aiId = normalizeIdNumber(ai.id_number);
+      const notes: string[] = [];
+      if (aiId && aiId !== groups[gi].idNumber) {
+        notes.push(`AI detected different ID: ${aiId} (text-detected: ${groups[gi].idNumber})`);
+      }
+      groups[gi].primary = {
+        ...cur,
+        employeeName: ai.employee_name ?? cur.employeeName,
+        year: ai.period_year ?? cur.year,
+        month: ai.period_month ?? cur.month,
+        grossSalary: ai.gross_salary ?? cur.grossSalary,
+        netSalary: ai.net_salary ?? cur.netSalary,
+        workDays: ai.work_days ?? cur.workDays,
+        workHours: ai.work_hours ?? cur.workHours,
+        vacationBalance: ai.vacation_balance ?? cur.vacationBalance,
+        sickBalance: ai.sick_balance ?? cur.sickBalance,
+      };
+      (groups[gi] as any)._aiNotes = notes.join('; ');
+      (groups[gi] as any)._aiUsed = true;
     }
 
     let matchedCount = 0;
