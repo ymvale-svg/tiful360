@@ -7,9 +7,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { UserMinus, AlertTriangle, Shield, FileText, Download } from "lucide-react";
+import { UserMinus, AlertTriangle, Shield, Download } from "lucide-react";
 import { useStartOffboarding } from "@/hooks/useOffboarding";
 import { useToast } from "@/hooks/use-toast";
+import { OffboardingFormsManager } from "@/components/OffboardingFormsManager";
 
 interface OffboardingDialogProps {
   open: boolean;
