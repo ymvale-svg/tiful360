@@ -148,19 +148,13 @@ export function UsersAndRolesTab() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">ניהול משתמשים</h1>
-          <p className="text-muted-foreground">צפייה, שינוי תפקידים והשהיית חשבונות</p>
+          <h2 className="text-lg font-semibold text-foreground">משתמשים ותפקידים</h2>
+          <p className="text-sm text-muted-foreground">צפייה, שינוי תפקידים והשהיית חשבונות</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
-            <Upload className="w-4 h-4" />
-            יבוא מאקסל
-          </Button>
-          <Button variant="outline" onClick={() => refetch()} className="gap-2">
-            <RefreshCw className="w-4 h-4" />
-            רענון
-          </Button>
-        </div>
+        <Button variant="outline" onClick={() => refetch()} className="gap-2">
+          <RefreshCw className="w-4 h-4" />
+          רענון
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
