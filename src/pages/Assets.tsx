@@ -77,8 +77,18 @@ export default function Assets() {
     }
   };
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") === "categories" ? "categories" : "assets";
+
   return (
     <div className="space-y-6 animate-fade-in">
+      <Tabs value={activeTab} onValueChange={(v) => setSearchParams(v === "assets" ? {} : { tab: v })}>
+        <TabsList>
+          <TabsTrigger value="assets">נכסים</TabsTrigger>
+          <TabsTrigger value="categories">קטגוריות</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="assets" className="space-y-6 mt-4">
       <div className="flex items-start justify-between">
         <div className="page-header">
           <h1 className="page-title">נכסים וציוד</h1>
