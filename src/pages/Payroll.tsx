@@ -370,7 +370,10 @@ function BatchesManagementTab() {
   const [yearFilter, setYearFilter] = useState<string>("all");
   const [monthFilter, setMonthFilter] = useState<string>("all");
   const [expandedBatchId, setExpandedBatchId] = useState<string | null>(null);
+  const [deleteBatchTarget, setDeleteBatchTarget] = useState<any | null>(null);
   const { data: batches, isLoading } = usePayslipBatches();
+  const deleteBatch = useDeleteBatch();
+  const { toast } = useToast();
 
   if (!activeCompanyId) {
     return <div className="text-center py-8 text-muted-foreground">לא נבחרה חברה</div>;
