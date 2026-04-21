@@ -1,12 +1,14 @@
 import { useState, useMemo, useEffect } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Search, Plus, Download, Eye, UserMinus, Upload, Mail, Send, ShieldCheck, ShieldAlert, UserCheck, UserX } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Search, Plus, Download, UserMinus, Upload, Mail, Send, ShieldCheck, ShieldAlert, UserCheck, UserX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useEmployees } from "@/hooks/useData";
+import { useUpdateEmployee } from "@/hooks/useMutations";
 import { AddEmployeeDialog } from "@/components/AddEmployeeDialog";
 import { ImportExcelDialog } from "@/components/ImportExcelDialog";
 import { UsersAndRolesTab } from "@/components/UsersAndRolesTab";
@@ -64,6 +66,7 @@ export default function Employees() {
   const { activeCompanyId } = useCompany();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const updateEmployee = useUpdateEmployee();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = searchParams.get("tab") === "users" ? "users" : "employees";
@@ -103,11 +106,6 @@ export default function Employees() {
     return m;
   }, [fullRows]);
 
-  const nameById = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const e of employees ?? []) m.set(e.id, e.full_name);
-    return m;
-  }, [employees]);
 
   const filtered = (employees ?? []).filter((emp) => {
     const matchSearch = emp.full_name.includes(search) || emp.employee_code.includes(search) || emp.role.includes(search);
@@ -156,6 +154,26 @@ export default function Employees() {
 
   const empById = useMemo(() => new Map((employees ?? []).map((e) => [e.id, e])), [employees]);
 
+  const managerOptions = useMemo(() => {
+    const opts = (employees ?? [])
+      .filter((e) => e.status === "active")
+      .map((e) => ({ value: e.id, label: `${e.full_name}${e.role ? ` — ${e.role}` : ""}` }));
+    return [{ value: "__none__", label: "ללא מנהל" }, ...opts];
+  }, [employees]);
+
+  const handleManagerChange = async (employeeId: string, newManagerId: string) => {
+    try {
+      await updateEmployee.mutateAsync({
+        id: employeeId,
+        direct_manager_id: newManagerId === "__none__" ? null : newManagerId,
+      });
+      toast({ title: "מנהל ישיר עודכן" });
+      queryClient.invalidateQueries({ queryKey: ["employees-full"] });
+    } catch (e: any) {
+      toast({ title: "שגיאה בעדכון", description: e.message, variant: "destructive" });
+    }
+  };
+
   const handleBulkInvite = () => {
     if (!activeCompanyId || selected.size === 0) return;
     const list = Array.from(selected)
@@ -198,7 +216,7 @@ export default function Employees() {
           <p className="page-subtitle">{employees?.length ?? 0} עובדים רשומים במערכת</p>
         </div>
 
-        <Tabs value={tab} onValueChange={switchTab}>
+        <Tabs value={tab} onValueChange={switchTab} dir="rtl">
           <TabsList>
             <TabsTrigger value="employees">עובדים</TabsTrigger>
             <TabsTrigger value="users">משתמשים ותפקידים</TabsTrigger>
@@ -301,11 +319,10 @@ export default function Employees() {
                       <th>שם מלא</th>
                       <th>תפקיד</th>
                       <th>מחלקה</th>
-                      <th>מנהל ישיר</th>
+                      <th className="min-w-[200px]">מנהל ישיר</th>
                       <th>גישה למערכת</th>
                       <th>בקשר</th>
                       <th>סטטוס</th>
-                      <th>פעולות</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -314,7 +331,7 @@ export default function Employees() {
                       const hasEmail = !!full?.email;
                       const hasAccount = !!full?.linked_user_id;
                       const inContacts = !full?.exclude_from_contacts;
-                      const managerName = full?.direct_manager_id ? nameById.get(full.direct_manager_id) : null;
+                      const currentManagerId = full?.direct_manager_id ?? "__none__";
                       return (
                         <tr
                           key={emp.id}
@@ -333,7 +350,17 @@ export default function Employees() {
                           <td className="font-medium">{emp.full_name}</td>
                           <td>{emp.role}</td>
                           <td>{emp.department}</td>
-                          <td className="text-sm text-muted-foreground">{managerName || "—"}</td>
+                          <td onClick={(e) => e.stopPropagation()} className="min-w-[200px]">
+                            <SearchableSelect
+                              value={currentManagerId}
+                              onChange={(v) => handleManagerChange(emp.id, v)}
+                              options={managerOptions.filter((o) => o.value !== emp.id)}
+                              placeholder="ללא מנהל"
+                              searchPlaceholder="חיפוש מנהל..."
+                              emptyText="לא נמצאו עובדים"
+                              className="h-8 text-xs"
+                            />
+                          </td>
                           <td onClick={(e) => e.stopPropagation()}>
                             {hasAccount ? (
                               <Badge variant="outline" className="gap-1 text-[11px] bg-success/10 text-success border-success/20">
@@ -376,21 +403,11 @@ export default function Employees() {
                               {statusLabels[emp.status as EmployeeStatus] ?? emp.status}
                             </span>
                           </td>
-                          <td onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center gap-1">
-                              <Link
-                                to={`/employees/${emp.id}`}
-                                className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground inline-block"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </Link>
-                            </div>
-                          </td>
                         </tr>
                       );
                     })}
                     {filtered.length === 0 && (
-                      <tr><td colSpan={10} className="text-center py-8 text-muted-foreground">לא נמצאו עובדים</td></tr>
+                      <tr><td colSpan={9} className="text-center py-8 text-muted-foreground">לא נמצאו עובדים</td></tr>
                     )}
                   </tbody>
                 </table>
