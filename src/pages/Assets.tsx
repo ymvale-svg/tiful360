@@ -253,6 +253,12 @@ export default function Assets() {
           </table>
         )}
       </div>
+        </TabsContent>
+
+        <TabsContent value="categories" className="mt-4">
+          <CategoryManager />
+        </TabsContent>
+      </Tabs>
 
       <AddAssetDialog open={addOpen} onOpenChange={setAddOpen} />
       <ImportAssetsExcelDialog open={importOpen} onOpenChange={setImportOpen} />
