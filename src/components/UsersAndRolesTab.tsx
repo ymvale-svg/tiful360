@@ -165,10 +165,18 @@ export function UsersAndRolesTab() {
           <h2 className="text-lg font-semibold text-foreground">משתמשים ותפקידים</h2>
           <p className="text-sm text-muted-foreground">צפייה, שינוי תפקידים והשהיית חשבונות</p>
         </div>
-        <Button variant="outline" onClick={() => refetch()} className="gap-2">
-          <RefreshCw className="w-4 h-4" />
-          רענון
-        </Button>
+        <div className="flex items-center gap-2">
+          {(isAdmin || isSuperAdmin) && (
+            <Button onClick={() => setInviteExternalOpen(true)} className="gap-2">
+              <UserPlus className="w-4 h-4" />
+              הזמן משתמש חיצוני
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => refetch()} className="gap-2">
+            <RefreshCw className="w-4 h-4" />
+            רענון
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
