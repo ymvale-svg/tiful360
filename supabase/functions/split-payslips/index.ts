@@ -148,6 +148,10 @@ Deno.serve(async (req) => {
     }
     const effectivePages = Math.max(totalPages, allTexts.length);
 
+    console.log('split-payslips: totalPages=', totalPages,
+      'extractedTexts=', allTexts.length,
+      'page1 first 300 chars:', (allTexts[0] ?? '').slice(0, 300));
+
     const pages: PageInfo[] = [];
     for (let i = 0; i < effectivePages; i++) {
       const pageText = allTexts[i] ?? '';
