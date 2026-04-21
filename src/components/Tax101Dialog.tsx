@@ -1142,6 +1142,9 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
           {/* Step 5: Sign */}
           {step === 5 && (
             <div className="space-y-4">
+              {/* Pre-export validation against the official 0101/130 layout */}
+              <Tax101ValidationPanel result={validation} onJumpToStep={(s) => setStep(s)} />
+
               <div className="p-3 bg-muted/30 rounded-lg text-xs space-y-1">
                 <p className="font-semibold">י. הצהרה:</p>
                 <p>אני מצהיר/ה כי כל הפרטים שמסרתי בטופס זה הם נכונים ומלאים, וידוע לי כי מסירת פרטים לא נכונים מהווה עבירה לפי פקודת מס הכנסה.</p>
@@ -1168,7 +1171,12 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
               הבא <ChevronLeft className="w-4 h-4" />
             </Button>
           ) : (
-            <Button onClick={handleSubmit} disabled={submitting} className="gap-1.5">
+            <Button
+              onClick={handleSubmit}
+              disabled={submitting || !validation.ok}
+              title={!validation.ok ? "יש לתקן את שגיאות הבדיקה לפני יצוא PDF" : undefined}
+              className="gap-1.5"
+            >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
               {submitting ? "שולח..." : "אשר ושלח"}
             </Button>
