@@ -1,11 +1,12 @@
 import { 
-  Shield, Clock, CheckCircle2, User, 
-  Timer, ChevronLeft, Lock
+  Shield, CheckCircle2, User, 
+  Timer, ChevronLeft, Lock, Plus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useITTickets } from "@/hooks/useData";
+import { NewITTicketDialog } from "@/components/NewITTicketDialog";
 
 const priorityColors: Record<string, string> = {
   critical: "bg-destructive text-destructive-foreground",
@@ -21,6 +22,7 @@ export default function ITTickets() {
   const { data: tickets, isLoading } = useITTickets();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [localChecklist, setLocalChecklist] = useState<{ label: string; done: boolean }[]>([]);
+  const [newOpen, setNewOpen] = useState(false);
 
   const selectedTicket = tickets?.find(t => t.id === selectedId);
 
@@ -47,10 +49,18 @@ export default function ITTickets() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="page-header">
-        <h1 className="page-title">משימות IT</h1>
-        <p className="page-subtitle">ניהול קריאות שירות, ניתוקים ואבטחת מידע</p>
+      <div className="page-header flex items-start justify-between gap-4">
+        <div>
+          <h1 className="page-title">משימות IT</h1>
+          <p className="page-subtitle">ניהול קריאות שירות, ניתוקים ואבטחת מידע</p>
+        </div>
+        <Button onClick={() => setNewOpen(true)} className="gap-2">
+          <Plus className="w-4 h-4" />
+          קריאה חדשה
+        </Button>
       </div>
+
+      <NewITTicketDialog open={newOpen} onOpenChange={setNewOpen} />
 
       {isLoading ? (
         <div className="text-center py-12 text-muted-foreground">טוען...</div>
