@@ -41,6 +41,7 @@ export interface Tax101FormData {
   marital_status: "single" | "married" | "divorced" | "widowed" | "";
   is_israeli_resident: boolean;
   health_fund_member: boolean;
+  health_fund_name: string;
   spouse_name: string;
   spouse_id: string;
   spouse_works: boolean;
