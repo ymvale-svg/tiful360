@@ -261,3 +261,105 @@ function AlertRulesSettings() {
     </div>
   );
 }
+
+// ============================
+// Payroll & Payslips Settings
+// ============================
+function PayrollSettings() {
+  const { activeCompanyId } = useCompany();
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const { data: batches, isLoading } = usePayslipBatches();
+  const { toast } = useToast();
+
+  const MONTHS = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
+
+  const exportMissingMichpalCodes = async () => {
+    if (!activeCompanyId) return;
+    const { data } = await supabase
+      .from("employees")
+      .select("employee_code, full_name, id_number, michpal_code")
+      .eq("company_id", activeCompanyId)
+      .is("michpal_code", null);
+    if (!data || data.length === 0) {
+      toast({ title: "כל העובדים כבר משויכים למספר מיכפל" });
+      return;
+    }
+    const XLSX = await import("xlsx");
+    const ws = XLSX.utils.json_to_sheet(data.map((e: any) => ({
+      "מס׳ עובד": e.employee_code,
+      "שם מלא": e.full_name,
+      "ת.ז.": e.id_number,
+      "מספר מיכפל (למילוי)": "",
+    })));
+    const wb = XLSX.utils.book_new();
+    wb.Workbook = { Views: [{ RTL: true }] };
+    XLSX.utils.book_append_sheet(wb, ws, "עובדים ללא מיכפל");
+    XLSX.writeFile(wb, "עובדים_ללא_מספר_מיכפל.xlsx");
+  };
+
+  if (!activeCompanyId) {
+    return <div className="text-center py-8 text-muted-foreground">לא נבחרה חברה</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-card rounded-xl border border-border/50 shadow-card p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <FileText className="w-5 h-5 text-primary" />
+            <div>
+              <h3 className="font-semibold">תלושי שכר חודשיים</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">העלאת קובץ PDF מאוחד מ-מיכפל ופיצול אוטומטי לעובדים</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={exportMissingMichpalCodes}>
+              <Download className="w-4 h-4" />
+              ייצא חסרי מיכפל
+            </Button>
+            <Button className="gap-1.5" onClick={() => setUploadOpen(true)}>
+              <Upload className="w-4 h-4" />
+              העלה תלושים
+            </Button>
+          </div>
+        </div>
+
+        <div className="border border-border rounded-lg overflow-hidden">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>תקופה</th>
+                <th>קובץ</th>
+                <th>סה"כ עמודים</th>
+                <th>הותאמו</th>
+                <th>לא הותאמו</th>
+                <th>נכשלו</th>
+                <th>תאריך העלאה</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading && <tr><td colSpan={7} className="text-center py-6 text-muted-foreground">טוען...</td></tr>}
+              {!isLoading && (batches?.length ?? 0) === 0 && (
+                <tr><td colSpan={7} className="text-center py-6 text-muted-foreground">עדיין לא הועלו תלושים</td></tr>
+              )}
+              {batches?.map((b: any) => (
+                <tr key={b.id}>
+                  <td className="font-medium">{MONTHS[b.period_month - 1]} {b.period_year}</td>
+                  <td className="text-xs text-muted-foreground">{b.original_filename ?? "—"}</td>
+                  <td className="font-mono">{b.total_pages}</td>
+                  <td className="font-mono text-success">{b.matched_count}</td>
+                  <td className="font-mono text-warning">{b.unmatched_count}</td>
+                  <td className="font-mono text-destructive">{b.failed_count}</td>
+                  <td className="text-xs text-muted-foreground">{new Date(b.created_at).toLocaleDateString("he-IL")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <PayslipsUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} />
+    </div>
+  );
+}
+
