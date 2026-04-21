@@ -255,6 +255,13 @@ export function UsersAndRolesTab() {
                       </div>
                     </TableCell>
                     <TableCell>
+                      {linkedUserIds.has(u.id) ? (
+                        <Badge variant="outline" className="text-xs bg-secondary text-secondary-foreground border-secondary">עובד</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs bg-accent text-accent-foreground border-accent">חיצוני</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
                       <Badge variant="outline" className="text-xs">
                         {u.provider}
                       </Badge>
