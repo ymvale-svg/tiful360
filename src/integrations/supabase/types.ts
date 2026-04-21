@@ -1155,10 +1155,12 @@ export type Database = {
           id: string
           id_number_detected: string | null
           net_salary: number | null
+          page_indices: number[] | null
           pdf_url: string | null
           period_month: number
           period_year: number
           sick_balance: number | null
+          source_pdf_url: string | null
           vacation_balance: number | null
           work_days: number | null
           work_hours: number | null
@@ -1176,10 +1178,12 @@ export type Database = {
           id?: string
           id_number_detected?: string | null
           net_salary?: number | null
+          page_indices?: number[] | null
           pdf_url?: string | null
           period_month: number
           period_year: number
           sick_balance?: number | null
+          source_pdf_url?: string | null
           vacation_balance?: number | null
           work_days?: number | null
           work_hours?: number | null
@@ -1197,10 +1201,12 @@ export type Database = {
           id?: string
           id_number_detected?: string | null
           net_salary?: number | null
+          page_indices?: number[] | null
           pdf_url?: string | null
           period_month?: number
           period_year?: number
           sick_balance?: number | null
+          source_pdf_url?: string | null
           vacation_balance?: number | null
           work_days?: number | null
           work_hours?: number | null
