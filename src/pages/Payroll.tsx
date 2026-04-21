@@ -415,7 +415,7 @@ function UnmatchedPayslipsList({ batchId }: { batchId: string }) {
             <SearchableSelect
               options={employeeOptions}
               value=""
-              onValueChange={(v) => handleAssign(p.id, v)}
+              onChange={(v) => handleAssign(p.id, v)}
               placeholder="בחר עובד לשיוך..."
             />
           </div>
@@ -459,7 +459,7 @@ function EmployeeLookupTab() {
           <SearchableSelect
             options={employeeOptions}
             value={employeeId}
-            onValueChange={setEmployeeId}
+            onChange={setEmployeeId}
             placeholder="חפש עובד..."
           />
         </div>
