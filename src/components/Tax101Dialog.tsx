@@ -60,6 +60,38 @@ export interface Tax101FormData {
   is_main_income: boolean;
   has_other_income: boolean;
   other_income_details: string;
+  // Section ח — tax credits / exemptions (parent options + nested sub-fields)
+  tax_credits: {
+    israeli_resident: boolean;
+    blind_or_disabled: boolean;
+    blind_or_disabled_period_at_least_year: boolean;
+    new_immigrant: boolean;
+    new_immigrant_started_after_aliyah: boolean;
+    single_parent_no_spouse_income: boolean;
+    single_parent_with_spouse_income: boolean;
+    children_in_custody: boolean;
+    children_in_custody_under_1: number | "";
+    children_in_custody_age_1_to_5: number | "";
+    children_in_custody_age_6_to_12: number | "";
+    children_in_custody_age_13_to_17: number | "";
+    children_not_in_custody: boolean;
+    children_not_in_custody_under_1: number | "";
+    children_not_in_custody_age_1_to_5: number | "";
+    children_not_in_custody_age_6_to_17: number | "";
+    single_parent: boolean;
+    children_with_alimony: boolean;
+    parent_to_19yo_child_in_national_service: boolean;
+    parent_to_19yo_child_count: number | "";
+    spouse_to_disabled: boolean;
+    child_aged_16_to_18: boolean;
+    child_aged_16_to_18_count: number | "";
+    discharged_soldier: boolean;
+    discharged_soldier_service_end_date: string;
+    academic_degree_completed: boolean;
+    academic_degree_end_date: string;
+    national_service_completed: boolean;
+    national_service_end_date: string;
+  };
   exemption_disability: boolean;
   exemption_new_immigrant: boolean;
   exemption_returning_resident: boolean;
@@ -105,6 +137,37 @@ const emptyForm = (employee?: any): Tax101FormData => {
     is_main_income: true,
     has_other_income: false,
     other_income_details: "",
+    tax_credits: {
+      israeli_resident: !!(employee?.is_israeli_resident ?? true),
+      blind_or_disabled: false,
+      blind_or_disabled_period_at_least_year: false,
+      new_immigrant: false,
+      new_immigrant_started_after_aliyah: false,
+      single_parent_no_spouse_income: false,
+      single_parent_with_spouse_income: false,
+      children_in_custody: false,
+      children_in_custody_under_1: "",
+      children_in_custody_age_1_to_5: "",
+      children_in_custody_age_6_to_12: "",
+      children_in_custody_age_13_to_17: "",
+      children_not_in_custody: false,
+      children_not_in_custody_under_1: "",
+      children_not_in_custody_age_1_to_5: "",
+      children_not_in_custody_age_6_to_17: "",
+      single_parent: false,
+      children_with_alimony: false,
+      parent_to_19yo_child_in_national_service: false,
+      parent_to_19yo_child_count: "",
+      spouse_to_disabled: false,
+      child_aged_16_to_18: false,
+      child_aged_16_to_18_count: "",
+      discharged_soldier: false,
+      discharged_soldier_service_end_date: "",
+      academic_degree_completed: false,
+      academic_degree_end_date: "",
+      national_service_completed: false,
+      national_service_end_date: "",
+    },
     exemption_disability: false,
     exemption_new_immigrant: false,
     exemption_returning_resident: false,
@@ -673,6 +736,250 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                     onChange={(e) => update("other_income_details", e.target.value)}
                   />
                 )}
+              </div>
+
+              {/* Section ח — Tax credits / exemptions (parent options + sub-fields) */}
+              <div className="space-y-3 p-3 bg-muted/30 rounded-lg">
+                <h4 className="text-sm font-semibold">ח. אני מבקש/ת פטור או זיכוי ממס מהסיבות הבאות</h4>
+                <p className="text-xs text-muted-foreground">סמן/י את הסעיפים הרלוונטיים. במקרים מסוימים יפתחו שדות נוספים למילוי.</p>
+
+                {(() => {
+                  const tc = data.tax_credits;
+                  const setTc = (patch: Partial<typeof tc>) =>
+                    update("tax_credits", { ...tc, ...patch });
+                  const numInput = (val: number | "", onChange: (v: number | "") => void) => (
+                    <Input
+                      type="number"
+                      min={0}
+                      className="h-7 w-16 text-xs"
+                      value={val}
+                      onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))}
+                    />
+                  );
+
+                  return (
+                    <div className="space-y-2 text-sm">
+                      {/* 1 */}
+                      <label className="flex items-center gap-2">
+                        <Checkbox checked={tc.israeli_resident} onCheckedChange={(v) => setTc({ israeli_resident: !!v })} />
+                        1. אני תושב/ת ישראל
+                      </label>
+
+                      {/* 2 */}
+                      <div>
+                        <label className="flex items-center gap-2">
+                          <Checkbox checked={tc.blind_or_disabled} onCheckedChange={(v) => setTc({ blind_or_disabled: !!v })} />
+                          2. אני עיוור/ת או נכה 100% לצמיתות
+                        </label>
+                        {tc.blind_or_disabled && (
+                          <label className="flex items-center gap-2 mr-6 mt-1 text-xs">
+                            <Checkbox
+                              checked={tc.blind_or_disabled_period_at_least_year}
+                              onCheckedChange={(v) => setTc({ blind_or_disabled_period_at_least_year: !!v })}
+                            />
+                            תקופת הנכות לפחות 185 יום (לפחות שנה)
+                          </label>
+                        )}
+                      </div>
+
+                      {/* 3 — new immigrant */}
+                      <div>
+                        <label className="flex items-center gap-2">
+                          <Checkbox checked={tc.new_immigrant} onCheckedChange={(v) => setTc({ new_immigrant: !!v })} />
+                          3. אני עולה חדש/ה (זכאי/ת לזיכוי לתקופה של עד 3.5 שנים מיום העלייה)
+                        </label>
+                        {tc.new_immigrant && (
+                          <label className="flex items-center gap-2 mr-6 mt-1 text-xs">
+                            <Checkbox
+                              checked={tc.new_immigrant_started_after_aliyah}
+                              onCheckedChange={(v) => setTc({ new_immigrant_started_after_aliyah: !!v })}
+                            />
+                            תאריך תחילת העבודה אחרי תאריך העלייה
+                          </label>
+                        )}
+                      </div>
+
+                      {/* 4 */}
+                      <label className="flex items-center gap-2">
+                        <Checkbox checked={tc.single_parent_no_spouse_income} onCheckedChange={(v) => setTc({ single_parent_no_spouse_income: !!v })} />
+                        4. בן/בת זוגי לא עבד/ה ולא היו לו/לה הכנסות בשנת המס
+                      </label>
+
+                      {/* 5 */}
+                      <label className="flex items-center gap-2">
+                        <Checkbox checked={tc.single_parent_with_spouse_income} onCheckedChange={(v) => setTc({ single_parent_with_spouse_income: !!v })} />
+                        5. בן/בת זוגי המתגורר/ת ועימי, ואין לו/לה הכנסות בשנת המס
+                      </label>
+
+                      {/* 6 — children in custody */}
+                      <div>
+                        <label className="flex items-center gap-2">
+                          <Checkbox checked={tc.children_in_custody} onCheckedChange={(v) => setTc({ children_in_custody: !!v })} />
+                          6. בעבור ילדי שבמשמורתי המפורטים בחלק ב'
+                        </label>
+                        {tc.children_in_custody && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mr-6 mt-2 text-xs">
+                            <label className="flex items-center gap-2">
+                              מספר ילדים שנולדו בשנת המס:
+                              {numInput(tc.children_in_custody_under_1, (v) => setTc({ children_in_custody_under_1: v }))}
+                            </label>
+                            <label className="flex items-center gap-2">
+                              מספר ילדים בני 1–5 בשנת המס:
+                              {numInput(tc.children_in_custody_age_1_to_5, (v) => setTc({ children_in_custody_age_1_to_5: v }))}
+                            </label>
+                            <label className="flex items-center gap-2">
+                              מספר ילדים בני 6–12 בשנת המס:
+                              {numInput(tc.children_in_custody_age_6_to_12, (v) => setTc({ children_in_custody_age_6_to_12: v }))}
+                            </label>
+                            <label className="flex items-center gap-2">
+                              מספר ילדים בני 13–17 בשנת המס:
+                              {numInput(tc.children_in_custody_age_13_to_17, (v) => setTc({ children_in_custody_age_13_to_17: v }))}
+                            </label>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 7 — children not in custody */}
+                      <div>
+                        <label className="flex items-center gap-2">
+                          <Checkbox checked={tc.children_not_in_custody} onCheckedChange={(v) => setTc({ children_not_in_custody: !!v })} />
+                          7. בעבור ילדי המפורטים בחלק ב' שאינם במשמורתי
+                        </label>
+                        {tc.children_not_in_custody && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mr-6 mt-2 text-xs">
+                            <label className="flex items-center gap-2">
+                              מספר ילדים שנולדו בשנת המס:
+                              {numInput(tc.children_not_in_custody_under_1, (v) => setTc({ children_not_in_custody_under_1: v }))}
+                            </label>
+                            <label className="flex items-center gap-2">
+                              מספר ילדים בני 1–5 בשנת המס:
+                              {numInput(tc.children_not_in_custody_age_1_to_5, (v) => setTc({ children_not_in_custody_age_1_to_5: v }))}
+                            </label>
+                            <label className="flex items-center gap-2">
+                              מספר ילדים בני 6–17 בשנת המס:
+                              {numInput(tc.children_not_in_custody_age_6_to_17, (v) => setTc({ children_not_in_custody_age_6_to_17: v }))}
+                            </label>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 8 */}
+                      <label className="flex items-center gap-2">
+                        <Checkbox checked={tc.single_parent} onCheckedChange={(v) => setTc({ single_parent: !!v })} />
+                        8. אני הורה יחיד/ה (לילדי המפורטים בחלק ב')
+                      </label>
+
+                      {/* 9 */}
+                      <label className="flex items-center gap-2">
+                        <Checkbox checked={tc.children_with_alimony} onCheckedChange={(v) => setTc({ children_with_alimony: !!v })} />
+                        9. בעבור ילדי שאני משלם/ת בעבורם מזונות (ואינם בחזקתי)
+                      </label>
+
+                      {/* 10 — 19yo child in national service */}
+                      <div>
+                        <label className="flex items-center gap-2">
+                          <Checkbox
+                            checked={tc.parent_to_19yo_child_in_national_service}
+                            onCheckedChange={(v) => setTc({ parent_to_19yo_child_in_national_service: !!v })}
+                          />
+                          10. אני הורה לילד/ה שמלאו לו/לה 19 שנים, ובשנת המס סיים/מה שירות לאומי / צבאי
+                        </label>
+                        {tc.parent_to_19yo_child_in_national_service && (
+                          <label className="flex items-center gap-2 mr-6 mt-1 text-xs">
+                            מספר ילדים:
+                            {numInput(tc.parent_to_19yo_child_count, (v) => setTc({ parent_to_19yo_child_count: v }))}
+                          </label>
+                        )}
+                      </div>
+
+                      {/* 11 */}
+                      <label className="flex items-center gap-2">
+                        <Checkbox checked={tc.spouse_to_disabled} onCheckedChange={(v) => setTc({ spouse_to_disabled: !!v })} />
+                        11. אני בן/בת זוג לבן/בת זוג נכה
+                      </label>
+
+                      {/* 12 — child 16-18 */}
+                      <div>
+                        <label className="flex items-center gap-2">
+                          <Checkbox checked={tc.child_aged_16_to_18} onCheckedChange={(v) => setTc({ child_aged_16_to_18: !!v })} />
+                          12. מלאו לי או לבן/בת זוגי 16 שנים ויש ילד/ים בני 16–18 בשנת המס
+                        </label>
+                        {tc.child_aged_16_to_18 && (
+                          <label className="flex items-center gap-2 mr-6 mt-1 text-xs">
+                            מספר ילדים:
+                            {numInput(tc.child_aged_16_to_18_count, (v) => setTc({ child_aged_16_to_18_count: v }))}
+                          </label>
+                        )}
+                      </div>
+
+                      {/* 13 — discharged soldier */}
+                      <div>
+                        <label className="flex items-center gap-2">
+                          <Checkbox
+                            checked={tc.discharged_soldier}
+                            onCheckedChange={(v) => setTc({ discharged_soldier: !!v })}
+                          />
+                          13. אני חייל/ת משוחרר/ת / שירות לאומי
+                        </label>
+                        {tc.discharged_soldier && (
+                          <label className="flex items-center gap-2 mr-6 mt-1 text-xs">
+                            תאריך סיום השירות:
+                            <Input
+                              type="date"
+                              className="h-7 text-xs w-40"
+                              value={tc.discharged_soldier_service_end_date}
+                              onChange={(e) => setTc({ discharged_soldier_service_end_date: e.target.value })}
+                            />
+                          </label>
+                        )}
+                      </div>
+
+                      {/* 14 — academic degree */}
+                      <div>
+                        <label className="flex items-center gap-2">
+                          <Checkbox
+                            checked={tc.academic_degree_completed}
+                            onCheckedChange={(v) => setTc({ academic_degree_completed: !!v })}
+                          />
+                          14. סיימתי לימודים לתואר אקדמי / לימודי מקצוע
+                        </label>
+                        {tc.academic_degree_completed && (
+                          <label className="flex items-center gap-2 mr-6 mt-1 text-xs">
+                            תאריך סיום הלימודים:
+                            <Input
+                              type="date"
+                              className="h-7 text-xs w-40"
+                              value={tc.academic_degree_end_date}
+                              onChange={(e) => setTc({ academic_degree_end_date: e.target.value })}
+                            />
+                          </label>
+                        )}
+                      </div>
+
+                      {/* 15 — national service */}
+                      <div>
+                        <label className="flex items-center gap-2">
+                          <Checkbox
+                            checked={tc.national_service_completed}
+                            onCheckedChange={(v) => setTc({ national_service_completed: !!v })}
+                          />
+                          15. שירותי כלוחמ/ת לאומית
+                        </label>
+                        {tc.national_service_completed && (
+                          <label className="flex items-center gap-2 mr-6 mt-1 text-xs">
+                            תאריך סיום השירות:
+                            <Input
+                              type="date"
+                              className="h-7 text-xs w-40"
+                              value={tc.national_service_end_date}
+                              onChange={(e) => setTc({ national_service_end_date: e.target.value })}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="space-y-2 p-3 bg-muted/30 rounded-lg">
