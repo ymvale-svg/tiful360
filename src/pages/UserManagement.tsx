@@ -277,11 +277,13 @@ export default function UserManagement() {
                             <SelectValue placeholder="שנה תפקיד" />
                           </SelectTrigger>
                           <SelectContent>
-                            {Object.entries(ROLE_LABELS).map(([key, label]) => (
-                              <SelectItem key={key} value={key} className="text-xs">
-                                {u.roles.includes(key) ? `הסר: ${label}` : `הוסף: ${label}`}
-                              </SelectItem>
-                            ))}
+                            {Object.entries(ROLE_LABELS)
+                              .filter(([key]) => !restrictRoles || !OPERATIONS_RESTRICTED_ROLES.has(key))
+                              .map(([key, label]) => (
+                                <SelectItem key={key} value={key} className="text-xs">
+                                  {u.roles.includes(key) ? `הסר: ${label}` : `הוסף: ${label}`}
+                                </SelectItem>
+                              ))}
                           </SelectContent>
                         </Select>
 
