@@ -1,8 +1,9 @@
 // Process monthly payslip PDF: extract text, group pages by Israeli ID,
-// store the ORIGINAL PDF once and record per-employee page indices.
-// No per-employee PDF building (avoids CPU resource limits).
+// split the source PDF into per-employee PDFs (using pdf-lib), upload each,
+// and store a row per group with a private pdf_url pointing to that employee's file.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.103.0';
 import { extractText, getDocumentProxy } from 'https://esm.sh/unpdf@0.12.1';
+import { PDFDocument } from 'https://esm.sh/pdf-lib@1.17.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -39,9 +40,6 @@ function normalizeIdNumber(raw: string | null | undefined): string | null {
   return digits.padStart(9, '0');
 }
 
-// Label patterns for "ID number" in Hebrew. unpdf returns text in visual order,
-// so the label may appear as "מספר זהות", "זהות מספר" (reversed), or with
-// suffix letters like "מספרו" / "זהותו". Colons can appear between the words.
 const ID_LABEL = '(?:מספר[ו]?\\s*[:\\-]?\\s*זהות[ו]?|זהות[ו]?\\s*[:\\-]?\\s*מספר[ו]?|תעודת\\s*זהות)';
 
 function isNoiseContext(text: string, captured: string): boolean {
@@ -61,13 +59,9 @@ function isNoiseContext(text: string, captured: string): boolean {
 }
 
 function findIdNumber(t: string): string | null {
-  // Try each pattern; if it captures a noise number, advance and retry.
   const patterns: RegExp[] = [
-    // Label-before-number: "מספר זהות: NNNNNNN" or "זהות: מספרו NNNNNNN"
     new RegExp(`${ID_LABEL}\\s*[:\\-]?\\s*(\\d{7,9})\\b`, 'g'),
-    // Number-before-label: "NNNNNNN מספר זהות" or "NNNNNNN זהות: מספרו"
     new RegExp(`\\b(\\d{7,9})\\s*[:\\-]?\\s*${ID_LABEL}`, 'g'),
-    // ת.ז / ז.ת abbreviations
     /\bת\s*[.״"'`]\s*ז\s*[.״"'`]?\s*[:\-]?\s*(\d{7,9})\b/g,
     /\b(\d{7,9})\s*[:\-]?\s*ת\s*[.״"'`]\s*ז\s*[.״"'`]?/g,
   ];
@@ -81,19 +75,77 @@ function findIdNumber(t: string): string | null {
   return null;
 }
 
-function extractFields(text: string): Omit<PageInfo, 'pageIndex' | 'text'> {
+// Try LTR pattern first, fallback to RTL (label-after-value).
+function tryMatch(t: string, ltr: RegExp, rtl: RegExp): RegExpMatchArray | null {
+  return t.match(ltr) ?? t.match(rtl);
+}
+
+function extractPeriod(t: string, fallback: { year: number; month: number }): { year: number | null; month: number | null } {
+  // LTR: "תלוש שכר לחודש MM/YYYY"
+  let m = t.match(/תלוש\s*שכר\s*לחוד[ש]?\s*(\d{1,2})\s*[\/\-]\s*(\d{2,4})/);
+  if (m) {
+    const month = parseInt(m[1], 10);
+    let year = parseInt(m[2], 10);
+    if (year < 100) year += 2000;
+    if (month >= 1 && month <= 12) return { month, year };
+  }
+  // RTL: "YYYY/MM לחודש שכר תלוש" or "YY/MM לחוד שכר תלוש"
+  m = t.match(/(\d{2,4})\s*[\/\-]\s*(\d{1,2})\s*לחוד[ש]?\s*שכר\s*תלוש/);
+  if (m) {
+    let year = parseInt(m[1], 10);
+    const month = parseInt(m[2], 10);
+    if (year < 100) year += 2000;
+    if (month >= 1 && month <= 12) return { month, year };
+  }
+  // RTL inverted: "MM/YYYY לחודש שכר תלוש"
+  m = t.match(/(\d{1,2})\s*[\/\-]\s*(\d{2,4})\s*לחוד[ש]?\s*שכר\s*תלוש/);
+  if (m) {
+    const month = parseInt(m[1], 10);
+    let year = parseInt(m[2], 10);
+    if (year < 100) year += 2000;
+    if (month >= 1 && month <= 12) return { month, year };
+  }
+  return { month: null, year: null };
+}
+
+function extractFields(text: string, fallbackPeriod: { year: number; month: number }): Omit<PageInfo, 'pageIndex' | 'text'> {
   const t = text.replace(/\u00a0/g, ' ').replace(/[ \t]+/g, ' ');
 
   const idRaw = findIdNumber(t);
+  const period = extractPeriod(t, fallbackPeriod);
 
-  const periodM = t.match(/תלוש\s*שכר\s*לחודש\s*(\d{1,2})\s*\/\s*(\d{4})/);
-  const grossM = t.match(/סה["״]כ\s*תשלומים\s*([\d,]+\.?\d*)/);
-  const netM = t.match(/שכר\s*נטו\s*([\d,]+\.?\d*)/);
-  const workDaysM = t.match(/ימי\s*עבודה\s*(\d+)/);
-  const workHoursM = t.match(/שעות\s*עבודה\s*([\d.]+)/);
+  // Gross
+  const grossM = tryMatch(t,
+    /סה["״]כ\s*תשלומים\s*([\d,]+\.?\d*)/,
+    /([\d,]+\.?\d*)\s*תשלומים\s*סה["״]כ/
+  );
+  // Net
+  const netM = tryMatch(t,
+    /שכר\s*נטו\s*([\d,]+\.?\d*)/,
+    /([\d,]+\.?\d*)\s*נטו\s*שכר/
+  );
+  // Work days
+  const workDaysM = tryMatch(t,
+    /ימי\s*עבודה\s*(\d+\.?\d*)/,
+    /(\d+\.?\d*)\s*עבודה\s*ימי/
+  );
+  // Work hours
+  const workHoursM = tryMatch(t,
+    /שעות\s*עבודה\s*([\d.,]+)/,
+    /([\d.,]+)\s*עבודה\s*שעות/
+  );
 
-  const vacBlock = t.match(/חשבון\s*חופשה[\s\S]{0,400}?יתרה\s*חדשה\s*([\d.,]+)/);
-  const sickBlock = t.match(/חשבון\s*מחלה[\s\S]{0,400}?יתרה\s*חדשה\s*([\d.,]+)/);
+  // Vacation balance: try both orders
+  let vacBlock = t.match(/חשבון\s*חופשה[\s\S]{0,400}?יתרה\s*חדשה\s*([\d.,]+)/);
+  if (!vacBlock) vacBlock = t.match(/([\d.,]+)\s*חדשה\s*יתרה[\s\S]{0,400}?חופשה\s*חשבון/);
+  if (!vacBlock) vacBlock = t.match(/חופשה[\s\S]{0,200}?יתרה\s*חדשה\s*([\d.,]+)/);
+  if (!vacBlock) vacBlock = t.match(/([\d.,]+)\s*חדשה\s*יתרה[\s\S]{0,200}?חופשה/);
+
+  // Sick balance: try both orders
+  let sickBlock = t.match(/חשבון\s*מחלה[\s\S]{0,400}?יתרה\s*חדשה\s*([\d.,]+)/);
+  if (!sickBlock) sickBlock = t.match(/([\d.,]+)\s*חדשה\s*יתרה[\s\S]{0,400}?מחלה\s*חשבון/);
+  if (!sickBlock) sickBlock = t.match(/מחלה[\s\S]{0,200}?יתרה\s*חדשה\s*([\d.,]+)/);
+  if (!sickBlock) sickBlock = t.match(/([\d.,]+)\s*חדשה\s*יתרה[\s\S]{0,200}?מחלה/);
 
   let employeeName: string | null = null;
   const nameM = t.match(/לכבוד\s+([^\n\r]+?)(?:\s{2,}|מספר|ת\.?ז|$)/);
@@ -101,11 +153,11 @@ function extractFields(text: string): Omit<PageInfo, 'pageIndex' | 'text'> {
 
   return {
     idNumber: normalizeIdNumber(idRaw),
-    month: periodM ? parseInt(periodM[1], 10) : null,
-    year: periodM ? parseInt(periodM[2], 10) : null,
+    month: period.month,
+    year: period.year,
     grossSalary: parseNumber(grossM?.[1]),
     netSalary: parseNumber(netM?.[1]),
-    workDays: workDaysM ? parseInt(workDaysM[1], 10) : null,
+    workDays: workDaysM ? parseFloat(workDaysM[1]) : null,
     workHours: parseNumber(workHoursM?.[1]),
     vacationBalance: parseNumber(vacBlock?.[1]),
     sickBalance: parseNumber(sickBlock?.[1]),
@@ -168,7 +220,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Decode PDF (single allocation)
     const binary = Uint8Array.from(atob(pdf_base64), (c) => c.charCodeAt(0));
 
     // Extract text for ALL pages in one pass
@@ -188,12 +239,13 @@ Deno.serve(async (req) => {
       'extractedTexts=', allTexts.length,
       'page1 first 300 chars:', (allTexts[0] ?? '').slice(0, 300));
 
+    const fallbackPeriod = { year: period_year, month: period_month };
     const pages: PageInfo[] = [];
     for (let i = 0; i < effectivePages; i++) {
       const pageText = allTexts[i] ?? '';
-      const fields = extractFields(pageText);
+      const fields = extractFields(pageText, fallbackPeriod);
       pages.push({ pageIndex: i, text: pageText, ...fields });
-      console.log(`split-payslips: page ${i} idDetected=${fields.idNumber} firstChars=${pageText.slice(0, 150)}`);
+      console.log(`split-payslips: page ${i} idDetected=${fields.idNumber} period=${fields.month}/${fields.year} firstChars=${pageText.slice(0, 150)}`);
     }
 
     // Group consecutive pages by idNumber
@@ -217,6 +269,8 @@ Deno.serve(async (req) => {
           workDays: cur.workDays ?? p.workDays,
           workHours: cur.workHours ?? p.workHours,
           employeeName: cur.employeeName ?? p.employeeName,
+          month: cur.month ?? p.month,
+          year: cur.year ?? p.year,
         };
       } else {
         currentGroup = { idNumber: id, pageIndices: [p.pageIndex], primary: p };
@@ -254,12 +308,47 @@ Deno.serve(async (req) => {
     if (batchErr) throw batchErr;
     const batchId = batchRow.id;
 
-    // Upload ORIGINAL PDF once (shared by all employees in this batch)
+    // Upload ORIGINAL PDF once (kept as a backup / source_pdf_url)
     const sourcePath = `${company_id}/${period_year}-${String(period_month).padStart(2, '0')}/_source_${batchId}.pdf`;
     const { error: srcUploadErr } = await admin.storage
       .from('payslips')
       .upload(sourcePath, binary, { contentType: 'application/pdf', upsert: true });
     if (srcUploadErr) throw srcUploadErr;
+
+    // === SPLIT: build a per-employee PDF for each group ===
+    // Load source once with pdf-lib, then copyPages into a fresh doc per group.
+    const sourceDoc = await PDFDocument.load(binary);
+    const groupPdfPaths = new Map<number, string>(); // groupIndex -> storage path
+
+    const BATCH = 5;
+    for (let i = 0; i < groups.length; i += BATCH) {
+      const slice = groups.slice(i, i + BATCH);
+      await Promise.all(slice.map(async (group, idxInSlice) => {
+        const groupIndex = i + idxInSlice;
+        try {
+          const outDoc = await PDFDocument.create();
+          const copied = await outDoc.copyPages(sourceDoc, group.pageIndices);
+          for (const pg of copied) outDoc.addPage(pg);
+          const bytes = await outDoc.save();
+          const period = group.primary.year && group.primary.month
+            ? `${group.primary.year}-${String(group.primary.month).padStart(2, '0')}`
+            : `${period_year}-${String(period_month).padStart(2, '0')}`;
+          const path = `${company_id}/${period}/${batchId}_${group.idNumber}.pdf`;
+          const { error: upErr } = await admin.storage
+            .from('payslips')
+            .upload(path, bytes, { contentType: 'application/pdf', upsert: true });
+          if (upErr) {
+            console.error('per-group upload failed:', group.idNumber, upErr);
+            return;
+          }
+          groupPdfPaths.set(groupIndex, path);
+        } catch (e) {
+          console.error('split failed for group:', group.idNumber, e);
+        }
+      }));
+      // yield to event loop
+      await new Promise((r) => setTimeout(r, 0));
+    }
 
     let matchedCount = 0;
     let unmatchedCount = 0;
@@ -267,11 +356,18 @@ Deno.serve(async (req) => {
     const unmatchedIdNumbers: string[] = [];
     const balanceChanges: any[] = [];
 
-    for (const group of groups) {
+    for (let gi = 0; gi < groups.length; gi++) {
+      const group = groups[gi];
       try {
         const normalizedId = group.idNumber;
         const matched = idMap.get(normalizedId);
         const pageIndices = group.pageIndices;
+        const groupPdfPath = groupPdfPaths.get(gi) ?? sourcePath;
+        // Use detected period when available, otherwise the form's period.
+        const recordYear = group.primary.year ?? period_year;
+        const recordMonth = group.primary.month ?? period_month;
+
+        console.log(`group ${normalizedId}: vac=${group.primary.vacationBalance} sick=${group.primary.sickBalance} gross=${group.primary.grossSalary} net=${group.primary.netSalary} workDays=${group.primary.workDays} period=${recordMonth}/${recordYear} pdfPath=${groupPdfPath}`);
 
         if (matched) {
           const { data: prevEmp } = await admin.from('employees')
@@ -283,11 +379,11 @@ Deno.serve(async (req) => {
             employee_id: matched.id,
             id_number_detected: normalizedId,
             employee_name_detected: group.primary.employeeName,
-            period_year,
-            period_month,
+            period_year: recordYear,
+            period_month: recordMonth,
             source_pdf_url: sourcePath,
             page_indices: pageIndices,
-            pdf_url: sourcePath, // backwards compat
+            pdf_url: groupPdfPath,
             vacation_balance: group.primary.vacationBalance,
             sick_balance: group.primary.sickBalance,
             gross_salary: group.primary.grossSalary,
@@ -321,11 +417,11 @@ Deno.serve(async (req) => {
             employee_id: null,
             id_number_detected: normalizedId,
             employee_name_detected: group.primary.employeeName,
-            period_year,
-            period_month,
+            period_year: recordYear,
+            period_month: recordMonth,
             source_pdf_url: sourcePath,
             page_indices: pageIndices,
-            pdf_url: sourcePath,
+            pdf_url: groupPdfPath,
             vacation_balance: group.primary.vacationBalance,
             sick_balance: group.primary.sickBalance,
             gross_salary: group.primary.grossSalary,

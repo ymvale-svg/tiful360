@@ -93,12 +93,15 @@ export function useAssignPayslipToEmployee() {
 
 export async function getPayslipSignedUrl(
   path: string,
-  pageIndices?: number[] | null
+  pageIndices?: number[] | null,
+  isSourceFallback = false
 ): Promise<string | null> {
   const { data, error } = await supabase.storage.from("payslips").createSignedUrl(path, 300);
   if (error) return null;
   let url = data.signedUrl;
-  if (pageIndices && pageIndices.length > 0) {
+  // Only add #page=N when opening the shared source PDF (fallback).
+  // The per-employee split PDF starts at page 1 by definition.
+  if (isSourceFallback && pageIndices && pageIndices.length > 0) {
     const firstPage = Math.min(...pageIndices) + 1;
     url += `#page=${firstPage}`;
   }

@@ -19,9 +19,11 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary }: Prop
   const [summaryPayslip, setSummaryPayslip] = useState<any | null>(null);
 
   const openPayslip = async (p: any) => {
-    const path = p.source_pdf_url ?? p.pdf_url;
+    // Prefer the per-employee split PDF; fall back to the shared source with a page anchor.
+    const usingSplit = !!p.pdf_url && p.pdf_url !== p.source_pdf_url;
+    const path = p.pdf_url ?? p.source_pdf_url;
     if (!path) return;
-    const url = await getPayslipSignedUrl(path, p.page_indices);
+    const url = await getPayslipSignedUrl(path, p.page_indices, !usingSplit);
     if (!url) {
       toast({ title: "שגיאה בהורדת התלוש", variant: "destructive" });
       return;
