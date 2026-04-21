@@ -155,10 +155,10 @@ export default function Companies() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-right">שם חברה</TableHead>
-                <TableHead className="text-right">משתמשים</TableHead>
-                <TableHead className="text-right">נוצרה בתאריך</TableHead>
-                <TableHead className="text-right">פעולות</TableHead>
+                <TableHead className="text-start">שם חברה</TableHead>
+                <TableHead className="text-start">משתמשים</TableHead>
+                <TableHead className="text-start">נוצרה בתאריך</TableHead>
+                <TableHead className="text-start">פעולות</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

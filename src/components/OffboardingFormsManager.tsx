@@ -299,11 +299,11 @@ export function OffboardingFormsManager({ employee, assets }: Props) {
             <table className="w-full text-sm">
               <thead className="bg-muted/40">
                 <tr>
-                  <th className="p-2 text-right w-10"></th>
-                  <th className="p-2 text-right">פריט</th>
-                  <th className="p-2 text-right">מס׳ סידורי</th>
-                  <th className="p-2 text-right w-32">מצב</th>
-                  <th className="p-2 text-right w-40">הערות</th>
+                  <th className="p-2 text-start w-10"></th>
+                  <th className="p-2 text-start">פריט</th>
+                  <th className="p-2 text-start">מס׳ סידורי</th>
+                  <th className="p-2 text-start w-32">מצב</th>
+                  <th className="p-2 text-start w-40">הערות</th>
                 </tr>
               </thead>
               <tbody>

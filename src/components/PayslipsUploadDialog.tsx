@@ -216,9 +216,9 @@ export function PayslipsUploadDialog({ open, onOpenChange }: Props) {
                 <table className="w-full text-xs">
                   <thead className="bg-muted sticky top-0">
                     <tr>
-                      <th className="p-2 text-right">עובד</th>
-                      <th className="p-2 text-right">חופשה (קודם → חדש)</th>
-                      <th className="p-2 text-right">מחלה (קודם → חדש)</th>
+                      <th className="p-2 text-start">עובד</th>
+                      <th className="p-2 text-start">חופשה (קודם → חדש)</th>
+                      <th className="p-2 text-start">מחלה (קודם → חדש)</th>
                     </tr>
                   </thead>
                   <tbody>

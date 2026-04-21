@@ -409,12 +409,12 @@ export function ImportExcelDialog({ open, onOpenChange, mode }: Props) {
                 <table className="w-full text-xs">
                   <thead className="bg-muted sticky top-0">
                     <tr>
-                      <th className="p-2 text-right">#</th>
-                      <th className="p-2 text-right">שם</th>
-                      <th className="p-2 text-right">דוא"ל</th>
-                      <th className="p-2 text-right">מנהל</th>
-                      <th className="p-2 text-right">תפקיד מערכת</th>
-                      <th className="p-2 text-right">סטטוס</th>
+                      <th className="p-2 text-start">#</th>
+                      <th className="p-2 text-start">שם</th>
+                      <th className="p-2 text-start">דוא"ל</th>
+                      <th className="p-2 text-start">מנהל</th>
+                      <th className="p-2 text-start">תפקיד מערכת</th>
+                      <th className="p-2 text-start">סטטוס</th>
                     </tr>
                   </thead>
                   <tbody>

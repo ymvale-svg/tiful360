@@ -194,12 +194,12 @@ export function UsersAndRolesTab() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-right">משתמש</TableHead>
-                <TableHead className="text-right">ספק אימות</TableHead>
-                <TableHead className="text-right">תפקידים</TableHead>
-                <TableHead className="text-right">כניסה אחרונה</TableHead>
-                <TableHead className="text-right">סטטוס</TableHead>
-                <TableHead className="text-right">פעולות</TableHead>
+                <TableHead className="text-start">משתמש</TableHead>
+                <TableHead className="text-start">ספק אימות</TableHead>
+                <TableHead className="text-start">תפקידים</TableHead>
+                <TableHead className="text-start">כניסה אחרונה</TableHead>
+                <TableHead className="text-start">סטטוס</TableHead>
+                <TableHead className="text-start">פעולות</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

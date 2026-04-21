@@ -270,11 +270,11 @@ export function ImportAssetsExcelDialog({ open, onOpenChange }: Props) {
                 <table className="w-full text-xs">
                   <thead className="bg-muted sticky top-0">
                     <tr>
-                      <th className="p-2 text-right">#</th>
-                      <th className="p-2 text-right">מזהה</th>
-                      <th className="p-2 text-right">שם פריט</th>
-                      <th className="p-2 text-right">קטגוריה</th>
-                      <th className="p-2 text-right">סטטוס</th>
+                      <th className="p-2 text-start">#</th>
+                      <th className="p-2 text-start">מזהה</th>
+                      <th className="p-2 text-start">שם פריט</th>
+                      <th className="p-2 text-start">קטגוריה</th>
+                      <th className="p-2 text-start">סטטוס</th>
                     </tr>
                   </thead>
                   <tbody>
