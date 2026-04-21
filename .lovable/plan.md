@@ -1,45 +1,55 @@
 
-## מיזוג טאב "תלושי שכר" מהגדרות למסך שכר ותלושים
+## תוכנית מקיפה: ארגון מסך "שכר ותלושים" + ניקוי קוד מת
 
-הסרת הטאב **"תלושי שכר"** ממסך **`/settings`** ומיזוג הפונקציונליות שלו (העלאת אצוות PDF, ניהול תלושים) למסך **`/payroll`**.
+### חלק א' — מבנה סופי של `/payroll`
 
-### בדיקה מקדימה
-לפני ביצוע — לוודא ב-`src/pages/Settings.tsx` מה בדיוק נמצא בטאב "תלושי שכר" כיום (סביר להניח: כפתור העלאה דרך `PayslipsUploadDialog`, רשימת אצוות, ניהול unmatched).
+מסך אחד עם 4 טאבים, deep-link דרך `?tab=`:
 
-### שינויים
+| טאב | key | תוכן |
+|---|---|---|
+| סקירה | `overview` (ברירת מחדל) | KPIs, אצוות אחרונות (6), מחלות/חופשות פעילות, תיקוני שעון פתוחים, **כפתור "העלאת אצוות תלושים"** + empty-state CTA |
+| ניהול תלושים | `batches` | רשימת כל האצוות עם פילטר חודש/שנה, תלושים לא משויכים (`useUnmatchedPayslips`) עם הקצאה ידנית, מחיקה |
+| תלושי עובד | `employee` | בחירת עובד + `<EmployeePayslipsTab />` |
+| הגדרות שכר | `settings` | שדה `payroll_emails` (מופרד פסיקים), וולידציה, שמירה ל-`companies.payroll_emails` |
 
-#### 1. `src/pages/Payroll.tsx` — הרחבה לטאבים
-המסך יהפוך למסך עם טאבים:
+### חלק ב' — הסרה מ-`/settings`
 
-- **טאב "סקירה"** (default) — התוכן הקיים (אצוות אחרונות, מחלות, חופשות, תיקוני שעון).
-- **טאב "ניהול תלושים"** — חדש, מכיל:
-  - כפתור **"העלאת אצוות תלושים חדשה"** → פותח את `PayslipsUploadDialog`.
-  - **רשימה מלאה של כל אצוות התלושים** (לא רק 6 האחרונות) עם פילטר לפי חודש/שנה.
-  - **תלושים לא משויכים** (`useUnmatchedPayslips`) עם אפשרות הקצאה ידנית.
-  - לכל אצווה: סטטוס, מספר עמודים, מותאמים/לא מותאמים, תאריך, פעולות (צפייה/מחיקה אם רלוונטי).
-- **טאב "תלושי עובד"** — בחירת עובד והצגת `<EmployeePayslipsTab />` (אם רלוונטי, אופציונלי בשלב הזה).
+#### `src/pages/Settings.tsx`
+- הסרת טאב "תלושי שכר" אם נותר.
+- מתוך `GeneralSettings` (טאב "כללי"):
+  - מחיקת state `payrollEmails` + סנכרון מה-query.
+  - מחיקת בלוק JSX של השדה (label + input + הסבר).
+  - מחיקת לוגיקת validate emails.
+  - הסרת `payroll_emails` מ-payload של `updateMutation`.
 
-תמיכה ב-deep-link: `/payroll?tab=batches`.
+### חלק ג' — ניקוי קוד מת
 
-#### 2. `src/pages/Settings.tsx` — הסרת הטאב
-- הסרת הטאב "תלושי שכר" ממערך הטאבים.
-- הסרת הקומפוננטה/הבלוק שמרנדר אותו.
-- הסרת imports לא בשימוש (`PayslipsUploadDialog` אם נטען רק שם).
-- אם הטאב היה default — לעדכן ברירת מחדל לטאב הבא (משתמשים והרשאות / אנשי קשר חיצוניים).
+#### ב-`src/pages/Settings.tsx`
+- imports שלא בשימוש: `PayslipsUploadDialog`, `usePayslipBatches`, `useUnmatchedPayslips`, אייקונים שהיו רק לבלוקים שהוסרו (`Upload`, `FileText` וכו').
+- פונקציות עזר שנשארו יתומות (validate email helper) — להעביר ל-`/payroll` או למחוק אם משוכפלות.
 
-#### 3. הרשאות
-- `/payroll` כבר מוגן ב-`App.tsx` ל-`admin/super_admin/payroll` — חשב השכר יראה את הכל במקום אחד.
-- `/settings` — חשב שכר כבר לא צריך לגשת אליו רק בשביל תלושים.
+#### ב-`src/pages/Payroll.tsx`
+- וידוא שאין כפילות בין `OverviewTab` ל-`BatchesTab` בשליפת `usePayslipBatches` (למשל key/limit שונים במקום אחד מקור).
+- מחיקת imports יתומים שנותרו מאיטרציות קודמות.
+
+#### חיפוש כללי בפרויקט
+- `grep` ל-`payroll_emails` — לוודא שהשימוש היחיד הוא ב-`/payroll` ובקריאות edge functions.
+- `grep` ל-`PayslipsUploadDialog` — שייובא רק במקומות הרלוונטיים (`Payroll.tsx`).
+- הסרת תרגומים/מחרוזות יתומות אם קיים קובץ i18n.
+
+### חלק ד' — הרשאות (ללא שינוי, וידוא בלבד)
+
+- `/payroll`: `admin`, `super_admin`, `payroll`
+- `/settings`: `admin`, `super_admin`
+- חשב שכר מקבל גישה מלאה לכל מה שצריך מתוך `/payroll`.
 
 ### קבצים מושפעים
 
 | קובץ | שינוי |
 |---|---|
-| `src/pages/Payroll.tsx` | מבנה טאבים + טאב "ניהול תלושים" עם העלאה, רשימת אצוות, unmatched |
-| `src/pages/Settings.tsx` | הסרת טאב "תלושי שכר" + cleanup |
+| `src/pages/Payroll.tsx` | מבנה 4 טאבים סופי, כפתור Upload בסקירה + empty-state, טאב "הגדרות שכר" |
+| `src/pages/Settings.tsx` | הסרה מלאה של תלושים/payroll_emails + ניקוי imports |
 
 ### הערות
-
-- אין שינוי ב-DB, ב-edge functions, ב-hooks או ב-`PayslipsUploadDialog` עצמו — רק העברת מיקום ה-UI.
-- `EmployeePayslipsTab` בתיק העובד נשאר כפי שהוא (לא חלק מבקשה זו).
-- `RoleGuard` הקיים על `/payroll` מבטיח שרק חשב שכר/admin רואים.
+- אין שינוי DB / hooks / edge functions.
+- לאחר ביצוע — בדיקה ידנית: `/payroll?tab=settings` עובד, שמירת אימיילים מעדכנת את ה-DB, התראות חופשה/מחלה ממשיכות להישלח לכתובות שהוגדרו.
