@@ -113,6 +113,30 @@ Deno.serve(async (req) => {
       })
       .eq("id", form_id);
 
+    // Best-effort activity log entry (covers both authenticated submit and token flow)
+    try {
+      const { data: existingLog } = await supabase
+        .from("activity_log")
+        .select("id")
+        .eq("entity_id", form_id)
+        .eq("entity_type", "tax_form_101")
+        .eq("action", `מילוי וחתימה על טופס 101 לשנת ${form.tax_year}`)
+        .maybeSingle();
+      if (!existingLog) {
+        await supabase.from("activity_log").insert({
+          company_id: form.company_id,
+          employee_id: form.employee_id,
+          entity_id: form.id,
+          entity_type: "tax_form_101",
+          action: `מילוי וחתימה על טופס 101 לשנת ${form.tax_year}`,
+          details: `הטופס נחתם דיגיטלית ונשלח למחלקת השכר (${allRecipients.join(", ")})`,
+          performed_by: form.created_by ?? null,
+        });
+      }
+    } catch (logErr) {
+      console.warn("activity_log insert failed:", logErr);
+    }
+
     return new Response(JSON.stringify({ ok: true, recipients: allRecipients, message_id: resendData.id }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
