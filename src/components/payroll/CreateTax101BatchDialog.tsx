@@ -1,10 +1,13 @@
 import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useEmployees } from "@/hooks/useData";
+import { useCompany } from "@/hooks/useCompany";
+import { supabase } from "@/integrations/supabase/client";
 import { useCreateTax101Batch } from "@/hooks/useTax101";
 import { useToast } from "@/hooks/use-toast";
 import { FileText, Loader2, Search } from "lucide-react";
@@ -16,8 +19,23 @@ interface Props {
 
 export function CreateTax101BatchDialog({ open, onOpenChange }: Props) {
   const { toast } = useToast();
+  const { activeCompanyId } = useCompany();
   const { data: employees = [] } = useEmployees();
   const createBatch = useCreateTax101Batch();
+
+  const { data: emailMap = {} } = useQuery({
+    queryKey: ["employee-emails", activeCompanyId],
+    enabled: !!activeCompanyId && open,
+    queryFn: async () => {
+      let q = supabase.from("employees").select("id,email");
+      if (activeCompanyId) q = q.eq("company_id", activeCompanyId);
+      const { data, error } = await q;
+      if (error) throw error;
+      const map: Record<string, string | null> = {};
+      (data ?? []).forEach((e: any) => { map[e.id] = e.email; });
+      return map;
+    },
+  });
 
   const currentYear = new Date().getFullYear();
   const [taxYear, setTaxYear] = useState(currentYear + 1);
@@ -166,7 +184,7 @@ export function CreateTax101BatchDialog({ open, onOpenChange }: Props) {
                       <p className="text-sm font-medium truncate">{e.full_name}</p>
                       <p className="text-xs text-muted-foreground">
                         {e.employee_code} • {e.department}
-                        {!e.email && <span className="text-warning"> • אין מייל</span>}
+                        {!emailMap[e.id] && <span className="text-warning"> • אין מייל</span>}
                       </p>
                     </div>
                   </label>
