@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, Wallet, TrendingUp, Stethoscope, Calendar, Clock, ExternalLink } from "lucide-react";
+import { Download, Wallet, TrendingUp, Stethoscope, Calendar, Clock, ExternalLink, AlertCircle } from "lucide-react";
 import { getPayslipSignedUrl } from "@/hooks/usePayslips";
 import { useToast } from "@/hooks/use-toast";
 
@@ -61,6 +61,13 @@ export function PayslipSummaryDialog({ open, onClose, payslip, employeeName, can
             </div>
           ))}
         </div>
+
+        {payslip.extraction_status === 'partial' && (
+          <div className="flex items-start gap-2 text-xs text-warning bg-warning/10 rounded-lg p-3 mt-2 border border-warning/30">
+            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+            <span>נתונים חלקיים — חלק מהשדות לא חולצו אוטומטית. ניתן לפתוח את התלוש המקורי לצפייה מלאה.</span>
+          </div>
+        )}
 
         {payslip.extraction_notes && (
           <div className="text-xs text-muted-foreground bg-muted/40 rounded-lg p-3 mt-2">
