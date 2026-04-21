@@ -18,6 +18,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { EmployeePayslipsTab } from "@/components/EmployeePayslipsTab";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { Tax101AdminTab } from "@/components/payroll/Tax101AdminTab";
 
 const MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
 const TYPE_LABELS_PAYROLL: Record<string, string> = { vacation: "חופשה", sick: "מחלה", personal: "יום אישי", other: "אחר" };
@@ -60,6 +61,10 @@ export default function Payroll() {
             <UserSearch className="w-4 h-4" />
             תלושי עובד
           </TabsTrigger>
+          <TabsTrigger value="tax101" className="gap-1.5">
+            <FileText className="w-4 h-4" />
+            טפסי עובדים
+          </TabsTrigger>
           <TabsTrigger value="settings" className="gap-1.5">
             <SettingsIcon className="w-4 h-4" />
             הגדרות שכר
@@ -76,6 +81,10 @@ export default function Payroll() {
 
         <TabsContent value="employee">
           <EmployeeLookupTab />
+        </TabsContent>
+
+        <TabsContent value="tax101">
+          <Tax101AdminTab />
         </TabsContent>
 
         <TabsContent value="settings">

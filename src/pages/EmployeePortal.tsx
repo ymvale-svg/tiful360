@@ -19,6 +19,8 @@ import { AttendanceCorrectionDialog } from "@/components/AttendanceCorrectionDia
 import { useMyLeaveRequests } from "@/hooks/useLeaveRequests";
 import { useMyAttendanceCorrections } from "@/hooks/useAttendanceCorrections";
 import { EmployeePayslipsTab } from "@/components/EmployeePayslipsTab";
+import { Tax101Banner } from "@/components/portal/Tax101Banner";
+import { MyTax101FormsList } from "@/components/portal/MyTax101FormsList";
 import { Plus } from "lucide-react";
 
 const portalTabs = [
@@ -324,6 +326,7 @@ export default function EmployeePortal() {
 
             {myEmployee && (
               <>
+                <Tax101Banner employee={myEmployee} />
                 <PendingHandoverForms employeeId={myEmployee.id} />
                 <h2 className="font-semibold text-sm">ציוד פיזי ({myAssets.length})</h2>
                 {myAssets.length > 0 ? (
@@ -498,6 +501,14 @@ export default function EmployeePortal() {
               ) : (
                 <p className="text-center text-sm text-muted-foreground py-4">אין מידע זמין</p>
               )}
+            </div>
+
+            <div className="bg-card rounded-xl border border-border/50 p-4">
+              <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-primary" />
+                טפסי 101
+              </h3>
+              <MyTax101FormsList employeeId={myEmployee?.id} />
             </div>
           </div>
         )}
