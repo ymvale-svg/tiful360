@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Settings as SettingsIcon, Bell, Shield, Database, Users,
-  Building2, Save, Upload, Smartphone,
+  Building2, Save, Upload, Smartphone, FileText, Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,6 +11,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PortalSettingsTab } from "@/components/PortalSettingsTab";
+import { PayslipsUploadDialog } from "@/components/PayslipsUploadDialog";
+import { usePayslipBatches } from "@/hooks/usePayslips";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -42,6 +44,10 @@ export default function Settings() {
             <Bell className="w-4 h-4" />
             חוקי התראות
           </TabsTrigger>
+          <TabsTrigger value="payroll" className="gap-1.5">
+            <FileText className="w-4 h-4" />
+            שכר ותלושים
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="general">
@@ -54,6 +60,10 @@ export default function Settings() {
 
         <TabsContent value="alerts">
           <AlertRulesSettings />
+        </TabsContent>
+
+        <TabsContent value="payroll">
+          <PayrollSettings />
         </TabsContent>
       </Tabs>
 
