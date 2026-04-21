@@ -96,7 +96,7 @@ export default function CategoryManager() {
           </div>
 
           {/* Fields editor */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 lg:order-first">
             {selectedId ? (
               <div className="space-y-4">
                 <CategoryEditor category={categories?.find(c => c.id === selectedId)!} />
