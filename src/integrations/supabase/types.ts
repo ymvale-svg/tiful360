@@ -1480,7 +1480,14 @@ export type Database = {
     Enums: {
       access_status: "active" | "suspended" | "blocked"
       alert_severity: "critical" | "warning" | "info"
-      app_role: "admin" | "it_manager" | "employee" | "super_admin"
+      app_role:
+        | "admin"
+        | "it_manager"
+        | "employee"
+        | "super_admin"
+        | "direct_manager"
+        | "payroll"
+        | "operations"
       asset_status: "in_use" | "in_stock" | "in_repair" | "lost"
       employee_status: "active" | "onboarding" | "leaving" | "inactive"
       field_type: "text" | "number" | "date" | "list"
@@ -1620,7 +1627,15 @@ export const Constants = {
     Enums: {
       access_status: ["active", "suspended", "blocked"],
       alert_severity: ["critical", "warning", "info"],
-      app_role: ["admin", "it_manager", "employee", "super_admin"],
+      app_role: [
+        "admin",
+        "it_manager",
+        "employee",
+        "super_admin",
+        "direct_manager",
+        "payroll",
+        "operations",
+      ],
       asset_status: ["in_use", "in_stock", "in_repair", "lost"],
       employee_status: ["active", "onboarding", "leaving", "inactive"],
       field_type: ["text", "number", "date", "list"],
