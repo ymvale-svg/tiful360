@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
-import { Wallet, FileText, Stethoscope, Calendar, Clock4, Upload, LayoutDashboard, FolderOpen, UserSearch, Settings as SettingsIcon, Save, Mail } from "lucide-react";
+import { Wallet, FileText, Stethoscope, Calendar, Clock4, Upload, LayoutDashboard, FolderOpen, UserSearch, Settings as SettingsIcon, Save, Mail, Paperclip } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { PayslipsUploadDialog } from "@/components/PayslipsUploadDialog";
@@ -20,6 +20,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
 const MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
+const TYPE_LABELS_PAYROLL: Record<string, string> = { vacation: "חופשה", sick: "מחלה", personal: "יום אישי", other: "אחר" };
 
 export default function Payroll() {
   const { activeCompanyId } = useCompany();
@@ -297,11 +298,19 @@ function OverviewTab() {
           ) : (
             <div className="divide-y divide-border/40">
               {sickRequests.map((r: any) => (
-                <div key={r.id} className="p-3 text-sm">
+                <div key={r.id} className="p-3 text-sm space-y-1.5">
                   <p className="font-medium">{r.employee?.full_name}</p>
                   <p className="text-xs text-muted-foreground">
                     {r.total_days} ימים • {new Date(r.start_date).toLocaleDateString("he-IL")} – {new Date(r.end_date).toLocaleDateString("he-IL")}
                   </p>
+                  {r.attachment_url && (
+                    <a href={r.attachment_url} target="_blank" rel="noopener noreferrer" className="inline-block">
+                      <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
+                        <Paperclip className="w-3 h-3" />
+                        אישור מחלה
+                      </Button>
+                    </a>
+                  )}
                 </div>
               ))}
             </div>
@@ -320,11 +329,19 @@ function OverviewTab() {
           ) : (
             <div className="divide-y divide-border/40">
               {approvedLeaves.map((r: any) => (
-                <div key={r.id} className="p-3 text-sm">
+                <div key={r.id} className="p-3 text-sm space-y-1.5">
                   <p className="font-medium">{r.employee?.full_name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {r.total_days} ימים • {new Date(r.start_date).toLocaleDateString("he-IL")} – {new Date(r.end_date).toLocaleDateString("he-IL")}
+                    {TYPE_LABELS_PAYROLL[r.request_type] ?? r.request_type} • {r.total_days} ימים • {new Date(r.start_date).toLocaleDateString("he-IL")} – {new Date(r.end_date).toLocaleDateString("he-IL")}
                   </p>
+                  {r.attachment_url && (
+                    <a href={r.attachment_url} target="_blank" rel="noopener noreferrer" className="inline-block">
+                      <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
+                        <Paperclip className="w-3 h-3" />
+                        קובץ מצורף
+                      </Button>
+                    </a>
+                  )}
                 </div>
               ))}
             </div>
