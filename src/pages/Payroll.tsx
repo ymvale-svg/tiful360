@@ -1,19 +1,85 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
-import { Wallet, FileText, Stethoscope, Calendar, Clock4 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Wallet, FileText, Stethoscope, Calendar, Clock4, Upload, LayoutDashboard, FolderOpen, UserSearch } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { PayslipsUploadDialog } from "@/components/PayslipsUploadDialog";
+import { usePayslipBatches, useUnmatchedPayslips, useAssignPayslipToEmployee } from "@/hooks/usePayslips";
+import { useEmployees } from "@/hooks/useData";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { EmployeePayslipsTab } from "@/components/EmployeePayslipsTab";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 const MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
 
 export default function Payroll() {
   const { activeCompanyId } = useCompany();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get("tab") ?? "overview";
   const now = new Date();
   const currentMonth = now.getMonth() + 1;
   const currentYear = now.getFullYear();
 
+  const setTab = (v: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", v);
+    setSearchParams(next, { replace: true });
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="page-header">
+        <h1 className="page-title flex items-center gap-2">
+          <Wallet className="w-5 h-5 text-primary" />
+          שכר ותלושים
+        </h1>
+        <p className="page-subtitle">דשבורד חשבות שכר — {MONTHS[currentMonth - 1]} {currentYear}</p>
+      </div>
+
+      <Tabs value={tab} onValueChange={setTab} dir="rtl">
+        <TabsList className="mb-4">
+          <TabsTrigger value="overview" className="gap-1.5">
+            <LayoutDashboard className="w-4 h-4" />
+            סקירה
+          </TabsTrigger>
+          <TabsTrigger value="batches" className="gap-1.5">
+            <FolderOpen className="w-4 h-4" />
+            ניהול תלושים
+          </TabsTrigger>
+          <TabsTrigger value="employee" className="gap-1.5">
+            <UserSearch className="w-4 h-4" />
+            תלושי עובד
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview">
+          <OverviewTab />
+        </TabsContent>
+
+        <TabsContent value="batches">
+          <BatchesManagementTab />
+        </TabsContent>
+
+        <TabsContent value="employee">
+          <EmployeeLookupTab />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+// ============================
+// Overview Tab (existing content)
+// ============================
+function OverviewTab() {
+  const { activeCompanyId } = useCompany();
+
   const { data: monthBatches = [] } = useQuery({
-    queryKey: ["payroll-batches", activeCompanyId, currentMonth, currentYear],
+    queryKey: ["payroll-batches-recent", activeCompanyId],
     queryFn: async () => {
       if (!activeCompanyId) return [];
       const { data } = await supabase
@@ -77,15 +143,7 @@ export default function Payroll() {
   });
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="page-header">
-        <h1 className="page-title flex items-center gap-2">
-          <Wallet className="w-5 h-5 text-primary" />
-          שכר ותלושים
-        </h1>
-        <p className="page-subtitle">דשבורד חשבות שכר — {MONTHS[currentMonth - 1]} {currentYear}</p>
-      </div>
-
+    <div className="space-y-6">
       {/* Payslip batches */}
       <section className="bg-card rounded-xl border border-border/50 shadow-card overflow-hidden">
         <div className="p-4 border-b border-border/50 flex items-center justify-between">
@@ -93,7 +151,7 @@ export default function Payroll() {
             <FileText className="w-4 h-4 text-primary" />
             אצוות תלושים אחרונות
           </h2>
-          <Link to="/employees" className="text-xs text-primary hover:underline">לעובדים →</Link>
+          <Link to="/payroll?tab=batches" className="text-xs text-primary hover:underline">לניהול תלושים →</Link>
         </div>
         {monthBatches.length === 0 ? (
           <div className="p-8 text-center text-sm text-muted-foreground">טרם הועלו אצוות תלושים</div>
@@ -119,7 +177,6 @@ export default function Payroll() {
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Sick leave */}
         <section className="bg-card rounded-xl border border-border/50 shadow-card overflow-hidden">
           <div className="p-4 border-b border-border/50">
             <h2 className="text-base font-semibold flex items-center gap-2">
@@ -143,7 +200,6 @@ export default function Payroll() {
           )}
         </section>
 
-        {/* Approved vacation */}
         <section className="bg-card rounded-xl border border-border/50 shadow-card overflow-hidden">
           <div className="p-4 border-b border-border/50">
             <h2 className="text-base font-semibold flex items-center gap-2">
@@ -168,7 +224,6 @@ export default function Payroll() {
         </section>
       </div>
 
-      {/* Approved attendance corrections */}
       <section className="bg-card rounded-xl border border-border/50 shadow-card overflow-hidden">
         <div className="p-4 border-b border-border/50">
           <h2 className="text-base font-semibold flex items-center gap-2">
@@ -194,6 +249,229 @@ export default function Payroll() {
           </table>
         )}
       </section>
+    </div>
+  );
+}
+
+// ============================
+// Batches Management Tab
+// ============================
+function BatchesManagementTab() {
+  const { activeCompanyId } = useCompany();
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [yearFilter, setYearFilter] = useState<string>("all");
+  const [monthFilter, setMonthFilter] = useState<string>("all");
+  const [expandedBatchId, setExpandedBatchId] = useState<string | null>(null);
+  const { data: batches, isLoading } = usePayslipBatches();
+
+  if (!activeCompanyId) {
+    return <div className="text-center py-8 text-muted-foreground">לא נבחרה חברה</div>;
+  }
+
+  const years = Array.from(new Set((batches ?? []).map((b: any) => b.period_year))).sort((a: any, b: any) => b - a);
+  const filtered = (batches ?? []).filter((b: any) => {
+    if (yearFilter !== "all" && String(b.period_year) !== yearFilter) return false;
+    if (monthFilter !== "all" && String(b.period_month) !== monthFilter) return false;
+    return true;
+  });
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-card rounded-xl border border-border/50 shadow-card p-6">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <FileText className="w-5 h-5 text-primary" />
+            <div>
+              <h3 className="font-semibold">תלושי שכר חודשיים</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">העלאת קובץ PDF מאוחד ופיצול אוטומטי לעובדים לפי תעודת זהות</p>
+            </div>
+          </div>
+          <Button className="gap-1.5" onClick={() => setUploadOpen(true)}>
+            <Upload className="w-4 h-4" />
+            העלאת אצוות תלושים חדשה
+          </Button>
+        </div>
+
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
+          <select
+            value={yearFilter}
+            onChange={(e) => setYearFilter(e.target.value)}
+            className="px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
+          >
+            <option value="all">כל השנים</option>
+            {years.map((y: any) => <option key={y} value={y}>{y}</option>)}
+          </select>
+          <select
+            value={monthFilter}
+            onChange={(e) => setMonthFilter(e.target.value)}
+            className="px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
+          >
+            <option value="all">כל החודשים</option>
+            {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+          </select>
+        </div>
+
+        <div className="border border-border rounded-lg overflow-hidden">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>תקופה</th>
+                <th>קובץ</th>
+                <th>סה"כ עמודים</th>
+                <th>הותאמו</th>
+                <th>לא הותאמו</th>
+                <th>נכשלו</th>
+                <th>סטטוס</th>
+                <th>תאריך העלאה</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading && <tr><td colSpan={9} className="text-center py-6 text-muted-foreground">טוען...</td></tr>}
+              {!isLoading && filtered.length === 0 && (
+                <tr><td colSpan={9} className="text-center py-6 text-muted-foreground">אין אצוות להצגה</td></tr>
+              )}
+              {filtered.map((b: any) => (
+                <>
+                  <tr key={b.id}>
+                    <td className="font-medium">{MONTHS[b.period_month - 1]} {b.period_year}</td>
+                    <td className="text-xs text-muted-foreground">{b.original_filename ?? "—"}</td>
+                    <td className="font-mono">{b.total_pages}</td>
+                    <td className="font-mono text-success">{b.matched_count}</td>
+                    <td className="font-mono text-warning">{b.unmatched_count}</td>
+                    <td className="font-mono text-destructive">{b.failed_count}</td>
+                    <td><span className="text-[11px] px-2 py-0.5 rounded-full bg-muted">{b.status}</span></td>
+                    <td className="text-xs text-muted-foreground">{new Date(b.created_at).toLocaleDateString("he-IL")}</td>
+                    <td>
+                      {b.unmatched_count > 0 && (
+                        <button
+                          onClick={() => setExpandedBatchId(expandedBatchId === b.id ? null : b.id)}
+                          className="text-xs text-primary hover:underline"
+                        >
+                          {expandedBatchId === b.id ? "סגור" : "הקצה"}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                  {expandedBatchId === b.id && (
+                    <tr>
+                      <td colSpan={9} className="bg-muted/30 p-0">
+                        <UnmatchedPayslipsList batchId={b.id} />
+                      </td>
+                    </tr>
+                  )}
+                </>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <PayslipsUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} />
+    </div>
+  );
+}
+
+// ============================
+// Unmatched Payslips inline list
+// ============================
+function UnmatchedPayslipsList({ batchId }: { batchId: string }) {
+  const { data: unmatched, isLoading } = useUnmatchedPayslips(batchId);
+  const { data: employees = [] } = useEmployees();
+  const assign = useAssignPayslipToEmployee();
+  const { toast } = useToast();
+
+  const employeeOptions = (employees ?? []).map((e: any) => ({
+    value: e.id,
+    label: `${e.full_name} (${e.id_number})`,
+  }));
+
+  const handleAssign = async (payslipId: string, employeeId: string) => {
+    try {
+      await assign.mutateAsync({ payslipId, employeeId });
+      toast({ title: "התלוש שויך בהצלחה" });
+    } catch (e: any) {
+      toast({ title: "שגיאה", description: e.message, variant: "destructive" });
+    }
+  };
+
+  if (isLoading) return <div className="p-4 text-center text-sm text-muted-foreground">טוען...</div>;
+  if (!unmatched || unmatched.length === 0) {
+    return <div className="p-4 text-center text-sm text-muted-foreground">אין תלושים לא משויכים</div>;
+  }
+
+  return (
+    <div className="p-4 space-y-2">
+      <p className="text-sm font-medium mb-2">תלושים לא משויכים ({unmatched.length})</p>
+      {unmatched.map((p) => (
+        <div key={p.id} className="flex items-center gap-3 bg-background p-2.5 rounded-lg border border-border/40">
+          <div className="flex-1 text-sm">
+            <p className="font-medium">{p.employee_name_detected ?? "לא זוהה שם"}</p>
+            <p className="text-xs text-muted-foreground">
+              ת.ז.: <span className="font-mono">{p.id_number_detected ?? "—"}</span>
+            </p>
+          </div>
+          <div className="w-72">
+            <SearchableSelect
+              options={employeeOptions}
+              value=""
+              onChange={(v) => handleAssign(p.id, v)}
+              placeholder="בחר עובד לשיוך..."
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ============================
+// Employee Lookup Tab
+// ============================
+function EmployeeLookupTab() {
+  const { activeCompanyId } = useCompany();
+  const { data: employees = [] } = useEmployees();
+  const { isAdmin } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const employeeId = searchParams.get("employee") ?? "";
+
+  const setEmployeeId = (id: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (id) next.set("employee", id); else next.delete("employee");
+    setSearchParams(next, { replace: true });
+  };
+
+  if (!activeCompanyId) {
+    return <div className="text-center py-8 text-muted-foreground">לא נבחרה חברה</div>;
+  }
+
+  const employeeOptions = (employees ?? []).map((e: any) => ({
+    value: e.id,
+    label: `${e.full_name} • ${e.department}`,
+  }));
+  const selected = (employees ?? []).find((e: any) => e.id === employeeId);
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-card rounded-xl border border-border/50 shadow-card p-4">
+        <label className="text-sm font-medium mb-2 block">בחר עובד</label>
+        <div className="max-w-md">
+          <SearchableSelect
+            options={employeeOptions}
+            value={employeeId}
+            onChange={setEmployeeId}
+            placeholder="חפש עובד..."
+          />
+        </div>
+      </div>
+
+      {selected ? (
+        <EmployeePayslipsTab employeeId={selected.id} employee={selected} canSeeSalary={isAdmin} />
+      ) : (
+        <div className="bg-card rounded-xl border border-border/50 shadow-card p-12 text-center text-sm text-muted-foreground">
+          בחר עובד כדי לראות את תלושי השכר שלו
+        </div>
+      )}
     </div>
   );
 }
