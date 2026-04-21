@@ -546,11 +546,16 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label>סוג הכנסה</Label>
+                  <Label>אני מקבל/ת <span className="text-muted-foreground text-xs">(ראה הסברים מעבר לדף)</span></Label>
                   <select className="w-full h-10 px-3 rounded-md bg-background border border-input" value={data.income_type} onChange={(e) => update("income_type", e.target.value as any)}>
+                    <option value="">בחר…</option>
                     <option value="monthly">משכורת חודשית</option>
-                    <option value="partial">משרה חלקית</option>
-                    <option value="daily">יומי / שעתי</option>
+                    <option value="monthly_additional">משכורת חודשית נוספת</option>
+                    <option value="partial">משכורת חלקית</option>
+                    <option value="daily">שכר עבודה (עובד יומי)</option>
+                    <option value="pension">קצבה</option>
+                    <option value="scholarship">מלגה</option>
+                    <option value="retirement_grant">מענק פרישה</option>
                   </select>
                 </div>
                 <div className="space-y-1.5">
