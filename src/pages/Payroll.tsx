@@ -454,20 +454,29 @@ function BatchesManagementTab() {
                     <td><span className="text-[11px] px-2 py-0.5 rounded-full bg-muted">{b.status}</span></td>
                     <td className="text-xs text-muted-foreground">{new Date(b.created_at).toLocaleDateString("he-IL")}</td>
                     <td>
-                      {b.unmatched_count > 0 && (
+                      <div className="flex items-center gap-2 justify-end">
                         <button
                           onClick={() => setExpandedBatchId(expandedBatchId === b.id ? null : b.id)}
                           className="text-xs text-primary hover:underline"
                         >
-                          {expandedBatchId === b.id ? "סגור" : "הקצה"}
+                          {expandedBatchId === b.id ? "סגור" : "ניהול"}
                         </button>
-                      )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                          title="מחק אצווה"
+                          onClick={() => setDeleteBatchTarget(b)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                   {expandedBatchId === b.id && (
                     <tr>
                       <td colSpan={9} className="bg-muted/30 p-0">
-                        <UnmatchedPayslipsList batchId={b.id} />
+                        <BatchPayslipsList batchId={b.id} />
                       </td>
                     </tr>
                   )}
