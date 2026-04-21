@@ -709,13 +709,55 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_dependents: {
+        Row: {
+          birth_date: string | null
+          company_id: string | null
+          created_at: string
+          employee_id: string
+          full_name: string
+          id: string
+          id_number: string | null
+          is_in_custody: boolean
+          receives_allowance: boolean
+          updated_at: string
+        }
+        Insert: {
+          birth_date?: string | null
+          company_id?: string | null
+          created_at?: string
+          employee_id: string
+          full_name: string
+          id?: string
+          id_number?: string | null
+          is_in_custody?: boolean
+          receives_allowance?: boolean
+          updated_at?: string
+        }
+        Update: {
+          birth_date?: string | null
+          company_id?: string | null
+          created_at?: string
+          employee_id?: string
+          full_name?: string
+          id?: string
+          id_number?: string | null
+          is_in_custody?: boolean
+          receives_allowance?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       employees: {
         Row: {
+          aliyah_date: string | null
           balances_source: string | null
           balances_updated_at: string | null
           birth_date: string | null
+          city: string | null
           company_id: string | null
           contact_sort_order: number | null
+          country_of_birth: string | null
           created_at: string
           department: string
           direct_manager_id: string | null
@@ -724,23 +766,34 @@ export type Database = {
           end_date: string | null
           exclude_from_contacts: boolean
           full_name: string
+          gender: string | null
+          health_fund_member: boolean | null
+          house_number: string | null
           id: string
           id_number: string
+          is_israeli_resident: boolean | null
           linked_user_id: string | null
+          marital_status: string | null
           phone: string | null
+          po_box: string | null
+          postal_code: string | null
           role: string
           sick_balance: number
           start_date: string
           status: Database["public"]["Enums"]["employee_status"]
+          street: string | null
           updated_at: string
           vacation_balance: number
         }
         Insert: {
+          aliyah_date?: string | null
           balances_source?: string | null
           balances_updated_at?: string | null
           birth_date?: string | null
+          city?: string | null
           company_id?: string | null
           contact_sort_order?: number | null
+          country_of_birth?: string | null
           created_at?: string
           department: string
           direct_manager_id?: string | null
@@ -749,23 +802,34 @@ export type Database = {
           end_date?: string | null
           exclude_from_contacts?: boolean
           full_name: string
+          gender?: string | null
+          health_fund_member?: boolean | null
+          house_number?: string | null
           id?: string
           id_number: string
+          is_israeli_resident?: boolean | null
           linked_user_id?: string | null
+          marital_status?: string | null
           phone?: string | null
+          po_box?: string | null
+          postal_code?: string | null
           role: string
           sick_balance?: number
           start_date?: string
           status?: Database["public"]["Enums"]["employee_status"]
+          street?: string | null
           updated_at?: string
           vacation_balance?: number
         }
         Update: {
+          aliyah_date?: string | null
           balances_source?: string | null
           balances_updated_at?: string | null
           birth_date?: string | null
+          city?: string | null
           company_id?: string | null
           contact_sort_order?: number | null
+          country_of_birth?: string | null
           created_at?: string
           department?: string
           direct_manager_id?: string | null
@@ -774,14 +838,22 @@ export type Database = {
           end_date?: string | null
           exclude_from_contacts?: boolean
           full_name?: string
+          gender?: string | null
+          health_fund_member?: boolean | null
+          house_number?: string | null
           id?: string
           id_number?: string
+          is_israeli_resident?: boolean | null
           linked_user_id?: string | null
+          marital_status?: string | null
           phone?: string | null
+          po_box?: string | null
+          postal_code?: string | null
           role?: string
           sick_balance?: number
           start_date?: string
           status?: Database["public"]["Enums"]["employee_status"]
+          street?: string | null
           updated_at?: string
           vacation_balance?: number
         }
@@ -1369,6 +1441,63 @@ export type Database = {
           id?: string
           metadata?: Json | null
           reason?: string
+        }
+        Relationships: []
+      }
+      tax_form_101: {
+        Row: {
+          access_token: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          form_data: Json
+          id: string
+          pdf_url: string | null
+          sent_at: string | null
+          sent_to: string[] | null
+          signature_data: string | null
+          signed_at: string | null
+          status: string
+          tax_year: number
+          token_expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          employee_id: string
+          form_data?: Json
+          id?: string
+          pdf_url?: string | null
+          sent_at?: string | null
+          sent_to?: string[] | null
+          signature_data?: string | null
+          signed_at?: string | null
+          status?: string
+          tax_year: number
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string
+          form_data?: Json
+          id?: string
+          pdf_url?: string | null
+          sent_at?: string | null
+          sent_to?: string[] | null
+          signature_data?: string | null
+          signed_at?: string | null
+          status?: string
+          tax_year?: number
+          token_expires_at?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
