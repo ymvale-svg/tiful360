@@ -200,6 +200,10 @@ Deno.serve(async (req) => {
       if (norm) idMap.set(norm, { id: e.id, full_name: e.full_name });
     }
 
+    console.log('split-payslips: groups=', groups.length,
+      'employees loaded=', employees?.length ?? 0,
+      'idMap size=', idMap.size);
+
     // Create batch
     const { data: batchRow, error: batchErr } = await admin.from('payslip_batches').insert({
       company_id,
