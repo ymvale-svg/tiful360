@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Settings as SettingsIcon, Bell, Shield, Database, Users,
-  Building2, Save, Upload, Smartphone, FileText, Download,
+  Building2, Save, Upload, Smartphone, FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -273,29 +273,7 @@ function PayrollSettings() {
 
   const MONTHS = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
 
-  const exportMissingMichpalCodes = async () => {
-    if (!activeCompanyId) return;
-    const { data } = await supabase
-      .from("employees")
-      .select("employee_code, full_name, id_number, michpal_code")
-      .eq("company_id", activeCompanyId)
-      .is("michpal_code", null);
-    if (!data || data.length === 0) {
-      toast({ title: "כל העובדים כבר משויכים למספר מיכפל" });
-      return;
-    }
-    const XLSX = await import("xlsx");
-    const ws = XLSX.utils.json_to_sheet(data.map((e: any) => ({
-      "מס׳ עובד": e.employee_code,
-      "שם מלא": e.full_name,
-      "ת.ז.": e.id_number,
-      "מספר מיכפל (למילוי)": "",
-    })));
-    const wb = XLSX.utils.book_new();
-    wb.Workbook = { Views: [{ RTL: true }] };
-    XLSX.utils.book_append_sheet(wb, ws, "עובדים ללא מיכפל");
-    XLSX.writeFile(wb, "עובדים_ללא_מספר_מיכפל.xlsx");
-  };
+
 
   if (!activeCompanyId) {
     return <div className="text-center py-8 text-muted-foreground">לא נבחרה חברה</div>;
@@ -312,16 +290,10 @@ function PayrollSettings() {
               <p className="text-xs text-muted-foreground mt-0.5">העלאת קובץ PDF מאוחד מ-מיכפל ופיצול אוטומטי לעובדים</p>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={exportMissingMichpalCodes}>
-              <Download className="w-4 h-4" />
-              ייצא חסרי מיכפל
-            </Button>
-            <Button className="gap-1.5" onClick={() => setUploadOpen(true)}>
-              <Upload className="w-4 h-4" />
-              העלה תלושים
-            </Button>
-          </div>
+          <Button className="gap-1.5" onClick={() => setUploadOpen(true)}>
+            <Upload className="w-4 h-4" />
+            העלה תלושים
+          </Button>
         </div>
 
         <div className="border border-border rounded-lg overflow-hidden">
