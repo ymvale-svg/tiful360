@@ -1,85 +1,57 @@
 
 
-## תיקון זיהוי ת"ז: סינון רעש (תיק ניכויים, מספר תאגיד) + תמיכה ב-8 ספרות
+## תיקון שגיאת UPSERT בתלושי שכר — Partial Unique Index
 
-### האבחנה (לפי לוגים ופענוח ה-PDF)
+### האבחנה (מה קורה בפועל)
 
-ה-PDF מכיל 22 עמודים = **כ-8 תלושים שונים**, כל תלוש פרוס על 2-3 עמודים עוקבים. בעמוד הראשון של כל תלוש מופיע "מספר זהות: XXXXXXXXX". המערכת זיהתה רק קבוצה אחת מתוך ~8 כי:
+הזיהוי עובד מצוין — 22 מתוך 22 עמודים זוהו עם ת"ז נכונה (`033204439`, `203242904`, `056055486` וכו'), נוצרו 22 קבוצות, נטענו 31 עובדים. אבל **כל 22 הקבוצות נכשלות** בשמירה ל-DB עם:
 
-1. **ה-Regex תופס מספרים שגויים לפני התווית** — בעמוד הראשון יש:
-   - `תיק ניכויים: 910485457` (9 ספרות)
-   - `מספר תאגיד: 512061185` (9 ספרות)
-   - `תיק בי"ל: 91048545700` (11 ספרות)
-   - `מספר זהות: 33204439` (8 ספרות בלבד!)
-   
-   ה-regex `(\d{5,9})\s*מספר\s*זהות` תופס את **`91048545700`** (תיק בי"ל) שמופיע לפני "מספר זהות", במקום את 33204439 שאחרי. גם `padStart(9,'0')` של 11 ספרות **לא תופס** — `replace(/\D/g,'')` נותן 11 ספרות, ובדיקת `length > 9` דוחה את זה ל-null. לכן ההתאמה נכשלת.
+```
+code: "42P10"
+message: "there is no unique or exclusion constraint matching the ON CONFLICT specification"
+```
 
-2. **חלק מהת"ז הן 8 ספרות בלבד** (דוגמה: `9663154`, `56055486`) — תקין לפי דין ישראלי כשחסר ה-0 המוביל, אבל ה-regex הנוכחי `\d{5,9}` כן מקבל את זה. הבעיה היא הסדר: מי שתופס קודם הוא מספרי הרעש.
+**הסיבה**: ה-Edge Function משתמש ב-`upsert(..., { onConflict: 'employee_id,period_year,period_month' })`. בטבלה קיים אינדקס בשם `payslips_employee_period_uniq` שהוא **partial unique index**:
 
-3. **fallback `\b(\d{9})\b` מסוכן** — תופס כל מספר 9-ספרתי (תיק ניכויים, מספר תאגיד) כת"ז.
+```sql
+CREATE UNIQUE INDEX payslips_employee_period_uniq 
+ON payslips (employee_id, period_year, period_month) 
+WHERE (employee_id IS NOT NULL);
+```
 
-### תוצאה בפועל
-מתוך 22 עמודים → רק קבוצה 1 נוצרה → 0 התאמות (כי ה-id_number שזוהה הוא `910485457` או `512061185`, שלא קיים בעובדים).
-
----
+PostgreSQL לא מקבל partial unique indexes ב-`ON CONFLICT (cols)` — דורש constraint מלא או ציון מפורש של ה-`WHERE` בפסוקית. PostgREST/supabase-js לא תומך בציון ה-`WHERE`, ולכן ה-upsert נכשל לחלוטין → 22 נכשלים, 0 הותאמו.
 
 ### השינוי
 
-**קובץ יחיד**: `supabase/functions/split-payslips/index.ts` — פונקציית `extractFields`.
+**שתי עבודות מקבילות:**
 
-#### 1. עדיפות גבוהה לתבנית "מספר זהות:" עם דרישה קפדנית
-החיפוש העיקרי יהיה **רק** "מספר זהות" / "תעודת זהות" עם נקודתיים/רווח, ועם מגבלה של 7-9 ספרות (ת"ז ישראלית = 9, אך לפעמים נשמרת בלי 0 מוביל = 7-8):
+#### 1. מיגרציה ב-DB
+ליצור UNIQUE CONSTRAINT אמיתי (לא partial) על `(employee_id, period_year, period_month)`. כדי שזה יעבוד עם רשומות `unmatched` (employee_id=NULL):
+- ב-PostgreSQL, NULL נחשב unique תמיד — כלומר ניתן להכניס מספר רשומות עם `employee_id=NULL` בלי בעיה גם תחת UNIQUE constraint רגיל.
+- לכן ניתן להוריד את ה-WHERE ולהפוך את האינדקס ל-constraint מלא:
 
-```js
-// 1. עדיפות עליונה: "מספר זהות: NNNNNNN" (תווית לפני מספר)
-let idMatch = t.match(/(?:מספר\s*זהות|תעודת\s*זהות)\s*[:\-]?\s*(\d{7,9})\b/);
-
-// 2. אם לא — מספר לפני תווית: "NNNNNNN מספר זהות"
-if (!idMatch) idMatch = t.match(/\b(\d{7,9})\s+(?:מספר\s*זהות|תעודת\s*זהות)/);
-
-// 3. ת.ז / ז.ת
-if (!idMatch) idMatch = t.match(/\bת\s*[.״"'`]\s*ז\s*[.״"'`]?\s*[:\-]?\s*(\d{7,9})\b/);
+```sql
+DROP INDEX IF EXISTS payslips_employee_period_uniq;
+ALTER TABLE payslips 
+  ADD CONSTRAINT payslips_employee_period_uniq 
+  UNIQUE (employee_id, period_year, period_month);
 ```
 
-#### 2. **להסיר את ה-fallback של `\b(\d{9})\b`**
-זה הגורם העיקרי לרעש. אם אין תווית מפורשת — עדיף לא לזהות (העמוד יצורף לקבוצה הקודמת, ובסוף ייסומן unmatched אם זה תלוש חדש).
+זה יוצר constraint שניתן להפניה ב-`onConflict`, ובו זמנית מאפשר רשומות unmatched (NULL) מרובות באותה תקופה.
 
-#### 3. סינון מספרי רעש ידועים
-אחרי תפיסה — לפסול אם המספר מופיע בהקשר של "תיק ניכויים", "מספר תאגיד", "תיק בי"ל", "מספר העובד":
+#### 2. תיקון ב-Edge Function (גיבוי בטיחות)
+לעטוף את ה-upsert ב-try/catch שאם `onConflict` נכשל — לבדוק אם רשומה קיימת ולעשות `update` או `insert` ידנית. זה גיבוי במקרה שהמיגרציה תיכשל מסיבה כלשהי.
 
-```js
-function isNoiseContext(text: string, captured: string): boolean {
-  const noisePatterns = [
-    new RegExp(`תיק\\s*ניכויים\\s*[:\\-]?\\s*${captured}`),
-    new RegExp(`מספר\\s*תאגיד\\s*[:\\-]?\\s*${captured}`),
-    new RegExp(`תיק\\s*ב[י''"]?\\s*ל\\s*[:\\-]?\\s*${captured}`),
-    new RegExp(`מספר\\s*העובד\\s*[:\\-]?\\s*${captured}`),
-    new RegExp(`חשבון\\s*[:\\-]?\\s*${captured}`),
-  ];
-  return noisePatterns.some(p => p.test(text));
-}
-```
-
-#### 4. נירמול: לקבל גם 7 ספרות
-שינוי קל ב-`normalizeIdNumber`: `if (digits.length < 7 || digits.length > 9) return null;` (במקום 5-9).
-
-#### 5. לוג דיאגנוסטי מורחב
-לוג של ה-id שזוהה לכל עמוד (לא רק עמוד 1):
-```js
-console.log(`page ${i}: idDetected=${fields.idNumber} firstChars=${pageText.slice(0,150)}`);
-```
-כדי שאם משהו עדיין נכשל — נראה איזה עמוד ולמה.
-
----
-
-### בדיקה לאחר ביצוע
-1. להעלות שוב את אותו PDF (T2091b32.pdf — 22 עמודים).
-2. **תוצאה צפויה**: `groups ≈ 8` (תלוש לכל עובד), `matched > 0` אם יש בעובדים ת"ז כמו 33204439, 9663154, 56055486.
-3. אם עדיין 0 matched — לבדוק ב-DB ש-`employees.id_number` מכיל את הת"ז האלה.
-
-### קובץ מושפע
+### קבצים מושפעים
 
 | קובץ | שינוי |
 |---|---|
-| `supabase/functions/split-payslips/index.ts` | regex מחמיר לת"ז (7-9 ספרות + תווית חובה), הסרת fallback רחב, סינון רעש (תיק ניכויים/תאגיד), לוג לכל עמוד |
+| מיגרציה חדשה | DROP partial index + ADD UNIQUE constraint על `payslips(employee_id, period_year, period_month)` |
+| `supabase/functions/split-payslips/index.ts` | (אופציונלי) fallback ידני ל-update/insert במקרה שה-upsert נכשל |
+
+### בדיקה לאחר ביצוע
+1. להעלות שוב את אותו PDF (T2091b32.pdf — 22 עמודים).
+2. **תוצאה צפויה**: `groups=22`, `matched=N` (כמה ת"ז קיימות בעובדים), `unmatched=22-N`, **`failed=0`**.
+3. הכרטיס האדום "נכשלו" אמור להציג 0.
+4. לבדוק שיתרות חופשה/מחלה התעדכנו לעובדים שהותאמו.
 
