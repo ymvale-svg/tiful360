@@ -22,6 +22,7 @@ import Companies from "@/pages/Companies";
 import SelectCompany from "@/pages/SelectCompany";
 import ResetPassword from "@/pages/ResetPassword";
 import SignHandover from "@/pages/SignHandover";
+import SignOffboarding from "@/pages/SignOffboarding";
 import LeaveRequests from "@/pages/LeaveRequests";
 import NotFound from "./pages/NotFound";
 
@@ -39,6 +40,7 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/handover/:token" element={<SignHandover />} />
+              <Route path="/sign-offboarding/:token" element={<SignOffboarding />} />
               <Route path="/select-company" element={<SelectCompany />} />
               <Route path="/portal" element={<ProtectedRoute><EmployeePortal /></ProtectedRoute>} />
               <Route element={
