@@ -119,7 +119,7 @@ function LinksManager({ companyId }: { companyId: string }) {
 function ContactsManager({ companyId }: { companyId: string }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [form, setForm] = useState({ name: "", role: "", department: "", phone: "" });
+  const [form, setForm] = useState({ name: "", role: "", department: "", phone: "", email: "" });
 
   const { data: contacts = [] } = useQuery({
     queryKey: ["portal_contacts", companyId],
@@ -137,16 +137,22 @@ function ContactsManager({ companyId }: { companyId: string }) {
   const addContact = useMutation({
     mutationFn: async () => {
       if (!form.name || !form.phone) throw new Error("נא למלא שם וטלפון");
+      if (form.email && !/^\S+@\S+\.\S+$/.test(form.email)) throw new Error("כתובת דוא\"ל לא תקינה");
       const { error } = await supabase.from("portal_contacts").insert({
         company_id: companyId,
-        ...form,
+        name: form.name,
+        role: form.role,
+        department: form.department,
+        phone: form.phone,
+        email: form.email || null,
         sort_order: contacts.length,
-      });
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["portal_contacts"] });
-      setForm({ name: "", role: "", department: "", phone: "" });
+      queryClient.invalidateQueries({ queryKey: ["company-contacts-merged"] });
+      setForm({ name: "", role: "", department: "", phone: "", email: "" });
       toast({ title: "איש קשר נוסף" });
     },
     onError: (e: any) => toast({ title: "שגיאה", description: e.message, variant: "destructive" }),
@@ -159,6 +165,7 @@ function ContactsManager({ companyId }: { companyId: string }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["portal_contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["company-contacts-merged"] });
       toast({ title: "איש קשר הוסר" });
     },
   });
@@ -182,11 +189,14 @@ function ContactsManager({ companyId }: { companyId: string }) {
       </p>
 
       <div className="space-y-2">
-        {contacts.map((c) => (
+        {contacts.map((c: any) => (
           <div key={c.id} className="flex items-center gap-2 p-2 rounded-lg border border-border/50 bg-background">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium">{c.name} <span className="text-muted-foreground">• {c.role}</span></p>
-              <p className="text-xs text-muted-foreground">{c.department} | {c.phone}</p>
+              <p className="text-xs text-muted-foreground">
+                {c.department} | {c.phone}
+                {c.email ? <> | <span dir="ltr">{c.email}</span></> : null}
+              </p>
             </div>
             <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8 text-destructive" onClick={() => deleteContact.mutate(c.id)}>
               <Trash2 className="w-4 h-4" />
@@ -200,6 +210,7 @@ function ContactsManager({ companyId }: { companyId: string }) {
         <input value={form.role} onChange={(e) => setForm(f => ({ ...f, role: e.target.value }))} placeholder="תפקיד" className="px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30" />
         <input value={form.department} onChange={(e) => setForm(f => ({ ...f, department: e.target.value }))} placeholder="מחלקה" className="px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30" />
         <input value={form.phone} onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="טלפון" className="px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30" dir="ltr" />
+        <input value={form.email} onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))} placeholder="דוא״ל (אופציונלי)" className="px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 col-span-2" dir="ltr" />
       </div>
       <Button size="sm" className="gap-1.5" onClick={() => addContact.mutate()} disabled={addContact.isPending}>
         <Plus className="w-4 h-4" />

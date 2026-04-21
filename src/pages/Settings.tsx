@@ -59,6 +59,9 @@ export default function Settings() {
 
         <TabsContent value="portal">
           <PortalSettingsTab />
+          <div className="mt-6">
+            <ITEmailsSettings />
+          </div>
         </TabsContent>
 
         <TabsContent value="alerts">

@@ -536,6 +536,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          it_emails: string | null
           logo_url: string | null
           name: string
           payroll_emails: string | null
@@ -545,6 +546,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          it_emails?: string | null
           logo_url?: string | null
           name: string
           payroll_emails?: string | null
@@ -554,6 +556,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          it_emails?: string | null
           logo_url?: string | null
           name?: string
           payroll_emails?: string | null
@@ -1329,6 +1332,7 @@ export type Database = {
           company_id: string | null
           created_at: string
           department: string
+          email: string | null
           id: string
           name: string
           phone: string
@@ -1339,6 +1343,7 @@ export type Database = {
           company_id?: string | null
           created_at?: string
           department: string
+          email?: string | null
           id?: string
           name: string
           phone: string
@@ -1349,6 +1354,7 @@ export type Database = {
           company_id?: string | null
           created_at?: string
           department?: string
+          email?: string | null
           id?: string
           name?: string
           phone?: string
