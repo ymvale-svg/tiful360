@@ -119,13 +119,24 @@ export function useCreateLeaveRequest() {
         .single();
       if (error) throw error;
 
-      // Fire email (non-blocking on error)
+      // Fire emails (non-blocking on error)
       try {
         await supabase.functions.invoke("send-leave-request-email", {
           body: { request_id: inserted.id, event: "submitted" },
         });
       } catch (e) {
         console.warn("send-leave-request-email failed", e);
+      }
+
+      // Sick leaves auto-approve and notify payroll directly
+      if (input.request_type === "sick") {
+        try {
+          await supabase.functions.invoke("notify-payroll-sick-leave", {
+            body: { request_id: inserted.id },
+          });
+        } catch (e) {
+          console.warn("notify-payroll-sick-leave failed", e);
+        }
       }
 
       return inserted;
