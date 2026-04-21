@@ -221,7 +221,7 @@ export function useCompanyContacts() {
         role: c.role,
         department: c.department,
         phone: c.phone,
-        email: null,
+        email: c.email ?? null,
         sort_order: c.sort_order,
         source: "external" as const,
       }));
