@@ -42,9 +42,13 @@ function normalizeIdNumber(raw: string | null | undefined): string | null {
 function extractFields(text: string): Omit<PageInfo, 'pageIndex' | 'text'> {
   const t = text.replace(/\u00a0/g, ' ').replace(/[ \t]+/g, ' ');
 
+  // unpdf may return Hebrew text in visual order — number can appear
+  // BEFORE the label. Try multiple patterns in order.
   const idM =
-    t.match(/(?:ת\s*[.״"']?\s*ז\s*[.״"']?|תעודת\s*זהות|מספר\s*זהות)\s*[:\-]?\s*(\d{5,9})/) ||
-    t.match(/\bז\s*[.״"']?\s*ת\s*[.״"']?\s*[:\-]?\s*(\d{5,9})/);
+    t.match(/(?:מספר\s*זהות|תעודת\s*זהות|ת\s*[.״"'`]?\s*ז\s*[.״"'`]?)\s*[:\-]?\s*(\d{5,9})/) ||
+    t.match(/(\d{5,9})\s*(?:מספר\s*זהות|תעודת\s*זהות|ת\s*[.״"'`]?\s*ז\s*[.״"'`]?)/) ||
+    t.match(/\bז\s*[.״"'`]?\s*ת\s*[.״"'`]?\s*[:\-]?\s*(\d{5,9})/) ||
+    t.match(/\b(\d{9})\b/);
 
   const periodM = t.match(/תלוש\s*שכר\s*לחודש\s*(\d{1,2})\s*\/\s*(\d{4})/);
   const grossM = t.match(/סה["״]כ\s*תשלומים\s*([\d,]+\.?\d*)/);
@@ -144,6 +148,10 @@ Deno.serve(async (req) => {
     }
     const effectivePages = Math.max(totalPages, allTexts.length);
 
+    console.log('split-payslips: totalPages=', totalPages,
+      'extractedTexts=', allTexts.length,
+      'page1 first 300 chars:', (allTexts[0] ?? '').slice(0, 300));
+
     const pages: PageInfo[] = [];
     for (let i = 0; i < effectivePages; i++) {
       const pageText = allTexts[i] ?? '';
@@ -191,6 +199,10 @@ Deno.serve(async (req) => {
       const norm = normalizeIdNumber(e.id_number);
       if (norm) idMap.set(norm, { id: e.id, full_name: e.full_name });
     }
+
+    console.log('split-payslips: groups=', groups.length,
+      'employees loaded=', employees?.length ?? 0,
+      'idMap size=', idMap.size);
 
     // Create batch
     const { data: batchRow, error: batchErr } = await admin.from('payslip_batches').insert({

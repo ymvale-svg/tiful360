@@ -80,7 +80,15 @@ export function PayslipsUploadDialog({ open, onOpenChange }: Props) {
       qc.invalidateQueries({ queryKey: ["payslip-batches"] });
       qc.invalidateQueries({ queryKey: ["payslips"] });
       qc.invalidateQueries({ queryKey: ["employees"] });
-      toast({ title: "התלושים עובדו", description: `${data?.matched ?? 0} הותאמו, ${data?.unmatched ?? 0} לא הותאמו` });
+      if ((data?.groups ?? 0) === 0) {
+        toast({
+          title: "לא זוהו תעודות זהות בקובץ",
+          description: "ייתכן שה-PDF סרוק (תמונה) או שהפורמט שונה. נסה PDF טקסטואלי.",
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "התלושים עובדו", description: `${data?.matched ?? 0} הותאמו, ${data?.unmatched ?? 0} לא הותאמו` });
+      }
     } catch (e: any) {
       setStage("idle");
       setProgress(0);
