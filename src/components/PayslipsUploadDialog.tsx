@@ -97,7 +97,7 @@ export function PayslipsUploadDialog({ open, onOpenChange }: Props) {
             העלאת תלושי שכר חודשיים
           </DialogTitle>
           <DialogDescription>
-            העלה את קובץ ה-PDF המאוחד מ-מיכפל. המערכת תפצל אותו אוטומטית לכל עובד ותעדכן יתרות חופשה ומחלה.
+            העלה את קובץ ה-PDF המאוחד של תלושי השכר. המערכת תפצל אותו אוטומטית לכל עובד לפי תעודת זהות ותעדכן יתרות חופשה ומחלה.
           </DialogDescription>
         </DialogHeader>
 
