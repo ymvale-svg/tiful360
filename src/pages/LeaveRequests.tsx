@@ -3,7 +3,7 @@ import { useTeamLeaveRequests } from "@/hooks/useLeaveRequests";
 import { ReviewLeaveRequestDialog } from "@/components/ReviewLeaveRequestDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, Stethoscope } from "lucide-react";
+import { CalendarDays, Stethoscope, Paperclip } from "lucide-react";
 
 const TYPE_LABELS: Record<string, string> = { vacation: "חופשה", sick: "מחלה", personal: "יום אישי", other: "אחר" };
 const STATUS_LABELS: Record<string, string> = { approved: "מאושר", rejected: "נדחה", cancelled: "בוטל", pending: "ממתין" };
@@ -98,6 +98,14 @@ export default function LeaveRequests() {
                     {new Date(r.start_date).toLocaleDateString("he-IL")} – {new Date(r.end_date).toLocaleDateString("he-IL")}
                   </p>
                   {r.reason && <p className="text-xs text-muted-foreground mt-1">{r.reason}</p>}
+                  {r.attachment_url && (
+                    <a href={r.attachment_url} target="_blank" rel="noopener noreferrer" className="inline-block mt-2">
+                      <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
+                        <Paperclip className="w-3 h-3" />
+                        קובץ מצורף
+                      </Button>
+                    </a>
+                  )}
                 </div>
                 {r.status === "pending" && canReview && r.request_type !== "sick" ? (
                   <Button size="sm" onClick={() => setReviewing(r)}>סקירה</Button>
