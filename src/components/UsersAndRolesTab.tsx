@@ -80,6 +80,7 @@ export function UsersAndRolesTab() {
   const { activeCompanyId } = useCompany();
   const queryClient = useQueryClient();
   const [importOpen, setImportOpen] = useState(false);
+  const [inviteExternalOpen, setInviteExternalOpen] = useState(false);
 
   // Operations-only users (no admin/super_admin) cannot manage sensitive roles
   const restrictRoles = isOperations && !isAdmin && !isSuperAdmin;
@@ -87,6 +88,17 @@ export function UsersAndRolesTab() {
   const { data: users = [], isLoading, refetch } = useQuery({
     queryKey: ["managed-users", activeCompanyId],
     queryFn: () => fetchUsers(activeCompanyId),
+  });
+
+  // Linked employee user IDs for the active company (to mark "external" vs "employee")
+  const { data: linkedUserIds = new Set<string>() } = useQuery({
+    queryKey: ["linked-employee-user-ids", activeCompanyId],
+    queryFn: async () => {
+      let q = supabase.from("employees").select("linked_user_id").not("linked_user_id", "is", null);
+      if (activeCompanyId) q = q.eq("company_id", activeCompanyId);
+      const { data } = await q;
+      return new Set((data ?? []).map((e: any) => e.linked_user_id).filter(Boolean));
+    },
   });
 
   const roleMutation = useMutation({
