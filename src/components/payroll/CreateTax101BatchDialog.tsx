@@ -19,8 +19,23 @@ interface Props {
 
 export function CreateTax101BatchDialog({ open, onOpenChange }: Props) {
   const { toast } = useToast();
+  const { activeCompanyId } = useCompany();
   const { data: employees = [] } = useEmployees();
   const createBatch = useCreateTax101Batch();
+
+  const { data: emailMap = {} } = useQuery({
+    queryKey: ["employee-emails", activeCompanyId],
+    enabled: !!activeCompanyId && open,
+    queryFn: async () => {
+      let q = supabase.from("employees").select("id,email");
+      if (activeCompanyId) q = q.eq("company_id", activeCompanyId);
+      const { data, error } = await q;
+      if (error) throw error;
+      const map: Record<string, string | null> = {};
+      (data ?? []).forEach((e: any) => { map[e.id] = e.email; });
+      return map;
+    },
+  });
 
   const currentYear = new Date().getFullYear();
   const [taxYear, setTaxYear] = useState(currentYear + 1);
