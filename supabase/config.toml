@@ -4,6 +4,6 @@ project_id = "rhzmhiknbcipucfvgkok"
   [functions.auth-email-hook]
     verify_jwt = false
   [functions.process-email-queue]
-    verify_jwt = true
+    verify_jwt = false
   [functions.split-payslips]
-    verify_jwt = true
+    verify_jwt = false
