@@ -41,7 +41,7 @@ export function PayslipSummaryDialog({ open, onClose, payslip, employeeName, can
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl" dir="rtl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             סיכום תלוש {MONTHS[payslip.period_month - 1]} {payslip.period_year}
