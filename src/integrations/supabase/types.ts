@@ -715,12 +715,14 @@ export type Database = {
           balances_updated_at: string | null
           birth_date: string | null
           company_id: string | null
+          contact_sort_order: number | null
           created_at: string
           department: string
           direct_manager_id: string | null
           email: string | null
           employee_code: string
           end_date: string | null
+          exclude_from_contacts: boolean
           full_name: string
           id: string
           id_number: string
@@ -739,12 +741,14 @@ export type Database = {
           balances_updated_at?: string | null
           birth_date?: string | null
           company_id?: string | null
+          contact_sort_order?: number | null
           created_at?: string
           department: string
           direct_manager_id?: string | null
           email?: string | null
           employee_code: string
           end_date?: string | null
+          exclude_from_contacts?: boolean
           full_name: string
           id?: string
           id_number: string
@@ -763,12 +767,14 @@ export type Database = {
           balances_updated_at?: string | null
           birth_date?: string | null
           company_id?: string | null
+          contact_sort_order?: number | null
           created_at?: string
           department?: string
           direct_manager_id?: string | null
           email?: string | null
           employee_code?: string
           end_date?: string | null
+          exclude_from_contacts?: boolean
           full_name?: string
           id?: string
           id_number?: string
@@ -1505,6 +1511,18 @@ export type Database = {
           birth_date: string
           full_name: string
           id: string
+        }[]
+      }
+      get_company_contacts: {
+        Args: { _company_id: string }
+        Returns: {
+          contact_sort_order: number
+          department: string
+          email: string
+          full_name: string
+          id: string
+          phone: string
+          role: string
         }[]
       }
       has_role: {

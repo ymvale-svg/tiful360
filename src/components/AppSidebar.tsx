@@ -41,7 +41,6 @@ const mainNav: NavItem[] = [
   { label: "תיקוני שעון", icon: Clock4, path: "/attendance-corrections", roles: ["admin", "super_admin", "direct_manager", "payroll"] },
   { label: "שכר ותלושים", icon: Wallet, path: "/payroll", roles: ["admin", "super_admin", "payroll"] },
   { label: "התראות", icon: Bell, path: "/alerts", roles: ["admin", "it_manager", "super_admin"] },
-  { label: "ניהול משתמשים", icon: Users, path: "/user-management", roles: ["admin", "super_admin", "operations"] },
 ];
 
 const superAdminNav: NavItem[] = [

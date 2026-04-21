@@ -17,7 +17,7 @@ import EmployeePortal from "@/pages/EmployeePortal";
 import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
 import CategoryManager from "@/pages/CategoryManager";
-import UserManagement from "@/pages/UserManagement";
+import { Navigate } from "react-router-dom";
 import Companies from "@/pages/Companies";
 import SelectCompany from "@/pages/SelectCompany";
 import ResetPassword from "@/pages/ResetPassword";
@@ -57,7 +57,7 @@ const App = () => (
                 <Route path="/categories" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations"]}><CategoryManager /></ProtectedRoute>} />
                 <Route path="/it-tickets" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin", "operations"]}><ITTickets /></ProtectedRoute>} />
                 <Route path="/alerts" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin"]}><Alerts /></ProtectedRoute>} />
-                <Route path="/user-management" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations"]}><UserManagement /></ProtectedRoute>} />
+                <Route path="/user-management" element={<Navigate to="/employees?tab=users" replace />} />
                 <Route path="/companies" element={<ProtectedRoute requiredRoles={["super_admin"]}><Companies /></ProtectedRoute>} />
                 <Route path="/leave-requests" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "direct_manager", "payroll"]}><LeaveRequests /></ProtectedRoute>} />
                 <Route path="/attendance-corrections" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "direct_manager", "payroll"]}><AttendanceCorrections /></ProtectedRoute>} />
