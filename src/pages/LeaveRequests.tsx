@@ -1,26 +1,46 @@
 import { useState, useMemo } from "react";
 import { useTeamLeaveRequests } from "@/hooks/useLeaveRequests";
-import { LeaveRequestsList } from "@/components/LeaveRequestsList";
 import { ReviewLeaveRequestDialog } from "@/components/ReviewLeaveRequestDialog";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, Stethoscope } from "lucide-react";
 
-const FILTERS = [
-  { id: "pending", label: "ממתינות" },
-  { id: "approved", label: "מאושרות" },
-  { id: "rejected", label: "נדחו" },
-  { id: "all", label: "הכל" },
-];
+const TYPE_LABELS: Record<string, string> = { vacation: "חופשה", sick: "מחלה", personal: "יום אישי", other: "אחר" };
+const STATUS_LABELS: Record<string, string> = { approved: "מאושר", rejected: "נדחה", cancelled: "בוטל", pending: "ממתין" };
 
 export default function LeaveRequests() {
+  const { isPayroll, isAdmin, isDirectManager } = useAuth();
   const { data: requests = [], isLoading } = useTeamLeaveRequests();
-  const [filter, setFilter] = useState("pending");
   const [reviewing, setReviewing] = useState<any | null>(null);
 
+  // Tabs vary by role
+  const tabs = useMemo(() => {
+    const list: { id: string; label: string; icon?: any }[] = [];
+    if (isAdmin || isDirectManager) list.push({ id: "pending", label: "ממתינות לאישור", icon: CalendarDays });
+    list.push({ id: "sick", label: "הצהרות מחלה", icon: Stethoscope });
+    if (isAdmin || isPayroll) list.push({ id: "approved", label: "מאושרות (לשכר)" });
+    list.push({ id: "archive", label: "ארכיון" });
+    return list;
+  }, [isAdmin, isDirectManager, isPayroll]);
+
+  const [tab, setTab] = useState(tabs[0]?.id ?? "sick");
+
   const filtered = useMemo(() => {
-    if (filter === "all") return requests;
-    return requests.filter((r: any) => r.status === filter);
-  }, [requests, filter]);
+    switch (tab) {
+      case "pending":
+        return requests.filter((r: any) => r.status === "pending" && r.request_type !== "sick");
+      case "sick":
+        return requests.filter((r: any) => r.request_type === "sick");
+      case "approved":
+        return requests.filter((r: any) => r.status === "approved" && r.request_type !== "sick");
+      case "archive":
+        return requests.filter((r: any) => r.status === "rejected" || r.status === "cancelled");
+      default:
+        return requests;
+    }
+  }, [requests, tab]);
+
+  const canReview = isAdmin || isDirectManager;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -29,29 +49,34 @@ export default function LeaveRequests() {
           <CalendarDays className="w-5 h-5 text-primary" />
           בקשות חופשה ומחלה
         </h1>
-        <p className="page-subtitle">ניהול ואישור בקשות של עובדים</p>
+        <p className="page-subtitle">
+          {isPayroll && !canReview
+            ? "צפייה בבקשות מאושרות והצהרות מחלה לטיפול שכר"
+            : "ניהול ואישור בקשות של עובדים"}
+        </p>
       </div>
 
-      <div className="flex items-center gap-2">
-        {FILTERS.map((f) => (
+      <div className="flex items-center gap-2 flex-wrap">
+        {tabs.map((t) => (
           <button
-            key={f.id}
-            onClick={() => setFilter(f.id)}
+            key={t.id}
+            onClick={() => setTab(t.id)}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              filter === f.id
+              tab === t.id
                 ? "bg-primary text-primary-foreground"
                 : "bg-card border border-border text-muted-foreground hover:text-foreground"
             }`}
           >
-            {f.label}
-            {f.id !== "all" && (
-              <span className="mr-1.5 text-[11px] opacity-80">
-                ({requests.filter((r: any) => r.status === f.id).length})
-              </span>
-            )}
+            {t.label}
           </button>
         ))}
       </div>
+
+      {tab === "sick" && (
+        <p className="text-xs text-muted-foreground bg-info/10 border border-info/20 rounded-lg p-3">
+          הצהרות מחלה מאושרות אוטומטית ונשלחות לחשבות שכר. {canReview ? "מוצג כאן לידיעה בלבד." : ""}
+        </p>
+      )}
 
       {isLoading ? (
         <p className="text-center text-sm text-muted-foreground py-8">טוען...</p>
@@ -68,21 +93,22 @@ export default function LeaveRequests() {
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-sm">{r.employee?.full_name}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {r.employee?.department} • {{ vacation: "חופשה", sick: "מחלה", personal: "יום אישי", other: "אחר" }[r.request_type as string]} •{" "}
+                    {r.employee?.department} • {TYPE_LABELS[r.request_type as string]} •{" "}
                     {r.total_days} ימים •{" "}
                     {new Date(r.start_date).toLocaleDateString("he-IL")} – {new Date(r.end_date).toLocaleDateString("he-IL")}
                   </p>
                   {r.reason && <p className="text-xs text-muted-foreground mt-1">{r.reason}</p>}
                 </div>
-                {r.status === "pending" ? (
+                {r.status === "pending" && canReview && r.request_type !== "sick" ? (
                   <Button size="sm" onClick={() => setReviewing(r)}>סקירה</Button>
                 ) : (
                   <span className={`text-[11px] px-2 py-1 rounded-full font-medium ${
                     r.status === "approved" ? "bg-success/15 text-success" :
                     r.status === "rejected" ? "bg-destructive/15 text-destructive" :
+                    r.status === "pending" ? "bg-warning/15 text-warning" :
                     "bg-muted text-muted-foreground"
                   }`}>
-                    {{ approved: "מאושר", rejected: "נדחה", cancelled: "בוטל" }[r.status as string]}
+                    {STATUS_LABELS[r.status as string]}
                   </span>
                 )}
               </div>
