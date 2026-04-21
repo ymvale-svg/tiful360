@@ -43,8 +43,14 @@ export interface Tax101FormData {
   health_fund_member: boolean;
   health_fund_name: string;
   kibbutz_member: "no" | "yes_transferred" | "yes_not_transferred" | "";
-  spouse_name: string;
+  spouse_last_name: string;
+  spouse_first_name: string;
   spouse_id: string;
+  spouse_passport: string;
+  spouse_birth_date: string;
+  spouse_aliyah_date: string;
+  spouse_income_status: "no_income" | "has_income" | "other_income" | "";
+  spouse_income_sources: { work: boolean; pension: boolean; business: boolean };
   spouse_works: boolean;
   // Dependents
   dependents: Dependent[];
@@ -84,8 +90,14 @@ const emptyForm = (employee?: any): Tax101FormData => {
     health_fund_member: employee?.health_fund_member ?? true,
     health_fund_name: employee?.health_fund_name ?? "",
     kibbutz_member: "no",
-    spouse_name: "",
+    spouse_last_name: "",
+    spouse_first_name: "",
     spouse_id: "",
+    spouse_passport: "",
+    spouse_birth_date: "",
+    spouse_aliyah_date: "",
+    spouse_income_status: "",
+    spouse_income_sources: { work: false, pension: false, business: false },
     spouse_works: false,
     dependents: [],
     income_type: "monthly",
@@ -474,19 +486,99 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
               </div>
 
               {data.marital_status === "married" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3 bg-muted/30 rounded-lg">
-                  <div className="space-y-1.5">
-                    <Label>שם בן/בת זוג</Label>
-                    <Input value={data.spouse_name} onChange={(e) => update("spouse_name", e.target.value)} />
+                <div className="space-y-3 p-3 bg-muted/30 rounded-lg">
+                  <h4 className="text-sm font-semibold">פרטים על בן/בת הזוג</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label>שם משפחה</Label>
+                      <Input value={data.spouse_last_name} onChange={(e) => update("spouse_last_name", e.target.value)} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>שם פרטי</Label>
+                      <Input value={data.spouse_first_name} onChange={(e) => update("spouse_first_name", e.target.value)} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>מספר זהות (9 ספרות)</Label>
+                      <Input value={data.spouse_id} onChange={(e) => update("spouse_id", e.target.value)} dir="ltr" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>מספר דרכון <span className="text-muted-foreground text-xs">(למי שאין מס' זהות)</span></Label>
+                      <Input value={data.spouse_passport} onChange={(e) => update("spouse_passport", e.target.value)} dir="ltr" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>תאריך לידה</Label>
+                      <Input type="date" value={data.spouse_birth_date} onChange={(e) => update("spouse_birth_date", e.target.value)} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>תאריך עליה</Label>
+                      <Input type="date" value={data.spouse_aliyah_date} onChange={(e) => update("spouse_aliyah_date", e.target.value)} />
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label>ת"ז בן/בת זוג</Label>
-                    <Input value={data.spouse_id} onChange={(e) => update("spouse_id", e.target.value)} />
+
+                  <div className="space-y-2 pt-2 border-t border-border/40">
+                    <Label className="text-sm font-semibold">הכנסות בן/בת הזוג</Label>
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="radio"
+                          name="spouse_income_status"
+                          checked={data.spouse_income_status === "no_income"}
+                          onChange={() => {
+                            update("spouse_income_status", "no_income");
+                            update("spouse_income_sources", { work: false, pension: false, business: false });
+                            update("spouse_works", false);
+                          }}
+                        />
+                        אין לבן/בת הזוג כל הכנסה
+                      </label>
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="radio"
+                          name="spouse_income_status"
+                          checked={data.spouse_income_status === "has_income"}
+                          onChange={() => {
+                            update("spouse_income_status", "has_income");
+                            update("spouse_works", true);
+                          }}
+                        />
+                        יש לבן/בת הזוג הכנסה מ:
+                      </label>
+                      {data.spouse_income_status === "has_income" && (
+                        <div className="flex flex-wrap gap-4 pr-6">
+                          <label className="flex items-center gap-2 text-sm">
+                            <Checkbox
+                              checked={data.spouse_income_sources.work}
+                              onCheckedChange={(v) => update("spouse_income_sources", { ...data.spouse_income_sources, work: !!v })}
+                            />
+                            עבודה
+                          </label>
+                          <label className="flex items-center gap-2 text-sm">
+                            <Checkbox
+                              checked={data.spouse_income_sources.pension}
+                              onCheckedChange={(v) => update("spouse_income_sources", { ...data.spouse_income_sources, pension: !!v })}
+                            />
+                            קצבה
+                          </label>
+                          <label className="flex items-center gap-2 text-sm">
+                            <Checkbox
+                              checked={data.spouse_income_sources.business}
+                              onCheckedChange={(v) => update("spouse_income_sources", { ...data.spouse_income_sources, business: !!v })}
+                            />
+                            עסק
+                          </label>
+                        </div>
+                      )}
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="radio"
+                          name="spouse_income_status"
+                          checked={data.spouse_income_status === "other_income"}
+                          onChange={() => update("spouse_income_status", "other_income")}
+                        />
+                        הכנסה אחרת
+                      </label>
+                    </div>
                   </div>
-                  <label className="flex items-center gap-2 text-sm md:col-span-2">
-                    <Checkbox checked={data.spouse_works} onCheckedChange={(v) => update("spouse_works", !!v)} />
-                    בן/בת הזוג עובד/ת
-                  </label>
                 </div>
               )}
             </div>
@@ -691,9 +783,24 @@ const Tax101Preview = forwardRef<HTMLDivElement, { data: Tax101FormData; taxYear
         {fieldRow("חבר קיבוץ/מושב שיתופי", { no: "לא", yes_transferred: "כן — הכנסות מועברות לקיבוץ", yes_not_transferred: "כן — הכנסות אינן מועברות לקיבוץ" }[data.kibbutz_member] || "—")}
         {data.marital_status === "married" && (
           <>
-            {fieldRow("שם בן/בת זוג", data.spouse_name)}
-            {fieldRow("ת\"ז בן/בת זוג", data.spouse_id)}
-            {fieldRow("בן/בת הזוג עובד/ת", data.spouse_works ? "כן" : "לא")}
+            {fieldRow("שם בן/בת זוג", `${data.spouse_last_name} ${data.spouse_first_name}`.trim())}
+            {fieldRow("ת\"ז בן/בת זוג", data.spouse_id || data.spouse_passport)}
+            {data.spouse_birth_date && fieldRow("תאריך לידה", data.spouse_birth_date)}
+            {data.spouse_aliyah_date && fieldRow("תאריך עליה", data.spouse_aliyah_date)}
+            {fieldRow(
+              "הכנסות בן/בת הזוג",
+              data.spouse_income_status === "no_income"
+                ? "אין הכנסה"
+                : data.spouse_income_status === "has_income"
+                ? `יש הכנסה מ: ${[
+                    data.spouse_income_sources.work && "עבודה",
+                    data.spouse_income_sources.pension && "קצבה",
+                    data.spouse_income_sources.business && "עסק",
+                  ].filter(Boolean).join(", ") || "—"}`
+                : data.spouse_income_status === "other_income"
+                ? "הכנסה אחרת"
+                : "—"
+            )}
           </>
         )}
 
