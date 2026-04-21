@@ -83,7 +83,19 @@ export default function EmployeeDetail() {
   const deleteAccess = useDeleteDigitalAccess();
   const unassignAsset = useUnassignAsset();
   const { data: leaveRequests } = useEmployeeLeaveRequests(id!);
-  const { isAdmin } = useAuth();
+  const { isAdmin, isSuperAdmin, isPayroll, user } = useAuth();
+
+  const canSeePayslips =
+    isSuperAdmin || isAdmin || isPayroll ||
+    (!!employee?.linked_user_id && employee.linked_user_id === user?.id);
+
+  const tabs = canSeePayslips ? allTabs : allTabs.filter((t) => t.id !== "payslips");
+
+  useEffect(() => {
+    if (activeTab === "payslips" && !canSeePayslips) {
+      setActiveTab("personal");
+    }
+  }, [activeTab, canSeePayslips]);
 
   const stockAssets = (allAssets ?? []).filter((a: any) => !a.current_owner_id);
   const pickedAsset = stockAssets.find((a: any) => a.id === pickAssetId) ?? null;
