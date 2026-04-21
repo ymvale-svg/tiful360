@@ -42,6 +42,7 @@ export interface Tax101FormData {
   is_israeli_resident: boolean;
   health_fund_member: boolean;
   health_fund_name: string;
+  kibbutz_member: "no" | "yes_transferred" | "yes_not_transferred" | "";
   spouse_name: string;
   spouse_id: string;
   spouse_works: boolean;
