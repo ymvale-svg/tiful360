@@ -2,7 +2,7 @@
 // Receives { request_id, event } where event is 'submitted' | 'approved' | 'rejected'.
 // Enqueues the appropriate emails into the auth_emails / transactional_emails pgmq queue
 // using the existing Lovable email infrastructure.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.103.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
