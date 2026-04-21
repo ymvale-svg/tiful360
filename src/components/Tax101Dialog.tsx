@@ -613,7 +613,7 @@ const Tax101Preview = forwardRef<HTMLDivElement, { data: Tax101FormData; taxYear
         {data.po_box && fieldRow("ת.ד.", data.po_box)}
         {fieldRow("מצב משפחתי", { single: "רווק/ה", married: "נשוי/אה", divorced: "גרוש/ה", widowed: "אלמן/ה" }[data.marital_status] || "—")}
         {fieldRow("תושב ישראל", data.is_israeli_resident ? "כן" : "לא")}
-        {fieldRow("חבר קופ\"ח", data.health_fund_member ? "כן" : "לא")}
+        {fieldRow("חבר קופ\"ח", data.health_fund_member ? `כן — ${data.health_fund_name || "—"}` : "לא")}
         {data.marital_status === "married" && (
           <>
             {fieldRow("שם בן/בת זוג", data.spouse_name)}
