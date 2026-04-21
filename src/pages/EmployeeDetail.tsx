@@ -5,7 +5,7 @@ import {
   Pencil, Plus, Trash2, Upload, Unlink, CalendarDays,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useEmployee, useEmployeeAssets, useEmployeeDigitalAccess, useActivityLog, useAssets } from "@/hooks/useData";
 import { useDeleteDigitalAccess, useUnassignAsset } from "@/hooks/useMutations";
