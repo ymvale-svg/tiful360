@@ -49,7 +49,7 @@ export interface Tax101FormData {
   // Dependents
   dependents: Dependent[];
   // Income & declarations
-  income_type: "monthly" | "partial" | "daily" | "";
+  income_type: "monthly" | "monthly_additional" | "partial" | "daily" | "pension" | "scholarship" | "retirement_grant" | "";
   job_start_date: string;
   is_main_income: boolean;
   has_other_income: boolean;
