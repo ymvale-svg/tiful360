@@ -81,6 +81,11 @@ function findIdNumber(t: string): string | null {
   return null;
 }
 
+function extractFields(text: string): Omit<PageInfo, 'pageIndex' | 'text'> {
+  const t = text.replace(/\u00a0/g, ' ').replace(/[ \t]+/g, ' ');
+
+  const idRaw = findIdNumber(t);
+
   const periodM = t.match(/תלוש\s*שכר\s*לחודש\s*(\d{1,2})\s*\/\s*(\d{4})/);
   const grossM = t.match(/סה["״]כ\s*תשלומים\s*([\d,]+\.?\d*)/);
   const netM = t.match(/שכר\s*נטו\s*([\d,]+\.?\d*)/);
@@ -95,7 +100,7 @@ function findIdNumber(t: string): string | null {
   if (nameM) employeeName = nameM[1].trim().slice(0, 100);
 
   return {
-    idNumber: normalizeIdNumber(idM?.[1]),
+    idNumber: normalizeIdNumber(idRaw),
     month: periodM ? parseInt(periodM[1], 10) : null,
     year: periodM ? parseInt(periodM[2], 10) : null,
     grossSalary: parseNumber(grossM?.[1]),
