@@ -81,6 +81,7 @@ const emptyForm = (employee?: any): Tax101FormData => {
     marital_status: employee?.marital_status ?? "",
     is_israeli_resident: employee?.is_israeli_resident ?? true,
     health_fund_member: employee?.health_fund_member ?? true,
+    health_fund_name: employee?.health_fund_name ?? "",
     spouse_name: "",
     spouse_id: "",
     spouse_works: false,
