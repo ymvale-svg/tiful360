@@ -1573,6 +1573,20 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "tax_form_101_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_form_101_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "tax_form_101_sub_employer_id_fkey"
             columns: ["sub_employer_id"]
             isOneToOne: false
