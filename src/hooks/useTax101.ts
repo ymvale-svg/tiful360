@@ -200,12 +200,29 @@ export function useSubmitTax101() {
         .single();
       if (error) throw error;
 
+      // Activity log entry (best-effort — won't block on RLS)
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase.from("activity_log").insert({
+          company_id: (data as any).company_id,
+          employee_id: (data as any).employee_id,
+          entity_id: (data as any).id,
+          entity_type: "tax_form_101",
+          action: `מילוי וחתימה על טופס 101 לשנת ${(data as any).tax_year}`,
+          details: `הטופס נחתם דיגיטלית ונשלח למחלקת השכר`,
+          performed_by: user?.id ?? null,
+        });
+      } catch (e) {
+        console.warn("activity_log insert (tax101) failed:", e);
+      }
+
       // Trigger email send (with attachment via Resend)
       await supabase.functions.invoke("send-tax101-email", { body: { form_id: formId } });
       return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tax101"] });
+      qc.invalidateQueries({ queryKey: ["activity-log"] });
     },
   });
 }

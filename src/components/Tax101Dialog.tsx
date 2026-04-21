@@ -401,7 +401,12 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
           })
           .eq("id", formId);
         if (error) throw error;
-        await supabase.functions.invoke("send-tax101-email", { body: { form_id: formId } });
+        // Best-effort activity log via the edge function path (anon can't insert into activity_log)
+        try {
+          await supabase.functions.invoke("send-tax101-email", { body: { form_id: formId, log_activity: true } });
+        } catch {
+          await supabase.functions.invoke("send-tax101-email", { body: { form_id: formId } });
+        }
       } else {
         await submit.mutateAsync({ formId, formData: data, signatureData: sig, pdfUrl });
       }
