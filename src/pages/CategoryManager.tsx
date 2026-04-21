@@ -62,7 +62,7 @@ export default function CategoryManager() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Category list */}
-          <div className="space-y-2">
+          <div className="space-y-2 lg:order-last">
             {(categories ?? []).map((cat) => (
               <button
                 key={cat.id}
@@ -96,7 +96,7 @@ export default function CategoryManager() {
           </div>
 
           {/* Fields editor */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 lg:order-first">
             {selectedId ? (
               <div className="space-y-4">
                 <CategoryEditor category={categories?.find(c => c.id === selectedId)!} />
