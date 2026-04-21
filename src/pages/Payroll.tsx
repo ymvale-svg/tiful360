@@ -488,6 +488,135 @@ function BatchesManagementTab() {
       </div>
 
       <PayslipsUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} />
+
+      <AlertDialog open={!!deleteBatchTarget} onOpenChange={(o) => !o && setDeleteBatchTarget(null)}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>למחוק את האצווה?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteBatchTarget && `האצווה של ${MONTHS[deleteBatchTarget.period_month - 1]} ${deleteBatchTarget.period_year} (${deleteBatchTarget.total_pages} עמודים) וכל התלושים שלה יימחקו לצמיתות. פעולה זו לא ניתנת לביטול.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ביטול</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                try {
+                  await deleteBatch.mutateAsync(deleteBatchTarget.id);
+                  toast({ title: "האצווה נמחקה" });
+                  setDeleteBatchTarget(null);
+                } catch (e: any) {
+                  toast({ title: "שגיאה במחיקה", description: e.message, variant: "destructive" });
+                }
+              }}
+            >
+              מחק
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+// ============================
+// All payslips in a batch (matched + unmatched) with delete + assign
+// ============================
+function BatchPayslipsList({ batchId }: { batchId: string }) {
+  const { data: payslips, isLoading } = useBatchPayslips(batchId);
+  const { data: employees = [] } = useEmployees();
+  const assign = useAssignPayslipToEmployee();
+  const deletePayslip = useDeletePayslip();
+  const { toast } = useToast();
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+
+  const employeeOptions = (employees ?? []).map((e: any) => ({
+    value: e.id,
+    label: `${e.full_name} (${e.id_number})`,
+  }));
+
+  const handleAssign = async (payslipId: string, employeeId: string) => {
+    try {
+      await assign.mutateAsync({ payslipId, employeeId });
+      toast({ title: "התלוש שויך בהצלחה" });
+    } catch (e: any) {
+      toast({ title: "שגיאה", description: e.message, variant: "destructive" });
+    }
+  };
+
+  if (isLoading) return <div className="p-4 text-center text-sm text-muted-foreground">טוען...</div>;
+  if (!payslips || payslips.length === 0) {
+    return <div className="p-4 text-center text-sm text-muted-foreground">אין תלושים באצווה זו</div>;
+  }
+
+  return (
+    <div className="p-4 space-y-2">
+      <p className="text-sm font-medium mb-2">תלושי האצווה ({payslips.length})</p>
+      {payslips.map((p: any) => {
+        const isMatched = !!p.employee_id;
+        return (
+          <div key={p.id} className="flex items-center gap-3 bg-background p-2.5 rounded-lg border border-border/40">
+            <div className="flex-1 text-sm">
+              <p className="font-medium">
+                {isMatched ? p.employee?.full_name : (p.employee_name_detected ?? "לא זוהה שם")}
+                {isMatched && <span className="ms-2 text-[10px] px-2 py-0.5 rounded-full bg-success/10 text-success">משויך</span>}
+                {!isMatched && <span className="ms-2 text-[10px] px-2 py-0.5 rounded-full bg-warning/10 text-warning">לא משויך</span>}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                ת.ז.: <span className="font-mono">{p.id_number_detected ?? p.employee?.id_number ?? "—"}</span>
+              </p>
+            </div>
+            {!isMatched && (
+              <div className="w-72">
+                <SearchableSelect
+                  options={employeeOptions}
+                  value=""
+                  onChange={(v) => handleAssign(p.id, v)}
+                  placeholder="בחר עובד לשיוך..."
+                />
+              </div>
+            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+              title="מחק תלוש"
+              onClick={() => setDeleteTarget(p)}
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
+        );
+      })}
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>למחוק את התלוש?</AlertDialogTitle>
+            <AlertDialogDescription>
+              התלוש יימחק לצמיתות מהמערכת ומאחסון הקבצים. פעולה זו לא ניתנת לביטול.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ביטול</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                try {
+                  await deletePayslip.mutateAsync(deleteTarget.id);
+                  toast({ title: "התלוש נמחק" });
+                  setDeleteTarget(null);
+                } catch (e: any) {
+                  toast({ title: "שגיאה", description: e.message, variant: "destructive" });
+                }
+              }}
+            >
+              מחק
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
