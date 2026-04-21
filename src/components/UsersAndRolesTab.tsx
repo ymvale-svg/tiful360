@@ -216,6 +216,7 @@ export function UsersAndRolesTab() {
             <TableHeader>
               <TableRow>
                 <TableHead className="text-start">משתמש</TableHead>
+                <TableHead className="text-start">סוג</TableHead>
                 <TableHead className="text-start">ספק אימות</TableHead>
                 <TableHead className="text-start">תפקידים</TableHead>
                 <TableHead className="text-start">כניסה אחרונה</TableHead>
