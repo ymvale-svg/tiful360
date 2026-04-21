@@ -166,7 +166,7 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary }: Prop
         open={!!summaryPayslip}
         onClose={() => setSummaryPayslip(null)}
         payslip={summaryPayslip}
-        employeeName={employee?.full_name}
+        employeeName={emp?.full_name}
         canSeeSalary={canSeeSalary}
       />
 
