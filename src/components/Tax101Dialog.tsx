@@ -49,7 +49,7 @@ export interface Tax101FormData {
   // Dependents
   dependents: Dependent[];
   // Income & declarations
-  income_type: "monthly" | "partial" | "daily" | "";
+  income_type: "monthly" | "monthly_additional" | "partial" | "daily" | "pension" | "scholarship" | "retirement_grant" | "";
   job_start_date: string;
   is_main_income: boolean;
   has_other_income: boolean;
@@ -546,11 +546,16 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label>סוג הכנסה</Label>
+                  <Label>אני מקבל/ת <span className="text-muted-foreground text-xs">(ראה הסברים מעבר לדף)</span></Label>
                   <select className="w-full h-10 px-3 rounded-md bg-background border border-input" value={data.income_type} onChange={(e) => update("income_type", e.target.value as any)}>
+                    <option value="">בחר…</option>
                     <option value="monthly">משכורת חודשית</option>
-                    <option value="partial">משרה חלקית</option>
-                    <option value="daily">יומי / שעתי</option>
+                    <option value="monthly_additional">משכורת חודשית נוספת</option>
+                    <option value="partial">משכורת חלקית</option>
+                    <option value="daily">שכר עבודה (עובד יומי)</option>
+                    <option value="pension">קצבה</option>
+                    <option value="scholarship">מלגה</option>
+                    <option value="retirement_grant">מענק פרישה</option>
                   </select>
                 </div>
                 <div className="space-y-1.5">
@@ -721,7 +726,7 @@ const Tax101Preview = forwardRef<HTMLDivElement, { data: Tax101FormData; taxYear
         )}
 
         <h2 style={{ fontSize: 14, fontWeight: 700, marginTop: 12, marginBottom: 6, background: "#f3f4f6", padding: "4px 8px" }}>הכנסות והצהרות</h2>
-        {fieldRow("סוג הכנסה", { monthly: "משכורת חודשית", partial: "משרה חלקית", daily: "יומי/שעתי" }[data.income_type] || "—")}
+        {fieldRow("סוג הכנסה", { monthly: "משכורת חודשית", monthly_additional: "משכורת חודשית נוספת", partial: "משכורת חלקית", daily: "שכר עבודה (עובד יומי)", pension: "קצבה", scholarship: "מלגה", retirement_grant: "מענק פרישה" }[data.income_type] || "—")}
         {fieldRow("תאריך תחילת עבודה", data.job_start_date)}
         {fieldRow("הכנסה עיקרית/יחידה", data.is_main_income ? "כן" : "לא")}
         {data.has_other_income && fieldRow("הכנסות נוספות", data.other_income_details)}
