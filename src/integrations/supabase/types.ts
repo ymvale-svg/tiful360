@@ -782,6 +782,7 @@ export type Database = {
           start_date: string
           status: Database["public"]["Enums"]["employee_status"]
           street: string | null
+          sub_employer_id: string | null
           updated_at: string
           vacation_balance: number
         }
@@ -818,6 +819,7 @@ export type Database = {
           start_date?: string
           status?: Database["public"]["Enums"]["employee_status"]
           street?: string | null
+          sub_employer_id?: string | null
           updated_at?: string
           vacation_balance?: number
         }
@@ -854,6 +856,7 @@ export type Database = {
           start_date?: string
           status?: Database["public"]["Enums"]["employee_status"]
           street?: string | null
+          sub_employer_id?: string | null
           updated_at?: string
           vacation_balance?: number
         }
@@ -877,6 +880,13 @@ export type Database = {
             columns: ["direct_manager_id"]
             isOneToOne: false
             referencedRelation: "employees_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_sub_employer_id_fkey"
+            columns: ["sub_employer_id"]
+            isOneToOne: false
+            referencedRelation: "sub_employers"
             referencedColumns: ["id"]
           },
         ]
@@ -1420,6 +1430,65 @@ export type Database = {
         }
         Relationships: []
       }
+      sub_employers: {
+        Row: {
+          address: string | null
+          city: string | null
+          company_id: string
+          contact_name: string | null
+          created_at: string
+          email: string | null
+          id: string
+          is_active: boolean
+          legal_name: string
+          phone: string | null
+          postal_code: string | null
+          tax_id: string
+          updated_at: string
+          withholding_file_number: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          company_id: string
+          contact_name?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          legal_name: string
+          phone?: string | null
+          postal_code?: string | null
+          tax_id: string
+          updated_at?: string
+          withholding_file_number?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          company_id?: string
+          contact_name?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          legal_name?: string
+          phone?: string | null
+          postal_code?: string | null
+          tax_id?: string
+          updated_at?: string
+          withholding_file_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sub_employers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppressed_emails: {
         Row: {
           created_at: string
@@ -1459,6 +1528,7 @@ export type Database = {
           signature_data: string | null
           signed_at: string | null
           status: string
+          sub_employer_id: string | null
           tax_year: number
           token_expires_at: string | null
           updated_at: string
@@ -1477,6 +1547,7 @@ export type Database = {
           signature_data?: string | null
           signed_at?: string | null
           status?: string
+          sub_employer_id?: string | null
           tax_year: number
           token_expires_at?: string | null
           updated_at?: string
@@ -1495,11 +1566,20 @@ export type Database = {
           signature_data?: string | null
           signed_at?: string | null
           status?: string
+          sub_employer_id?: string | null
           tax_year?: number
           token_expires_at?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tax_form_101_sub_employer_id_fkey"
+            columns: ["sub_employer_id"]
+            isOneToOne: false
+            referencedRelation: "sub_employers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_company_access: {
         Row: {
