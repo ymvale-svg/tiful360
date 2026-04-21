@@ -60,6 +60,38 @@ export interface Tax101FormData {
   is_main_income: boolean;
   has_other_income: boolean;
   other_income_details: string;
+  // Section ח — tax credits / exemptions (parent options + nested sub-fields)
+  tax_credits: {
+    israeli_resident: boolean;
+    blind_or_disabled: boolean;
+    blind_or_disabled_period_at_least_year: boolean;
+    new_immigrant: boolean;
+    new_immigrant_started_after_aliyah: boolean;
+    single_parent_no_spouse_income: boolean;
+    single_parent_with_spouse_income: boolean;
+    children_in_custody: boolean;
+    children_in_custody_under_1: number | "";
+    children_in_custody_age_1_to_5: number | "";
+    children_in_custody_age_6_to_12: number | "";
+    children_in_custody_age_13_to_17: number | "";
+    children_not_in_custody: boolean;
+    children_not_in_custody_under_1: number | "";
+    children_not_in_custody_age_1_to_5: number | "";
+    children_not_in_custody_age_6_to_17: number | "";
+    single_parent: boolean;
+    children_with_alimony: boolean;
+    parent_to_19yo_child_in_national_service: boolean;
+    parent_to_19yo_child_count: number | "";
+    spouse_to_disabled: boolean;
+    child_aged_16_to_18: boolean;
+    child_aged_16_to_18_count: number | "";
+    discharged_soldier: boolean;
+    discharged_soldier_service_end_date: string;
+    academic_degree_completed: boolean;
+    academic_degree_end_date: string;
+    national_service_completed: boolean;
+    national_service_end_date: string;
+  };
   exemption_disability: boolean;
   exemption_new_immigrant: boolean;
   exemption_returning_resident: boolean;
