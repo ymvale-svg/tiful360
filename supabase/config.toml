@@ -7,3 +7,7 @@ project_id = "rhzmhiknbcipucfvgkok"
     verify_jwt = false
   [functions.split-payslips]
     verify_jwt = false
+  [functions.send-tax101-email]
+    verify_jwt = false
+  [functions.send-tax101-invite]
+    verify_jwt = false
