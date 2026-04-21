@@ -18,9 +18,10 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary }: Prop
   const { toast } = useToast();
   const [summaryPayslip, setSummaryPayslip] = useState<any | null>(null);
 
-  const download = async (path: string | null) => {
+  const openPayslip = async (p: any) => {
+    const path = p.source_pdf_url ?? p.pdf_url;
     if (!path) return;
-    const url = await getPayslipSignedUrl(path);
+    const url = await getPayslipSignedUrl(path, p.page_indices);
     if (!url) {
       toast({ title: "שגיאה בהורדת התלוש", variant: "destructive" });
       return;
@@ -114,7 +115,7 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary }: Prop
                       <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="סיכום" onClick={() => setSummaryPayslip(p)}>
                         <Eye className="w-4 h-4" />
                       </Button>
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="הורדה" onClick={() => download(p.pdf_url)}>
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="הורדה" onClick={() => openPayslip(p)}>
                         <Download className="w-4 h-4" />
                       </Button>
                     </div>

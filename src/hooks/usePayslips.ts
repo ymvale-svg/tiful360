@@ -11,6 +11,8 @@ export interface Payslip {
   period_year: number;
   period_month: number;
   pdf_url: string | null;
+  source_pdf_url?: string | null;
+  page_indices?: number[] | null;
   vacation_balance: number | null;
   sick_balance: number | null;
   gross_salary: number | null;
@@ -89,8 +91,16 @@ export function useAssignPayslipToEmployee() {
   });
 }
 
-export async function getPayslipSignedUrl(path: string): Promise<string | null> {
+export async function getPayslipSignedUrl(
+  path: string,
+  pageIndices?: number[] | null
+): Promise<string | null> {
   const { data, error } = await supabase.storage.from("payslips").createSignedUrl(path, 300);
   if (error) return null;
-  return data.signedUrl;
+  let url = data.signedUrl;
+  if (pageIndices && pageIndices.length > 0) {
+    const firstPage = Math.min(...pageIndices) + 1;
+    url += `#page=${firstPage}`;
+  }
+  return url;
 }

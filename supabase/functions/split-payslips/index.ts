@@ -1,7 +1,7 @@
-// Split monthly payslip PDF into per-employee PDFs and extract balances.
-// Matching is done by Israeli ID number (תעודת זהות) detected in each page.
+// Process monthly payslip PDF: extract text, group pages by Israeli ID,
+// store the ORIGINAL PDF once and record per-employee page indices.
+// No per-employee PDF building (avoids CPU resource limits).
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.103.0';
-import { PDFDocument } from 'https://esm.sh/pdf-lib@1.17.1';
 import { extractText, getDocumentProxy } from 'https://esm.sh/unpdf@0.12.1';
 
 const corsHeaders = {
@@ -40,10 +40,8 @@ function normalizeIdNumber(raw: string | null | undefined): string | null {
 }
 
 function extractFields(text: string): Omit<PageInfo, 'pageIndex' | 'text'> {
-  // Normalize whitespace (Hebrew PDFs often have lots of NBSPs)
   const t = text.replace(/\u00a0/g, ' ').replace(/[ \t]+/g, ' ');
 
-  // ID number: ת.ז. / ת"ז / תעודת זהות / מספר זהות followed by 5-9 digits
   const idM =
     t.match(/(?:ת\s*[.״"']?\s*ז\s*[.״"']?|תעודת\s*זהות|מספר\s*זהות)\s*[:\-]?\s*(\d{5,9})/) ||
     t.match(/\bז\s*[.״"']?\s*ת\s*[.״"']?\s*[:\-]?\s*(\d{5,9})/);
@@ -54,11 +52,9 @@ function extractFields(text: string): Omit<PageInfo, 'pageIndex' | 'text'> {
   const workDaysM = t.match(/ימי\s*עבודה\s*(\d+)/);
   const workHoursM = t.match(/שעות\s*עבודה\s*([\d.]+)/);
 
-  // Vacation block: find "חשבון חופשה" then nearest "יתרה חדשה <num>"
   const vacBlock = t.match(/חשבון\s*חופשה[\s\S]{0,400}?יתרה\s*חדשה\s*([\d.,]+)/);
   const sickBlock = t.match(/חשבון\s*מחלה[\s\S]{0,400}?יתרה\s*חדשה\s*([\d.,]+)/);
 
-  // Employee name: line after "לכבוד"
   let employeeName: string | null = null;
   const nameM = t.match(/לכבוד\s+([^\n\r]+?)(?:\s{2,}|מספר|ת\.?ז|$)/);
   if (nameM) employeeName = nameM[1].trim().slice(0, 100);
@@ -92,7 +88,6 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
-    // User-scoped client to verify the caller
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -103,7 +98,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Service-role client for DB ops
     const admin = createClient(supabaseUrl, serviceKey);
 
     const body = await req.json();
@@ -115,12 +109,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Authorize: caller must be admin/it_manager of company OR super_admin
+    // Authorize
     const { data: roles } = await admin.from('user_roles').select('role').eq('user_id', user.id);
     const roleSet = new Set((roles ?? []).map((r: any) => r.role));
     const isSuper = roleSet.has('super_admin');
     if (!isSuper) {
-      if (!(roleSet.has('admin') || roleSet.has('it_manager'))) {
+      if (!(roleSet.has('admin') || roleSet.has('it_manager') || roleSet.has('payroll'))) {
         return new Response(JSON.stringify({ error: 'Forbidden' }), {
           status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -134,13 +128,12 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Decode PDF
+    // Decode PDF (single allocation)
     const binary = Uint8Array.from(atob(pdf_base64), (c) => c.charCodeAt(0));
-    const sourceDoc = await PDFDocument.load(binary, { ignoreEncryption: true });
-    const totalPages = sourceDoc.getPageCount();
 
-    // Extract text for ALL pages once (avoids O(n²) re-extraction)
+    // Extract text for ALL pages in one pass
     const pdfProxy = await getDocumentProxy(binary);
+    const totalPages = pdfProxy.numPages ?? 0;
     let allTexts: string[] = [];
     try {
       const { text } = await extractText(pdfProxy, { mergePages: false });
@@ -149,15 +142,16 @@ Deno.serve(async (req) => {
       console.error('extractText failed:', e);
       allTexts = new Array(totalPages).fill('');
     }
+    const effectivePages = Math.max(totalPages, allTexts.length);
+
     const pages: PageInfo[] = [];
-    for (let i = 0; i < totalPages; i++) {
+    for (let i = 0; i < effectivePages; i++) {
       const pageText = allTexts[i] ?? '';
       const fields = extractFields(pageText);
       pages.push({ pageIndex: i, text: pageText, ...fields });
     }
 
-    // Group consecutive pages by idNumber (a payslip can span multiple pages).
-    // Pages without an ID are appended as continuation of the previous group.
+    // Group consecutive pages by idNumber
     const groups: { idNumber: string; pageIndices: number[]; primary: PageInfo }[] = [];
     let currentGroup: typeof groups[0] | null = null;
     for (const p of pages) {
@@ -185,7 +179,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Lookup employees of this company by id_number
+    // Lookup employees by id_number
     const { data: employees } = await admin
       .from('employees')
       .select('id, full_name, id_number')
@@ -198,18 +192,25 @@ Deno.serve(async (req) => {
       if (norm) idMap.set(norm, { id: e.id, full_name: e.full_name });
     }
 
-    // Create batch row
+    // Create batch
     const { data: batchRow, error: batchErr } = await admin.from('payslip_batches').insert({
       company_id,
       period_year,
       period_month,
-      total_pages: totalPages,
+      total_pages: effectivePages,
       original_filename: original_filename ?? null,
       created_by: user.id,
       status: 'processing',
     }).select().single();
     if (batchErr) throw batchErr;
     const batchId = batchRow.id;
+
+    // Upload ORIGINAL PDF once (shared by all employees in this batch)
+    const sourcePath = `${company_id}/${period_year}-${String(period_month).padStart(2, '0')}/_source_${batchId}.pdf`;
+    const { error: srcUploadErr } = await admin.storage
+      .from('payslips')
+      .upload(sourcePath, binary, { contentType: 'application/pdf', upsert: true });
+    if (srcUploadErr) throw srcUploadErr;
 
     let matchedCount = 0;
     let unmatchedCount = 0;
@@ -219,32 +220,15 @@ Deno.serve(async (req) => {
 
     for (const group of groups) {
       try {
-        // Build per-employee PDF
-        const newDoc = await PDFDocument.create();
-        const copied = await newDoc.copyPages(sourceDoc, group.pageIndices);
-        copied.forEach((p) => newDoc.addPage(p));
-        const pdfBytes = await newDoc.save();
-
         const normalizedId = group.idNumber;
         const matched = idMap.get(normalizedId);
-
-        const filenameSafe = (matched?.full_name ?? group.primary.employeeName ?? 'unknown')
-          .replace(/[^ \u0590-\u05FFa-zA-Z0-9 _-]/g, '').replace(/\s+/g, '_').slice(0, 40);
-        const storagePath = `${company_id}/${period_year}-${String(period_month).padStart(2, '0')}/${normalizedId}_${filenameSafe}.pdf`;
-
-        // Upload
-        const { error: uploadErr } = await admin.storage
-          .from('payslips')
-          .upload(storagePath, pdfBytes, { contentType: 'application/pdf', upsert: true });
-        if (uploadErr) throw uploadErr;
+        const pageIndices = group.pageIndices;
 
         if (matched) {
-          // Read previous balance for diff
           const { data: prevEmp } = await admin.from('employees')
             .select('vacation_balance, sick_balance, full_name')
             .eq('id', matched.id).single();
 
-          // Upsert payslip
           const { error: psErr } = await admin.from('payslips').upsert({
             company_id,
             employee_id: matched.id,
@@ -252,7 +236,9 @@ Deno.serve(async (req) => {
             employee_name_detected: group.primary.employeeName,
             period_year,
             period_month,
-            pdf_url: storagePath,
+            source_pdf_url: sourcePath,
+            page_indices: pageIndices,
+            pdf_url: sourcePath, // backwards compat
             vacation_balance: group.primary.vacationBalance,
             sick_balance: group.primary.sickBalance,
             gross_salary: group.primary.grossSalary,
@@ -265,7 +251,6 @@ Deno.serve(async (req) => {
           }, { onConflict: 'employee_id,period_year,period_month' });
           if (psErr) throw psErr;
 
-          // Update employee balances
           if (group.primary.vacationBalance != null || group.primary.sickBalance != null) {
             const updates: any = { balances_updated_at: new Date().toISOString(), balances_source: 'payslip' };
             if (group.primary.vacationBalance != null) updates.vacation_balance = group.primary.vacationBalance;
@@ -282,7 +267,6 @@ Deno.serve(async (req) => {
           }
           matchedCount++;
         } else {
-          // Save as unmatched
           await admin.from('payslips').insert({
             company_id,
             employee_id: null,
@@ -290,7 +274,9 @@ Deno.serve(async (req) => {
             employee_name_detected: group.primary.employeeName,
             period_year,
             period_month,
-            pdf_url: storagePath,
+            source_pdf_url: sourcePath,
+            page_indices: pageIndices,
+            pdf_url: sourcePath,
             vacation_balance: group.primary.vacationBalance,
             sick_balance: group.primary.sickBalance,
             gross_salary: group.primary.grossSalary,
@@ -310,7 +296,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Update batch summary
     await admin.from('payslip_batches').update({
       matched_count: matchedCount,
       unmatched_count: unmatchedCount,
@@ -318,11 +303,10 @@ Deno.serve(async (req) => {
       status: 'done',
     }).eq('id', batchId);
 
-    // Activity log
     await admin.from('activity_log').insert({
       company_id,
       action: `העלאת תלושי שכר ${period_month}/${period_year}`,
-      details: `סה"כ ${totalPages} עמודים, ${matchedCount} הותאמו, ${unmatchedCount} לא הותאמו, ${failedCount} נכשלו`,
+      details: `סה"כ ${effectivePages} עמודים, ${matchedCount} הותאמו, ${unmatchedCount} לא הותאמו, ${failedCount} נכשלו`,
       entity_type: 'payslip_batch',
       entity_id: batchId,
       performed_by: user.id,
@@ -330,7 +314,7 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({
       batch_id: batchId,
-      total_pages: totalPages,
+      total_pages: effectivePages,
       groups: groups.length,
       matched: matchedCount,
       unmatched: unmatchedCount,
