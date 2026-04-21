@@ -341,6 +341,7 @@ export function UsersAndRolesTab() {
         </CardContent>
       </Card>
       <ImportExcelDialog open={importOpen} onOpenChange={setImportOpen} mode="employees" />
+      <InviteExternalUserDialog open={inviteExternalOpen} onOpenChange={setInviteExternalOpen} />
     </div>
   );
 }
