@@ -24,7 +24,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { EmployeePayslipsTab } from "@/components/EmployeePayslipsTab";
 import { useAuth } from "@/hooks/useAuth";
 
-const tabs = [
+const allTabs = [
   { id: "personal", label: "פרטים אישיים", icon: User },
   { id: "assets", label: "ציוד משויך", icon: Package },
   { id: "digital", label: "גישות דיגיטליות", icon: Key },
