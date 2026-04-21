@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import logoImg from "@/assets/logo.png";
 
-type AppRole = "admin" | "it_manager" | "employee" | "super_admin";
+type AppRole = "admin" | "it_manager" | "employee" | "super_admin" | "direct_manager" | "payroll" | "operations";
 
 interface NavItem {
   label: string;
@@ -30,14 +30,14 @@ interface NavItem {
 }
 
 const mainNav: NavItem[] = [
-  { label: "לוח בקרה", icon: LayoutDashboard, path: "/", roles: ["admin", "it_manager", "super_admin"] },
-  { label: "עובדים", icon: Users, path: "/employees", roles: ["admin", "super_admin"] },
-  { label: "נכסים וציוד", icon: Package, path: "/assets", roles: ["admin", "it_manager", "super_admin"] },
-  { label: "קטגוריות ציוד", icon: Boxes, path: "/categories", roles: ["admin", "super_admin"] },
-  { label: "משימות IT", icon: Shield, path: "/it-tickets", roles: ["admin", "it_manager", "super_admin"] },
-  { label: "בקשות חופשה ומחלה", icon: CalendarDays, path: "/leave-requests", roles: ["admin", "it_manager", "super_admin"] },
+  { label: "לוח בקרה", icon: LayoutDashboard, path: "/", roles: ["admin", "it_manager", "super_admin", "operations", "payroll"] },
+  { label: "עובדים", icon: Users, path: "/employees", roles: ["admin", "super_admin", "operations"] },
+  { label: "נכסים וציוד", icon: Package, path: "/assets", roles: ["admin", "it_manager", "super_admin", "operations"] },
+  { label: "קטגוריות ציוד", icon: Boxes, path: "/categories", roles: ["admin", "super_admin", "operations"] },
+  { label: "משימות IT", icon: Shield, path: "/it-tickets", roles: ["admin", "it_manager", "super_admin", "operations"] },
+  { label: "בקשות חופשה ומחלה", icon: CalendarDays, path: "/leave-requests", roles: ["admin", "super_admin", "direct_manager", "payroll"] },
   { label: "התראות", icon: Bell, path: "/alerts", roles: ["admin", "it_manager", "super_admin"] },
-  { label: "ניהול משתמשים", icon: Users, path: "/user-management", roles: ["admin", "super_admin"] },
+  { label: "ניהול משתמשים", icon: Users, path: "/user-management", roles: ["admin", "super_admin", "operations"] },
 ];
 
 const superAdminNav: NavItem[] = [

@@ -33,6 +33,9 @@ const ROLE_LABELS: Record<string, string> = {
   super_admin: "סופר אדמין",
   admin: "מנהל מערכת",
   it_manager: "מנהל IT",
+  operations: "עובד תפעול",
+  direct_manager: "מנהל ישיר",
+  payroll: "חשב/ת שכר",
   employee: "עובד",
 };
 
@@ -40,8 +43,14 @@ const ROLE_COLORS: Record<string, string> = {
   super_admin: "bg-primary/10 text-primary border-primary/20",
   admin: "bg-destructive/10 text-destructive border-destructive/20",
   it_manager: "bg-accent text-accent-foreground border-accent",
+  operations: "bg-cyan-500/10 text-cyan-600 border-cyan-500/20 dark:text-cyan-400",
+  direct_manager: "bg-orange-500/10 text-orange-600 border-orange-500/20 dark:text-orange-400",
+  payroll: "bg-purple-500/10 text-purple-600 border-purple-500/20 dark:text-purple-400",
   employee: "bg-secondary text-secondary-foreground border-secondary",
 };
+
+// Roles that operations users cannot grant or revoke
+const OPERATIONS_RESTRICTED_ROLES = new Set(["super_admin", "admin", "payroll"]);
 
 async function fetchUsers(companyId: string | null): Promise<ManagedUser[]> {
   const { data: { session } } = await supabase.auth.getSession();
@@ -66,10 +75,13 @@ async function fetchUsers(companyId: string | null): Promise<ManagedUser[]> {
 
 export default function UserManagement() {
   const { toast } = useToast();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, isAdmin, isSuperAdmin, isOperations } = useAuth();
   const { activeCompanyId } = useCompany();
   const queryClient = useQueryClient();
   const [importOpen, setImportOpen] = useState(false);
+
+  // Operations-only users (no admin/super_admin) cannot manage sensitive roles
+  const restrictRoles = isOperations && !isAdmin && !isSuperAdmin;
 
   const { data: users = [], isLoading, refetch } = useQuery({
     queryKey: ["managed-users", activeCompanyId],
@@ -265,11 +277,13 @@ export default function UserManagement() {
                             <SelectValue placeholder="שנה תפקיד" />
                           </SelectTrigger>
                           <SelectContent>
-                            {Object.entries(ROLE_LABELS).map(([key, label]) => (
-                              <SelectItem key={key} value={key} className="text-xs">
-                                {u.roles.includes(key) ? `הסר: ${label}` : `הוסף: ${label}`}
-                              </SelectItem>
-                            ))}
+                            {Object.entries(ROLE_LABELS)
+                              .filter(([key]) => !restrictRoles || !OPERATIONS_RESTRICTED_ROLES.has(key))
+                              .map(([key, label]) => (
+                                <SelectItem key={key} value={key} className="text-xs">
+                                  {u.roles.includes(key) ? `הסר: ${label}` : `הוסף: ${label}`}
+                                </SelectItem>
+                              ))}
                           </SelectContent>
                         </Select>
 

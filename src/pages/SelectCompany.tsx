@@ -12,12 +12,34 @@ interface CompanyOption {
   logo_url: string | null;
 }
 
+// Returns the appropriate landing path for the user's primary role.
+function getDefaultRoute(opts: {
+  isSuperAdmin: boolean;
+  isAdmin: boolean;
+  isPayroll: boolean;
+  isOperations: boolean;
+  isIT: boolean;
+  isDirectManager: boolean;
+  isEmployee: boolean;
+}): string {
+  if (opts.isSuperAdmin || opts.isAdmin) return "/";
+  if (opts.isPayroll) return "/leave-requests";
+  if (opts.isOperations) return "/employees";
+  if (opts.isIT) return "/it-tickets";
+  if (opts.isDirectManager) return "/leave-requests";
+  if (opts.isEmployee) return "/portal";
+  return "/portal";
+}
+
 export default function SelectCompany() {
-  const { user, loading: authLoading, isSuperAdmin } = useAuth();
+  const auth = useAuth();
+  const { user, loading: authLoading, isSuperAdmin } = auth;
   const { setActiveCompanyId } = useCompany();
   const navigate = useNavigate();
   const [companies, setCompanies] = useState<CompanyOption[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const defaultRoute = getDefaultRoute(auth);
 
   useEffect(() => {
     if (authLoading) return;
@@ -58,9 +80,9 @@ export default function SelectCompany() {
   useEffect(() => {
     if (!loading && companies.length === 1) {
       setActiveCompanyId(companies[0].id);
-      navigate("/");
+      navigate(defaultRoute);
     }
-  }, [loading, companies, setActiveCompanyId, navigate]);
+  }, [loading, companies, setActiveCompanyId, navigate, defaultRoute]);
 
   // Still loading or auto-redirecting
   if (authLoading || loading || companies.length === 1) {
@@ -89,7 +111,7 @@ export default function SelectCompany() {
   // Multiple companies — show picker
   const handleSelect = (companyId: string) => {
     setActiveCompanyId(companyId);
-    navigate("/");
+    navigate(defaultRoute);
   };
 
   return (

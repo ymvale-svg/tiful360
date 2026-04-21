@@ -49,15 +49,15 @@ const App = () => (
                 </ProtectedRoute>
               }>
                 <Route path="/" element={<Dashboard />} />
-                <Route path="/employees" element={<ProtectedRoute requiredRoles={["admin", "super_admin"]}><Employees /></ProtectedRoute>} />
-                <Route path="/employees/:id" element={<ProtectedRoute requiredRoles={["admin", "super_admin"]}><EmployeeDetail /></ProtectedRoute>} />
-                <Route path="/assets" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin"]}><Assets /></ProtectedRoute>} />
-                <Route path="/categories" element={<ProtectedRoute requiredRoles={["admin", "super_admin"]}><CategoryManager /></ProtectedRoute>} />
-                <Route path="/it-tickets" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin"]}><ITTickets /></ProtectedRoute>} />
+                <Route path="/employees" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations"]}><Employees /></ProtectedRoute>} />
+                <Route path="/employees/:id" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations", "direct_manager", "payroll"]}><EmployeeDetail /></ProtectedRoute>} />
+                <Route path="/assets" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin", "operations"]}><Assets /></ProtectedRoute>} />
+                <Route path="/categories" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations"]}><CategoryManager /></ProtectedRoute>} />
+                <Route path="/it-tickets" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin", "operations"]}><ITTickets /></ProtectedRoute>} />
                 <Route path="/alerts" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin"]}><Alerts /></ProtectedRoute>} />
-                <Route path="/user-management" element={<ProtectedRoute requiredRoles={["admin", "super_admin"]}><UserManagement /></ProtectedRoute>} />
+                <Route path="/user-management" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations"]}><UserManagement /></ProtectedRoute>} />
                 <Route path="/companies" element={<ProtectedRoute requiredRoles={["super_admin"]}><Companies /></ProtectedRoute>} />
-                <Route path="/leave-requests" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin"]}><LeaveRequests /></ProtectedRoute>} />
+                <Route path="/leave-requests" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "direct_manager", "payroll"]}><LeaveRequests /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute requiredRoles={["admin", "super_admin"]}><Settings /></ProtectedRoute>} />
               </Route>
               <Route path="*" element={<NotFound />} />

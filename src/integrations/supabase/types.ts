@@ -353,6 +353,75 @@ export type Database = {
           },
         ]
       }
+      attendance_corrections: {
+        Row: {
+          attachment_url: string | null
+          attendance_record_id: string | null
+          company_id: string
+          correction_date: string
+          created_at: string
+          employee_id: string
+          id: string
+          initiated_by: string
+          manager_id: string | null
+          manager_note: string | null
+          original_check_in: string | null
+          original_check_out: string | null
+          payroll_notified_at: string | null
+          reason: string | null
+          requested_check_in: string | null
+          requested_check_out: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attachment_url?: string | null
+          attendance_record_id?: string | null
+          company_id: string
+          correction_date: string
+          created_at?: string
+          employee_id: string
+          id?: string
+          initiated_by?: string
+          manager_id?: string | null
+          manager_note?: string | null
+          original_check_in?: string | null
+          original_check_out?: string | null
+          payroll_notified_at?: string | null
+          reason?: string | null
+          requested_check_in?: string | null
+          requested_check_out?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attachment_url?: string | null
+          attendance_record_id?: string | null
+          company_id?: string
+          correction_date?: string
+          created_at?: string
+          employee_id?: string
+          id?: string
+          initiated_by?: string
+          manager_id?: string | null
+          manager_note?: string | null
+          original_check_in?: string | null
+          original_check_out?: string | null
+          payroll_notified_at?: string | null
+          reason?: string | null
+          requested_check_in?: string | null
+          requested_check_out?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       attendance_records: {
         Row: {
           check_in: string | null
@@ -1457,6 +1526,8 @@ export type Database = {
         Args: { _employee_id: string; _user_id: string }
         Returns: boolean
       }
+      is_operations: { Args: { _user_id: string }; Returns: boolean }
+      is_payroll: { Args: { _user_id: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       move_to_dlq: {
         Args: {
@@ -1480,7 +1551,14 @@ export type Database = {
     Enums: {
       access_status: "active" | "suspended" | "blocked"
       alert_severity: "critical" | "warning" | "info"
-      app_role: "admin" | "it_manager" | "employee" | "super_admin"
+      app_role:
+        | "admin"
+        | "it_manager"
+        | "employee"
+        | "super_admin"
+        | "direct_manager"
+        | "payroll"
+        | "operations"
       asset_status: "in_use" | "in_stock" | "in_repair" | "lost"
       employee_status: "active" | "onboarding" | "leaving" | "inactive"
       field_type: "text" | "number" | "date" | "list"
@@ -1620,7 +1698,15 @@ export const Constants = {
     Enums: {
       access_status: ["active", "suspended", "blocked"],
       alert_severity: ["critical", "warning", "info"],
-      app_role: ["admin", "it_manager", "employee", "super_admin"],
+      app_role: [
+        "admin",
+        "it_manager",
+        "employee",
+        "super_admin",
+        "direct_manager",
+        "payroll",
+        "operations",
+      ],
       asset_status: ["in_use", "in_stock", "in_repair", "lost"],
       employee_status: ["active", "onboarding", "leaving", "inactive"],
       field_type: ["text", "number", "date", "list"],
