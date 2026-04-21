@@ -26,6 +26,7 @@ import SignOffboarding from "@/pages/SignOffboarding";
 import LeaveRequests from "@/pages/LeaveRequests";
 import AttendanceCorrections from "@/pages/AttendanceCorrections";
 import Payroll from "@/pages/Payroll";
+import Tax101TokenPage from "@/pages/Tax101TokenPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/handover/:token" element={<SignHandover />} />
               <Route path="/sign-offboarding/:token" element={<SignOffboarding />} />
+              <Route path="/portal/tax101/:token" element={<Tax101TokenPage />} />
               <Route path="/select-company" element={<SelectCompany />} />
               <Route path="/portal" element={<ProtectedRoute><EmployeePortal /></ProtectedRoute>} />
               <Route element={
