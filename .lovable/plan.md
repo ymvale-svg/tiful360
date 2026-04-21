@@ -1,61 +1,53 @@
 
-## יישור RTL אחיד לכל הטבלאות
 
-### הבעיה
-במסך עובדים (וטבלאות אחרות) הכותרות (`<th>`) מיושרות עם `text-right` (ימין פיזי), אבל תאי הנתונים (`<td>`) ללא יישור מפורש — מקבלים את ברירת המחדל של הדפדפן שיכולה להיות `start` או להיות מושפעת מתוכן (font-mono, badges, אלמנטים inline-flex). התוצאה: חוסר יישור חזותי בין הכותרת לערכים, במיוחד בעמודות עם תוכן קצר/LTR כמו `EMP-400`.
+## תיקון פיצול תלושים — אחסון PDF מקורי + טווחי עמודים
 
-### הפתרון — כלל CSS גלובלי אחד
+### האבחנה
+המסך מציג 0/0/0 כי הפונקציה הנוכחית עדיין מבצעת `pdf-lib` `copyPages` + `save` לכל קבוצה — פעולה עתירת CPU שגורמת ל-`WORKER_RESOURCE_LIMIT` באמצע הלולאה. גם אם `extractText` מצליח, השלב של בניית PDF נפרד לכל עובד מתרסק לפני שמשהו נשמר. בנוסף, אם `extractText` נכשל על המסמך כולו — אף קבוצה לא נוצרת ומחזירים 0/0/0.
 
-#### `src/index.css` — עדכון `.data-table`
-החלפה של `text-right` ב-`text-start` (לוגי, נכון ל-RTL ול-LTR), והוספה של אותו כלל ל-`td`:
+לפי הבחירה המאושרת: **לא לפצל את ה-PDF.** לשמור את ה-PDF המקורי פעם אחת, ולשמור לכל עובד טווח עמודים בלבד. הצפייה תרנדר רק את העמודים שלו מתוך הקובץ המקורי.
 
-```css
-.data-table th {
-  @apply text-start font-medium text-muted-foreground bg-muted/50 px-4 py-3 border-b;
-}
+### שינוי סכימה (`payslips`)
+שתי עמודות חדשות:
+- `source_pdf_url text` — נתיב לקובץ המקורי המשותף בכל הקבוצה.
+- `page_indices integer[]` — אינדקסי העמודים של העובד בתוך הקובץ.
+`pdf_url` יישאר אופציונלי לתאימות לאחור.
 
-.data-table td {
-  @apply text-start px-4 py-3 border-b border-border/50;
-}
-```
+### שינוי ב-Edge Function `split-payslips`
+1. **להעלות את ה-PDF המקורי פעם אחת** ל-`payslips/{company}/{year}-{month}/_source_{batchId}.pdf`.
+2. **לחלץ טקסט פעם אחת** (כבר עושים) ולקבץ עמודים לפי ת"ז (כבר עושים).
+3. **למחוק את כל ה-block של `PDFDocument.create()`/`copyPages`/`save`/`upload` לכל קבוצה.**
+4. לכל קבוצה — רק `INSERT/UPSERT` ל-`payslips` עם `source_pdf_url` + `page_indices` + ערכים מחולצים.
+5. להסיר את ה-import של `pdf-lib` לחלוטין (לא נחוץ יותר). לשמור רק את `unpdf` לחילוץ טקסט.
 
-זה מבטיח שכל טבלה שמשתמשת ב-class `data-table` (Employees, Assets, EmployeeDetail, EmployeePayslipsTab, Payroll × 3) תהיה מיושרת אחיד מימין.
+תוצאה: O(1) פעולות PDF במקום O(n) — אפס סיכון ל-CPU limit.
 
-### ניקוי `text-right` מיותר בטבלאות `data-table`
-ב-`src/pages/Payroll.tsx` יש כמה תאים עם `className="font-mono"` בלבד — אלה כבר ירשו את היישור החדש. אין צורך לגעת.
+### שינוי בצד הלקוח — צפייה בתלוש בודד
+- `getPayslipSignedUrl(path)` ב-`src/hooks/usePayslips.ts` יקבל אופציונלית `pageIndices`. אם יש — מוסיפים ל-URL את ה-fragment `#page={firstPage+1}` (תקן PDF.js/Chrome מציג מהעמוד הזה).
+- `EmployeePayslipsTab.tsx` ו-`EmployeePortal` ייקראו ל-helper עם `payslip.source_pdf_url ?? payslip.pdf_url` ועם `payslip.page_indices`.
+- **הערה למשתמש**: הצופה יפתח על העמוד הראשון של העובד, אבל המשתמש יוכל לגלול לעמודים סמוכים של עובדים אחרים בקובץ המקורי. זו פשרה הכרחית כדי להימנע מ-CPU limit. אם רוצים בידוד מלא — נדרש שירות חיצוני (iLovePDF) שכרוך ב-API key ועלות.
 
-### תיקונים נקודתיים בטבלאות שלא משתמשות ב-`data-table`
+### `EmployeePayslipsTab` — תצוגה
+לעדכן את הקישור כך שיפתח טאב חדש עם ה-fragment `#page=N#toolbar=0`, וישלח ל-PDF viewer של הדפדפן ישירות לעמוד הנכון.
 
-טבלאות שמשתמשות ב-`text-right` עם רכיבי `Table`/`TableHead` של shadcn או טבלאות מותאמות — לעבור ל-`text-start` לעקביות:
-
-| קובץ | מיקום |
-|---|---|
-| `src/pages/Companies.tsx` | `<TableHead className="text-right">` × 4 → `text-start` |
-| `src/components/OffboardingFormsManager.tsx` | `<th className="p-2 text-right">` × 5 → `text-start` |
-| `src/components/ImportAssetsExcelDialog.tsx` | `<th className="p-2 text-right">` × 5 + tds → `text-start` |
-| `src/components/HandoverFormsList.tsx` | אם יש `text-right` בטבלאות — להחליף |
-| `src/components/ImportExcelDialog.tsx` | אותו טיפול אם רלוונטי |
-| `src/components/OffboardingFormView.tsx` / `HandoverFormView.tsx` | טפסי PDF — להישאר עם `text-right` (נדרש ל-print/PDF, לא תלוי `dir`) |
-
-### בדיקה רוחבית (grep)
-לאחר השינוי — `grep` ל-`text-right` בכל `src/`:
-- בטבלאות UI אינטראקטיביות → להחליף ל-`text-start`.
-- בטפסי PDF/Print (`OffboardingFormView`, `HandoverFormView`, `generate*Pdf.ts`) → להשאיר.
-- ב-form labels / input alignment → להשאיר אם מיועד לכוון ספציפי.
+### ניקוי
+- `pdf-lib` import מוסר מ-`split-payslips/index.ts`.
+- אם יש שורות `payslip.pdf_url` ישנות בלי `source_pdf_url` — הקוד נופל חזרה ל-`pdf_url` (תאימות).
 
 ### קבצים מושפעים
 
 | קובץ | שינוי |
 |---|---|
-| `src/index.css` | `.data-table th/td` → `text-start` |
-| `src/pages/Companies.tsx` | `TableHead text-right` → `text-start` |
-| `src/components/OffboardingFormsManager.tsx` | `th text-right` → `text-start` |
-| `src/components/ImportAssetsExcelDialog.tsx` | `th text-right` → `text-start` |
-| `src/components/ImportExcelDialog.tsx` | בדיקה + החלפה אם רלוונטי |
-| `src/components/HandoverFormsList.tsx` | בדיקה + החלפה אם רלוונטי |
+| migration חדשה | `ALTER TABLE payslips ADD COLUMN source_pdf_url text, page_indices integer[]` |
+| `supabase/functions/split-payslips/index.ts` | להוריד pdf-lib, להעלות source PDF פעם אחת, לשמור page_indices בלבד |
+| `src/hooks/usePayslips.ts` | `getPayslipSignedUrl` מקבל `pageIndices?` ומחזיר URL עם `#page=N` |
+| `src/components/EmployeePayslipsTab.tsx` | להשתמש ב-`source_pdf_url` + `page_indices` |
+| `src/pages/EmployeePortal.tsx` | אותו עדכון בצד העובד |
+| `src/integrations/supabase/types.ts` | ייווצר אוטומטית מהמיגרציה |
 
-### הערות
-- אין שינוי DB / hooks / לוגיקה — שינוי ויזואלי בלבד.
-- `text-start` הוא CSS logical property — בדפדפנים מודרניים נתמך מלא (Chrome/Edge/Safari/Firefox).
-- טפסי PDF/Print נשארים עם `text-right` כי הם לא תלויים ב-`dir` של ה-document.
-- לאחר ביצוע — בדיקה ידנית: עובדים, נכסים, תלושים, חברות, טופסי החזרה — כל הכותרות והתאים מיושרים לקצה ימין באופן זהה.
+### בדיקה לאחר ביצוע
+1. להעלות PDF מאוחד גדול (10+ עמודים).
+2. לוודא שה-batch מסתיים ב-`done` עם `matched > 0`.
+3. ללחוץ "צפייה בתלוש" בכרטיס עובד — לוודא ש-PDF נפתח ומציג את העמוד הנכון.
+4. לוודא שיתרות חופשה/מחלה התעדכנו.
+
