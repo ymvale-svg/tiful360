@@ -17,6 +17,9 @@ export function useCreateEmployee() {
       start_date?: string;
       birth_date?: string;
       status?: "active" | "onboarding";
+      michpal_code?: string;
+      direct_manager_id?: string | null;
+      exclude_from_contacts?: boolean;
     }) => {
       const { data, error } = await supabase
         .from("employees")

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Link2, Phone, Plus, Trash2, Save, GripVertical } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Link2, Phone, Plus, Trash2, Users, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCompany } from "@/hooks/useCompany";
 import { supabase } from "@/integrations/supabase/client";
@@ -164,10 +165,21 @@ function ContactsManager({ companyId }: { companyId: string }) {
 
   return (
     <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 space-y-4">
-      <div className="flex items-center gap-3 mb-2">
-        <Phone className="w-5 h-5 text-primary" />
-        <h3 className="font-semibold">אנשי קשר בפורטל</h3>
+      <div className="flex items-center justify-between gap-3 mb-2">
+        <div className="flex items-center gap-3">
+          <Phone className="w-5 h-5 text-primary" />
+          <h3 className="font-semibold">אנשי קשר חיצוניים</h3>
+        </div>
+        <Link to="/employees" className="text-xs text-primary hover:underline flex items-center gap-1 shrink-0">
+          <Users className="w-3.5 h-3.5" />
+          לניהול עובדים
+          <ExternalLink className="w-3 h-3" />
+        </Link>
       </div>
+
+      <p className="text-xs text-muted-foreground bg-muted/40 rounded-lg p-2.5 leading-relaxed">
+        עובדי החברה מופיעים אוטומטית ברשימת אנשי הקשר בפורטל. כאן ניתן להוסיף ספקים / יועצים חיצוניים בלבד.
+      </p>
 
       <div className="space-y-2">
         {contacts.map((c) => (
@@ -191,7 +203,7 @@ function ContactsManager({ companyId }: { companyId: string }) {
       </div>
       <Button size="sm" className="gap-1.5" onClick={() => addContact.mutate()} disabled={addContact.isPending}>
         <Plus className="w-4 h-4" />
-        הוסף איש קשר
+        הוסף איש קשר חיצוני
       </Button>
     </div>
   );

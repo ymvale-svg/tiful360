@@ -181,6 +181,66 @@ export function useProfile() {
   });
 }
 
+export interface CompanyContact {
+  id: string;
+  name: string;
+  role: string;
+  department: string;
+  phone: string | null;
+  email: string | null;
+  sort_order: number | null;
+  source: "employee" | "external";
+}
+
+export function useCompanyContacts() {
+  const { activeCompanyId } = useCompany();
+  return useQuery({
+    queryKey: ["company-contacts-merged", activeCompanyId],
+    queryFn: async (): Promise<CompanyContact[]> => {
+      if (!activeCompanyId) return [];
+      const [empRes, extRes] = await Promise.all([
+        supabase.rpc("get_company_contacts", { _company_id: activeCompanyId }),
+        supabase.from("portal_contacts").select("*").eq("company_id", activeCompanyId),
+      ]);
+      if (empRes.error) throw empRes.error;
+      if (extRes.error) throw extRes.error;
+
+      const employees: CompanyContact[] = (empRes.data ?? []).map((e: any) => ({
+        id: `emp-${e.id}`,
+        name: e.full_name,
+        role: e.role ?? "",
+        department: e.department ?? "",
+        phone: e.phone ?? null,
+        email: e.email ?? null,
+        sort_order: e.contact_sort_order,
+        source: "employee" as const,
+      }));
+      const external: CompanyContact[] = (extRes.data ?? []).map((c: any) => ({
+        id: `ext-${c.id}`,
+        name: c.name,
+        role: c.role,
+        department: c.department,
+        phone: c.phone,
+        email: null,
+        sort_order: c.sort_order,
+        source: "external" as const,
+      }));
+
+      const merged = [...employees, ...external];
+      merged.sort((a, b) => {
+        const sa = a.sort_order ?? Number.MAX_SAFE_INTEGER;
+        const sb = b.sort_order ?? Number.MAX_SAFE_INTEGER;
+        if (sa !== sb) return sa - sb;
+        const da = (a.department || "").localeCompare(b.department || "", "he");
+        if (da !== 0) return da;
+        return (a.name || "").localeCompare(b.name || "", "he");
+      });
+      return merged;
+    },
+    enabled: !!activeCompanyId,
+  });
+}
+
 export function useDashboardStats() {
   const { activeCompanyId } = useCompany();
   return useQuery({
