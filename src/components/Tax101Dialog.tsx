@@ -181,6 +181,7 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
     if (step === 1) {
       if (!data.city || !data.street) return "יש למלא כתובת מלאה";
       if (!data.marital_status) return "יש לבחור מצב משפחתי";
+      if (data.health_fund_member && !data.health_fund_name) return "יש לבחור שם קופת חולים";
     }
     return null;
   };
