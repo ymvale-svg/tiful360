@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode, useCallback 
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-type AppRole = "admin" | "it_manager" | "employee" | "super_admin";
+export type AppRole = "admin" | "it_manager" | "employee" | "super_admin" | "direct_manager" | "payroll" | "operations";
 
 interface AuthContextType {
   session: Session | null;
@@ -14,6 +14,9 @@ interface AuthContextType {
   isIT: boolean;
   isEmployee: boolean;
   isSuperAdmin: boolean;
+  isDirectManager: boolean;
+  isPayroll: boolean;
+  isOperations: boolean;
   signOut: () => Promise<void>;
 }
 
@@ -27,6 +30,9 @@ const AuthContext = createContext<AuthContextType>({
   isIT: false,
   isEmployee: false,
   isSuperAdmin: false,
+  isDirectManager: false,
+  isPayroll: false,
+  isOperations: false,
   signOut: async () => {},
 });
 
