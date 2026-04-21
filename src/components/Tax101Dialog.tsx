@@ -12,6 +12,8 @@ import { ChevronRight, ChevronLeft, FileText, Plus, Trash2, Loader2, CheckCircle
 import { generateAndUploadTax101Pdf } from "@/lib/generateTax101Pdf";
 import { useSubmitTax101 } from "@/hooks/useTax101";
 import { supabase } from "@/integrations/supabase/client";
+import { validateTax101 } from "@/lib/validateTax101";
+import { Tax101ValidationPanel } from "@/components/Tax101ValidationPanel";
 
 interface Dependent {
   full_name: string;
