@@ -73,12 +73,11 @@ async function fetchUsers(companyId: string | null): Promise<ManagedUser[]> {
   return res.json();
 }
 
-export default function UserManagement() {
+export function UsersAndRolesTab() {
   const { toast } = useToast();
   const { user: currentUser, isAdmin, isSuperAdmin, isOperations } = useAuth();
   const { activeCompanyId } = useCompany();
   const queryClient = useQueryClient();
-  const [importOpen, setImportOpen] = useState(false);
 
   // Operations-only users (no admin/super_admin) cannot manage sensitive roles
   const restrictRoles = isOperations && !isAdmin && !isSuperAdmin;
