@@ -145,7 +145,7 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
         ? `${title} — ${(sites ?? []).find(s => s.id === siteId)?.legal_name ?? ""}`
         : title;
 
-      const { error } = await supabase.from("it_tickets").insert({
+      const { data: inserted, error } = await supabase.from("it_tickets").insert({
         company_id: activeCompanyId,
         employee_id: callerEmployee.id,
         ticket_code: generateTicketCode(),
@@ -154,8 +154,15 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
         priority: priority as any,
         status: status as any,
         checklist: checklist as any,
-      });
+      }).select("id").single();
       if (error) throw error;
+
+      // Notify configured IT recipients (best-effort)
+      if (inserted?.id) {
+        supabase.functions.invoke("notify-it-ticket", {
+          body: { ticket_id: inserted.id },
+        }).catch(err => console.warn("notify-it-ticket failed", err));
+      }
 
       toast.success("הקריאה נפתחה בהצלחה");
       queryClient.invalidateQueries({ queryKey: ["it-tickets"] });

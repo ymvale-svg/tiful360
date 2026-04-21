@@ -559,11 +559,18 @@ export default function EmployeePortal() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{contact.name}</p>
-                  <p className="text-[11px] text-muted-foreground">{contact.role} • {contact.department}</p>
+                  <p className="text-[11px] text-muted-foreground truncate">{contact.role} • {contact.department}</p>
+                  {contact.email && (
+                    <a href={`mailto:${contact.email}`} className="text-[11px] text-primary hover:underline truncate block" dir="ltr">
+                      {contact.email}
+                    </a>
+                  )}
                 </div>
-                <a href={`tel:${contact.phone}`} className="flex items-center gap-1 text-xs text-primary hover:underline shrink-0">
-                  <Phone className="w-3.5 h-3.5" />
-                </a>
+                {contact.phone && (
+                  <a href={`tel:${contact.phone}`} className="flex items-center gap-1 text-xs text-primary hover:underline shrink-0" title={contact.phone}>
+                    <Phone className="w-3.5 h-3.5" />
+                  </a>
+                )}
               </div>
             )) : (
               <p className="text-center text-sm text-muted-foreground py-8">אין אנשי קשר כרגע</p>
