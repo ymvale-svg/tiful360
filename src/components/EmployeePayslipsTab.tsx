@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { useEmployeePayslips, getPayslipSignedUrl, useDeletePayslip } from "@/hooks/usePayslips";
 import { Download, Calendar, TrendingUp, Stethoscope, FileText, Eye, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
