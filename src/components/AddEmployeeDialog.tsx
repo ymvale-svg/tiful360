@@ -12,6 +12,8 @@ import { useCompany } from "@/hooks/useCompany";
 import { supabase } from "@/integrations/supabase/client";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Switch } from "@/components/ui/switch";
+import { useSubEmployers } from "@/hooks/useSubEmployers";
+import { useCompany } from "@/hooks/useCompany";
 
 interface Props {
   open: boolean;
