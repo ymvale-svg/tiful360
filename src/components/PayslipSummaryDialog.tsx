@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, Wallet, TrendingUp, Stethoscope, Calendar, Clock, ExternalLink } from "lucide-react";
+import { Download, Wallet, TrendingUp, Stethoscope, Calendar, Clock, ExternalLink, AlertCircle } from "lucide-react";
 import { getPayslipSignedUrl } from "@/hooks/usePayslips";
 import { useToast } from "@/hooks/use-toast";
 
