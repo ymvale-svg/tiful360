@@ -6,7 +6,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useEmployees } from "@/hooks/useData";
+import { useUpdateEmployee } from "@/hooks/useMutations";
 import { AddEmployeeDialog } from "@/components/AddEmployeeDialog";
 import { ImportExcelDialog } from "@/components/ImportExcelDialog";
 import { UsersAndRolesTab } from "@/components/UsersAndRolesTab";
@@ -64,6 +66,7 @@ export default function Employees() {
   const { activeCompanyId } = useCompany();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const updateEmployee = useUpdateEmployee();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = searchParams.get("tab") === "users" ? "users" : "employees";
@@ -198,7 +201,7 @@ export default function Employees() {
           <p className="page-subtitle">{employees?.length ?? 0} עובדים רשומים במערכת</p>
         </div>
 
-        <Tabs value={tab} onValueChange={switchTab}>
+        <Tabs value={tab} onValueChange={switchTab} dir="rtl">
           <TabsList>
             <TabsTrigger value="employees">עובדים</TabsTrigger>
             <TabsTrigger value="users">משתמשים ותפקידים</TabsTrigger>
