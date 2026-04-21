@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { PortalSettingsTab } from "@/components/PortalSettingsTab";
+import { SubEmployersTab } from "@/components/SubEmployersTab";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -34,6 +35,10 @@ export default function Settings() {
             <SettingsIcon className="w-4 h-4" />
             כללי
           </TabsTrigger>
+          <TabsTrigger value="sub_employers" className="gap-1.5">
+            <Building2 className="w-4 h-4" />
+            מעסיקים / תת-חברות
+          </TabsTrigger>
           <TabsTrigger value="portal" className="gap-1.5">
             <Smartphone className="w-4 h-4" />
             פורטל עובדים
@@ -46,6 +51,10 @@ export default function Settings() {
 
         <TabsContent value="general">
           <GeneralSettings />
+        </TabsContent>
+
+        <TabsContent value="sub_employers">
+          <SubEmployersTab />
         </TabsContent>
 
         <TabsContent value="portal">
