@@ -91,6 +91,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isIT: isSuperAdmin || roles.includes("it_manager"),
         isEmployee: roles.includes("employee"),
         isSuperAdmin,
+        isDirectManager: isSuperAdmin || roles.includes("direct_manager"),
+        isPayroll: isSuperAdmin || roles.includes("payroll"),
+        isOperations: isSuperAdmin || roles.includes("operations"),
         signOut,
       }}
     >
