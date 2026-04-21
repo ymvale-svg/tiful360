@@ -12,6 +12,8 @@ import { ChevronRight, ChevronLeft, FileText, Plus, Trash2, Loader2, CheckCircle
 import { generateAndUploadTax101Pdf } from "@/lib/generateTax101Pdf";
 import { useSubmitTax101 } from "@/hooks/useTax101";
 import { supabase } from "@/integrations/supabase/client";
+import { validateTax101 } from "@/lib/validateTax101";
+import { Tax101ValidationPanel } from "@/components/Tax101ValidationPanel";
 
 interface Dependent {
   full_name: string;
@@ -245,6 +247,10 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
   const sigRef = useRef<SignaturePadHandle>(null);
   const previewRef = useRef<HTMLDivElement>(null);
 
+  // Live validation against the official 0101/130 requirements.
+  // Recomputed on every change so step 5 always shows the current state.
+  const validation = useMemo(() => validateTax101(data), [data]);
+
   // Load employer (sub_employer if set, else company) for the PDF
   useEffect(() => {
     if (!open || !employee) return;
@@ -375,6 +381,16 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
   const prev = () => setStep((s) => Math.max(s - 1, 0));
 
   const handleSubmit = async () => {
+    // Block on official-form validation errors before producing the PDF.
+    if (!validation.ok) {
+      const first = validation.errors[0];
+      toast({
+        title: "לא ניתן ליצא PDF — חסרים שדות חובה",
+        description: first ? `דוגמה: ${first.message}` : "יש לתקן את השגיאות המסומנות בתחתית המסך",
+        variant: "destructive",
+      });
+      return;
+    }
     const sig = sigRef.current?.getDataUrl();
     if (!sig) {
       toast({ title: "נדרשת חתימה", description: "אנא חתום על הטופס לפני השליחה", variant: "destructive" });
@@ -1126,6 +1142,9 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
           {/* Step 5: Sign */}
           {step === 5 && (
             <div className="space-y-4">
+              {/* Pre-export validation against the official 0101/130 layout */}
+              <Tax101ValidationPanel result={validation} onJumpToStep={(s) => setStep(s)} />
+
               <div className="p-3 bg-muted/30 rounded-lg text-xs space-y-1">
                 <p className="font-semibold">י. הצהרה:</p>
                 <p>אני מצהיר/ה כי כל הפרטים שמסרתי בטופס זה הם נכונים ומלאים, וידוע לי כי מסירת פרטים לא נכונים מהווה עבירה לפי פקודת מס הכנסה.</p>
@@ -1152,7 +1171,12 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
               הבא <ChevronLeft className="w-4 h-4" />
             </Button>
           ) : (
-            <Button onClick={handleSubmit} disabled={submitting} className="gap-1.5">
+            <Button
+              onClick={handleSubmit}
+              disabled={submitting || !validation.ok}
+              title={!validation.ok ? "יש לתקן את שגיאות הבדיקה לפני יצוא PDF" : undefined}
+              className="gap-1.5"
+            >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
               {submitting ? "שולח..." : "אשר ושלח"}
             </Button>
