@@ -944,6 +944,60 @@ export type Database = {
           },
         ]
       }
+      offboarding_forms: {
+        Row: {
+          attached_document_url: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          end_date: string | null
+          form_index: number
+          form_snapshot: Json
+          id: string
+          it_ticket_id: string | null
+          pdf_url: string | null
+          sign_token: string
+          signature_data: string | null
+          signed_at: string | null
+          status: string
+        }
+        Insert: {
+          attached_document_url?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          employee_id: string
+          end_date?: string | null
+          form_index?: number
+          form_snapshot?: Json
+          id?: string
+          it_ticket_id?: string | null
+          pdf_url?: string | null
+          sign_token?: string
+          signature_data?: string | null
+          signed_at?: string | null
+          status?: string
+        }
+        Update: {
+          attached_document_url?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string
+          end_date?: string | null
+          form_index?: number
+          form_snapshot?: Json
+          id?: string
+          it_ticket_id?: string | null
+          pdf_url?: string | null
+          sign_token?: string
+          signature_data?: string | null
+          signed_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       portal_contacts: {
         Row: {
           company_id: string | null

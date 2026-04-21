@@ -7,9 +7,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { UserMinus, AlertTriangle, Shield, FileText, Download } from "lucide-react";
+import { UserMinus, AlertTriangle, Shield, Download } from "lucide-react";
 import { useStartOffboarding } from "@/hooks/useOffboarding";
 import { useToast } from "@/hooks/use-toast";
+import { OffboardingFormsManager } from "@/components/OffboardingFormsManager";
 
 interface OffboardingDialogProps {
   open: boolean;
@@ -22,12 +23,14 @@ interface OffboardingDialogProps {
     department: string;
     id_number: string;
     start_date: string;
+    company_id?: string | null;
   };
   assets: Array<{
     id: string;
     asset_name: string;
     asset_code: string;
     serial_number: string | null;
+    manufacturer_model?: string | null;
     asset_categories?: { category_name: string } | null;
   }>;
   digitalAccess: Array<{
@@ -119,7 +122,7 @@ export function OffboardingDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg" dir="rtl">
+      <DialogContent className={step === "done" ? "max-w-3xl max-h-[90vh] overflow-y-auto" : "max-w-lg"} dir="rtl">
         {step === "confirm" && (
           <>
             <DialogHeader>
@@ -211,28 +214,53 @@ export function OffboardingDialog({
                 <Shield className="w-5 h-5" />
                 תהליך עזיבה הופעל בהצלחה
               </DialogTitle>
+              <DialogDescription>
+                נוצרה קריאת IT <span className="font-mono font-bold">{ticketCode}</span>.
+                כעת ניתן ליצור טופסי החזרת ציוד דיגיטליים לעובד.
+              </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4 mt-4">
-              <div className="bg-success/10 border border-success/30 rounded-lg p-4 space-y-2 text-sm">
+              <div className="bg-success/10 border border-success/30 rounded-lg p-3 text-xs space-y-1">
                 <p>✅ סטטוס העובד שונה ל"בתהליך עזיבה"</p>
                 <p>✅ {digitalAccess.length} הרשאות דיגיטליות הושהו</p>
                 <p>✅ נוצרה קריאת IT: <span className="font-mono font-bold">{ticketCode}</span></p>
-                <p>✅ נוצרה התראה קריטית</p>
               </div>
 
-              <Button
-                variant="outline"
-                className="w-full gap-2"
-                onClick={handleDownloadPdf}
-              >
-                <Download className="w-4 h-4" />
-                הורד פרוטוקול משיכת ציוד
-              </Button>
+              <OffboardingFormsManager
+                employee={{
+                  id: employee.id,
+                  full_name: employee.full_name,
+                  employee_code: employee.employee_code,
+                  id_number: employee.id_number,
+                  department: employee.department,
+                  role: employee.role,
+                  end_date: endDate,
+                  company_id: (employee as any).company_id ?? null,
+                }}
+                assets={assets.map((a) => ({
+                  id: a.id,
+                  asset_name: a.asset_name,
+                  asset_code: a.asset_code,
+                  serial_number: a.serial_number,
+                  manufacturer_model: (a as any).manufacturer_model ?? null,
+                  asset_categories: a.asset_categories,
+                }))}
+              />
 
-              <Button className="w-full" onClick={handleClose}>
-                סגור
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 gap-2"
+                  onClick={handleDownloadPdf}
+                >
+                  <Download className="w-4 h-4" />
+                  הורד פרוטוקול מלא
+                </Button>
+                <Button className="flex-1" onClick={handleClose}>
+                  סגור
+                </Button>
+              </div>
             </div>
           </>
         )}
