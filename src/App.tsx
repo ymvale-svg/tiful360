@@ -24,6 +24,8 @@ import ResetPassword from "@/pages/ResetPassword";
 import SignHandover from "@/pages/SignHandover";
 import SignOffboarding from "@/pages/SignOffboarding";
 import LeaveRequests from "@/pages/LeaveRequests";
+import AttendanceCorrections from "@/pages/AttendanceCorrections";
+import Payroll from "@/pages/Payroll";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -58,6 +60,8 @@ const App = () => (
                 <Route path="/user-management" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations"]}><UserManagement /></ProtectedRoute>} />
                 <Route path="/companies" element={<ProtectedRoute requiredRoles={["super_admin"]}><Companies /></ProtectedRoute>} />
                 <Route path="/leave-requests" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "direct_manager", "payroll"]}><LeaveRequests /></ProtectedRoute>} />
+                <Route path="/attendance-corrections" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "direct_manager", "payroll"]}><AttendanceCorrections /></ProtectedRoute>} />
+                <Route path="/payroll" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "payroll"]}><Payroll /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute requiredRoles={["admin", "super_admin"]}><Settings /></ProtectedRoute>} />
               </Route>
               <Route path="*" element={<NotFound />} />

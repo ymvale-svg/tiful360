@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { useEmployeePayslips, getPayslipSignedUrl } from "@/hooks/usePayslips";
-import { Download, Calendar, TrendingUp, Stethoscope, FileText } from "lucide-react";
+import { Download, Calendar, TrendingUp, Stethoscope, FileText, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { PayslipSummaryDialog } from "@/components/PayslipSummaryDialog";
 
 interface Props {
   employeeId: string;
@@ -14,6 +16,7 @@ const MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", 
 export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary }: Props) {
   const { data: payslips, isLoading } = useEmployeePayslips(employeeId);
   const { toast } = useToast();
+  const [summaryPayslip, setSummaryPayslip] = useState<any | null>(null);
 
   const download = async (path: string | null) => {
     if (!path) return;
@@ -107,9 +110,14 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary }: Prop
                   <td className="font-mono">{p.sick_balance ?? "—"}</td>
                   <td className="font-mono">{p.work_days ?? "—"}</td>
                   <td>
-                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => download(p.pdf_url)}>
-                      <Download className="w-4 h-4" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="סיכום" onClick={() => setSummaryPayslip(p)}>
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="הורדה" onClick={() => download(p.pdf_url)}>
+                        <Download className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -117,6 +125,14 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary }: Prop
           </table>
         )}
       </div>
+
+      <PayslipSummaryDialog
+        open={!!summaryPayslip}
+        onClose={() => setSummaryPayslip(null)}
+        payslip={summaryPayslip}
+        employeeName={employee?.full_name}
+        canSeeSalary={canSeeSalary}
+      />
     </div>
   );
 }
