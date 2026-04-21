@@ -1,49 +1,43 @@
 
-המשתמש מבקש למפות את כל שגיאות הכניסה (login errors) במערכת ולתרגם אותן לעברית. כרגע ב-`Login.tsx` השגיאות מוצגות עם `error.message` הגולמי שמגיע מ-Supabase/Google באנגלית (למשל "Invalid login credentials", "Email not confirmed", "redirect_uri_mismatch" וכו').
+## וידוא קנבס חתימה זהה לטופס מסירת ציוד
 
-### המטרה
-להחליף את ההצגה הגולמית של הודעות שגיאה במיפוי לעברית ידידותי למשתמש, עבור 3 הזרימות בקובץ `src/pages/Login.tsx`:
-1. כניסה עם דוא"ל + סיסמה
-2. שכחתי סיסמה
-3. כניסה עם Google
+יש כבר רכיב חתימה מובנה בפרויקט: **`src/components/SignaturePad.tsx`** — מבוסס `react-signature-canvas`, עם כפתור "נקה", התאמה רספונסיבית (ResizeObserver) ו-API נקי (`getDataUrl`, `clear`, `isEmpty`). הוא הרכיב שבו משתמש `SignHandover.tsx` (טופס מסירת ציוד).
 
-### גישה
-ליצור פונקציית עזר חדשה `src/lib/authErrors.ts` עם מילון מיפוי קודי/הודעות שגיאה נפוצות מ-Supabase Auth ו-Google OAuth ל-טקסט בעברית. הפונקציה תקבל את אובייקט השגיאה ותחזיר מחרוזת בעברית. אם השגיאה לא מוכרת — תוחזר הודעת ברירת מחדל גנרית בעברית ("אירעה שגיאה. נסה שוב.").
+### מה משתנה בתכנית הקודמת
+זה לא שינוי מהותי — אלא **התחייבות מפורשת** שהמסך החדש `src/pages/SignOffboarding.tsx` ישתמש **באותו הרכיב בדיוק** (`SignaturePad`) ולא ייצור קנבס חדש משלו.
 
-### מיפוי השגיאות המתוכנן
+### פירוט השימוש ב-`SignOffboarding.tsx`
 
-**שגיאות סיסמה/דוא"ל (Supabase Auth):**
-| הודעה באנגלית | תרגום לעברית |
-|---|---|
-| Invalid login credentials | פרטי הכניסה שגויים. בדוק את הדוא"ל והסיסמה |
-| Email not confirmed | הדוא"ל טרם אומת. בדוק את תיבת הדואר שלך |
-| User not found | משתמש לא נמצא במערכת |
-| Invalid email | כתובת דוא"ל לא תקינה |
-| Password should be at least 6 characters | הסיסמה חייבת להכיל לפחות 6 תווים |
-| Email rate limit exceeded | יותר מדי ניסיונות. נסה שוב בעוד מספר דקות |
-| Too many requests | יותר מדי בקשות. נסה שוב מאוחר יותר |
-| User already registered | משתמש זה כבר רשום במערכת |
-| Network request failed | בעיית תקשורת. בדוק את חיבור האינטרנט |
+```tsx
+import { SignaturePad, type SignaturePadHandle } from "@/components/SignaturePad";
 
-**שגיאות איפוס סיסמה:**
-| הודעה באנגלית | תרגום לעברית |
-|---|---|
-| For security purposes, you can only request this once every 60 seconds | מטעמי אבטחה ניתן לבקש איפוס פעם ב-60 שניות בלבד |
-| Unable to validate email address | כתובת הדוא"ל לא תקינה |
+const sigRef = useRef<SignaturePadHandle>(null);
 
-**שגיאות Google OAuth:**
-| הודעה / קוד | תרגום לעברית |
-|---|---|
-| redirect_uri_mismatch | בעיה בהגדרות הכניסה עם Google. פנה למנהל המערכת |
-| access_denied | הכניסה עם Google בוטלה |
-| popup_closed_by_user | חלון הכניסה נסגר לפני השלמת התהליך |
-| OAuth provider not enabled | הכניסה עם Google אינה זמינה כרגע |
-| invalid_client | בעיה בהגדרות הלקוח של Google. פנה למנהל המערכת |
-| Network error / fetch failed | בעיית תקשורת בכניסה עם Google |
+// בתוך ה-JSX, מתחת לטבלת הציוד וההצהרה:
+<SignaturePad ref={sigRef} label="חתימת העובד" height={180} />
 
-### שינויים בקבצים
-1. **קובץ חדש** `src/lib/authErrors.ts` — פונקציה `translateAuthError(error)` עם המילון
-2. **עריכה** `src/pages/Login.tsx` — בכל 3 ה-`catch` להחליף `description: error.message` ב-`description: translateAuthError(error)`
+// בעת לחיצה על "אשר וחתום":
+const dataUrl = sigRef.current?.getDataUrl();
+if (!dataUrl) {
+  toast({ title: "חסרה חתימה", description: "יש לחתום לפני שליחה", variant: "destructive" });
+  return;
+}
+// dataUrl נשמר ב-offboarding_forms.signature_data
+// ואז ה-OffboardingFormView מוצג עם תמונת החתימה ומועבר ל-generateAndUploadOffboardingPdf
+```
 
-### הערה חשובה
-התרגום לא יפתור את שגיאת ה-`redirect_uri_mismatch` שאתה מתמודד איתה ב-Google OAuth — זו בעיית הגדרה שדורשת תיקון נפרד (מעבר ל-Managed OAuth או הוספת ה-callback URL הנכון של Lovable ב-Google Cloud Console). התרגום רק יציג את השגיאה בעברית במקום באנגלית.
+### תזכורת לזרימה המלאה (ללא שינוי)
+
+1. העובד פותח את הקישור → רואה את `OffboardingFormView` עם **רק הציוד שב-snapshot** של הטופס הזה.
+2. מתחת לטבלה — רכיב `SignaturePad` (זהה לחלוטין לזה שבמסירת ציוד).
+3. אופציונלי: שדה צירוף מסמך (input file → upload ל-Storage).
+4. כפתור "אשר וחתום" → ולידציה `!sigRef.current?.isEmpty()` → שמירת `signature_data` ב-DB → רינדור ה-View עם החתימה המוטבעת → `generateAndUploadOffboardingPdf` → עדכון `status='signed'`, `pdf_url`, `signed_at`.
+
+### גם בצד המנהל
+ב-`OffboardingFormView` (תצוגת ה-PDF/תצוגה מקדימה), אזור החתימה ירונדר באותה מתכונת של `HandoverFormView`: מסגרת מקווקוות עם תמונת ה-`signature_data` (אם קיימת), אחרת קו ריק לחתימה ידנית בהדפסה — בדיוק כמו במסירת ציוד.
+
+### אין שינויים נדרשים ב-`SignaturePad.tsx`
+הרכיב הקיים מספק את כל מה שצריך. לא ניצור variant חדש, לא נשכפל לוגיקת קנבס.
+
+### עדכון לרשימת הקבצים בתכנית
+ללא תוספת קבצים. רק התחייבות מפורשת בקוד `SignOffboarding.tsx` ו-`OffboardingFormView.tsx` להשתמש ב-`@/components/SignaturePad` הקיים.
