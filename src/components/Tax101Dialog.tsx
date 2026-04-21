@@ -83,6 +83,7 @@ const emptyForm = (employee?: any): Tax101FormData => {
     is_israeli_resident: employee?.is_israeli_resident ?? true,
     health_fund_member: employee?.health_fund_member ?? true,
     health_fund_name: employee?.health_fund_name ?? "",
+    kibbutz_member: "no",
     spouse_name: "",
     spouse_id: "",
     spouse_works: false,
@@ -183,6 +184,7 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
       if (!data.city || !data.street) return "יש למלא כתובת מלאה";
       if (!data.marital_status) return "יש לבחור מצב משפחתי";
       if (data.health_fund_member && !data.health_fund_name) return "יש לבחור שם קופת חולים";
+      if (!data.kibbutz_member) return "יש לבחור סטטוס חבר קיבוץ/מושב שיתופי";
     }
     return null;
   };
@@ -402,7 +404,40 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                       <option value="לאומית">לאומית</option>
                     </select>
                   )}
+              </div>
+
+              <div className="space-y-2 p-3 bg-muted/30 rounded-lg">
+                <Label>חבר קיבוץ / מושב שיתופי</Label>
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="radio"
+                      name="kibbutz_member"
+                      checked={data.kibbutz_member === "no"}
+                      onChange={() => update("kibbutz_member", "no")}
+                    />
+                    לא
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="radio"
+                      name="kibbutz_member"
+                      checked={data.kibbutz_member === "yes_transferred"}
+                      onChange={() => update("kibbutz_member", "yes_transferred")}
+                    />
+                    כן — ההכנסות ממעסיק זה מועברות לקיבוץ
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="radio"
+                      name="kibbutz_member"
+                      checked={data.kibbutz_member === "yes_not_transferred"}
+                      onChange={() => update("kibbutz_member", "yes_not_transferred")}
+                    />
+                    כן — ההכנסות ממעסיק זה אינן מועברות לקיבוץ
+                  </label>
                 </div>
+              </div>
               </div>
 
               {data.marital_status === "married" && (
@@ -615,6 +650,7 @@ const Tax101Preview = forwardRef<HTMLDivElement, { data: Tax101FormData; taxYear
         {fieldRow("מצב משפחתי", { single: "רווק/ה", married: "נשוי/אה", divorced: "גרוש/ה", widowed: "אלמן/ה" }[data.marital_status] || "—")}
         {fieldRow("תושב ישראל", data.is_israeli_resident ? "כן" : "לא")}
         {fieldRow("חבר קופ\"ח", data.health_fund_member ? `כן — ${data.health_fund_name || "—"}` : "לא")}
+        {fieldRow("חבר קיבוץ/מושב שיתופי", { no: "לא", yes_transferred: "כן — הכנסות מועברות לקיבוץ", yes_not_transferred: "כן — הכנסות אינן מועברות לקיבוץ" }[data.kibbutz_member] || "—")}
         {data.marital_status === "married" && (
           <>
             {fieldRow("שם בן/בת זוג", data.spouse_name)}
