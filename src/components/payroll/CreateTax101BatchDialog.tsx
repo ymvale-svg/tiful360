@@ -1,10 +1,13 @@
 import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useEmployees } from "@/hooks/useData";
+import { useCompany } from "@/hooks/useCompany";
+import { supabase } from "@/integrations/supabase/client";
 import { useCreateTax101Batch } from "@/hooks/useTax101";
 import { useToast } from "@/hooks/use-toast";
 import { FileText, Loader2, Search } from "lucide-react";
