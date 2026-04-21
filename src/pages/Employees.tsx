@@ -106,11 +106,6 @@ export default function Employees() {
     return m;
   }, [fullRows]);
 
-  const nameById = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const e of employees ?? []) m.set(e.id, e.full_name);
-    return m;
-  }, [employees]);
 
   const filtered = (employees ?? []).filter((emp) => {
     const matchSearch = emp.full_name.includes(search) || emp.employee_code.includes(search) || emp.role.includes(search);
