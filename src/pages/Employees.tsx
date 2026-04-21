@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Search, Plus, Download, Eye, UserMinus, Upload, Mail, Send, ShieldCheck, ShieldAlert, UserCheck, UserX } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Search, Plus, Download, UserMinus, Upload, Mail, Send, ShieldCheck, ShieldAlert, UserCheck, UserX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -412,7 +412,7 @@ export default function Employees() {
                       );
                     })}
                     {filtered.length === 0 && (
-                      <tr><td colSpan={10} className="text-center py-8 text-muted-foreground">לא נמצאו עובדים</td></tr>
+                      <tr><td colSpan={9} className="text-center py-8 text-muted-foreground">לא נמצאו עובדים</td></tr>
                     )}
                   </tbody>
                 </table>
