@@ -726,7 +726,7 @@ const Tax101Preview = forwardRef<HTMLDivElement, { data: Tax101FormData; taxYear
         )}
 
         <h2 style={{ fontSize: 14, fontWeight: 700, marginTop: 12, marginBottom: 6, background: "#f3f4f6", padding: "4px 8px" }}>הכנסות והצהרות</h2>
-        {fieldRow("סוג הכנסה", { monthly: "משכורת חודשית", partial: "משרה חלקית", daily: "יומי/שעתי" }[data.income_type] || "—")}
+        {fieldRow("סוג הכנסה", { monthly: "משכורת חודשית", monthly_additional: "משכורת חודשית נוספת", partial: "משכורת חלקית", daily: "שכר עבודה (עובד יומי)", pension: "קצבה", scholarship: "מלגה", retirement_grant: "מענק פרישה" }[data.income_type] || "—")}
         {fieldRow("תאריך תחילת עבודה", data.job_start_date)}
         {fieldRow("הכנסה עיקרית/יחידה", data.is_main_income ? "כן" : "לא")}
         {data.has_other_income && fieldRow("הכנסות נוספות", data.other_income_details)}
