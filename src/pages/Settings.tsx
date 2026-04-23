@@ -12,6 +12,63 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { PortalSettingsTab } from "@/components/PortalSettingsTab";
 import { SubEmployersTab } from "@/components/SubEmployersTab";
+import { Mail } from "lucide-react";
+
+// ============================
+// IT Emails Settings
+// ============================
+function ITEmailsSettings() {
+  const { activeCompanyId, activeCompany } = useCompany();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [emails, setEmails] = useState((activeCompany as any)?.it_emails ?? "");
+
+  const updateMutation = useMutation({
+    mutationFn: async () => {
+      if (!activeCompanyId) throw new Error("לא נבחרה חברה");
+      const { error } = await supabase
+        .from("companies")
+        .update({ it_emails: emails || null } as any)
+        .eq("id", activeCompanyId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      toast({ title: "נמענים נשמרו בהצלחה" });
+    },
+    onError: (err: any) => {
+      toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+    },
+  });
+
+  if (!activeCompanyId) return null;
+
+  return (
+    <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 space-y-4 max-w-xl">
+      <div className="flex items-center gap-3 mb-2">
+        <Mail className="w-5 h-5 text-primary" />
+        <h3 className="font-semibold">נמענים להתראות IT</h3>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        כתובות דוא"ל שיקבלו התראה בעת פתיחת קריאת IT חדשה (מופרדות בפסיק)
+      </p>
+      <div>
+        <label className="text-sm font-medium mb-1.5 block">כתובות דוא"ל</label>
+        <input
+          value={emails}
+          onChange={(e) => setEmails(e.target.value)}
+          placeholder="it@company.com, ops@company.com"
+          className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 font-mono"
+          dir="ltr"
+        />
+      </div>
+      <Button className="gap-1.5" onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>
+        <Save className="w-4 h-4" />
+        {updateMutation.isPending ? "שומר..." : "שמור שינויים"}
+      </Button>
+    </div>
+  );
+}
 
 export default function Settings() {
   const navigate = useNavigate();
