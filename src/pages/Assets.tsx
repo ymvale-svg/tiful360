@@ -81,8 +81,8 @@ export default function Assets() {
   const activeTab = searchParams.get("tab") === "categories" ? "categories" : "assets";
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <Tabs value={activeTab} onValueChange={(v) => setSearchParams(v === "assets" ? {} : { tab: v })}>
+    <div className="space-y-6 animate-fade-in" dir="rtl">
+      <Tabs value={activeTab} onValueChange={(v) => setSearchParams(v === "assets" ? {} : { tab: v })} dir="rtl">
         <TabsList>
           <TabsTrigger value="assets">נכסים</TabsTrigger>
           <TabsTrigger value="categories">קטגוריות</TabsTrigger>
