@@ -48,6 +48,31 @@ npm run once         # מחזור אחד (לשימוש עם cron / Task Schedule
 `CLEAR_AFTER_SEND=true` ימחק את הלוג מהשעון אחרי שליחה מוצלחת — **אל תפעיל
 את זה עד שאתה בטוח שהמערכת יציבה**, כי המחיקה היא לתמיד.
 
+## הרצה כ-Windows Service (רץ ברקע אוטומטית)
+
+כדי שה-agent ירוץ ברקע גם בלי חלון פתוח, יתחיל יחד עם Windows ויקום אוטומטית אם נפל:
+
+```cmd
+cd /d "%USERPROFILE%\Desktop\agent"
+npm install
+npm run service:install
+```
+
+**חשוב:** הרץ את ה-cmd **כ-Administrator** (קליק ימני → Run as administrator), אחרת ההתקנה תיכשל.
+
+מאותו רגע:
+- ה-service רץ ברקע, גם אם החלון נסגר
+- מתחיל אוטומטית בכל הדלקה של המחשב
+- אם קרס — Windows מפעיל אותו מחדש
+- לוגים נשמרים ב-`agent\daemon\`
+
+ניהול ידני: `services.msc` → "Tiful360 Attendance Agent" (Start / Stop / Restart).
+
+להסרה:
+```cmd
+npm run service:uninstall
+```
+
 ## פתרון בעיות
 
 - **timeout / לא מתחבר**: ודא ש-Port 4370 פתוח (גם UDP). נסה `ping 10.0.0.114`.
