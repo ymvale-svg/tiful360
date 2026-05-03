@@ -179,6 +179,14 @@ async function runCycle() {
     const res = await zk.getAttendances();
     logs = res?.data || [];
     console.log(`📋 נמשכו ${logs.length} רשומות`);
+    if (logs.length) {
+      const times = logs.map((r) => new Date(r.recordTime).getTime()).filter((t) => !isNaN(t));
+      if (times.length) {
+        const minD = new Date(Math.min(...times)).toISOString();
+        const maxD = new Date(Math.max(...times)).toISOString();
+        console.log(`   טווח בשעון: ${minD}  →  ${maxD}`);
+      }
+    }
   } catch (e) {
     console.error("❌ getAttendances נכשל:", e.message || e);
     try { await zk.disconnect(); } catch {}
@@ -200,11 +208,24 @@ async function runCycle() {
     return;
   }
 
-  // סינון
-  let filtered = logs;
-  if (SINCE) {
+  // --- סינון תאריך מינימלי (HARD) ---
+  const beforeHard = logs.length;
+  let filtered = logs.filter((r) => {
+    const t = new Date(r.recordTime);
+    return !isNaN(t.getTime()) && t >= HARD_MIN_DATE;
+  });
+  const blockedHard = beforeHard - filtered.length;
+  if (blockedHard > 0) {
+    console.log(`🛡️  נחסמו ${blockedHard} רשומות לפני HARD_MIN_DATE (${HARD_MIN_DATE.toISOString()})`);
+  }
+
+  // --- סינון since (אם גבוה יותר מ-HARD) ---
+  if (SINCE > HARD_MIN_DATE) {
+    const before = filtered.length;
     filtered = filtered.filter((r) => new Date(r.recordTime) >= SINCE);
-    console.log(`🗓️  אחרי --since=${SINCE.toISOString()}: ${filtered.length}`);
+    console.log(`🗓️  אחרי --since=${SINCE.toISOString()}: ${filtered.length} (סוננו ${before - filtered.length})`);
+  } else {
+    console.log(`🗓️  סינון פעיל מ: ${SINCE.toISOString()}  (נשארו ${filtered.length})`);
   }
 
   const state = loadState();
