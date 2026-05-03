@@ -1,44 +1,72 @@
-אני מבין — אם הוא עדיין “מושך מ-2017”, צריך להפסיק להסתמך רק על הדגל `--since` בזמן ההרצה ולהכניס הגנת ברירת מחדל בקוד.
+# הפיכת ה-agent ל-Windows Service
 
-חשוב: השורה `📋 נמשכו X רשומות` תמיד יכולה לכלול גם 2017, כי השעון מחזיר את כל הלוג ההיסטורי שלו. המדד החשוב הוא כמה נשאר אחרי הסינון וכמה נשלח. אבל כדי שלא תהיה אפשרות לשלוח 2017 בכלל, אעדכן את ה-agent כך שהוא יחסום תאריכים ישנים בקוד עצמו.
+המטרה: שה-agent ירוץ ברקע אוטומטית גם בלי שמישהו פתח חלון, יתחיל יחד עם Windows, ויקום אוטומטית אם נפל.
 
-## תכנית תיקון
+## הגישה
 
-1. לעדכן את `agent/index.js` כך שיתמוך בכל צורות ההרצה:
-   - `--since=2026-04-01`
-   - `--since 2026-04-01`
-   - עם מרכאות אם Windows מוסיף אותן.
+נשתמש בחבילה `node-windows` שעוטפת את ה-Service Manager של Windows. נוסיף שני סקריפטים קטנים:
+- `install-service.js` — מתקין את ה-service
+- `uninstall-service.js` — מסיר אותו
 
-2. להוסיף ברירת מחדל קשיחה דרך `.env`:
-   - `DEFAULT_SINCE=2026-04-01`
-   - אם לא הועבר `--since`, ה-agent עדיין יסנן אוטומטית מתחילת אפריל 2026.
+## שינויים בקבצים
 
-3. להוסיף הגנת בטיחות לפני שליחה:
-   - כל רשומה עם `recordTime` לפני התאריך המינימלי תיזרק.
-   - גם אם הדגלים לא נקלטים, 2017 לא תישלח.
+### 1. `agent/package.json`
+להוסיף תלות ב-`node-windows` ו-scripts חדשים:
+```
+"scripts": {
+  "start": "node index.js",
+  "once": "node index.js --once",
+  "service:install": "node install-service.js",
+  "service:uninstall": "node uninstall-service.js"
+},
+"dependencies": {
+  "node-zklib": "^1.1.10",
+  "node-windows": "^1.0.0-beta.8"
+}
+```
 
-4. לשפר את הלוגים כדי שיהיה ברור מה קורה:
-   - להדפיס את הארגומנטים שהתקבלו בפועל.
-   - להדפיס טווח תאריכים שנמשך מהשעון: התאריך הכי מוקדם והכי מאוחר.
-   - להדפיס: `אחרי סינון תאריך מינימלי: N`.
-   - להדפיס אזהרה אם נמצאו רשומות ישנות שנחסמו.
+### 2. `agent/install-service.js` (חדש)
+סקריפט שמגדיר Service בשם **"Tiful360 Attendance Agent"**:
+- מצביע על `index.js`
+- `description` ברור
+- `wait: 2`, `grow: .5`, `maxRestarts: 40` — restart אוטומטי אם נפל
+- מדפיס הודעה כשההתקנה הצליחה ומפעיל את ה-service מיד
 
-5. להוסיף/לעדכן את `agent/.env.example` עם ההגדרה החדשה:
-   - `DEFAULT_SINCE=2026-04-01`
+### 3. `agent/uninstall-service.js` (חדש)
+עוצר ומסיר את ה-service.
 
-6. אופציונלי אבל מומלץ: להוסיף גם הגנה ב-backend function `ingest-attendance-punch`, כך שגם אם מחשב ישן מריץ גרסה לא מעודכנת של ה-agent — רשומות לפני אפריל 2026 לא ייכנסו למערכת.
+### 4. `agent/README.md`
+להוסיף סעיף "התקנה כ-Windows Service" עם ההוראות בעברית.
 
-## אחרי התיקון תריץ כך
+## איך המשתמש מפעיל
+
+פעם אחת בלבד, ב-cmd **כ-Administrator** (חשוב!):
 
 ```cmd
 cd /d "%USERPROFILE%\Desktop\agent"
-node index.js --once
+npm install
+npm run service:install
 ```
 
-או מפורשות:
+מאותו רגע:
+- ה-agent רץ ברקע, גם אם החלון נסגר
+- מתחיל אוטומטית בכל הדלקה של המחשב
+- אם קרס — Windows מפעיל אותו מחדש
+- לוגים נשמרים אוטומטית ב-`%USERPROFILE%\Desktop\agent\daemon\`
 
+לעצור / להפעיל ידנית: `services.msc` → "Tiful360 Attendance Agent".
+
+להסרה:
 ```cmd
-node index.js --once --since=2026-04-01 --limit=20
+npm run service:uninstall
 ```
 
-אחרי האישור שלך אני אבצע את התיקון בקבצים.
+## דברים שחשוב להזכיר למשתמש
+
+1. **חייב להריץ כ-Administrator** את `service:install` (אחרת Windows חוסם).
+2. ה-`.env` ו-`state.json` חייבים להישאר בתיקיית `agent` — ה-service רץ משם.
+3. אם המחשב נכבה לגמרי בלילה — אין נתונים. אם רוצים סנכרון 24/7 צריך מחשב שדלוק תמיד (או שרת קטן ברשת של השעון).
+
+## הערה לגבי תמיכה
+
+`node-windows` עובד רק על Windows. אם בעתיד נריץ על Linux, נשתמש ב-`systemd` במקום (סקריפט נפרד).
