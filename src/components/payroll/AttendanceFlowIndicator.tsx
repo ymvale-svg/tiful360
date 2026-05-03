@@ -104,18 +104,20 @@ export function AttendanceFlowIndicator() {
       statusLabel = "זרימה פעילה";
       statusColor = "bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30";
       Icon = Activity;
-    } else if (ageMin <= 60) {
+    } else if (ageMin <= 10) {
       status = "idle";
       statusLabel = "ממתין לפעימה";
       statusColor = "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30";
       Icon = CheckCircle2;
     } else {
-      status = "stale";
-      statusLabel = "ייתכן שהאגנט מנותק";
-      statusColor = "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30";
+      status = "down";
+      statusLabel = `אין שידור מהאגנט ${ageMin >= 60 ? `${Math.floor(ageMin / 60)}ש' ` : ""}${ageMin % 60} דק'`;
+      statusColor = "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/40";
       Icon = AlertTriangle;
     }
   }
+
+  const showAlert = status === "down";
 
   return (
     <Card className={`border ${status === "live" ? "border-green-500/40" : status === "stale" || status === "down" ? "border-amber-500/40" : ""}`} dir="rtl">
