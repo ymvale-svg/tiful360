@@ -104,26 +104,37 @@ export function AttendanceFlowIndicator() {
       statusLabel = "זרימה פעילה";
       statusColor = "bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30";
       Icon = Activity;
-    } else if (ageMin <= 60) {
+    } else if (ageMin <= 10) {
       status = "idle";
       statusLabel = "ממתין לפעימה";
       statusColor = "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30";
       Icon = CheckCircle2;
     } else {
-      status = "stale";
-      statusLabel = "ייתכן שהאגנט מנותק";
-      statusColor = "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30";
+      status = "down";
+      statusLabel = `אין שידור מהאגנט ${ageMin >= 60 ? `${Math.floor(ageMin / 60)}ש' ` : ""}${ageMin % 60} דק'`;
+      statusColor = "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/40";
       Icon = AlertTriangle;
     }
   }
 
+  const showAlert = status === "down";
+
   return (
-    <Card className={`border ${status === "live" ? "border-green-500/40" : status === "stale" || status === "down" ? "border-amber-500/40" : ""}`} dir="rtl">
+    <Card className={`border ${status === "live" ? "border-green-500/40" : status === "down" ? "border-amber-500/40" : ""}`} dir="rtl">
       <CardContent className="p-4">
+        {showAlert && (
+          <div className="mb-3 flex items-start gap-2 rounded-md border border-red-500/40 bg-red-500/10 p-2.5 text-red-700 dark:text-red-400">
+            <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <div className="text-xs leading-relaxed">
+              <div className="font-semibold">לא מתקבלות פעימות מהשעון יותר מ-10 דק'.</div>
+              <div className="text-red-700/80 dark:text-red-400/80">בדוק שהאגנט במחשב המקומי פועל (sc query tiful360attendanceagent) ושיש חיבור לשעון 10.0.0.114.</div>
+            </div>
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-3 justify-between">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <Icon className={`w-5 h-5 ${status === "live" ? "text-green-600 dark:text-green-400" : status === "stale" || status === "down" ? "text-amber-600 dark:text-amber-400" : "text-blue-600 dark:text-blue-400"}`} />
+              <Icon className={`w-5 h-5 ${status === "live" ? "text-green-600 dark:text-green-400" : status === "down" ? "text-amber-600 dark:text-amber-400" : "text-blue-600 dark:text-blue-400"}`} />
               {status === "live" && (
                 <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
