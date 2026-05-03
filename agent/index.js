@@ -1,207 +1,231 @@
-#!/usr/bin/env node
-/**
- * Attendance Clock Agent — Lovable Cloud
- *
- * רץ על השרת המקומי שלך, מתחבר לשעון הנוכחות (TCP או Serial),
- * וקורא פאנצ'ים. כל פאנץ' נשלח ל-Edge Function ingest-attendance-punch.
- *
- * מצב raw: node index.js --raw
- *   רק מדפיס למסך כל מה שמגיע מהשעון, בלי לפרסר ובלי לשלוח. שימושי לכיול.
- *
- * מצב רגיל: node index.js
- */
+// Attendance Clock Agent — ZKTeco U560 (PULL mode, ZK protocol on UDP/TCP 4370)
+// ---------------------------------------------------------------------------
+// משיכה תקופתית של רשומות נוכחות (attendance log) מהשעון, מיפוי כיוון לפי
+// verify_type של ZK, ושליחה ל-Edge Function ingest-attendance-punch.
+//
+// שימוש:
+//   node index.js          — פולינג רציף לפי POLL_INTERVAL_MS
+//   node index.js --once   — מחזור אחד ויציאה (טוב ל-cron)
+//   node index.js --raw    — חיבור + הדפסת כל הרשומות הגולמיות, בלי שליחה
+//
+// תלויות: node-zklib (npm install)
+// ---------------------------------------------------------------------------
 
-require("dotenv").config?.();
 const fs = require("fs");
 const path = require("path");
-const net = require("net");
 
-// טעינת .env ידנית אם dotenv לא קיים
-try {
+// טעינת .env ידנית (בלי תלות חיצונית)
+function loadEnv() {
   const envPath = path.join(__dirname, ".env");
-  if (fs.existsSync(envPath)) {
-    for (const line of fs.readFileSync(envPath, "utf8").split("\n")) {
-      const m = line.match(/^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(.*?)\s*$/);
-      if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^"(.*)"$/, "$1");
+  if (!fs.existsSync(envPath)) return;
+  const content = fs.readFileSync(envPath, "utf-8");
+  for (const line of content.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const idx = trimmed.indexOf("=");
+    if (idx === -1) continue;
+    const key = trimmed.slice(0, idx).trim();
+    let val = trimmed.slice(idx + 1).trim();
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1);
     }
-  }
-} catch {}
-
-const RAW_MODE = process.argv.includes("--raw");
-const TOKEN = process.env.ATTENDANCE_INGEST_TOKEN;
-const FN_URL = process.env.SUPABASE_FUNCTIONS_URL;
-const COMPANY_ID = process.env.COMPANY_ID;
-const MODE = (process.env.CLOCK_MODE || "tcp").toLowerCase();
-
-if (!RAW_MODE) {
-  if (!TOKEN || !FN_URL || !COMPANY_ID) {
-    console.error("[FATAL] חסרים משתנים: ATTENDANCE_INGEST_TOKEN, SUPABASE_FUNCTIONS_URL, COMPANY_ID");
-    process.exit(1);
+    if (!(key in process.env)) process.env[key] = val;
   }
 }
+loadEnv();
 
-async function sendPunch({ employee_code, punch_at, direction, raw }) {
-  if (RAW_MODE) {
-    console.log("[RAW]", JSON.stringify({ employee_code, punch_at, direction, raw }));
-    return;
-  }
-  try {
-    const res = await fetch(`${FN_URL}/ingest-attendance-punch`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        company_id: COMPANY_ID,
-        employee_code,
-        punch_at: punch_at || new Date().toISOString(),
-        direction: direction || "unknown",
-        raw,
-      }),
-    });
-    const text = await res.text();
-    if (!res.ok) {
-      console.error(`[ERR ${res.status}]`, text);
-    } else {
-      console.log(`[OK] employee=${employee_code} dir=${direction || "?"}`, text);
-    }
-  } catch (e) {
-    console.error("[NET ERR]", e.message);
-  }
-}
-
-/**
- * פרסר ברירת מחדל — מטפל בכמה פורמטים נפוצים.
- * אם השעון שלך משתמש בפורמט אחר, ערוך את הפונקציה הזו.
- *
- * מנסה לזהות:
- *  - שורה עם טוקן ראשון = מספר עובד, ולפעמים אינדיקציית כיוון (I/O)
- *  - JSON
- *  - מבנה Synel/ZK בסיסי (12 ספרות)
- */
-function parseLine(line) {
-  const trimmed = line.trim();
-  if (!trimmed) return null;
-
-  // נסה JSON
-  if (trimmed.startsWith("{")) {
-    try {
-      const j = JSON.parse(trimmed);
-      const code = j.employee_code || j.emp_code || j.user_id || j.badge;
-      if (code) {
-        return {
-          employee_code: String(code),
-          punch_at: j.timestamp || j.time || j.punch_at,
-          direction: (j.direction || j.dir || "").toLowerCase().startsWith("o") ? "out"
-                   : (j.direction || j.dir || "").toLowerCase().startsWith("i") ? "in"
-                   : "unknown",
-          raw: j,
-        };
-      }
-    } catch {}
-  }
-
-  // נסה CSV/TSV: code,timestamp,direction
-  const parts = trimmed.split(/[,\t;|\s]+/);
-  if (parts.length >= 1 && /^\d+$/.test(parts[0])) {
-    let direction = "unknown";
-    const dirToken = parts.find(p => /^[ioIO]$/.test(p) || /^(in|out|IN|OUT)$/.test(p));
-    if (dirToken) direction = /^o/i.test(dirToken) ? "out" : "in";
-    return {
-      employee_code: parts[0],
-      punch_at: undefined,
-      direction,
-      raw: { line: trimmed },
-    };
-  }
-
-  return null;
-}
-
-// ============ TCP MODE ============
-function startTcp() {
-  const HOST = process.env.CLOCK_HOST || "10.0.0.114";
-  const PORT = Number(process.env.CLOCK_PORT || 4370);
-  console.log(`[TCP] מתחבר אל ${HOST}:${PORT} …`);
-
-  const connect = () => {
-    const sock = new net.Socket();
-    let buffer = "";
-
-    sock.connect(PORT, HOST, () => {
-      console.log(`[TCP] מחובר ל-${HOST}:${PORT}`);
-    });
-
-    sock.on("data", (chunk) => {
-      if (RAW_MODE) {
-        console.log("[RAW BYTES]", chunk.toString("hex"));
-        console.log("[RAW TEXT]", chunk.toString("utf8"));
-      }
-      buffer += chunk.toString("utf8");
-      let idx;
-      while ((idx = buffer.search(/[\r\n]/)) >= 0) {
-        const line = buffer.slice(0, idx);
-        buffer = buffer.slice(idx + 1);
-        const parsed = parseLine(line);
-        if (parsed) sendPunch(parsed);
-        else if (RAW_MODE && line.trim()) console.log("[RAW LINE]", line);
-      }
-    });
-
-    sock.on("error", (err) => {
-      console.error("[TCP ERR]", err.message);
-    });
-
-    sock.on("close", () => {
-      console.log("[TCP] חיבור נסגר. מנסה שוב בעוד 5 שניות…");
-      setTimeout(connect, 5000);
-    });
-  };
-
-  connect();
-}
-
-// ============ SERIAL MODE ============
-function startSerial() {
-  let SerialPort;
-  try {
-    ({ SerialPort } = require("serialport"));
-  } catch (e) {
-    console.error("[FATAL] חבילת serialport לא מותקנת. הרץ: npm install serialport");
-    process.exit(1);
-  }
-  const PATH_ = process.env.SERIAL_PATH || "/dev/ttyUSB0";
-  const BAUD = Number(process.env.BAUD_RATE || 9600);
-  console.log(`[SERIAL] פותח ${PATH_} @ ${BAUD}…`);
-
-  const port = new SerialPort({ path: PATH_, baudRate: BAUD });
-  let buffer = "";
-
-  port.on("open", () => console.log(`[SERIAL] פתוח ${PATH_}`));
-  port.on("data", (chunk) => {
-    if (RAW_MODE) {
-      console.log("[RAW BYTES]", chunk.toString("hex"));
-      console.log("[RAW TEXT]", chunk.toString("utf8"));
-    }
-    buffer += chunk.toString("utf8");
-    let idx;
-    while ((idx = buffer.search(/[\r\n]/)) >= 0) {
-      const line = buffer.slice(0, idx);
-      buffer = buffer.slice(idx + 1);
-      const parsed = parseLine(line);
-      if (parsed) sendPunch(parsed);
-      else if (RAW_MODE && line.trim()) console.log("[RAW LINE]", line);
-    }
-  });
-  port.on("error", (e) => console.error("[SERIAL ERR]", e.message));
-}
-
-// ============ MAIN ============
-console.log(`=== Attendance Agent ===  mode=${MODE}  raw=${RAW_MODE}`);
-if (MODE === "tcp") startTcp();
-else if (MODE === "serial") startSerial();
-else {
-  console.error(`[FATAL] CLOCK_MODE לא תקין: ${MODE} (חייב להיות tcp או serial)`);
+let ZKLib;
+try {
+  ZKLib = require("node-zklib");
+} catch (e) {
+  console.error("❌ חסר node-zklib. הרץ: npm install");
   process.exit(1);
 }
+
+const TOKEN = process.env.ATTENDANCE_INGEST_TOKEN;
+const FUNCTIONS_URL = process.env.SUPABASE_FUNCTIONS_URL;
+const COMPANY_ID = process.env.COMPANY_ID;
+const CLOCK_HOST = process.env.CLOCK_HOST || "10.0.0.114";
+const CLOCK_PORT = parseInt(process.env.CLOCK_PORT || "4370", 10);
+const CLOCK_INPORT = parseInt(process.env.CLOCK_INPORT || "5200", 10);
+const CLOCK_TIMEOUT = parseInt(process.env.CLOCK_TIMEOUT || "5500", 10);
+const POLL_INTERVAL_MS = parseInt(process.env.POLL_INTERVAL_MS || "30000", 10);
+const CLEAR_AFTER_SEND = (process.env.CLEAR_AFTER_SEND || "false").toLowerCase() === "true";
+const STATE_FILE = path.resolve(__dirname, process.env.STATE_FILE || "./state.json");
+
+const RAW_MODE = process.argv.includes("--raw");
+const ONCE_MODE = process.argv.includes("--once");
+
+// מיפוי verify_type / state של ZK לכיווני נוכחות
+// מקור: ZK SDK — Attendance State / verify mode
+//   0 = Check-In, 1 = Check-Out, 2 = Break-Out, 3 = Break-In,
+//   4 = Overtime-In, 5 = Overtime-Out
+function mapDirection(state) {
+  switch (Number(state)) {
+    case 0: return "in";
+    case 1: return "out";
+    case 2: return "break_out";
+    case 3: return "break_in";
+    case 4: return "overtime_in";
+    case 5: return "overtime_out";
+    default: return "unknown";
+  }
+}
+
+function loadState() {
+  try {
+    if (fs.existsSync(STATE_FILE)) {
+      return JSON.parse(fs.readFileSync(STATE_FILE, "utf-8"));
+    }
+  } catch (e) {
+    console.warn("⚠️  state.json קיים אך פגום, מתחיל מאפס");
+  }
+  return { sentKeys: [] };
+}
+
+function saveState(state) {
+  // נשמור רק את 5000 המפתחות האחרונים כדי שהקובץ לא יגדל לאינסוף
+  const trimmed = {
+    ...state,
+    sentKeys: state.sentKeys.slice(-5000),
+  };
+  fs.writeFileSync(STATE_FILE, JSON.stringify(trimmed, null, 2));
+}
+
+function recordKey(rec) {
+  // מפתח ייחודי לרשומה: עובד + timestamp + state
+  return `${rec.deviceUserId}|${rec.recordTime}|${rec.state ?? ""}`;
+}
+
+async function sendPunch(rec) {
+  const body = {
+    company_id: COMPANY_ID,
+    employee_code_raw: String(rec.deviceUserId),
+    punched_at: new Date(rec.recordTime).toISOString(),
+    direction: mapDirection(rec.state),
+    source: "zkteco-u560",
+    raw: rec,
+  };
+  const res = await fetch(`${FUNCTIONS_URL}/ingest-attendance-punch`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${TOKEN}`,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const txt = await res.text().catch(() => "");
+    throw new Error(`HTTP ${res.status}: ${txt}`);
+  }
+  return res.json().catch(() => ({}));
+}
+
+async function runCycle() {
+  const zk = new ZKLib(CLOCK_HOST, CLOCK_PORT, CLOCK_TIMEOUT, CLOCK_INPORT);
+  const ts = new Date().toISOString();
+  console.log(`\n[${ts}] מתחבר לשעון ${CLOCK_HOST}:${CLOCK_PORT} ...`);
+
+  try {
+    await zk.createSocket();
+  } catch (e) {
+    console.error("❌ נכשל החיבור:", e.message || e);
+    try { await zk.disconnect(); } catch {}
+    return;
+  }
+
+  let info = {};
+  try {
+    info = await zk.getInfo();
+    console.log(`✅ מחובר. רשומות בשעון: ${info.logCounts ?? "?"} | משתמשים: ${info.userCounts ?? "?"}`);
+  } catch (e) {
+    console.warn("⚠️  לא הצלחתי לקרוא getInfo:", e.message || e);
+  }
+
+  let logs;
+  try {
+    const res = await zk.getAttendances();
+    logs = res?.data || [];
+    console.log(`📋 נמשכו ${logs.length} רשומות מהשעון`);
+  } catch (e) {
+    console.error("❌ getAttendances נכשל:", e.message || e);
+    try { await zk.disconnect(); } catch {}
+    return;
+  }
+
+  if (RAW_MODE) {
+    console.log("\n=== RAW MODE — מציג עד 20 רשומות אחרונות ===");
+    const sample = logs.slice(-20);
+    for (const r of sample) {
+      console.log(JSON.stringify({
+        deviceUserId: r.deviceUserId,
+        recordTime: r.recordTime,
+        state: r.state,
+        type: r.type,
+        ip: r.ip,
+        mappedDirection: mapDirection(r.state),
+      }));
+    }
+    console.log("\nℹ️  --raw לא שולח כלום ולא מוחק. הסר את הדגל כדי לאפשר שליחה.");
+    try { await zk.disconnect(); } catch {}
+    return;
+  }
+
+  const state = loadState();
+  const sentSet = new Set(state.sentKeys);
+  const newOnes = logs.filter((r) => !sentSet.has(recordKey(r)));
+
+  console.log(`📤 ${newOnes.length} רשומות חדשות לשליחה (סה״כ ${logs.length})`);
+
+  let ok = 0, fail = 0;
+  for (const rec of newOnes) {
+    try {
+      await sendPunch(rec);
+      state.sentKeys.push(recordKey(rec));
+      ok++;
+    } catch (e) {
+      fail++;
+      console.error(`  ✗ ${rec.deviceUserId} @ ${rec.recordTime}:`, e.message || e);
+    }
+  }
+  saveState(state);
+  console.log(`✓ נשלחו: ${ok} | נכשלו: ${fail}`);
+
+  if (CLEAR_AFTER_SEND && fail === 0 && ok > 0) {
+    try {
+      await zk.clearAttendanceLog();
+      console.log("🧹 לוג נוכחות בשעון נמחק (CLEAR_AFTER_SEND=true)");
+    } catch (e) {
+      console.warn("⚠️  clearAttendanceLog נכשל:", e.message || e);
+    }
+  }
+
+  try { await zk.disconnect(); } catch {}
+}
+
+async function main() {
+  if (!TOKEN || !FUNCTIONS_URL || !COMPANY_ID) {
+    if (!RAW_MODE) {
+      console.error("❌ חסרים משתני סביבה חובה: ATTENDANCE_INGEST_TOKEN / SUPABASE_FUNCTIONS_URL / COMPANY_ID");
+      process.exit(1);
+    } else {
+      console.warn("⚠️  --raw: רץ בלי שליחה, אז משתני הענן לא חובה.");
+    }
+  }
+
+  console.log("=== ZKTeco Attendance Agent ===");
+  console.log(`Host: ${CLOCK_HOST}:${CLOCK_PORT} (inport ${CLOCK_INPORT})`);
+  console.log(`Mode: ${RAW_MODE ? "RAW (no send)" : ONCE_MODE ? "ONCE" : `POLL every ${POLL_INTERVAL_MS}ms`}`);
+
+  await runCycle();
+  if (RAW_MODE || ONCE_MODE) return;
+
+  setInterval(() => {
+    runCycle().catch((e) => console.error("מחזור נכשל:", e));
+  }, POLL_INTERVAL_MS);
+}
+
+main().catch((e) => {
+  console.error("שגיאה קריטית:", e);
+  process.exit(1);
+});
