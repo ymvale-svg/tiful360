@@ -24,7 +24,10 @@ export function RemotePunchDialog({ open, onOpenChange, direction, employee }: P
   const { toast } = useToast();
 
   const captureGeo = () => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      setGeoStatus("denied");
+      return;
+    }
     setGeoStatus("loading");
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -32,9 +35,19 @@ export function RemotePunchDialog({ open, onOpenChange, direction, employee }: P
         setGeoStatus("ok");
       },
       () => setGeoStatus("denied"),
-      { enableHighAccuracy: true, timeout: 8000 },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
     );
   };
+
+  // אוטומטית מבקש מיקום בפתיחת הדיאלוג
+  useEffect(() => {
+    if (open && geoStatus === "idle") captureGeo();
+    if (!open) {
+      setGeo(null);
+      setGeoStatus("idle");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const submit = async () => {
     const sig = sigRef.current?.getDataUrl();
