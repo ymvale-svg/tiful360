@@ -1,74 +1,56 @@
-# Attendance Clock Agent
+# Attendance Clock Agent — ZKTeco U560
 
-Agent מקומי שקורא משעון הנוכחות הפיזי (`10.0.0.114`) ושולח את הפאנצ'ים ל-Lovable Cloud.
+Agent מקומי שמושך פאנצ'ים מהשעון בפרוטוקול ZK ושולח ל-Lovable Cloud.
+
+## למה PULL ולא PUSH?
+
+הקושחה של U560 (`ZMM200_TFT`) **לא** תומכת ב-ADMS/PUSH HTTP. השעון מדבר רק
+פרוטוקול ZK בינארי על פורט 4370 (UDP/TCP). לכן ה-Agent יוזם חיבור, שולח
+`CMD_CONNECT` → `CMD_ATTLOG_RRQ`, מקבל את ה-buffer, ומתנתק. כל זה עטוף
+ב-`node-zklib`.
 
 ## התקנה
 
-1. התקן Node.js 18+ על השרת המקומי.
-2. העתק את התיקייה `agent/` לשרת.
-3. התקן תלויות:
-   ```bash
-   cd agent
-   npm install
-   ```
-4. צור קובץ `.env` (העתק מ-`.env.example`) ומלא:
-   - `ATTENDANCE_INGEST_TOKEN` — הטוקן ששמור בענן
-   - `COMPANY_ID` — ה-UUID של החברה במערכת (אפשר לקבל מהמסך "חברות" כמנהל-על)
-   - `CLOCK_MODE` — `tcp` או `serial`
-   - לפי המצב: `CLOCK_HOST`+`CLOCK_PORT` או `SERIAL_PATH`+`BAUD_RATE`
+```bash
+cd agent
+npm install
+cp .env.example .env
+# ערוך .env: הדבק את ה-token, ה-COMPANY_ID, ואמת את CLOCK_HOST
+```
 
-## הרצה ראשונית — מצב raw (כיול)
-
-כדי לראות מה השעון בעצם שולח (לפני שמחליטים איך לפרסר):
+## בדיקה ראשונה (ללא שליחה)
 
 ```bash
-node index.js --raw
+npm run raw
 ```
 
-זה ידפיס לכל פעימה גם את ה-bytes (hex) וגם את הטקסט. תפעיל פאנץ' אחד או שניים בשעון ותשלח לי את הפלט — אכייל את הפרסר.
+זה יתחבר לשעון, ידפיס כמה רשומות יש בו וידגום עד 20 אחרונות עם:
+- `deviceUserId` — מספר העובד כפי שהוקלד בשעון
+- `recordTime` — חותמת זמן
+- `state` — סוג הפעולה (0=כניסה, 1=יציאה, 2=הפסקה-יציאה, 3=הפסקה-חזרה, 4/5=שעות נוספות)
+- `mappedDirection` — איך ה-Agent ימפה את זה
 
-## הרצה רגילה
+**העבר פאנץ' אחד עכשיו בשעון** ובדוק שהוא מופיע ב-RAW. אם כן — תעבור להפעלה רגילה.
+
+## הפעלה רגילה
 
 ```bash
-node index.js
+npm start            # פולינג כל POLL_INTERVAL_MS
+# או
+npm run once         # מחזור אחד (לשימוש עם cron / Task Scheduler)
 ```
 
-## הרצה כשירות (Linux / systemd)
+## איך נמנע מכפילויות?
 
-צור קובץ `/etc/systemd/system/attendance-agent.service`:
+ה-Agent שומר `state.json` עם מפתחות של רשומות שכבר נשלחו
+(`employeeId|timestamp|state`). רשומה חוזרת מהשעון לא תישלח שנית.
 
-```ini
-[Unit]
-Description=Attendance Clock Agent
-After=network.target
-
-[Service]
-Type=simple
-WorkingDirectory=/opt/attendance-agent
-ExecStart=/usr/bin/node /opt/attendance-agent/index.js
-Restart=always
-RestartSec=5
-User=root
-
-[Install]
-WantedBy=multi-user.target
-```
-
-הפעל:
-```bash
-sudo systemctl enable --now attendance-agent
-sudo journalctl -u attendance-agent -f
-```
-
-## הרצה כשירות (Windows / NSSM)
-
-```cmd
-nssm install AttendanceAgent "C:\Program Files\nodejs\node.exe" "C:\agent\index.js"
-nssm start AttendanceAgent
-```
+`CLEAR_AFTER_SEND=true` ימחק את הלוג מהשעון אחרי שליחה מוצלחת — **אל תפעיל
+את זה עד שאתה בטוח שהמערכת יציבה**, כי המחיקה היא לתמיד.
 
 ## פתרון בעיות
 
-- **אין נתונים**: ודא שהשעון פתוח על `CLOCK_PORT`. רוב השעונים משתמשים ב-4370 (ZKTeco) או 3001 (Synel).
-- **טוקן שגוי / 401**: בדוק ש-`ATTENDANCE_INGEST_TOKEN` בקובץ `.env` זהה בדיוק לסוד בענן.
-- **"unmatched"**: מספר העובד שמגיע מהשעון לא תואם ל-`employee_code` במערכת. עדכן את הקוד בכרטיס העובד או נהל ידנית במסך "שעוני נוכחות".
+- **timeout / לא מתחבר**: ודא ש-Port 4370 פתוח (גם UDP). נסה `ping 10.0.0.114`.
+- **CLOCK_INPORT תפוס**: שנה ל-5201/5202.
+- **getAttendances זורק**: נסה להעלות את `CLOCK_TIMEOUT` ל-10000.
+- **direction=unknown**: השעון מחזיר state חריג — שלח לי את הפלט מ-`--raw`.

@@ -1,16 +1,14 @@
 {
   "name": "attendance-clock-agent",
-  "version": "1.0.0",
-  "description": "Agent מקומי שקורא נתונים משעון נוכחות ושולח ל-Lovable Cloud",
+  "version": "2.0.0",
+  "description": "Agent מקומי לשעון ZKTeco U560 — מושך פאנצ'ים בפרוטוקול ZK ושולח ל-Lovable Cloud",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "raw": "node index.js --raw"
+    "raw": "node index.js --raw",
+    "once": "node index.js --once"
   },
   "dependencies": {
-    "node-fetch": "^3.3.0"
-  },
-  "optionalDependencies": {
-    "serialport": "^12.0.0"
+    "node-zklib": "^1.1.10"
   }
 }
