@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Check, X, DollarSign, Clock4, AlertTriangle, UserPlus2 } from "lucide-react";
+import { AttendanceFlowIndicator } from "./AttendanceFlowIndicator";
 
 const MONTHS = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
 
@@ -61,6 +62,7 @@ export function AttendanceClockTab() {
 
   return (
     <div className="space-y-6" dir="rtl">
+      <AttendanceFlowIndicator />
       {/* Health widget */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <StatCard icon={<Clock4 className="w-4 h-4" />} label="פעימות החודש" value={stats.data?.total ?? 0} />
