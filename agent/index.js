@@ -52,12 +52,60 @@ const STATE_FILE = path.resolve(__dirname, process.env.STATE_FILE || "./state.js
 const EMPLOYEE_CODE_PREFIX = process.env.EMPLOYEE_CODE_PREFIX || "";
 const BATCH_SIZE = parseInt(process.env.BATCH_SIZE || "200", 10);
 
-const RAW_MODE = process.argv.includes("--raw");
-const ONCE_MODE = process.argv.includes("--once");
-const SINCE_ARG = process.argv.find((a) => a.startsWith("--since="));
-const LIMIT_ARG = process.argv.find((a) => a.startsWith("--limit="));
-const SINCE = SINCE_ARG ? new Date(SINCE_ARG.split("=")[1]) : null;
-const LIMIT = LIMIT_ARG ? parseInt(LIMIT_ARG.split("=")[1], 10) : null;
+// --- ניתוח ארגומנטים גמיש: תומך ב --flag=value, --flag value, ועם/בלי מרכאות ---
+function parseArgs(argv) {
+  const out = { flags: new Set(), values: {} };
+  const stripQuotes = (s) => {
+    if (!s) return s;
+    s = String(s).trim();
+    if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+      s = s.slice(1, -1);
+    }
+    return s;
+  };
+  for (let i = 0; i < argv.length; i++) {
+    let a = stripQuotes(argv[i]);
+    if (!a || !a.startsWith("--")) continue;
+    const eq = a.indexOf("=");
+    if (eq !== -1) {
+      const k = a.slice(2, eq);
+      const v = stripQuotes(a.slice(eq + 1));
+      out.values[k] = v;
+      out.flags.add(k);
+    } else {
+      const k = a.slice(2);
+      out.flags.add(k);
+      const next = argv[i + 1];
+      if (next && !String(next).startsWith("--")) {
+        out.values[k] = stripQuotes(next);
+        i++;
+      }
+    }
+  }
+  return out;
+}
+
+const ARGS = parseArgs(process.argv.slice(2));
+const RAW_MODE = ARGS.flags.has("raw");
+const ONCE_MODE = ARGS.flags.has("once");
+
+// תאריך מינימלי קשיח — גם אם לא הועבר --since, רשומות לפני זה לא יישלחו
+const HARD_MIN_DATE = new Date(process.env.HARD_MIN_DATE || "2026-04-01T00:00:00Z");
+const DEFAULT_SINCE = process.env.DEFAULT_SINCE ? new Date(process.env.DEFAULT_SINCE) : null;
+
+const SINCE_RAW = ARGS.values["since"] || null;
+const LIMIT_RAW = ARGS.values["limit"] || null;
+let SINCE = SINCE_RAW ? new Date(SINCE_RAW) : (DEFAULT_SINCE || HARD_MIN_DATE);
+if (isNaN(SINCE.getTime())) {
+  console.warn(`⚠️  --since לא תקין ("${SINCE_RAW}") — חוזר ל-HARD_MIN_DATE`);
+  SINCE = HARD_MIN_DATE;
+}
+// לעולם לא לרדת מתחת ל-HARD_MIN_DATE
+if (SINCE < HARD_MIN_DATE) {
+  console.warn(`⚠️  --since=${SINCE.toISOString()} מוקדם מהמינימום — נכפה ${HARD_MIN_DATE.toISOString()}`);
+  SINCE = HARD_MIN_DATE;
+}
+const LIMIT = LIMIT_RAW ? parseInt(LIMIT_RAW, 10) : null;
 
 function mapDirection(state) {
   switch (Number(state)) {
