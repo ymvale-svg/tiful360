@@ -73,8 +73,8 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const companyIds = [...new Set(punches.map((p) => p.company_id))];
-    const codes = [...new Set(punches.map((p) => p.employee_code))];
+    const companyIds = [...new Set(filteredPunches.map((p) => p.company_id))];
+    const codes = [...new Set(filteredPunches.map((p) => p.employee_code))];
 
     const { data: employees, error: empErr } = await supabase
       .from("employees")
@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
       empMap.set(`${e.company_id}::${e.employee_code}`, e.id);
     }
 
-    const rows = punches.map((p) => {
+    const rows = filteredPunches.map((p) => {
       const employee_id = empMap.get(`${p.company_id}::${p.employee_code}`) ?? null;
       return {
         company_id: p.company_id,
@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
     }
 
     const matched = rows.filter((r) => r.employee_id).length;
-    return json({ ok: true, received: rows.length, matched, unmatched: rows.length - matched });
+    return json({ ok: true, received: rows.length, matched, unmatched: rows.length - matched, blocked });
   } catch (e) {
     console.error("unhandled", e);
     return json({ error: "internal_error", details: String(e) }, 500);
