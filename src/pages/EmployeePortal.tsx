@@ -632,6 +632,19 @@ export default function EmployeePortal() {
             managerId={myEmployee.direct_manager_id ?? null}
             initiatedBy="employee"
           />
+          {myEmployee.can_remote_punch && remotePunchDir && (
+            <RemotePunchDialog
+              open={!!remotePunchDir}
+              onOpenChange={(v) => !v && setRemotePunchDir(null)}
+              direction={remotePunchDir}
+              employee={{
+                id: myEmployee.id,
+                company_id: myEmployee.company_id,
+                employee_code: myEmployee.employee_code,
+                full_name: myEmployee.full_name,
+              }}
+            />
+          )}
         </>
       )}
     </div>
