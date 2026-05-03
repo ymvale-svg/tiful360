@@ -122,6 +122,15 @@ export function AttendanceFlowIndicator() {
   return (
     <Card className={`border ${status === "live" ? "border-green-500/40" : status === "down" ? "border-amber-500/40" : ""}`} dir="rtl">
       <CardContent className="p-4">
+        {showAlert && (
+          <div className="mb-3 flex items-start gap-2 rounded-md border border-red-500/40 bg-red-500/10 p-2.5 text-red-700 dark:text-red-400">
+            <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <div className="text-xs leading-relaxed">
+              <div className="font-semibold">לא מתקבלות פעימות מהשעון יותר מ-10 דק'.</div>
+              <div className="text-red-700/80 dark:text-red-400/80">בדוק שהאגנט במחשב המקומי פועל (sc query tiful360attendanceagent) ושיש חיבור לשעון 10.0.0.114.</div>
+            </div>
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-3 justify-between">
           <div className="flex items-center gap-3">
             <div className="relative">
