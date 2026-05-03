@@ -94,8 +94,8 @@ export function AttendanceClockTab() {
                 value={employeeId ?? ""}
                 onChange={(v) => setEmployeeId(v || null)}
                 placeholder="בחר/י עובד…"
-                searchPlaceholder="חיפוש עובד"
-                emptyMessage="לא נמצאו עובדים"
+
+
               />
             </div>
             <div>
@@ -201,8 +201,8 @@ function OrphansPanel({ punches, employees }: { punches: AttendancePunch[]; empl
                         }
                       }}
                       placeholder="בחר/י עובד…"
-                      searchPlaceholder="חיפוש"
-                      emptyMessage="אין"
+
+
                     />
                   </td>
                   <td className="p-2">
