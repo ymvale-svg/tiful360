@@ -422,6 +422,51 @@ export type Database = {
         }
         Relationships: []
       }
+      attendance_punches: {
+        Row: {
+          company_id: string
+          created_at: string
+          direction: string
+          employee_code_raw: string
+          employee_id: string | null
+          id: string
+          processed_at: string | null
+          processed_by: string | null
+          punch_at: string
+          raw_payload: Json | null
+          source: string
+          status: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          direction?: string
+          employee_code_raw: string
+          employee_id?: string | null
+          id?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          punch_at: string
+          raw_payload?: Json | null
+          source?: string
+          status?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          direction?: string
+          employee_code_raw?: string
+          employee_id?: string | null
+          id?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          punch_at?: string
+          raw_payload?: Json | null
+          source?: string
+          status?: string
+        }
+        Relationships: []
+      }
       attendance_records: {
         Row: {
           check_in: string | null
