@@ -100,7 +100,7 @@ export function AttendanceClockTab() {
             </div>
             <div>
               <label className="text-xs text-muted-foreground">חודש</label>
-              <Select value={String(month)} onChange={(v) => setMonth(Number(v))}>
+              <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {MONTHS.map((m, i) => <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>)}
@@ -109,7 +109,7 @@ export function AttendanceClockTab() {
             </div>
             <div>
               <label className="text-xs text-muted-foreground">שנה</label>
-              <Select value={String(year)} onChange={(v) => setYear(Number(v))}>
+              <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {[now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map(y => (
