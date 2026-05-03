@@ -274,8 +274,10 @@ async function main() {
   }
 
   console.log("=== ZKTeco Attendance Agent ===");
+  console.log(`Args: ${JSON.stringify(process.argv.slice(2))}`);
   console.log(`Host: ${CLOCK_HOST}:${CLOCK_PORT} | Prefix: "${EMPLOYEE_CODE_PREFIX}"`);
-  console.log(`Mode: ${RAW_MODE ? "RAW" : ONCE_MODE ? "ONCE" : `POLL ${POLL_INTERVAL_MS}ms`}${SINCE ? ` since=${SINCE.toISOString()}` : ""}${LIMIT ? ` limit=${LIMIT}` : ""}`);
+  console.log(`HARD_MIN_DATE: ${HARD_MIN_DATE.toISOString()} | Effective SINCE: ${SINCE.toISOString()}${LIMIT ? ` | limit=${LIMIT}` : ""}`);
+  console.log(`Mode: ${RAW_MODE ? "RAW" : ONCE_MODE ? "ONCE" : `POLL ${POLL_INTERVAL_MS}ms`}`);
 
   await runCycle();
   if (RAW_MODE || ONCE_MODE) return;
