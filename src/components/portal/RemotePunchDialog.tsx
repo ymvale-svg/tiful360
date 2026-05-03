@@ -55,6 +55,15 @@ export function RemotePunchDialog({ open, onOpenChange, direction, employee }: P
       toast({ title: "חתימה חסרה", description: "נא לחתום לפני שליחה", variant: "destructive" });
       return;
     }
+    if (!geo) {
+      toast({
+        title: "מיקום חסר",
+        description: "יש לאשר שיתוף מיקום GPS לפני שליחת ההחתמה",
+        variant: "destructive",
+      });
+      captureGeo();
+      return;
+    }
     try {
       await create.mutateAsync({
         companyId: employee.company_id,
