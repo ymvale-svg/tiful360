@@ -409,30 +409,77 @@ export default function EmployeePortal() {
               </p>
             )}
 
-            {myEmployee && myAttendance.length > 0 ? (
+            {myEmployee?.can_remote_punch && (
+              <div className="bg-card rounded-xl border border-border/50 p-3">
+                <p className="text-xs font-semibold text-muted-foreground mb-2">דיווח נוכחות מרחוק</p>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    className="flex-1 gap-1"
+                    onClick={() => setRemotePunchDir("in")}
+                  >
+                    <Clock className="w-3 h-3" />
+                    כניסה
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 gap-1"
+                    onClick={() => setRemotePunchDir("out")}
+                  >
+                    <Clock className="w-3 h-3" />
+                    יציאה
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {myEmployee && myPunches.length > 0 ? (
               <div className="space-y-2">
-                {myAttendance.map((row) => (
-                  <div key={row.id} className="bg-card rounded-xl border border-border/50 p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">
-                        {new Date(row.date).toLocaleDateString("he-IL")}
-                      </span>
-                      <span className={cn(
-                        "text-[11px] px-2 py-0.5 rounded-full font-medium",
-                        row.source === "משרד"
-                          ? "bg-primary/10 text-primary"
-                          : "bg-accent text-accent-foreground"
-                      )}>
-                        {row.source}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                      <span>כניסה: <span className="font-mono text-foreground">{row.check_in?.slice(0, 5) || "—"}</span></span>
-                      <span>יציאה: <span className="font-mono text-foreground">{row.check_out?.slice(0, 5) || "—"}</span></span>
-                      <span className="font-semibold text-foreground">{calcHours(row.check_in, row.check_out)} שעות</span>
-                    </div>
-                  </div>
-                ))}
+                {(() => {
+                  // Group punches by day
+                  const byDay = new Map<string, typeof myPunches>();
+                  for (const p of myPunches) {
+                    const day = new Date(p.punch_at).toLocaleDateString("he-IL");
+                    if (!byDay.has(day)) byDay.set(day, [] as any);
+                    byDay.get(day)!.push(p);
+                  }
+                  return Array.from(byDay.entries()).map(([day, items]) => {
+                    const sorted = [...items].sort((a, b) => a.punch_at.localeCompare(b.punch_at));
+                    const ins = sorted.filter((p) => p.direction === "in");
+                    const outs = sorted.filter((p) => p.direction === "out");
+                    const firstIn = ins[0]?.punch_at;
+                    const lastOut = outs[outs.length - 1]?.punch_at;
+                    const hours = firstIn && lastOut ? calcHours(
+                      new Date(firstIn).toTimeString().slice(0, 5),
+                      new Date(lastOut).toTimeString().slice(0, 5),
+                    ) : "—";
+                    const isRemote = sorted.some((p) => p.source === "portal_remote");
+                    return (
+                      <div key={day} className="bg-card rounded-xl border border-border/50 p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium">{day}</span>
+                          <span className={cn(
+                            "text-[11px] px-2 py-0.5 rounded-full font-medium",
+                            isRemote ? "bg-accent text-accent-foreground" : "bg-primary/10 text-primary"
+                          )}>
+                            {isRemote ? "מרחוק 🖊️" : "שעון"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                          <span>כניסה: <span className="font-mono text-foreground">
+                            {firstIn ? new Date(firstIn).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" }) : "—"}
+                          </span></span>
+                          <span>יציאה: <span className="font-mono text-foreground">
+                            {lastOut ? new Date(lastOut).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" }) : "—"}
+                          </span></span>
+                          <span className="font-semibold text-foreground">{hours} שעות</span>
+                          <span className="text-[10px]">({sorted.length} פעימות)</span>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             ) : myEmployee ? (
               <p className="text-center text-sm text-muted-foreground py-4">אין רשומות נוכחות</p>
@@ -440,7 +487,7 @@ export default function EmployeePortal() {
 
             <p className="text-[11px] text-muted-foreground flex items-center gap-1">
               <AlertCircle className="w-3 h-3" />
-              נתוני הנוכחות הם לקריאה בלבד
+              היומן מתעדכן אוטומטית מהשעון. לתיקון — שלח/י בקשת תיקון.
             </p>
           </div>
         )}
