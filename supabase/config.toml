@@ -11,3 +11,5 @@ project_id = "rhzmhiknbcipucfvgkok"
     verify_jwt = false
   [functions.send-tax101-invite]
     verify_jwt = false
+  [functions.ingest-attendance-punch]
+    verify_jwt = false
