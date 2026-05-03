@@ -32,12 +32,9 @@ async function inlineImages(root: HTMLElement) {
   );
 }
 
-export async function generateAndUploadHandoverPdf(
-  el: HTMLElement,
-  path: string,
-): Promise<string> {
+/** Render the element to a PDF blob (no upload). */
+export async function renderHandoverPdfBlob(el: HTMLElement): Promise<Blob> {
   await inlineImages(el);
-
   const canvas = await html2canvas(el, {
     scale: 2,
     useCORS: true,
@@ -46,7 +43,6 @@ export async function generateAndUploadHandoverPdf(
     logging: false,
   });
   const imgData = canvas.toDataURL("image/png");
-
   const pdf = new jsPDF({ orientation: "portrait", unit: "px", format: "a4" });
   const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
@@ -58,13 +54,19 @@ export async function generateAndUploadHandoverPdf(
     imgW = pageH * ratio;
   }
   pdf.addImage(imgData, "PNG", (pageW - imgW) / 2, 0, imgW, imgH);
-  const blob = pdf.output("blob");
+  return pdf.output("blob");
+}
 
+/** Authenticated path: upload directly via storage policy. */
+export async function generateAndUploadHandoverPdf(
+  el: HTMLElement,
+  path: string,
+): Promise<string> {
+  const blob = await renderHandoverPdfBlob(el);
   const { error } = await supabase.storage
     .from("handover-forms")
     .upload(path, blob, { contentType: "application/pdf", upsert: true });
   if (error) throw error;
-
   const { data } = supabase.storage.from("handover-forms").getPublicUrl(path);
   return data.publicUrl;
 }
