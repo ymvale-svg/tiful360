@@ -802,6 +802,7 @@ export type Database = {
           balances_source: string | null
           balances_updated_at: string | null
           birth_date: string | null
+          can_remote_punch: boolean
           city: string | null
           company_id: string | null
           contact_sort_order: number | null
@@ -839,6 +840,7 @@ export type Database = {
           balances_source?: string | null
           balances_updated_at?: string | null
           birth_date?: string | null
+          can_remote_punch?: boolean
           city?: string | null
           company_id?: string | null
           contact_sort_order?: number | null
@@ -876,6 +878,7 @@ export type Database = {
           balances_source?: string | null
           balances_updated_at?: string | null
           birth_date?: string | null
+          can_remote_punch?: boolean
           city?: string | null
           company_id?: string | null
           contact_sort_order?: number | null
@@ -1770,6 +1773,10 @@ export type Database = {
       }
     }
     Functions: {
+      classify_existing_punches: {
+        Args: { _company_id: string }
+        Returns: number
+      }
       delete_company_cascade: {
         Args: { _company_id: string }
         Returns: undefined
