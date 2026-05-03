@@ -146,8 +146,15 @@ export function AttendanceFlowIndicator() {
             <Stat label="ב-5 דק'" value={state.countLast5Min} highlight={state.countLast5Min > 0} />
             <Stat label="בשעה" value={state.countLastHour} />
             <Stat label="היום" value={state.countToday} />
-            <Button variant="ghost" size="sm" onClick={refresh} className="h-8 px-2">
-              <RefreshCw className="w-3.5 h-3.5" />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={refresh}
+              disabled={isRefreshing || !activeCompanyId}
+              className="h-8 px-2"
+              title={`עודכן: ${new Date(lastRefreshAt).toLocaleTimeString("he-IL")}`}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
             </Button>
           </div>
         </div>
