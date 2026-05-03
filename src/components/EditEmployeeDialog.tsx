@@ -47,6 +47,7 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
         direct_manager_id: employee.direct_manager_id ?? "",
         sub_employer_id: employee.sub_employer_id ?? "",
         exclude_from_contacts: !!employee.exclude_from_contacts,
+        can_remote_punch: !!employee.can_remote_punch,
       });
     }
   }, [employee, open]);
