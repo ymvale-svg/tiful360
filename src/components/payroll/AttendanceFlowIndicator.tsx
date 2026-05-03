@@ -120,12 +120,12 @@ export function AttendanceFlowIndicator() {
   const showAlert = status === "down";
 
   return (
-    <Card className={`border ${status === "live" ? "border-green-500/40" : status === "stale" || status === "down" ? "border-amber-500/40" : ""}`} dir="rtl">
+    <Card className={`border ${status === "live" ? "border-green-500/40" : status === "down" ? "border-amber-500/40" : ""}`} dir="rtl">
       <CardContent className="p-4">
         <div className="flex flex-wrap items-center gap-3 justify-between">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <Icon className={`w-5 h-5 ${status === "live" ? "text-green-600 dark:text-green-400" : status === "stale" || status === "down" ? "text-amber-600 dark:text-amber-400" : "text-blue-600 dark:text-blue-400"}`} />
+              <Icon className={`w-5 h-5 ${status === "live" ? "text-green-600 dark:text-green-400" : status === "down" ? "text-amber-600 dark:text-amber-400" : "text-blue-600 dark:text-blue-400"}`} />
               {status === "live" && (
                 <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
