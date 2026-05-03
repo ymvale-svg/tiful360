@@ -18,6 +18,8 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Check, X, DollarSign, Clock4, AlertTriangle, UserPlus2 } from "lucide-react";
 import { AttendanceFlowIndicator } from "./AttendanceFlowIndicator";
+import { useCompany } from "@/hooks/useCompany";
+import { supabase } from "@/integrations/supabase/client";
 
 const MONTHS = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
 
@@ -63,6 +65,8 @@ export function AttendanceClockTab() {
   return (
     <div className="space-y-6" dir="rtl">
       <AttendanceFlowIndicator />
+      <ReclassifyButton />
+
       {/* Health widget */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <StatCard icon={<Clock4 className="w-4 h-4" />} label="פעימות החודש" value={stats.data?.total ?? 0} />
@@ -390,5 +394,31 @@ function PunchChip({ punch }: { punch: AttendancePunch }) {
     >
       {formatTime(punch.punch_at)} {DIR_LABEL[punch.direction]}
     </button>
+  );
+}
+
+function ReclassifyButton() {
+  const { activeCompanyId } = useCompany();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const run = async () => {
+    if (!activeCompanyId) return;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.rpc("classify_existing_punches" as any, { _company_id: activeCompanyId });
+      if (error) throw error;
+      toast({ title: "סיווג מחדש הושלם", description: `עודכנו ${data ?? 0} פעימות` });
+    } catch (e: any) {
+      toast({ title: "שגיאה", description: e.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+  return (
+    <div className="flex justify-end">
+      <Button size="sm" variant="outline" onClick={run} disabled={loading}>
+        {loading ? "מסווג..." : "סווג מחדש כניסות/יציאות"}
+      </Button>
+    </div>
   );
 }

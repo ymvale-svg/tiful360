@@ -47,6 +47,7 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
         direct_manager_id: employee.direct_manager_id ?? "",
         sub_employer_id: employee.sub_employer_id ?? "",
         exclude_from_contacts: !!employee.exclude_from_contacts,
+        can_remote_punch: !!employee.can_remote_punch,
       });
     }
   }, [employee, open]);
@@ -245,6 +246,17 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
           />
           <Label htmlFor="exclude_from_contacts" className="text-sm cursor-pointer">
             אל תכלול ברשימת אנשי הקשר בפורטל
+          </Label>
+        </div>
+
+        <div className="mt-2 flex items-center gap-2">
+          <Checkbox
+            id="can_remote_punch"
+            checked={!!form.can_remote_punch}
+            onCheckedChange={(v) => set("can_remote_punch", !!v)}
+          />
+          <Label htmlFor="can_remote_punch" className="text-sm cursor-pointer">
+            מורשה דיווח נוכחות מרחוק (עובד שטח)
           </Label>
         </div>
 
