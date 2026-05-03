@@ -21,6 +21,8 @@ import { useMyAttendanceCorrections } from "@/hooks/useAttendanceCorrections";
 import { EmployeePayslipsTab } from "@/components/EmployeePayslipsTab";
 import { Tax101Banner } from "@/components/portal/Tax101Banner";
 import { MyTax101FormsList } from "@/components/portal/MyTax101FormsList";
+import { RemotePunchDialog } from "@/components/portal/RemotePunchDialog";
+import { useMyPunches } from "@/hooks/useAttendancePunches";
 import { Plus } from "lucide-react";
 
 const portalTabs = [
