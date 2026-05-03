@@ -394,3 +394,30 @@ function PunchChip({ punch }: { punch: AttendancePunch }) {
     </button>
   );
 }
+
+function ReclassifyButton() {
+  const { activeCompanyId } = (require("@/hooks/useCompany") as typeof import("@/hooks/useCompany")).useCompany();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const run = async () => {
+    if (!activeCompanyId) return;
+    setLoading(true);
+    try {
+      const { data, error } = await (await import("@/integrations/supabase/client")).supabase
+        .rpc("classify_existing_punches", { _company_id: activeCompanyId });
+      if (error) throw error;
+      toast({ title: "סיווג מחדש הושלם", description: `עודכנו ${data ?? 0} פעימות` });
+    } catch (e: any) {
+      toast({ title: "שגיאה", description: e.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+  return (
+    <div className="flex justify-end">
+      <Button size="sm" variant="outline" onClick={run} disabled={loading}>
+        {loading ? "מסווג..." : "סווג מחדש כניסות/יציאות"}
+      </Button>
+    </div>
+  );
+}
