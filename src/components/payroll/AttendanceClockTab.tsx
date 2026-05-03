@@ -63,6 +63,8 @@ export function AttendanceClockTab() {
   return (
     <div className="space-y-6" dir="rtl">
       <AttendanceFlowIndicator />
+      <ReclassifyButton />
+
       {/* Health widget */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <StatCard icon={<Clock4 className="w-4 h-4" />} label="פעימות החודש" value={stats.data?.total ?? 0} />
