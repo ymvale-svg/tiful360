@@ -103,6 +103,19 @@ export default function EmployeePortal() {
 
   // Fetch attendance punches for my employee (last 30 days)
   const { data: myPunches = [] } = useMyPunches(myEmployee?.id, 30);
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (!myEmployee?.id) return;
+    const ch = supabase
+      .channel(`my_punches_${myEmployee.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "attendance_punches", filter: `employee_id=eq.${myEmployee.id}` },
+        () => qc.invalidateQueries({ queryKey: ["attendance_punches", "mine", myEmployee.id] }),
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [myEmployee?.id, qc]);
 
   // Fetch portal links from DB
   const { data: portalLinks = [] } = useQuery({
