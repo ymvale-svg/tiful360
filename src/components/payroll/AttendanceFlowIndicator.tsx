@@ -36,27 +36,19 @@ export function AttendanceFlowIndicator() {
 
   const refresh = async () => {
     if (!activeCompanyId) return;
-    const now = Date.now();
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-    const hourAgo = new Date(now - 60 * 60 * 1000).toISOString();
-    const fiveMinAgo = new Date(now - 5 * 60 * 1000).toISOString();
-
-    const { data } = await supabase
-      .from("attendance_punches")
-      .select("punch_at, created_at")
-      .eq("company_id", activeCompanyId)
-      .gte("created_at", startOfDay.toISOString())
-      .order("created_at", { ascending: false })
-      .limit(500);
-
-    const arr = data ?? [];
-    const lastAt = arr.length ? arr[0].created_at : null;
+    const { data, error } = await supabase.rpc("get_attendance_flow_stats", {
+      _company_id: activeCompanyId,
+    });
+    if (error) {
+      setState((s) => ({ ...s, loading: false }));
+      return;
+    }
+    const row: any = Array.isArray(data) ? data[0] : data;
     setState({
-      lastPunchAt: lastAt,
-      countLast5Min: arr.filter((r: any) => r.created_at >= fiveMinAgo).length,
-      countLastHour: arr.filter((r: any) => r.created_at >= hourAgo).length,
-      countToday: arr.length,
+      lastPunchAt: row?.last_punch_at ?? null,
+      countLast5Min: Number(row?.count_5min ?? 0),
+      countLastHour: Number(row?.count_hour ?? 0),
+      countToday: Number(row?.count_today ?? 0),
       loading: false,
     });
   };
