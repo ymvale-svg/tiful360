@@ -249,6 +249,17 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
           </Label>
         </div>
 
+        <div className="mt-2 flex items-center gap-2">
+          <Checkbox
+            id="can_remote_punch"
+            checked={!!form.can_remote_punch}
+            onCheckedChange={(v) => set("can_remote_punch", !!v)}
+          />
+          <Label htmlFor="can_remote_punch" className="text-sm cursor-pointer">
+            מורשה דיווח נוכחות מרחוק (עובד שטח)
+          </Label>
+        </div>
+
         <div className="flex gap-2 pt-4">
           <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>ביטול</Button>
           <Button className="flex-1" disabled={update.isPending} onClick={handleSave}>
