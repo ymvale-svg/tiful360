@@ -18,6 +18,8 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Check, X, DollarSign, Clock4, AlertTriangle, UserPlus2 } from "lucide-react";
 import { AttendanceFlowIndicator } from "./AttendanceFlowIndicator";
+import { useCompany } from "@/hooks/useCompany";
+import { supabase } from "@/integrations/supabase/client";
 
 const MONTHS = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
 
