@@ -134,3 +134,57 @@ export function useUpdatePunch() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["attendance_punches"] }),
   });
 }
+
+/** הפעימות של העובד הנוכחי (פורטל) */
+export function useMyPunches(employeeId: string | null | undefined, days = 30) {
+  return useQuery({
+    queryKey: ["attendance_punches", "mine", employeeId, days],
+    queryFn: async () => {
+      if (!employeeId) return [];
+      const since = new Date(Date.now() - days * 86400000).toISOString();
+      const { data, error } = await supabase
+        .from("attendance_punches")
+        .select("*")
+        .eq("employee_id", employeeId)
+        .gte("punch_at", since)
+        .order("punch_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as AttendancePunch[];
+    },
+    enabled: !!employeeId,
+  });
+}
+
+/** יצירת פעימה מרחוק עם חתימה */
+export function useCreateRemotePunch() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: {
+      companyId: string;
+      employeeId: string;
+      employeeCode: string;
+      direction: "in" | "out";
+      signatureDataUrl: string;
+      note?: string;
+      geo?: { lat: number; lng: number; accuracy?: number } | null;
+    }) => {
+      const { error } = await supabase.from("attendance_punches").insert({
+        company_id: params.companyId,
+        employee_id: params.employeeId,
+        employee_code_raw: params.employeeCode,
+        punch_at: new Date().toISOString(),
+        direction: params.direction,
+        source: "portal_remote",
+        status: "pending",
+        raw_payload: {
+          signature_data_url: params.signatureDataUrl,
+          note: params.note ?? null,
+          geo: params.geo ?? null,
+          user_agent: navigator.userAgent,
+        },
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["attendance_punches"] }),
+  });
+}
