@@ -1782,6 +1782,15 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      get_attendance_flow_stats: {
+        Args: { _company_id: string }
+        Returns: {
+          count_5min: number
+          count_hour: number
+          count_today: number
+          last_punch_at: string
+        }[]
+      }
       get_company_birthdays: {
         Args: { _company_id: string }
         Returns: {
