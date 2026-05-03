@@ -38,6 +38,7 @@ export default function EmployeePortal() {
   const [activeTab, setActiveTab] = useState("assets");
   const [newLeaveOpen, setNewLeaveOpen] = useState(false);
   const [correctionOpen, setCorrectionOpen] = useState(false);
+  const [remotePunchDir, setRemotePunchDir] = useState<"in" | "out" | null>(null);
   const { user, signOut } = useAuth();
   const { data: profile } = useProfile();
   const { activeCompanyId } = useCompany();
