@@ -11,7 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProfile, useCompanyContacts } from "@/hooks/useData";
 import { useCompany } from "@/hooks/useCompany";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PendingHandoverForms } from "@/components/PendingHandoverForms";
 import { NewLeaveRequestDialog } from "@/components/NewLeaveRequestDialog";
 import { LeaveRequestsList } from "@/components/LeaveRequestsList";
