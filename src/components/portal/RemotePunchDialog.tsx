@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,7 +24,10 @@ export function RemotePunchDialog({ open, onOpenChange, direction, employee }: P
   const { toast } = useToast();
 
   const captureGeo = () => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      setGeoStatus("denied");
+      return;
+    }
     setGeoStatus("loading");
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -32,14 +35,33 @@ export function RemotePunchDialog({ open, onOpenChange, direction, employee }: P
         setGeoStatus("ok");
       },
       () => setGeoStatus("denied"),
-      { enableHighAccuracy: true, timeout: 8000 },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
     );
   };
+
+  // אוטומטית מבקש מיקום בפתיחת הדיאלוג
+  useEffect(() => {
+    if (open && geoStatus === "idle") captureGeo();
+    if (!open) {
+      setGeo(null);
+      setGeoStatus("idle");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const submit = async () => {
     const sig = sigRef.current?.getDataUrl();
     if (!sig) {
       toast({ title: "חתימה חסרה", description: "נא לחתום לפני שליחה", variant: "destructive" });
+      return;
+    }
+    if (!geo) {
+      toast({
+        title: "מיקום חסר",
+        description: "יש לאשר שיתוף מיקום GPS לפני שליחת ההחתמה",
+        variant: "destructive",
+      });
+      captureGeo();
       return;
     }
     try {
@@ -93,22 +115,39 @@ export function RemotePunchDialog({ open, onOpenChange, direction, employee }: P
             />
           </div>
 
-          <div className="flex items-center justify-between text-xs">
-            <Button type="button" variant="outline" size="sm" onClick={captureGeo} className="gap-1">
-              <MapPin className="w-3 h-3" />
-              {geoStatus === "loading" ? "מאתר..." : "צרף מיקום"}
-            </Button>
-            <span className="text-muted-foreground">
-              {geoStatus === "ok" && geo && `נשמר: ${geo.lat.toFixed(4)}, ${geo.lng.toFixed(4)}`}
-              {geoStatus === "denied" && "אישור מיקום נדחה"}
-            </span>
+          <div className="rounded-md border p-2 text-xs space-y-1">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1 font-medium">
+                <MapPin className="w-3 h-3" />
+                מיקום GPS {geoStatus !== "ok" && <span className="text-destructive">*חובה</span>}
+              </div>
+              <Button type="button" variant="ghost" size="sm" onClick={captureGeo} className="h-6 text-xs">
+                {geoStatus === "loading" ? "מאתר..." : geoStatus === "ok" ? "רענן" : "אתר עכשיו"}
+              </Button>
+            </div>
+            <div className="text-muted-foreground">
+              {geoStatus === "loading" && "מאתר את מיקומך..."}
+              {geoStatus === "ok" && geo && (
+                <a
+                  href={`https://www.google.com/maps?q=${geo.lat},${geo.lng}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline"
+                >
+                  {geo.lat.toFixed(5)}, {geo.lng.toFixed(5)}
+                  {geo.accuracy ? ` (±${Math.round(geo.accuracy)} מ׳)` : ""}
+                </a>
+              )}
+              {geoStatus === "denied" && "אישור מיקום נדחה — יש לאפשר גישה למיקום בדפדפן"}
+              {geoStatus === "idle" && "לחץ על 'אתר עכשיו' כדי לשתף מיקום"}
+            </div>
           </div>
 
           <div className="flex gap-2 pt-2">
             <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
               ביטול
             </Button>
-            <Button className="flex-1" onClick={submit} disabled={create.isPending}>
+            <Button className="flex-1" onClick={submit} disabled={create.isPending || !geo}>
               {create.isPending ? "שולח..." : isIn ? "אישור כניסה" : "אישור יציאה"}
             </Button>
           </div>
