@@ -8,7 +8,8 @@ import {
   OffboardingFormData,
 } from "@/components/OffboardingFormView";
 import { SignaturePad, SignaturePadHandle } from "@/components/SignaturePad";
-import { generateAndUploadOffboardingPdf } from "@/lib/generateOffboardingPdf";
+import { renderHandoverPdfBlob } from "@/lib/generateHandoverPdf";
+import { uploadViaSignedToken } from "@/lib/signedFormUpload";
 import { useToast } from "@/hooks/use-toast";
 
 export default function SignOffboarding() {
@@ -54,23 +55,23 @@ export default function SignOffboarding() {
 
       let attachedUrl = record.attached_document_url;
       if (attachment) {
-        const ext = attachment.name.split(".").pop();
-        const path = `offboarding/${record.company_id}/${record.employee_id}/${record.id}-attached-${Date.now()}.${ext}`;
-        const { error } = await supabase.storage
-          .from("handover-forms")
-          .upload(path, attachment);
-        if (error) throw error;
-        attachedUrl = supabase.storage
-          .from("handover-forms")
-          .getPublicUrl(path).data.publicUrl;
+        attachedUrl = await uploadViaSignedToken({
+          sign_token: token!,
+          form_type: "offboarding",
+          kind: "attachment",
+          file: attachment,
+        });
       }
 
-      const pdfUrl = await generateAndUploadOffboardingPdf(
-        formRef.current,
-        record.company_id,
-        record.employee_id,
-        record.id,
-      );
+      const pdfBlob = await renderHandoverPdfBlob(formRef.current);
+      const pdfUrl = await uploadViaSignedToken({
+        sign_token: token!,
+        form_type: "offboarding",
+        kind: "pdf",
+        file: pdfBlob,
+        filename: "form.pdf",
+        contentType: "application/pdf",
+      });
 
       const { error } = await supabase
         .from("offboarding_forms")
