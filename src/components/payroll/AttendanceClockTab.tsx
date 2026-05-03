@@ -398,15 +398,14 @@ function PunchChip({ punch }: { punch: AttendancePunch }) {
 }
 
 function ReclassifyButton() {
-  const { activeCompanyId } = (require("@/hooks/useCompany") as typeof import("@/hooks/useCompany")).useCompany();
+  const { activeCompanyId } = useCompany();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const run = async () => {
     if (!activeCompanyId) return;
     setLoading(true);
     try {
-      const { data, error } = await (await import("@/integrations/supabase/client")).supabase
-        .rpc("classify_existing_punches", { _company_id: activeCompanyId });
+      const { data, error } = await supabase.rpc("classify_existing_punches" as any, { _company_id: activeCompanyId });
       if (error) throw error;
       toast({ title: "סיווג מחדש הושלם", description: `עודכנו ${data ?? 0} פעימות` });
     } catch (e: any) {
