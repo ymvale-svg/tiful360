@@ -19,6 +19,7 @@ import { EmployeePayslipsTab } from "@/components/EmployeePayslipsTab";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Tax101AdminTab } from "@/components/payroll/Tax101AdminTab";
+import { AttendanceClockTab } from "@/components/payroll/AttendanceClockTab";
 
 const MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
 const TYPE_LABELS_PAYROLL: Record<string, string> = { vacation: "חופשה", sick: "מחלה", personal: "יום אישי", other: "אחר" };
@@ -65,6 +66,10 @@ export default function Payroll() {
             <FileText className="w-4 h-4" />
             טפסי עובדים
           </TabsTrigger>
+          <TabsTrigger value="attendance" className="gap-1.5">
+            <Clock4 className="w-4 h-4" />
+            שעוני נוכחות
+          </TabsTrigger>
           <TabsTrigger value="settings" className="gap-1.5">
             <SettingsIcon className="w-4 h-4" />
             הגדרות שכר
@@ -85,6 +90,10 @@ export default function Payroll() {
 
         <TabsContent value="tax101">
           <Tax101AdminTab />
+        </TabsContent>
+
+        <TabsContent value="attendance">
+          <AttendanceClockTab />
         </TabsContent>
 
         <TabsContent value="settings">
