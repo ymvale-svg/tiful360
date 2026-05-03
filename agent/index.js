@@ -52,12 +52,60 @@ const STATE_FILE = path.resolve(__dirname, process.env.STATE_FILE || "./state.js
 const EMPLOYEE_CODE_PREFIX = process.env.EMPLOYEE_CODE_PREFIX || "";
 const BATCH_SIZE = parseInt(process.env.BATCH_SIZE || "200", 10);
 
-const RAW_MODE = process.argv.includes("--raw");
-const ONCE_MODE = process.argv.includes("--once");
-const SINCE_ARG = process.argv.find((a) => a.startsWith("--since="));
-const LIMIT_ARG = process.argv.find((a) => a.startsWith("--limit="));
-const SINCE = SINCE_ARG ? new Date(SINCE_ARG.split("=")[1]) : null;
-const LIMIT = LIMIT_ARG ? parseInt(LIMIT_ARG.split("=")[1], 10) : null;
+// --- ניתוח ארגומנטים גמיש: תומך ב --flag=value, --flag value, ועם/בלי מרכאות ---
+function parseArgs(argv) {
+  const out = { flags: new Set(), values: {} };
+  const stripQuotes = (s) => {
+    if (!s) return s;
+    s = String(s).trim();
+    if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+      s = s.slice(1, -1);
+    }
+    return s;
+  };
+  for (let i = 0; i < argv.length; i++) {
+    let a = stripQuotes(argv[i]);
+    if (!a || !a.startsWith("--")) continue;
+    const eq = a.indexOf("=");
+    if (eq !== -1) {
+      const k = a.slice(2, eq);
+      const v = stripQuotes(a.slice(eq + 1));
+      out.values[k] = v;
+      out.flags.add(k);
+    } else {
+      const k = a.slice(2);
+      out.flags.add(k);
+      const next = argv[i + 1];
+      if (next && !String(next).startsWith("--")) {
+        out.values[k] = stripQuotes(next);
+        i++;
+      }
+    }
+  }
+  return out;
+}
+
+const ARGS = parseArgs(process.argv.slice(2));
+const RAW_MODE = ARGS.flags.has("raw");
+const ONCE_MODE = ARGS.flags.has("once");
+
+// תאריך מינימלי קשיח — גם אם לא הועבר --since, רשומות לפני זה לא יישלחו
+const HARD_MIN_DATE = new Date(process.env.HARD_MIN_DATE || "2026-04-01T00:00:00Z");
+const DEFAULT_SINCE = process.env.DEFAULT_SINCE ? new Date(process.env.DEFAULT_SINCE) : null;
+
+const SINCE_RAW = ARGS.values["since"] || null;
+const LIMIT_RAW = ARGS.values["limit"] || null;
+let SINCE = SINCE_RAW ? new Date(SINCE_RAW) : (DEFAULT_SINCE || HARD_MIN_DATE);
+if (isNaN(SINCE.getTime())) {
+  console.warn(`⚠️  --since לא תקין ("${SINCE_RAW}") — חוזר ל-HARD_MIN_DATE`);
+  SINCE = HARD_MIN_DATE;
+}
+// לעולם לא לרדת מתחת ל-HARD_MIN_DATE
+if (SINCE < HARD_MIN_DATE) {
+  console.warn(`⚠️  --since=${SINCE.toISOString()} מוקדם מהמינימום — נכפה ${HARD_MIN_DATE.toISOString()}`);
+  SINCE = HARD_MIN_DATE;
+}
+const LIMIT = LIMIT_RAW ? parseInt(LIMIT_RAW, 10) : null;
 
 function mapDirection(state) {
   switch (Number(state)) {
@@ -131,6 +179,14 @@ async function runCycle() {
     const res = await zk.getAttendances();
     logs = res?.data || [];
     console.log(`📋 נמשכו ${logs.length} רשומות`);
+    if (logs.length) {
+      const times = logs.map((r) => new Date(r.recordTime).getTime()).filter((t) => !isNaN(t));
+      if (times.length) {
+        const minD = new Date(Math.min(...times)).toISOString();
+        const maxD = new Date(Math.max(...times)).toISOString();
+        console.log(`   טווח בשעון: ${minD}  →  ${maxD}`);
+      }
+    }
   } catch (e) {
     console.error("❌ getAttendances נכשל:", e.message || e);
     try { await zk.disconnect(); } catch {}
@@ -152,11 +208,24 @@ async function runCycle() {
     return;
   }
 
-  // סינון
-  let filtered = logs;
-  if (SINCE) {
+  // --- סינון תאריך מינימלי (HARD) ---
+  const beforeHard = logs.length;
+  let filtered = logs.filter((r) => {
+    const t = new Date(r.recordTime);
+    return !isNaN(t.getTime()) && t >= HARD_MIN_DATE;
+  });
+  const blockedHard = beforeHard - filtered.length;
+  if (blockedHard > 0) {
+    console.log(`🛡️  נחסמו ${blockedHard} רשומות לפני HARD_MIN_DATE (${HARD_MIN_DATE.toISOString()})`);
+  }
+
+  // --- סינון since (אם גבוה יותר מ-HARD) ---
+  if (SINCE > HARD_MIN_DATE) {
+    const before = filtered.length;
     filtered = filtered.filter((r) => new Date(r.recordTime) >= SINCE);
-    console.log(`🗓️  אחרי --since=${SINCE.toISOString()}: ${filtered.length}`);
+    console.log(`🗓️  אחרי --since=${SINCE.toISOString()}: ${filtered.length} (סוננו ${before - filtered.length})`);
+  } else {
+    console.log(`🗓️  סינון פעיל מ: ${SINCE.toISOString()}  (נשארו ${filtered.length})`);
   }
 
   const state = loadState();
@@ -205,8 +274,10 @@ async function main() {
   }
 
   console.log("=== ZKTeco Attendance Agent ===");
+  console.log(`Args: ${JSON.stringify(process.argv.slice(2))}`);
   console.log(`Host: ${CLOCK_HOST}:${CLOCK_PORT} | Prefix: "${EMPLOYEE_CODE_PREFIX}"`);
-  console.log(`Mode: ${RAW_MODE ? "RAW" : ONCE_MODE ? "ONCE" : `POLL ${POLL_INTERVAL_MS}ms`}${SINCE ? ` since=${SINCE.toISOString()}` : ""}${LIMIT ? ` limit=${LIMIT}` : ""}`);
+  console.log(`HARD_MIN_DATE: ${HARD_MIN_DATE.toISOString()} | Effective SINCE: ${SINCE.toISOString()}${LIMIT ? ` | limit=${LIMIT}` : ""}`);
+  console.log(`Mode: ${RAW_MODE ? "RAW" : ONCE_MODE ? "ONCE" : `POLL ${POLL_INTERVAL_MS}ms`}`);
 
   await runCycle();
   if (RAW_MODE || ONCE_MODE) return;

@@ -45,10 +45,27 @@ Deno.serve(async (req) => {
       return json({ error: "invalid_batch_size" }, 400);
     }
 
+    const HARD_MIN_DATE = new Date(Deno.env.get("ATTENDANCE_HARD_MIN_DATE") ?? "2026-04-01T00:00:00Z");
+
     for (const p of punches) {
       if (!p.company_id || !p.employee_code) {
         return json({ error: "missing_fields", details: "company_id and employee_code required" }, 400);
       }
+    }
+
+    // חוסם רשומות לפני התאריך המינימלי — מגן מפני agent ישן ששולח 2017
+    const beforeFilter = punches.length;
+    const filteredPunches = punches.filter((p) => {
+      if (!p.punch_at) return true;
+      const t = new Date(p.punch_at);
+      return !isNaN(t.getTime()) && t >= HARD_MIN_DATE;
+    });
+    const blocked = beforeFilter - filteredPunches.length;
+    if (blocked > 0) {
+      console.warn(`blocked ${blocked} punches before HARD_MIN_DATE ${HARD_MIN_DATE.toISOString()}`);
+    }
+    if (filteredPunches.length === 0) {
+      return json({ ok: true, received: 0, matched: 0, unmatched: 0, blocked });
     }
 
     const supabase = createClient(
@@ -56,8 +73,8 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const companyIds = [...new Set(punches.map((p) => p.company_id))];
-    const codes = [...new Set(punches.map((p) => p.employee_code))];
+    const companyIds = [...new Set(filteredPunches.map((p) => p.company_id))];
+    const codes = [...new Set(filteredPunches.map((p) => p.employee_code))];
 
     const { data: employees, error: empErr } = await supabase
       .from("employees")
@@ -75,7 +92,7 @@ Deno.serve(async (req) => {
       empMap.set(`${e.company_id}::${e.employee_code}`, e.id);
     }
 
-    const rows = punches.map((p) => {
+    const rows = filteredPunches.map((p) => {
       const employee_id = empMap.get(`${p.company_id}::${p.employee_code}`) ?? null;
       return {
         company_id: p.company_id,
@@ -96,7 +113,7 @@ Deno.serve(async (req) => {
     }
 
     const matched = rows.filter((r) => r.employee_id).length;
-    return json({ ok: true, received: rows.length, matched, unmatched: rows.length - matched });
+    return json({ ok: true, received: rows.length, matched, unmatched: rows.length - matched, blocked });
   } catch (e) {
     console.error("unhandled", e);
     return json({ error: "internal_error", details: String(e) }, 500);
