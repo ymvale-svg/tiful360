@@ -45,10 +45,27 @@ Deno.serve(async (req) => {
       return json({ error: "invalid_batch_size" }, 400);
     }
 
+    const HARD_MIN_DATE = new Date(Deno.env.get("ATTENDANCE_HARD_MIN_DATE") ?? "2026-04-01T00:00:00Z");
+
     for (const p of punches) {
       if (!p.company_id || !p.employee_code) {
         return json({ error: "missing_fields", details: "company_id and employee_code required" }, 400);
       }
+    }
+
+    // חוסם רשומות לפני התאריך המינימלי — מגן מפני agent ישן ששולח 2017
+    const beforeFilter = punches.length;
+    const filteredPunches = punches.filter((p) => {
+      if (!p.punch_at) return true;
+      const t = new Date(p.punch_at);
+      return !isNaN(t.getTime()) && t >= HARD_MIN_DATE;
+    });
+    const blocked = beforeFilter - filteredPunches.length;
+    if (blocked > 0) {
+      console.warn(`blocked ${blocked} punches before HARD_MIN_DATE ${HARD_MIN_DATE.toISOString()}`);
+    }
+    if (filteredPunches.length === 0) {
+      return json({ ok: true, received: 0, matched: 0, unmatched: 0, blocked });
     }
 
     const supabase = createClient(
