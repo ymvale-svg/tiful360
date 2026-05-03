@@ -1,20 +1,16 @@
 // Attendance Clock Agent — ZKTeco U560 (PULL mode, ZK protocol on UDP/TCP 4370)
 // ---------------------------------------------------------------------------
-// משיכה תקופתית של רשומות נוכחות (attendance log) מהשעון, מיפוי כיוון לפי
-// verify_type של ZK, ושליחה ל-Edge Function ingest-attendance-punch.
-//
 // שימוש:
-//   node index.js          — פולינג רציף לפי POLL_INTERVAL_MS
-//   node index.js --once   — מחזור אחד ויציאה (טוב ל-cron)
-//   node index.js --raw    — חיבור + הדפסת כל הרשומות הגולמיות, בלי שליחה
-//
-// תלויות: node-zklib (npm install)
+//   node index.js                    — פולינג רציף לפי POLL_INTERVAL_MS
+//   node index.js --once             — מחזור אחד ויציאה
+//   node index.js --raw              — מציג רשומות גולמיות, בלי שליחה
+//   node index.js --once --since=2026-05-01    — שולח רק מתאריך מסוים
+//   node index.js --once --limit=20            — שולח רק N רשומות אחרונות
 // ---------------------------------------------------------------------------
 
 const fs = require("fs");
 const path = require("path");
 
-// טעינת .env ידנית (בלי תלות חיצונית)
 function loadEnv() {
   const envPath = path.join(__dirname, ".env");
   if (!fs.existsSync(envPath)) return;
@@ -52,17 +48,20 @@ const CLOCK_TIMEOUT = parseInt(process.env.CLOCK_TIMEOUT || "5500", 10);
 const POLL_INTERVAL_MS = parseInt(process.env.POLL_INTERVAL_MS || "30000", 10);
 const CLEAR_AFTER_SEND = (process.env.CLEAR_AFTER_SEND || "false").toLowerCase() === "true";
 const STATE_FILE = path.resolve(__dirname, process.env.STATE_FILE || "./state.json");
+// קידומת לקוד עובד — כי בשעון מספר חשוף (363) ובמערכת EMP-363
+const EMPLOYEE_CODE_PREFIX = process.env.EMPLOYEE_CODE_PREFIX || "";
+const BATCH_SIZE = parseInt(process.env.BATCH_SIZE || "200", 10);
 
 const RAW_MODE = process.argv.includes("--raw");
 const ONCE_MODE = process.argv.includes("--once");
+const SINCE_ARG = process.argv.find((a) => a.startsWith("--since="));
+const LIMIT_ARG = process.argv.find((a) => a.startsWith("--limit="));
+const SINCE = SINCE_ARG ? new Date(SINCE_ARG.split("=")[1]) : null;
+const LIMIT = LIMIT_ARG ? parseInt(LIMIT_ARG.split("=")[1], 10) : null;
 
-// מיפוי verify_type / state של ZK לכיווני נוכחות
-// מקור: ZK SDK — Attendance State / verify mode
-//   0 = Check-In, 1 = Check-Out, 2 = Break-Out, 3 = Break-In,
-//   4 = Overtime-In, 5 = Overtime-Out
 function mapDirection(state) {
   switch (Number(state)) {
-    case 0: return "in";
+    case 0: return "unknown"; // U560 ישן — state=0 לא אומר כלום
     case 1: return "out";
     case 2: return "break_out";
     case 3: return "break_in";
@@ -74,79 +73,64 @@ function mapDirection(state) {
 
 function loadState() {
   try {
-    if (fs.existsSync(STATE_FILE)) {
-      return JSON.parse(fs.readFileSync(STATE_FILE, "utf-8"));
-    }
-  } catch (e) {
-    console.warn("⚠️  state.json קיים אך פגום, מתחיל מאפס");
+    if (fs.existsSync(STATE_FILE)) return JSON.parse(fs.readFileSync(STATE_FILE, "utf-8"));
+  } catch {
+    console.warn("⚠️  state.json פגום, מתחיל מאפס");
   }
   return { sentKeys: [] };
 }
 
 function saveState(state) {
-  // נשמור רק את 5000 המפתחות האחרונים כדי שהקובץ לא יגדל לאינסוף
-  const trimmed = {
-    ...state,
-    sentKeys: state.sentKeys.slice(-5000),
-  };
-  fs.writeFileSync(STATE_FILE, JSON.stringify(trimmed, null, 2));
+  const trimmed = { ...state, sentKeys: state.sentKeys.slice(-100000) };
+  fs.writeFileSync(STATE_FILE, JSON.stringify(trimmed));
 }
 
 function recordKey(rec) {
-  // מפתח ייחודי לרשומה: עובד + timestamp + state
   return `${rec.deviceUserId}|${rec.recordTime}|${rec.state ?? ""}`;
 }
 
-async function sendPunch(rec) {
-  const body = {
+function toPayload(rec) {
+  return {
     company_id: COMPANY_ID,
-    employee_code_raw: String(rec.deviceUserId),
-    punched_at: new Date(rec.recordTime).toISOString(),
+    employee_code: `${EMPLOYEE_CODE_PREFIX}${rec.deviceUserId}`,
+    punch_at: new Date(rec.recordTime).toISOString(),
     direction: mapDirection(rec.state),
-    source: "zkteco-u560",
-    raw: rec,
+    raw: { state: rec.state, type: rec.type, ip: rec.ip, source: "zkteco-u560" },
   };
+}
+
+async function sendBatch(batch) {
   const res = await fetch(`${FUNCTIONS_URL}/ingest-attendance-punch`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${TOKEN}`,
-    },
-    body: JSON.stringify(body),
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${TOKEN}` },
+    body: JSON.stringify(batch.map(toPayload)),
   });
-  if (!res.ok) {
-    const txt = await res.text().catch(() => "");
-    throw new Error(`HTTP ${res.status}: ${txt}`);
-  }
-  return res.json().catch(() => ({}));
+  const txt = await res.text();
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${txt}`);
+  try { return JSON.parse(txt); } catch { return {}; }
 }
 
 async function runCycle() {
   const zk = new ZKLib(CLOCK_HOST, CLOCK_PORT, CLOCK_TIMEOUT, CLOCK_INPORT);
   const ts = new Date().toISOString();
-  console.log(`\n[${ts}] מתחבר לשעון ${CLOCK_HOST}:${CLOCK_PORT} ...`);
+  console.log(`\n[${ts}] מתחבר ל-${CLOCK_HOST}:${CLOCK_PORT} ...`);
 
-  try {
-    await zk.createSocket();
-  } catch (e) {
+  try { await zk.createSocket(); } catch (e) {
     console.error("❌ נכשל החיבור:", e.message || e);
     try { await zk.disconnect(); } catch {}
     return;
   }
 
-  let info = {};
   try {
-    info = await zk.getInfo();
+    const info = await zk.getInfo();
     console.log(`✅ מחובר. רשומות בשעון: ${info.logCounts ?? "?"} | משתמשים: ${info.userCounts ?? "?"}`);
-  } catch (e) {
-    console.warn("⚠️  לא הצלחתי לקרוא getInfo:", e.message || e);
-  }
+  } catch (e) { console.warn("⚠️  getInfo:", e.message || e); }
 
   let logs;
   try {
     const res = await zk.getAttendances();
     logs = res?.data || [];
-    console.log(`📋 נמשכו ${logs.length} רשומות מהשעון`);
+    console.log(`📋 נמשכו ${logs.length} רשומות`);
   } catch (e) {
     console.error("❌ getAttendances נכשל:", e.message || e);
     try { await zk.disconnect(); } catch {}
@@ -154,78 +138,80 @@ async function runCycle() {
   }
 
   if (RAW_MODE) {
-    console.log("\n=== RAW MODE — מציג עד 20 רשומות אחרונות ===");
-    const sample = logs.slice(-20);
-    for (const r of sample) {
+    console.log("\n=== RAW — 20 אחרונות ===");
+    for (const r of logs.slice(-20)) {
       console.log(JSON.stringify({
         deviceUserId: r.deviceUserId,
         recordTime: r.recordTime,
         state: r.state,
-        type: r.type,
-        ip: r.ip,
+        mappedEmployeeCode: `${EMPLOYEE_CODE_PREFIX}${r.deviceUserId}`,
         mappedDirection: mapDirection(r.state),
       }));
     }
-    console.log("\nℹ️  --raw לא שולח כלום ולא מוחק. הסר את הדגל כדי לאפשר שליחה.");
     try { await zk.disconnect(); } catch {}
     return;
   }
 
+  // סינון
+  let filtered = logs;
+  if (SINCE) {
+    filtered = filtered.filter((r) => new Date(r.recordTime) >= SINCE);
+    console.log(`🗓️  אחרי --since=${SINCE.toISOString()}: ${filtered.length}`);
+  }
+
   const state = loadState();
   const sentSet = new Set(state.sentKeys);
-  const newOnes = logs.filter((r) => !sentSet.has(recordKey(r)));
+  let newOnes = filtered.filter((r) => !sentSet.has(recordKey(r)));
 
-  console.log(`📤 ${newOnes.length} רשומות חדשות לשליחה (סה״כ ${logs.length})`);
+  if (LIMIT && newOnes.length > LIMIT) {
+    newOnes = newOnes.slice(-LIMIT);
+    console.log(`✂️  --limit=${LIMIT}: שולח את ${LIMIT} האחרונות`);
+  }
 
-  let ok = 0, fail = 0;
-  for (const rec of newOnes) {
+  console.log(`📤 ${newOnes.length} רשומות חדשות לשליחה`);
+
+  let ok = 0, fail = 0, matched = 0, unmatched = 0;
+  for (let i = 0; i < newOnes.length; i += BATCH_SIZE) {
+    const batch = newOnes.slice(i, i + BATCH_SIZE);
     try {
-      await sendPunch(rec);
-      state.sentKeys.push(recordKey(rec));
-      ok++;
+      const result = await sendBatch(batch);
+      ok += batch.length;
+      matched += result.matched || 0;
+      unmatched += result.unmatched || 0;
+      for (const rec of batch) state.sentKeys.push(recordKey(rec));
+      saveState(state);
+      console.log(`  ✓ batch ${i / BATCH_SIZE + 1}: נשלחו ${batch.length} | זוהו ${result.matched ?? "?"} | לא זוהו ${result.unmatched ?? "?"}`);
     } catch (e) {
-      fail++;
-      console.error(`  ✗ ${rec.deviceUserId} @ ${rec.recordTime}:`, e.message || e);
+      fail += batch.length;
+      console.error(`  ✗ batch ${i / BATCH_SIZE + 1} נכשל:`, e.message || e);
     }
   }
-  saveState(state);
-  console.log(`✓ נשלחו: ${ok} | נכשלו: ${fail}`);
+  console.log(`\nסיכום: נשלחו ${ok} | נכשלו ${fail} | זוהו ${matched} | לא זוהו ${unmatched}`);
 
   if (CLEAR_AFTER_SEND && fail === 0 && ok > 0) {
     try {
       await zk.clearAttendanceLog();
-      console.log("🧹 לוג נוכחות בשעון נמחק (CLEAR_AFTER_SEND=true)");
-    } catch (e) {
-      console.warn("⚠️  clearAttendanceLog נכשל:", e.message || e);
-    }
+      console.log("🧹 לוג השעון נמחק");
+    } catch (e) { console.warn("⚠️  clearAttendanceLog:", e.message || e); }
   }
 
   try { await zk.disconnect(); } catch {}
 }
 
 async function main() {
-  if (!TOKEN || !FUNCTIONS_URL || !COMPANY_ID) {
-    if (!RAW_MODE) {
-      console.error("❌ חסרים משתני סביבה חובה: ATTENDANCE_INGEST_TOKEN / SUPABASE_FUNCTIONS_URL / COMPANY_ID");
-      process.exit(1);
-    } else {
-      console.warn("⚠️  --raw: רץ בלי שליחה, אז משתני הענן לא חובה.");
-    }
+  if (!RAW_MODE && (!TOKEN || !FUNCTIONS_URL || !COMPANY_ID)) {
+    console.error("❌ חסרים: ATTENDANCE_INGEST_TOKEN / SUPABASE_FUNCTIONS_URL / COMPANY_ID");
+    process.exit(1);
   }
 
   console.log("=== ZKTeco Attendance Agent ===");
-  console.log(`Host: ${CLOCK_HOST}:${CLOCK_PORT} (inport ${CLOCK_INPORT})`);
-  console.log(`Mode: ${RAW_MODE ? "RAW (no send)" : ONCE_MODE ? "ONCE" : `POLL every ${POLL_INTERVAL_MS}ms`}`);
+  console.log(`Host: ${CLOCK_HOST}:${CLOCK_PORT} | Prefix: "${EMPLOYEE_CODE_PREFIX}"`);
+  console.log(`Mode: ${RAW_MODE ? "RAW" : ONCE_MODE ? "ONCE" : `POLL ${POLL_INTERVAL_MS}ms`}${SINCE ? ` since=${SINCE.toISOString()}` : ""}${LIMIT ? ` limit=${LIMIT}` : ""}`);
 
   await runCycle();
   if (RAW_MODE || ONCE_MODE) return;
 
-  setInterval(() => {
-    runCycle().catch((e) => console.error("מחזור נכשל:", e));
-  }, POLL_INTERVAL_MS);
+  setInterval(() => runCycle().catch((e) => console.error("מחזור נכשל:", e)), POLL_INTERVAL_MS);
 }
 
-main().catch((e) => {
-  console.error("שגיאה קריטית:", e);
-  process.exit(1);
-});
+main().catch((e) => { console.error("שגיאה קריטית:", e); process.exit(1); });
