@@ -33,24 +33,33 @@ export function AttendanceFlowIndicator() {
     countToday: 0,
     loading: true,
   });
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefreshAt, setLastRefreshAt] = useState<number>(Date.now());
 
   const refresh = async () => {
     if (!activeCompanyId) return;
-    const { data, error } = await supabase.rpc("get_attendance_flow_stats", {
-      _company_id: activeCompanyId,
-    });
-    if (error) {
-      setState((s) => ({ ...s, loading: false }));
-      return;
+    setIsRefreshing(true);
+    try {
+      const { data, error } = await supabase.rpc("get_attendance_flow_stats", {
+        _company_id: activeCompanyId,
+      });
+      if (error) {
+        console.error("flow stats error", error);
+        return;
+      }
+      const row: any = Array.isArray(data) ? data[0] : data;
+      setState({
+        lastPunchAt: row?.last_punch_at ?? null,
+        countLast5Min: Number(row?.count_5min ?? 0),
+        countLastHour: Number(row?.count_hour ?? 0),
+        countToday: Number(row?.count_today ?? 0),
+        loading: false,
+      });
+      setLastRefreshAt(Date.now());
+    } finally {
+      // keep spin visible briefly even on fast responses
+      setTimeout(() => setIsRefreshing(false), 400);
     }
-    const row: any = Array.isArray(data) ? data[0] : data;
-    setState({
-      lastPunchAt: row?.last_punch_at ?? null,
-      countLast5Min: Number(row?.count_5min ?? 0),
-      countLastHour: Number(row?.count_hour ?? 0),
-      countToday: Number(row?.count_today ?? 0),
-      loading: false,
-    });
   };
 
   useEffect(() => {
