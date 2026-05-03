@@ -101,22 +101,8 @@ export default function EmployeePortal() {
     enabled: !!myEmployee?.id,
   });
 
-  // Fetch attendance records for my employee
-  const { data: myAttendance = [] } = useQuery({
-    queryKey: ["my_attendance", myEmployee?.id],
-    queryFn: async () => {
-      if (!myEmployee?.id) return [];
-      const { data, error } = await supabase
-        .from("attendance_records")
-        .select("*")
-        .eq("employee_id", myEmployee.id)
-        .order("date", { ascending: false })
-        .limit(30);
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!myEmployee?.id,
-  });
+  // Fetch attendance punches for my employee (last 30 days)
+  const { data: myPunches = [] } = useMyPunches(myEmployee?.id, 30);
 
   // Fetch portal links from DB
   const { data: portalLinks = [] } = useQuery({
