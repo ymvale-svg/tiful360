@@ -161,13 +161,31 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
 
   if (!asset) return null;
 
+  const isView = mode === "view";
+  const inputCls = "w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30";
+  const readCls = "w-full px-3 py-2 bg-muted/40 rounded-lg text-sm min-h-[40px]";
+  const display = (v: string | null | undefined) =>
+    v && String(v).trim() !== "" ? String(v) : <span className="text-muted-foreground">—</span>;
+
+  const ownerName = (employees ?? []).find((e: any) => e.id === form.current_owner_id)?.full_name;
+  const categoryName = (categories ?? []).find((c: any) => c.id === form.category_id)?.category_name;
+  const conditionLabels: Record<string, string> = { new: "חדש", good: "תקין", fair: "בינוני" };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" dir="rtl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Package className="w-5 h-5 text-primary" />
-            עריכת פריט ציוד
+          <DialogTitle className="flex items-center justify-between gap-2">
+            <span className="flex items-center gap-2">
+              <Package className="w-5 h-5 text-primary" />
+              {isView ? "פרטי פריט ציוד" : "עריכת פריט ציוד"}
+            </span>
+            {isView && (
+              <Button size="sm" variant="outline" className="gap-1.5 h-8" onClick={() => setMode("edit")}>
+                <Pencil className="w-3.5 h-3.5" />
+                ערוך
+              </Button>
+            )}
           </DialogTitle>
           <DialogDescription>מזהה: <span className="font-mono">{asset.asset_code}</span></DialogDescription>
         </DialogHeader>
