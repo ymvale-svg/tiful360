@@ -367,11 +367,11 @@ export default function EmployeeDetail() {
           serial_number: a.serial_number,
           asset_categories: (a as any).asset_categories,
         }))}
-        digitalAccess={(digitalAccess ?? []).map(da => ({
-          id: da.id,
-          access_type: da.access_type,
-          resource_path: da.resource_path,
-          permission_level: da.permission_level,
+        digitalAccess={digitalAccessAssets.map((a: any) => ({
+          id: a.id,
+          access_type: a.custom_fields?.["סוג גישה"] ?? a.asset_name,
+          resource_path: a.custom_fields?.["נתיב/משאב"] ?? a.serial_number ?? "",
+          permission_level: a.custom_fields?.["רמת הרשאה"] ?? "read",
         }))}
       />
 
@@ -392,13 +392,7 @@ export default function EmployeeDetail() {
         employee={employee}
       />
 
-      {/* Add/edit digital access */}
-      <AddDigitalAccessDialog
-        open={addAccessOpen}
-        onOpenChange={(o) => { setAddAccessOpen(o); if (!o) setEditAccess(null); }}
-        employeeId={id!}
-        existing={editAccess}
-      />
+      {/* Digital access dialog removed - managed via Asset dialog (DACC category) */}
 
       {/* Upload signed form */}
       <UploadSignedFormDialog
