@@ -234,32 +234,6 @@ export default function Assets() {
         </div>
       </div>
 
-      {/* Scope tabs: Allocated vs Institutional */}
-      <div className="flex items-center gap-2">
-        {[
-          { value: "all", label: "הכל", icon: Boxes, count: assets?.length ?? 0 },
-          { value: "allocated", label: "מוקצים לעובדים", icon: User, count: allocatedCount },
-          { value: "institutional", label: "נכסי חברה", icon: Building2, count: institutionalCount },
-        ].map((s) => (
-          <button
-            key={s.value}
-            onClick={() => { setScope(s.value as any); setSelectedCategory("all"); }}
-            className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors border",
-              scope === s.value
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-card text-muted-foreground border-border hover:bg-muted"
-            )}
-          >
-            <s.icon className="w-4 h-4" />
-            {s.label}
-            <span className={cn("text-xs px-1.5 py-0.5 rounded-md", scope === s.value ? "bg-primary-foreground/20" : "bg-muted")}>
-              {s.count}
-            </span>
-          </button>
-        ))}
-      </div>
-
       {/* Category pills */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
         <button
