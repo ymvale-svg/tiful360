@@ -48,9 +48,12 @@ export default function Assets() {
 
   const filtered = (assets ?? []).filter((a) => {
     const matchCat = selectedCategory === "all" || a.category_id === selectedCategory;
+    const matchEmp =
+      selectedEmployee === "all" ||
+      (selectedEmployee === "__unassigned__" ? !a.current_owner_id : a.current_owner_id === selectedEmployee);
     const matchSearch = a.asset_name.includes(search) || a.asset_code.includes(search) ||
       ((a as any).employees?.full_name ?? "").includes(search);
-    return matchCat && matchSearch;
+    return matchCat && matchEmp && matchSearch;
   });
 
   const handleDelete = async () => {
