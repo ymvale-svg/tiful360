@@ -39,6 +39,7 @@ export default function Assets() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedEmployee, setSelectedEmployee] = useState("all");
   const [search, setSearch] = useState("");
+  const [scope, setScope] = useState<"all" | "allocated" | "institutional">("all");
   const [addOpen, setAddOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [editAsset, setEditAsset] = useState<any>(null);
@@ -47,14 +48,29 @@ export default function Assets() {
   const [unassignTarget, setUnassignTarget] = useState<any>(null);
 
   const filtered = (assets ?? []).filter((a) => {
+    const isAssignable = (a as any).asset_categories?.is_assignable !== false;
+    const matchScope =
+      scope === "all" ||
+      (scope === "allocated" && isAssignable) ||
+      (scope === "institutional" && !isAssignable);
     const matchCat = selectedCategory === "all" || a.category_id === selectedCategory;
     const matchEmp =
       selectedEmployee === "all" ||
       (selectedEmployee === "__unassigned__" ? !a.current_owner_id : a.current_owner_id === selectedEmployee);
     const matchSearch = a.asset_name.includes(search) || a.asset_code.includes(search) ||
       ((a as any).employees?.full_name ?? "").includes(search);
-    return matchCat && matchEmp && matchSearch;
+    return matchScope && matchCat && matchEmp && matchSearch;
   });
+
+  // Categories that match the current scope (so the pill row narrows correctly)
+  const visibleCategories = (categories ?? []).filter((c: any) => {
+    if (scope === "allocated") return c.is_assignable !== false;
+    if (scope === "institutional") return c.is_assignable === false;
+    return true;
+  });
+
+  const allocatedCount = (assets ?? []).filter((a: any) => (a as any).asset_categories?.is_assignable !== false).length;
+  const institutionalCount = (assets ?? []).filter((a: any) => (a as any).asset_categories?.is_assignable === false).length;
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
