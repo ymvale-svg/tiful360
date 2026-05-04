@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Plus, Boxes, Download, Upload, FileSignature, Trash2, UserMinus, User, Building2 } from "lucide-react";
+import { Search, Plus, Boxes, Download, Upload, FileSignature, Trash2, UserMinus, User, Building2, ChevronDown, ChevronRight, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
@@ -38,6 +38,7 @@ export default function Assets() {
 
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedEmployee, setSelectedEmployee] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [scope, setScope] = useState<"all" | "allocated" | "institutional">("all");
   const [addOpen, setAddOpen] = useState(false);
@@ -46,6 +47,53 @@ export default function Assets() {
   const [assignAsset, setAssignAsset] = useState<any>(null);
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const [unassignTarget, setUnassignTarget] = useState<any>(null);
+
+  // Grouping & sorting
+  type GroupBy = "category" | "employee" | "none";
+  type SortKey = "asset_code" | "asset_name" | "category" | "owner" | "status" | "expiry";
+  const [groupBy, setGroupBy] = useState<GroupBy>("category");
+  const [sortKey, setSortKey] = useState<SortKey>("asset_code");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  // When user picks a specific category — switch grouping to employee automatically
+  const effectiveGroupBy: GroupBy = selectedCategory !== "all" && groupBy === "category" ? "employee" : groupBy;
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setSortDir("asc"); }
+  };
+  const SortIcon = ({ k }: { k: SortKey }) =>
+    sortKey !== k
+      ? <ArrowUpDown className="w-3 h-3 inline opacity-40 mr-1" />
+      : sortDir === "asc"
+        ? <ArrowUp className="w-3 h-3 inline mr-1" />
+        : <ArrowDown className="w-3 h-3 inline mr-1" />;
+
+  const cmp = (a: any, b: any, key: SortKey): number => {
+    const dir = sortDir === "asc" ? 1 : -1;
+    const av = (() => {
+      switch (key) {
+        case "asset_code": return a.asset_code ?? "";
+        case "asset_name": return a.asset_name ?? "";
+        case "category": return a.asset_categories?.category_name ?? "";
+        case "owner": return a.employees?.full_name ?? "\uFFFF"; // unassigned last on asc
+        case "status": return assetStatusLabels[a.status] ?? a.status ?? "";
+        case "expiry": return a.expiry_date ?? "";
+      }
+    })();
+    const bv = (() => {
+      switch (key) {
+        case "asset_code": return b.asset_code ?? "";
+        case "asset_name": return b.asset_name ?? "";
+        case "category": return b.asset_categories?.category_name ?? "";
+        case "owner": return b.employees?.full_name ?? "\uFFFF";
+        case "status": return assetStatusLabels[b.status] ?? b.status ?? "";
+        case "expiry": return b.expiry_date ?? "";
+      }
+    })();
+    return String(av).localeCompare(String(bv), "he", { numeric: true, sensitivity: "base" }) * dir;
+  };
 
   const filtered = (assets ?? []).filter((a) => {
     const isAssignable = (a as any).asset_categories?.is_assignable !== false;
