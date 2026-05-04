@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, FileSignature, Upload } from "lucide-react";
-import type { OffboardingFormData } from "@/components/OffboardingFormView";
+import type { OffboardingFormData } from "@/lib/pdf/types";
 import { SignaturePad, SignaturePadHandle } from "@/components/SignaturePad";
 import { buildOffboardingPdf } from "@/lib/pdf/buildOffboardingPdf";
 import { uploadViaSignedToken } from "@/lib/signedFormUpload";

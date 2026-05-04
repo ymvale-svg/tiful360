@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, FileSignature, Upload } from "lucide-react";
-import type { HandoverFormData } from "@/components/HandoverFormView";
+import type { HandoverFormData } from "@/lib/pdf/types";
 import { SignaturePad, SignaturePadHandle } from "@/components/SignaturePad";
 import { buildHandoverPdf } from "@/lib/pdf/buildHandoverPdf";
 import { uploadViaSignedToken } from "@/lib/signedFormUpload";
