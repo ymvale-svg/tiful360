@@ -89,6 +89,22 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
     receiver_signature: receiverDataUrl,
   } : null;
 
+  // Live PDF preview
+  useEffect(() => {
+    if (step !== "sign" || !formData) { setPreviewUrl(null); return; }
+    let cancelled = false;
+    let createdUrl: string | null = null;
+    (async () => {
+      try {
+        const blob = await buildHandoverPdf(formData);
+        if (cancelled) return;
+        createdUrl = URL.createObjectURL(blob);
+        setPreviewUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return createdUrl; });
+      } catch (e) { console.error("preview pdf failed", e); }
+    })();
+    return () => { cancelled = true; if (createdUrl) URL.revokeObjectURL(createdUrl); };
+  }, [step, formData?.employee_name, formData?.asset_code, issuerDataUrl, receiverDataUrl]);
+
   // ---- Action: Send to portal ----
   const handleSendToPortal = async () => {
     if (!asset || !employee || !activeCompanyId) return;
