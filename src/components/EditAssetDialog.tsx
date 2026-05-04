@@ -51,6 +51,10 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
     status: "in_stock", manufacturer_model: "", condition: "good",
     expiry_date: "", notes: "",
   });
+  const [customFields, setCustomFields] = useState<Record<string, string>>({});
+
+  const { data: catFields } = useCategoryFields(form.category_id);
+  const selectedCategory = (categories ?? []).find((c: any) => c.id === form.category_id) as any;
 
   useEffect(() => {
     if (asset) {
@@ -65,6 +69,11 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
         expiry_date: asset.expiry_date ?? "",
         notes: asset.notes ?? "",
       });
+      // Load existing custom_fields as strings
+      const cf: Record<string, string> = {};
+      const raw = (asset as any).custom_fields ?? {};
+      Object.keys(raw).forEach((k) => { cf[k] = raw[k] == null ? "" : String(raw[k]); });
+      setCustomFields(cf);
     }
   }, [asset]);
 
@@ -123,6 +132,11 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
   const handleSubmit = async () => {
     if (!asset) return;
     try {
+      // Strip empty custom field values
+      const cleanCustom: Record<string, string> = {};
+      Object.entries(customFields).forEach(([k, v]) => {
+        if (v && v.toString().trim() !== "") cleanCustom[k] = v;
+      });
       await mutation.mutateAsync({
         id: asset.id,
         asset_name: form.asset_name,
@@ -134,6 +148,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
         condition: form.condition,
         expiry_date: form.expiry_date || null,
         notes: form.notes || null,
+        custom_fields: cleanCustom,
       });
       toast({ title: "פריט עודכן בהצלחה" });
       onOpenChange(false);
