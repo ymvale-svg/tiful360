@@ -23,6 +23,7 @@ import SelectCompany from "@/pages/SelectCompany";
 import ResetPassword from "@/pages/ResetPassword";
 import SignHandover from "@/pages/SignHandover";
 import SignOffboarding from "@/pages/SignOffboarding";
+import SelectExperience from "@/pages/SelectExperience";
 import LeaveRequests from "@/pages/LeaveRequests";
 import AttendanceCorrections from "@/pages/AttendanceCorrections";
 import Payroll from "@/pages/Payroll";
@@ -47,6 +48,7 @@ const App = () => (
               <Route path="/sign-offboarding/:token" element={<SignOffboarding />} />
               <Route path="/portal/tax101/:token" element={<Tax101TokenPage />} />
               <Route path="/select-company" element={<SelectCompany />} />
+              <Route path="/select-experience" element={<ProtectedRoute><SelectExperience /></ProtectedRoute>} />
               <Route path="/portal" element={<ProtectedRoute><EmployeePortal /></ProtectedRoute>} />
               <Route element={
                 <ProtectedRoute>
