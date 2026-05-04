@@ -18,9 +18,9 @@ export default function SignOffboarding() {
   const [attachment, setAttachment] = useState<File | null>(null);
   const [done, setDone] = useState(false);
 
-  const formRef = useRef<HTMLDivElement>(null);
   const sigRef = useRef<SignaturePadHandle>(null);
   const [sigUrl, setSigUrl] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
