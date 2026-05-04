@@ -1968,7 +1968,7 @@ export type Database = {
         | "operations"
       asset_status: "in_use" | "in_stock" | "in_repair" | "lost"
       employee_status: "active" | "onboarding" | "leaving" | "inactive"
-      field_type: "text" | "number" | "date" | "list"
+      field_type: "text" | "number" | "date" | "list" | "list_multi"
       leave_request_status: "pending" | "approved" | "rejected" | "cancelled"
       leave_request_type: "vacation" | "sick" | "personal" | "other"
       permission_level: "read" | "write" | "admin"
@@ -2116,7 +2116,7 @@ export const Constants = {
       ],
       asset_status: ["in_use", "in_stock", "in_repair", "lost"],
       employee_status: ["active", "onboarding", "leaving", "inactive"],
-      field_type: ["text", "number", "date", "list"],
+      field_type: ["text", "number", "date", "list", "list_multi"],
       leave_request_status: ["pending", "approved", "rejected", "cancelled"],
       leave_request_type: ["vacation", "sick", "personal", "other"],
       permission_level: ["read", "write", "admin"],
