@@ -15,11 +15,12 @@ interface Props {
   employeeId: string;
   employee: any;
   canSeeSalary: boolean;
+  hideBalances?: boolean;
 }
 
 const MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
 
-export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary }: Props) {
+export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary, hideBalances }: Props) {
   const { data: payslips, isLoading } = useEmployeePayslips(employeeId);
   const { toast } = useToast();
   const [summaryPayslip, setSummaryPayslip] = useState<any | null>(null);
@@ -60,38 +61,40 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary }: Prop
   return (
     <div className="space-y-4 animate-fade-in">
       {/* Summary cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-card rounded-xl border border-border/50 shadow-card p-5">
-          <div className="flex items-center gap-2 text-muted-foreground text-sm">
-            <TrendingUp className="w-4 h-4" />
-            יתרת חופשה
+      {!hideBalances && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-card rounded-xl border border-border/50 shadow-card p-5">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <TrendingUp className="w-4 h-4" />
+              יתרת חופשה
+            </div>
+            <p className="text-3xl font-bold mt-2 text-primary">
+              {Number(emp?.vacation_balance ?? 0).toFixed(2)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">ימים</p>
           </div>
-          <p className="text-3xl font-bold mt-2 text-primary">
-            {Number(emp?.vacation_balance ?? 0).toFixed(2)}
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">ימים</p>
-        </div>
-        <div className="bg-card rounded-xl border border-border/50 shadow-card p-5">
-          <div className="flex items-center gap-2 text-muted-foreground text-sm">
-            <Stethoscope className="w-4 h-4" />
-            יתרת מחלה
+          <div className="bg-card rounded-xl border border-border/50 shadow-card p-5">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <Stethoscope className="w-4 h-4" />
+              יתרת מחלה
+            </div>
+            <p className="text-3xl font-bold mt-2 text-info">
+              {Number(emp?.sick_balance ?? 0).toFixed(2)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">ימים</p>
           </div>
-          <p className="text-3xl font-bold mt-2 text-info">
-            {Number(emp?.sick_balance ?? 0).toFixed(2)}
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">ימים</p>
-        </div>
-        <div className="bg-card rounded-xl border border-border/50 shadow-card p-5">
-          <div className="flex items-center gap-2 text-muted-foreground text-sm">
-            <Calendar className="w-4 h-4" />
-            עודכן לאחרונה
+          <div className="bg-card rounded-xl border border-border/50 shadow-card p-5">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <Calendar className="w-4 h-4" />
+              עודכן לאחרונה
+            </div>
+            <p className="text-lg font-bold mt-2">{lastUpdate ?? "—"}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              מקור: {emp?.balances_source === "payslip" ? "תלוש שכר" : "ידני"}
+            </p>
           </div>
-          <p className="text-lg font-bold mt-2">{lastUpdate ?? "—"}</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            מקור: {emp?.balances_source === "payslip" ? "תלוש שכר" : "ידני"}
-          </p>
         </div>
-      </div>
+      )}
 
       {/* Payslips table */}
       <div className="bg-card rounded-xl border border-border/50 shadow-card overflow-hidden">
