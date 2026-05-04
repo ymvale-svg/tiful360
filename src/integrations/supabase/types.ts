@@ -1818,6 +1818,27 @@ export type Database = {
           role: string
         }[]
       }
+      get_live_employee_locations: {
+        Args: { _company_id: string }
+        Returns: {
+          accuracy: number
+          department: string
+          direction: string
+          employee_id: string
+          full_name: string
+          lat: number
+          lng: number
+          punch_at: string
+          punch_id: string
+          role: string
+        }[]
+      }
+      get_subordinate_employee_ids: {
+        Args: { _manager_user_id: string }
+        Returns: {
+          employee_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
