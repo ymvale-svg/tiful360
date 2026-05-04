@@ -153,7 +153,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
         custom_fields: cleanCustom,
       });
       toast({ title: "פריט עודכן בהצלחה" });
-      onOpenChange(false);
+      setMode("view");
     } catch (err: any) {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
     }
