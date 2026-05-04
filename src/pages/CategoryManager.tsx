@@ -443,10 +443,10 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
         ))}
 
         {/* List options editor for selected list fields */}
-        {fields.filter(f => f.field_type === "list").map((field) => (
+        {fields.filter(f => f.field_type === "list" || f.field_type === "list_multi").map((field) => (
           <div key={`opts-${field.tempId}`} className="mr-7 p-3 rounded-lg border border-dashed border-border bg-muted/30 space-y-2">
             <p className="text-xs font-medium text-muted-foreground">
-              אפשרויות רשימה עבור "{field.field_name || "ללא שם"}"
+              אפשרויות {field.field_type === "list_multi" ? "(בחירה מרובה) " : ""}עבור "{field.field_name || "ללא שם"}"
             </p>
             {(field.field_options ?? [""]).map((opt, oi) => (
               <div key={oi} className="flex items-center gap-2">
