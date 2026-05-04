@@ -7,8 +7,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { useEmployee, useEmployeeAssets, useEmployeeDigitalAccess, useActivityLog, useAssets } from "@/hooks/useData";
-import { useDeleteDigitalAccess, useUnassignAsset } from "@/hooks/useMutations";
+import { useEmployee, useEmployeeAssets, useActivityLog, useAssets } from "@/hooks/useData";
+import { useUnassignAsset } from "@/hooks/useMutations";
 import { useEmployeeLeaveRequests } from "@/hooks/useLeaveRequests";
 import { useToast } from "@/hooks/use-toast";
 import { OffboardingDialog } from "@/components/OffboardingDialog";
@@ -27,8 +27,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 const allTabs = [
   { id: "personal", label: "פרטים אישיים", icon: User },
-  { id: "assets", label: "ציוד משויך", icon: Package },
-  { id: "digital", label: "גישות דיגיטליות", icon: Key },
+  { id: "assets", label: "ציוד וגישות", icon: Package },
   { id: "forms", label: "טפסים חתומים", icon: FileText },
   { id: "leave", label: "חופשה ומחלה", icon: CalendarDays },
   { id: "payslips", label: "תלושי שכר", icon: FileText },
