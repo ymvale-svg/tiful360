@@ -52,10 +52,13 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
   const { data: employees } = useEmployees();
   const { data: existingAssets } = useAssets();
   const mutation = useCreateAsset();
+  const uploadDoc = useUploadAssetDocument();
   const { toast } = useToast();
   const qc = useQueryClient();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [pendingDocs, setPendingDocs] = useState<File[]>([]);
+  const [docDragging, setDocDragging] = useState(false);
 
   const [form, setForm] = useState({
     asset_code: "",
