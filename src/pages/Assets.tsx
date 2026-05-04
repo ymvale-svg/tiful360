@@ -6,7 +6,8 @@ import { Search, Plus, Boxes, Download, Upload, FileSignature, Trash2, UserMinus
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { useAssets, useAssetCategories } from "@/hooks/useData";
+import { useAssets, useAssetCategories, useEmployees } from "@/hooks/useData";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useDeleteAsset } from "@/hooks/useMutations";
 import { AddAssetDialog } from "@/components/AddAssetDialog";
 import { EditAssetDialog } from "@/components/EditAssetDialog";
