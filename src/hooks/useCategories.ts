@@ -22,7 +22,7 @@ export function useCreateCategory() {
   const queryClient = useQueryClient();
   const { activeCompanyId } = useCompany();
   return useMutation({
-    mutationFn: async (params: { category_name: string; prefix: string; description?: string; icon?: string }) => {
+    mutationFn: async (params: { category_name: string; prefix: string; description?: string; icon?: string; skip_handover_form?: boolean; skip_return_form?: boolean }) => {
       const { data, error } = await supabase
         .from("asset_categories")
         .insert({ ...params, company_id: activeCompanyId })
