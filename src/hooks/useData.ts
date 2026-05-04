@@ -72,7 +72,7 @@ export function useAssetCategories() {
   return useQuery({
     queryKey: ["asset-categories", activeCompanyId],
     queryFn: async () => {
-      let query = supabase.from("asset_categories").select("*, assets(count)").order("category_name");
+      let query = supabase.from("asset_categories").select("*, assets(count)").order("sort_order").order("category_name");
       if (activeCompanyId) query = query.eq("company_id", activeCompanyId);
       const { data, error } = await query;
       if (error) throw error;
