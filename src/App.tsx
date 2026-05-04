@@ -27,6 +27,7 @@ import LeaveRequests from "@/pages/LeaveRequests";
 import AttendanceCorrections from "@/pages/AttendanceCorrections";
 import Payroll from "@/pages/Payroll";
 import Tax101TokenPage from "@/pages/Tax101TokenPage";
+import AttendanceMap from "@/pages/AttendanceMap";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -64,6 +65,7 @@ const App = () => (
                 <Route path="/leave-requests" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "direct_manager", "payroll"]}><LeaveRequests /></ProtectedRoute>} />
                 <Route path="/attendance-corrections" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "direct_manager", "payroll"]}><AttendanceCorrections /></ProtectedRoute>} />
                 <Route path="/payroll" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "payroll"]}><Payroll /></ProtectedRoute>} />
+                <Route path="/attendance-map" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "payroll", "direct_manager"]}><AttendanceMap /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute requiredRoles={["admin", "super_admin"]}><Settings /></ProtectedRoute>} />
               </Route>
               <Route path="*" element={<NotFound />} />
