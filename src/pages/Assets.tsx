@@ -6,7 +6,8 @@ import { Search, Plus, Boxes, Download, Upload, FileSignature, Trash2, UserMinus
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { useAssets, useAssetCategories } from "@/hooks/useData";
+import { useAssets, useAssetCategories, useEmployees } from "@/hooks/useData";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useDeleteAsset } from "@/hooks/useMutations";
 import { AddAssetDialog } from "@/components/AddAssetDialog";
 import { EditAssetDialog } from "@/components/EditAssetDialog";
@@ -30,11 +31,13 @@ const assetStatusClasses: Record<string, string> = {
 export default function Assets() {
   const { data: assets, isLoading } = useAssets();
   const { data: categories } = useAssetCategories();
+  const { data: employees } = useEmployees();
   const deleteMutation = useDeleteAsset();
   const { toast } = useToast();
   const qc = useQueryClient();
 
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedEmployee, setSelectedEmployee] = useState("all");
   const [search, setSearch] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -45,9 +48,12 @@ export default function Assets() {
 
   const filtered = (assets ?? []).filter((a) => {
     const matchCat = selectedCategory === "all" || a.category_id === selectedCategory;
+    const matchEmp =
+      selectedEmployee === "all" ||
+      (selectedEmployee === "__unassigned__" ? !a.current_owner_id : a.current_owner_id === selectedEmployee);
     const matchSearch = a.asset_name.includes(search) || a.asset_code.includes(search) ||
       ((a as any).employees?.full_name ?? "").includes(search);
-    return matchCat && matchSearch;
+    return matchCat && matchEmp && matchSearch;
   });
 
   const handleDelete = async () => {
@@ -164,15 +170,42 @@ export default function Assets() {
         ))}
       </div>
 
-      {/* Search */}
-      <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2 w-80">
-        <Search className="w-4 h-4 text-muted-foreground" />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="חיפוש ציוד..."
-          className="bg-transparent text-sm outline-none w-full"
-        />
+      {/* Search & filters */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2 w-80">
+          <Search className="w-4 h-4 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="חיפוש פריט / מזהה..."
+            className="bg-transparent text-sm outline-none w-full"
+          />
+        </div>
+        <div className="w-72">
+          <SearchableSelect
+            value={selectedEmployee}
+            onChange={setSelectedEmployee}
+            placeholder="סינון לפי עובד"
+            searchPlaceholder="חיפוש עובד..."
+            options={[
+              { value: "all", label: "כל העובדים" },
+              { value: "__unassigned__", label: "במלאי (ללא שיוך)" },
+              ...((employees ?? []).map((e: any) => ({
+                value: e.id,
+                label: `${e.full_name}${e.department ? ` — ${e.department}` : ""}`,
+              }))),
+            ]}
+          />
+        </div>
+        {(selectedEmployee !== "all" || selectedCategory !== "all" || search) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => { setSelectedEmployee("all"); setSelectedCategory("all"); setSearch(""); }}
+          >
+            נקה סינון
+          </Button>
+        )}
       </div>
 
       {/* Table */}
