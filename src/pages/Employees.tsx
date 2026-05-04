@@ -12,6 +12,7 @@ import { useUpdateEmployee } from "@/hooks/useMutations";
 import { AddEmployeeDialog } from "@/components/AddEmployeeDialog";
 import { ImportExcelDialog } from "@/components/ImportExcelDialog";
 import { UsersAndRolesTab } from "@/components/UsersAndRolesTab";
+import { useAuth } from "@/hooks/useAuth";
 import { exportToExcel } from "@/lib/exportExcel";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
@@ -68,8 +69,10 @@ export default function Employees() {
   const queryClient = useQueryClient();
   const updateEmployee = useUpdateEmployee();
   const navigate = useNavigate();
+  const { isAdmin, isSuperAdmin } = useAuth();
+  const canManageUsers = isAdmin || isSuperAdmin;
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = searchParams.get("tab") === "users" ? "users" : "employees";
+  const initialTab = searchParams.get("tab") === "users" && canManageUsers ? "users" : "employees";
   const [tab, setTab] = useState<"employees" | "users">(initialTab);
 
   useEffect(() => {
