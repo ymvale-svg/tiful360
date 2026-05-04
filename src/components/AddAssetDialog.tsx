@@ -12,6 +12,8 @@ import { format } from "date-fns";
 import { useCreateAsset } from "@/hooks/useMutations";
 import { useAssetCategories, useEmployees, useAssets } from "@/hooks/useData";
 import { useCategoryFields } from "@/hooks/useCategories";
+import { useUploadAssetDocument } from "@/hooks/useAssetDocuments";
+import { FileText, Upload, Trash2 } from "lucide-react";
 import { useCompany } from "@/hooks/useCompany";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -50,10 +52,13 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
   const { data: employees } = useEmployees();
   const { data: existingAssets } = useAssets();
   const mutation = useCreateAsset();
+  const uploadDoc = useUploadAssetDocument();
   const { toast } = useToast();
   const qc = useQueryClient();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [pendingDocs, setPendingDocs] = useState<File[]>([]);
+  const [docDragging, setDocDragging] = useState(false);
 
   const [form, setForm] = useState({
     asset_code: "",
@@ -93,6 +98,8 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
       setPerEmpFieldKeys(new Set());
       setPerEmpRows({});
       setErrors({});
+      setPendingDocs([]);
+      setDocDragging(false);
     }
   }, [open]);
 
@@ -264,7 +271,7 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
       return;
     }
     try {
-      await mutation.mutateAsync({
+      const created = await mutation.mutateAsync({
         asset_code: form.asset_code,
         asset_name: form.asset_name,
         category_id: form.category_id,
@@ -275,6 +282,17 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
         expiry_date: form.expiry_date || undefined,
         notes: form.notes || undefined,
       });
+      // Upload pending documents (if any)
+      if (pendingDocs.length > 0 && (created as any)?.id) {
+        const assetId = (created as any).id;
+        for (const file of pendingDocs) {
+          try {
+            await uploadDoc.mutateAsync({ asset_id: assetId, file, document_type: "other" });
+          } catch (uerr: any) {
+            toast({ title: `שגיאה בהעלאת ${file.name}`, description: uerr.message, variant: "destructive" });
+          }
+        }
+      }
       toast({ title: "פריט ציוד נוסף בהצלחה" });
       onOpenChange(false);
     } catch (err: any) {
@@ -650,6 +668,68 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
               className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 resize-none"
             />
           </div>
+
+          {/* Pending documents (single mode only) */}
+          {!bulkMode && (
+            <div
+              className={cn(
+                "border border-dashed rounded-lg p-3 space-y-2 transition-colors",
+                docDragging ? "border-primary bg-primary/5" : "border-border"
+              )}
+              onDragOver={(e) => { e.preventDefault(); setDocDragging(true); }}
+              onDragLeave={(e) => { e.preventDefault(); setDocDragging(false); }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDocDragging(false);
+                const files = Array.from(e.dataTransfer.files ?? []);
+                if (files.length > 0) setPendingDocs(prev => [...prev, ...files]);
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-primary" />
+                  מסמכים מצורפים
+                  {pendingDocs.length > 0 && (
+                    <span className="text-xs text-muted-foreground font-normal">({pendingDocs.length})</span>
+                  )}
+                </div>
+                <label className="text-xs text-primary hover:underline cursor-pointer flex items-center gap-1">
+                  <Upload className="w-3.5 h-3.5" />
+                  בחר קבצים
+                  <input
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files ?? []);
+                      if (files.length > 0) setPendingDocs(prev => [...prev, ...files]);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+              </div>
+              {pendingDocs.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-2">
+                  גרור קבצים לכאן או לחץ "בחר קבצים" — הם יועלו לאחר יצירת הפריט
+                </p>
+              ) : (
+                <ul className="space-y-1">
+                  {pendingDocs.map((f, idx) => (
+                    <li key={idx} className="flex items-center justify-between gap-2 text-xs bg-muted/40 rounded px-2 py-1">
+                      <span className="truncate">{f.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => setPendingDocs(prev => prev.filter((_, i) => i !== idx))}
+                        className="text-muted-foreground hover:text-destructive shrink-0"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
 
           {/* ============ BULK MODE TOGGLE ============ */}
           {/* Hidden for institutional categories — they cannot be assigned to employees */}
