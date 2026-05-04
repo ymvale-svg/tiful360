@@ -540,20 +540,24 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
 // ============================
 // Category Editor (name, prefix, description)
 // ============================
-function CategoryEditor({ category }: { category: { id: string; category_name: string; prefix: string; description?: string | null } }) {
+function CategoryEditor({ category }: { category: { id: string; category_name: string; prefix: string; description?: string | null; skip_handover_form?: boolean | null; skip_return_form?: boolean | null } }) {
   const updateMutation = useUpdateCategory();
   const { toast } = useToast();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(category.category_name);
   const [prefix, setPrefix] = useState(category.prefix);
   const [description, setDescription] = useState(category.description ?? "");
+  const [skipHandover, setSkipHandover] = useState(!!category.skip_handover_form);
+  const [skipReturn, setSkipReturn] = useState(!!category.skip_return_form);
 
   useEffect(() => {
     setName(category.category_name);
     setPrefix(category.prefix);
     setDescription(category.description ?? "");
+    setSkipHandover(!!category.skip_handover_form);
+    setSkipReturn(!!category.skip_return_form);
     setEditing(false);
-  }, [category.id, category.category_name, category.prefix, category.description]);
+  }, [category.id, category.category_name, category.prefix, category.description, category.skip_handover_form, category.skip_return_form]);
 
   const handleSave = async () => {
     if (!name.trim() || !prefix.trim()) {
@@ -566,6 +570,8 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
         category_name: name,
         prefix: prefix.toUpperCase(),
         description: description || undefined,
+        skip_handover_form: skipHandover,
+        skip_return_form: skipReturn,
       });
       toast({ title: "קטגוריה עודכנה בהצלחה" });
       setEditing(false);
@@ -583,6 +589,13 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
             קידומת: <span className="font-mono">{category.prefix}</span>
             {category.description && ` • ${category.description}`}
           </p>
+          {(category.skip_handover_form || category.skip_return_form) && (
+            <p className="text-[11px] text-muted-foreground mt-1">
+              {category.skip_handover_form && "ללא אישור משיכה"}
+              {category.skip_handover_form && category.skip_return_form && " • "}
+              {category.skip_return_form && "ללא אישור זיכוי"}
+            </p>
+          )}
         </div>
         <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setEditing(true)}>
           <Pencil className="w-3.5 h-3.5" />
@@ -611,6 +624,35 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
         <input value={description} onChange={e => setDescription(e.target.value)} placeholder="תיאור קצר..."
           className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30" />
       </div>
+
+      <div className="space-y-2 pt-2 border-t border-border/50">
+        <p className="text-xs font-medium text-muted-foreground">הגדרות טופסי מסירה/החזרה</p>
+        <label className="flex items-start gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={skipHandover}
+            onChange={(e) => setSkipHandover(e.target.checked)}
+            className="mt-0.5 w-4 h-4 rounded border-border accent-primary"
+          />
+          <div className="text-sm">
+            <div>דלג על אישור משיכה</div>
+            <div className="text-[11px] text-muted-foreground">פריטים בקטגוריה זו ישויכו לעובד ישירות, ללא טופס מסירה וחתימה.</div>
+          </div>
+        </label>
+        <label className="flex items-start gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={skipReturn}
+            onChange={(e) => setSkipReturn(e.target.checked)}
+            className="mt-0.5 w-4 h-4 rounded border-border accent-primary"
+          />
+          <div className="text-sm">
+            <div>דלג על אישור זיכוי</div>
+            <div className="text-[11px] text-muted-foreground">החזרת פריטים בקטגוריה זו למלאי תתבצע ללא טופס החזרה וחתימה.</div>
+          </div>
+        </label>
+      </div>
+
       <div className="flex gap-2 justify-end">
         <Button size="sm" variant="outline" onClick={() => setEditing(false)}>
           <X className="w-3.5 h-3.5 ml-1" />ביטול

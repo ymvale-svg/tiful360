@@ -38,7 +38,7 @@ export function useCreateCategory() {
 export function useUpdateCategory() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...params }: { id: string; category_name?: string; prefix?: string; description?: string; icon?: string; sort_order?: number }) => {
+    mutationFn: async ({ id, ...params }: { id: string; category_name?: string; prefix?: string; description?: string; icon?: string; sort_order?: number; skip_handover_form?: boolean; skip_return_form?: boolean }) => {
       const { error } = await supabase.from("asset_categories").update(params).eq("id", id);
       if (error) throw error;
     },

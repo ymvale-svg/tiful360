@@ -270,7 +270,7 @@ export default function Assets() {
                 const cat = (asset as any).asset_categories;
                 const categoryName = cat?.category_name ?? "";
                 const isAssignable = cat?.is_assignable !== false;
-                const isVirtualAsset = /תוכנ|וירטואל|software|virtual|subscription|מנוי/i.test(categoryName);
+                const isVirtualAsset = cat?.skip_handover_form === true || /תוכנ|וירטואל|software|virtual|subscription|מנוי/i.test(categoryName);
                 return (
                 <tr
                   key={asset.id}
