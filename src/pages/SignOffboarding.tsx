@@ -63,7 +63,10 @@ export default function SignOffboarding() {
         });
       }
 
-      const pdfBlob = await renderHandoverPdfBlob(formRef.current);
+      const pdfBlob = await buildOffboardingPdf({
+        ...(record.form_snapshot as OffboardingFormData),
+        receiver_signature: sig,
+      });
       const pdfUrl = await uploadViaSignedToken({
         sign_token: token!,
         form_type: "offboarding",
