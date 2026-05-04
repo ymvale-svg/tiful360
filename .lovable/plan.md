@@ -1,57 +1,88 @@
-## הבעיה
 
-בדיאלוג חתימה על טופס קבלת ציוד, ה-iframe נטען, אבל הדפדפן מציג אייקון של "מסמך שבור" במקום ה-PDF. ב-session replay רואים שה-iframe אכן נטען עם `previewUrl`, אז ה-blob נוצר — אבל הוא **פגום**.
+## מטרה
+בדיאלוג **"הוספת פריט ציוד"** — הוספת Switch "שייך פריט לקבוצת עובדים". כשהוא פעיל:
+- שדות **אוניברסליים** נשארים למעלה (ממולאים פעם אחת לכולם).
+- לצד כל שם עובד מופיעים **רק השדות המשתנים** פר עובד.
 
-## שורש הבעיה
+## הגדרת שדות: אוניברסלי מול משתנה (לפי קטגוריה)
 
-ב-`src/lib/pdf/hebrewPdf.ts` שומרים בקאש את בייטי הגופן כ-`ArrayBuffer` ומעבירים אותם ישירות ל-`pdf.embedFont(cachedRegular, { subset: true })`:
+| קטגוריה | שדות אוניברסליים (למעלה) | שדות משתנים (פר עובד) |
+|---|---|---|
+| **תוכנות** | קטגוריה, שם פריט, חברה, URL, יצרן, הערות, תאריך תפוגה | מזהה פריט, מס׳ סידורי/רישיון, שם משתמש, סיסמה |
+| **רכבים** | קטגוריה, שם פריט, יצרן, דגם, צבע, הערות | מזהה פריט, מס׳ סידורי (לוחית רישוי), **תאריך תפוגה (טסט/ביטוח)** |
+| **ציוד הנדסי** | קטגוריה, שם פריט, יצרן, דגם, שנת ייצור, הערות | מזהה פריט, מס׳ סידורי, תאריך תפוגה (אם רלוונטי לכיול) |
+| **מנויים לשירות** | קטגוריה, שם פריט, סוג שירות, חברה, URL ניהול, הערות, תאריך תפוגה | מזהה פריט, שם משתמש, מס׳ רישיון |
 
-```ts
-let cachedRegular: ArrayBuffer | null = null;
-...
-const regular = await pdf.embedFont(cachedRegular!, { subset: true });
+### חוקי ברירת מחדל אוטומטיים
+שדה ייחשב **משתנה** אם מתקיים אחד מאלה:
+1. שדה מערכת קבוע: `serial_number` תמיד משתנה.
+2. שם השדה כולל אחת מהמילים: `משתמש`, `username`, `סיסמה`, `password`, `רישיון`, `license`, `IMEI`, `מזהה`, `token`, `email`, `מייל`, `לוחית`, `רישוי`.
+3. **תאריך תפוגה כשהקטגוריה היא "רכבים" או "ציוד הנדסי"** — משתנה (טסט/ביטוח/כיול ייחודיים פר עובד/רכב). בשאר הקטגוריות (תוכנות, מנויים) — אוניברסלי.
+4. כל השאר → אוניברסלי.
+
+המשתמש יכול להחליף ידנית כל שדה בין "אוניברסלי" ל"פר עובד" דרך אייקון 👤/👥 ליד הלייבל. שדה שעבר לפר־עובד נעלם מהקטע העליון ומופיע כעמודה בטבלה למטה.
+
+## פריסת הדיאלוג במצב bulk (לדוגמה — רכבים)
+
+```text
+┌─ הוספת פריט ציוד ─────────────────────────────────┐
+│  קטגוריה:   [רכבים ▾]                              │
+│  שם פריט:   [טויוטה קורולה היברידי]               │
+│  יצרן:      [Toyota]                  [👥]         │
+│  דגם:       [Corolla Hybrid]          [👥]         │
+│  צבע:       [לבן ▾]                   [👥]         │
+│  הערות:     [...]                                  │
+│                                                    │
+│  ──────────────────────────────────────────────    │
+│  [✓] שייך פריט לקבוצת עובדים                       │
+│  ──────────────────────────────────────────────    │
+│                                                    │
+│  בחר עובדים: [🔍 חיפוש] [מחלקה ▾]                  │
+│  ☑ דנה כהן  ☑ יוסי לוי  ...   נבחרו: 5             │
+│                                                    │
+│  שדות פר עובד:                                     │
+│  ┌──────────┬──────────┬───────────┬────────────┐ │
+│  │ עובד     │ מזהה     │ לוחית     │ תפוגת טסט  │ │
+│  │          │ [העתק]   │ [העתק]    │ [העתק]     │ │
+│  ├──────────┼──────────┼───────────┼────────────┤ │
+│  │ דנה כהן  │ VHC-..01 │ 12-345-67 │ 📅 2026-08 │ │
+│  │ יוסי לוי │ VHC-..02 │ 23-456-78 │ 📅 2026-11 │ │
+│  └──────────┴──────────┴───────────┴────────────┘ │
+│                                                    │
+│  [ביטול]            [הוסף 5 פריטים ושייך]          │
+└────────────────────────────────────────────────────┘
 ```
 
-`pdf-lib` + `fontkit` עלולים לבצע operations שמנתקים/מבזבזים (detach) את ה-`ArrayBuffer`. בקריאה הראשונה ה-PDF נבנה בסדר, אבל בכל קריאה הבאה (וב-effect הזה הוא רץ מחדש בכל שינוי שדה/חתימה!) ה-cached buffer כבר ריק → font embedding נכשל בשקט → ה-PDF שמתקבל פגום, והדפדפן מסרב להציגו.
+תאריכים בטבלה ייפתחו דרך Popover + Calendar של shadcn (`pointer-events-auto` על ה-Calendar כדי לעבוד בתוך Dialog).
 
-זו גם הסיבה שאין שגיאה בקונסולה — pdf-lib לא זורק, רק יוצר PDF לא תקין.
+כשה-Switch כבוי — חוזרים לדיאלוג הקיים בדיוק כפי שהוא.
 
-## התיקון
+## פרטים טכניים
 
-ב-`src/lib/pdf/hebrewPdf.ts`:
+### קובץ שיערך — `src/components/AddAssetDialog.tsx`
+state חדש:
+- `bulkMode: boolean`
+- `selectedEmployeeIds: string[]`
+- `perEmployeeFieldKeys: Set<string>` — שמות שדות שסומנו כ"פר עובד" (כולל `expiry_date` כשהקטגוריה רכבים/ציוד הנדסי).
+- `perEmployeeRows: Record<empId, Record<fieldKey, string>>` — ערכים פר עובד.
 
-1. לשמור את הקאש כ-`Uint8Array` (ולא `ArrayBuffer`).
-2. להעביר עותק חדש (`new Uint8Array(cached)`) ל-`pdf.embedFont` בכל קריאה, כדי ש-pdf-lib/fontkit יקבלו תמיד buffer "טרי".
-3. אותו טיפול לטעינת התבנית (`loadTemplateBytes` כבר עושה `.slice(0)` אבל נוודא שזה תקין גם תחת קריאות מקבילות).
+לוגיקה:
+- בעת שינוי קטגוריה: חישוב `perEmployeeFieldKeys` לפי החוקים למעלה (כולל זיהוי קטגוריית רכבים/ציוד הנדסי לפי `prefix` כגון `VHC` ו-`EQP`).
+- חישוב `asset_code` עוקב לכל עובד נבחר (`PREFIX-MMYY-NNN`, `NNN+i`).
+- ולידציה: לפחות עובד אחד; שדות חובה מולאו לכל עובד (כולל תאריך תפוגה ברכבים אם הוגדר חובה); אין כפילות `asset_code`/`serial_number` בטבלה ולא מול ה-DB; max 100 עובדים.
+- הגשה: בניית `rows[]` ו-`supabase.from("assets").insert(rows)` בקריאה אחת. שדות אוניברסליים זהים בכל שורה; משתנים נלקחים מ-`perEmployeeRows` (כולל `expiry_date` כשרלוונטי). סטטוס `in_use`, `current_owner_id` של העובד. בסיום — invalidate `["assets"]` + toast מסכם.
 
-```ts
-let cachedRegular: Uint8Array | null = null;
-let cachedBold: Uint8Array | null = null;
+### רכיבי משנה פנימיים
+- `MultiEmployeePicker` — חיפוש + checkboxes + פילטר מחלקה.
+- `PerEmployeeFieldsTable` — טבלה עם כפתור "העתק לכולם" לכל עמודה; עמודות תאריך משתמשות ב-`Popover` + `Calendar` של shadcn.
+- `FieldScopeToggle` — אייקון 👤/👥 ליד לייבל להחלפת מצב שדה.
 
-async function loadFontBytes(url: string): Promise<Uint8Array> {
-  const res = await fetch(url);
-  const buf = new Uint8Array(await res.arrayBuffer());
-  // magic-header validation as today
-  return buf;
-}
+### ללא שינוי סכמה
+אין צורך בשינויי DB או RLS — INSERT מרובה תחת אותו `company_id`.
 
-async function embedHebrewFonts(pdf) {
-  pdf.registerFontkit(fontkit);
-  if (!cachedRegular) cachedRegular = await loadFontBytes(regularUrl);
-  if (!cachedBold)    cachedBold    = await loadFontBytes(boldUrl);
-  // Pass a *copy* every time so pdf-lib/fontkit can't mutate our cache
-  const regular = await pdf.embedFont(new Uint8Array(cachedRegular), { subset: true });
-  const bold    = await pdf.embedFont(new Uint8Array(cachedBold),    { subset: true });
-  return { regular, bold };
-}
-```
+### מקרי קצה
+- שינוי קטגוריה אחרי בחירת עובדים → איפוס `perEmployeeRows` עם אישור.
+- כיבוי ה-Switch אחרי בחירה → נשמרים נתוני העובד הראשון בלבד כשיוך יחיד.
+- שדה חובה ריק לעובד מסוים → השורה מסומנת אדום עם tooltip.
 
-4. שיפור קטן ל-debug: להוסיף `console.error` עם פרטים בתוך ה-`catch` של ה-effect ב-`AssignAssetWithFormDialog` ו-`PendingHandoverForms`, כך שאם משהו עדיין נכשל בעתיד נראה את הסיבה מיד.
-
-## הקבצים שמושפעים
-
-- `src/lib/pdf/hebrewPdf.ts` — תיקון מנגנון הקאש של הגופנים.
-
-## בדיקה
-
-לאחר התיקון: לפתוח את דיאלוג החתימה, לוודא שה-PDF מוצג בפעם הראשונה, לסגור ולפתוח שוב, ולשנות שדה (חתימה / משיכה) — בכל פעם ה-PDF צריך להציג כראוי במקום אייקון מסמך שבור.
+מוכן לבנייה ברגע שתאשר.
