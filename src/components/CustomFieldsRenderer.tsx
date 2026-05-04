@@ -95,6 +95,69 @@ export function CustomFieldsRenderer({
                   placeholder="בחר..."
                   error={!!errors[errKey]}
                 />
+              ) : cf.field_type === "list_multi" ? (
+                (() => {
+                  const opts = (Array.isArray(cf.field_options) ? cf.field_options : []).map(String);
+                  const selected = value ? value.split(",").map((s) => s.trim()).filter(Boolean) : [];
+                  const toggle = (opt: string) => {
+                    const next = selected.includes(opt)
+                      ? selected.filter((s) => s !== opt)
+                      : [...selected, opt];
+                    onChange(cf.field_name, next.join(", "));
+                  };
+                  return (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className={cn(
+                            "w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 text-right flex items-center justify-between gap-2 min-h-[40px]",
+                            errors[errKey] ? "ring-2 ring-destructive/50" : "focus:ring-primary/30",
+                          )}
+                        >
+                          <span className="flex flex-wrap gap-1 flex-1 min-w-0">
+                            {selected.length === 0 ? (
+                              <span className="text-muted-foreground">בחר אפשרויות...</span>
+                            ) : (
+                              selected.map((s) => (
+                                <span
+                                  key={s}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-primary/10 text-primary text-xs"
+                                >
+                                  {s}
+                                  <XIcon
+                                    className="w-3 h-3 cursor-pointer hover:text-destructive"
+                                    onClick={(e) => { e.stopPropagation(); toggle(s); }}
+                                  />
+                                </span>
+                              ))
+                            )}
+                          </span>
+                          <ChevronDown className="w-4 h-4 shrink-0 text-muted-foreground" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-1" align="start">
+                        <div className="max-h-64 overflow-auto">
+                          {opts.length === 0 && (
+                            <p className="text-xs text-muted-foreground p-2 text-center">אין אפשרויות מוגדרות</p>
+                          )}
+                          {opts.map((opt) => {
+                            const checked = selected.includes(opt);
+                            return (
+                              <label
+                                key={opt}
+                                className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm"
+                              >
+                                <Checkbox checked={checked} onCheckedChange={() => toggle(opt)} />
+                                <span>{opt}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  );
+                })()
               ) : (
                 <input
                   type={
