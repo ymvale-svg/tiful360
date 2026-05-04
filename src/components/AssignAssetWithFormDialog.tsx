@@ -26,7 +26,7 @@ interface Asset {
   condition?: string | null;
   company_id?: string | null;
   current_owner_id?: string | null;
-  asset_categories?: { category_name?: string | null } | null;
+  asset_categories?: { category_name?: string | null; skip_handover_form?: boolean | null } | null;
   employees?: { full_name?: string | null } | null;
 }
 
@@ -64,9 +64,11 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
     if (open && preassignedOwnerId) setEmployeeId(preassignedOwnerId);
   }, [open, preassignedOwnerId]);
 
-  // Virtual assets (software / virtual assets) don't require a handover form
+  // Skip handover form when category opted-out, OR for legacy "virtual" categories by name
   const categoryName = asset?.asset_categories?.category_name ?? "";
+  const categorySkipsHandover = asset?.asset_categories?.skip_handover_form === true;
   const isVirtualAsset =
+    categorySkipsHandover ||
     /תוכנ|וירטואל|software|virtual|subscription|מנוי/i.test(categoryName);
 
   // Direct assignment for virtual assets — no form, no signature

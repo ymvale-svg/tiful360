@@ -191,6 +191,8 @@ export type Database = {
           id: string
           is_assignable: boolean
           prefix: string
+          skip_handover_form: boolean
+          skip_return_form: boolean
           sort_order: number
         }
         Insert: {
@@ -202,6 +204,8 @@ export type Database = {
           id?: string
           is_assignable?: boolean
           prefix: string
+          skip_handover_form?: boolean
+          skip_return_form?: boolean
           sort_order?: number
         }
         Update: {
@@ -213,6 +217,8 @@ export type Database = {
           id?: string
           is_assignable?: boolean
           prefix?: string
+          skip_handover_form?: boolean
+          skip_return_form?: boolean
           sort_order?: number
         }
         Relationships: [
