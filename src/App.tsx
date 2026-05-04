@@ -25,6 +25,7 @@ const CategoryManager = lazy(() => import("@/pages/CategoryManager"));
 const Companies = lazy(() => import("@/pages/Companies"));
 const SelectCompany = lazy(() => import("@/pages/SelectCompany"));
 const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
+const Welcome = lazy(() => import("@/pages/Welcome"));
 const SignHandover = lazy(() => import("@/pages/SignHandover"));
 const SignOffboarding = lazy(() => import("@/pages/SignOffboarding"));
 const SelectExperience = lazy(() => import("@/pages/SelectExperience"));
@@ -55,6 +56,7 @@ const App = () => (
               <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/welcome" element={<Welcome />} />
                 <Route path="/handover/:token" element={<SignHandover />} />
                 <Route path="/sign-offboarding/:token" element={<SignOffboarding />} />
                 <Route path="/portal/tax101/:token" element={<Tax101TokenPage />} />
