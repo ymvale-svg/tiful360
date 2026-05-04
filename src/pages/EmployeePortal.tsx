@@ -88,18 +88,23 @@ export default function EmployeePortal() {
     enabled: !!myEmployee?.id,
   });
 
-  // Fetch digital access for my employee
+  // Fetch digital access for my employee (now stored as assets in DACC category)
   const { data: myDigitalAccess = [] } = useQuery({
     queryKey: ["my_digital_access", myEmployee?.id],
     queryFn: async () => {
       if (!myEmployee?.id) return [];
       const { data, error } = await supabase
-        .from("digital_access")
-        .select("*")
-        .eq("employee_id", myEmployee.id)
-        .eq("status", "active");
+        .from("assets")
+        .select("*, asset_categories!inner(category_name, prefix)")
+        .eq("current_owner_id", myEmployee.id)
+        .eq("asset_categories.prefix", "DACC");
       if (error) throw error;
-      return data;
+      return (data ?? []).map((a: any) => ({
+        id: a.id,
+        access_type: a.custom_fields?.["סוג גישה"] ?? a.asset_name,
+        resource_path: a.custom_fields?.["נתיב/משאב"] ?? a.serial_number ?? a.asset_name,
+        permission_level: a.custom_fields?.["רמת הרשאה"] ?? "—",
+      }));
     },
     enabled: !!myEmployee?.id,
   });
