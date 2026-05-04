@@ -467,18 +467,27 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
           {/* Single mode: owner + expiry */}
           {!bulkMode && (
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm font-medium mb-1 block">שיוך לעובד</label>
-                <SearchableSelect
-                  value={form.current_owner_id}
-                  onChange={(v) => set("current_owner_id", v)}
-                  options={[
-                    { value: "", label: "במלאי (ללא שיוך)" },
-                    ...activeEmployees.map(e => ({ value: e.id, label: `${e.full_name} (${e.employee_code})` })),
-                  ]}
-                  placeholder="במלאי (ללא שיוך)"
-                />
-              </div>
+              {(selectedCategory as any)?.is_assignable !== false ? (
+                <div>
+                  <label className="text-sm font-medium mb-1 block">שיוך לעובד</label>
+                  <SearchableSelect
+                    value={form.current_owner_id}
+                    onChange={(v) => set("current_owner_id", v)}
+                    options={[
+                      { value: "", label: "במלאי (ללא שיוך)" },
+                      ...activeEmployees.map(e => ({ value: e.id, label: `${e.full_name} (${e.employee_code})` })),
+                    ]}
+                    placeholder="במלאי (ללא שיוך)"
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label className="text-sm font-medium mb-1 block">סוג נכס</label>
+                  <div className="px-3 py-2 bg-primary/5 border border-primary/20 rounded-lg text-sm text-primary">
+                    נכס מוסדי (לא משוייך לעובד)
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="text-sm font-medium mb-1 block">תאריך תפוגה</label>
                 <input
