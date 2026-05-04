@@ -8,6 +8,7 @@ import { SignaturePad, SignaturePadHandle } from "@/components/SignaturePad";
 import { buildOffboardingPdf } from "@/lib/pdf/buildOffboardingPdf";
 import { uploadViaSignedToken } from "@/lib/signedFormUpload";
 import { useToast } from "@/hooks/use-toast";
+import { PdfPreview } from "@/components/PdfPreview";
 
 export default function SignOffboarding() {
   const { token } = useParams();
@@ -194,20 +195,7 @@ export default function SignOffboarding() {
           </p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-card overflow-hidden">
-          {previewUrl ? (
-            <iframe
-              src={previewUrl}
-              title="תצוגת הטופס"
-              className="w-full"
-              style={{ height: "85vh", border: 0 }}
-            />
-          ) : (
-            <div className="p-12 text-center text-sm text-muted-foreground">
-              טוען תצוגת טופס...
-            </div>
-          )}
-        </div>
+        <PdfPreview src={previewUrl} title="תצוגת הטופס" height="85vh" />
 
         <div className="bg-card border rounded-xl p-6 space-y-4">
           <SignaturePad
