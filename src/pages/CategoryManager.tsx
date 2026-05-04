@@ -510,6 +510,15 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
                       <option key={i}>{o}</option>
                     ))}
                   </select>
+                ) : field.field_type === "list_multi" ? (
+                  <div className="w-full bg-muted rounded-md px-3 py-2 text-sm flex flex-wrap gap-1 min-h-[38px] opacity-70">
+                    {(field.field_options ?? []).filter(Boolean).slice(0, 3).map((o, i) => (
+                      <span key={i} className="px-2 py-0.5 rounded bg-background text-xs border border-border/50">☐ {o}</span>
+                    ))}
+                    {(!field.field_options || field.field_options.filter(Boolean).length === 0) && (
+                      <span className="text-muted-foreground text-xs">בחר אפשרויות (אחת או יותר)...</span>
+                    )}
+                  </div>
                 ) : (
                   <input
                     type={field.field_type === "number" ? "number" : field.field_type === "date" ? "date" : "text"}
