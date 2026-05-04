@@ -433,7 +433,9 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                 <Button variant="outline" className="flex-1" onClick={() => setMode("view")}>ביטול</Button>
                 <Button className="flex-1" onClick={handleSubmit} disabled={mutation.isPending}>
                   {mutation.isPending ? "שומר..." : "שמור שינויים"}
-            </Button>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </DialogContent>
