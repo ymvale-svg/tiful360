@@ -35,6 +35,34 @@ export default function SignOffboarding() {
     })();
   }, [token]);
 
+  // Generate live PDF preview (with logo) whenever record loads or signature changes.
+  useEffect(() => {
+    if (!record) return;
+    let cancelled = false;
+    let createdUrl: string | null = null;
+    (async () => {
+      try {
+        const data: OffboardingFormData = {
+          ...(record.form_snapshot as OffboardingFormData),
+          receiver_signature: sigUrl,
+        };
+        const blob = await buildOffboardingPdf(data);
+        if (cancelled) return;
+        createdUrl = URL.createObjectURL(blob);
+        setPreviewUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return createdUrl;
+        });
+      } catch (e) {
+        console.error("preview pdf failed", e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (createdUrl) URL.revokeObjectURL(createdUrl);
+    };
+  }, [record, sigUrl]);
+
   const handleSign = async () => {
     if (!record) return;
     const sig = sigRef.current?.getDataUrl();
