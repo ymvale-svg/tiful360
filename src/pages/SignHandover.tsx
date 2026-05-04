@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, FileSignature, Upload } from "lucide-react";
 import { HandoverFormView, HandoverFormData } from "@/components/HandoverFormView";
 import { SignaturePad, SignaturePadHandle } from "@/components/SignaturePad";
-import { renderHandoverPdfBlob } from "@/lib/generateHandoverPdf";
+import { buildHandoverPdf } from "@/lib/pdf/buildHandoverPdf";
 import { uploadViaSignedToken } from "@/lib/signedFormUpload";
 import { useToast } from "@/hooks/use-toast";
 
@@ -57,7 +57,7 @@ export default function SignHandover() {
         });
       }
 
-      const pdfBlob = await renderHandoverPdfBlob(formRef.current);
+      const pdfBlob = await buildHandoverPdf({ ...(record.form_snapshot as HandoverFormData), receiver_signature: sig });
       const pdfUrl = await uploadViaSignedToken({
         sign_token: token!,
         form_type: "handover",

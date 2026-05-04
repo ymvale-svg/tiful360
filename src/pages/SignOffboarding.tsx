@@ -8,7 +8,7 @@ import {
   OffboardingFormData,
 } from "@/components/OffboardingFormView";
 import { SignaturePad, SignaturePadHandle } from "@/components/SignaturePad";
-import { renderHandoverPdfBlob } from "@/lib/generateHandoverPdf";
+import { buildOffboardingPdf } from "@/lib/pdf/buildOffboardingPdf";
 import { uploadViaSignedToken } from "@/lib/signedFormUpload";
 import { useToast } from "@/hooks/use-toast";
 
@@ -63,7 +63,10 @@ export default function SignOffboarding() {
         });
       }
 
-      const pdfBlob = await renderHandoverPdfBlob(formRef.current);
+      const pdfBlob = await buildOffboardingPdf({
+        ...(record.form_snapshot as OffboardingFormData),
+        receiver_signature: sig,
+      });
       const pdfUrl = await uploadViaSignedToken({
         sign_token: token!,
         form_type: "offboarding",
