@@ -188,7 +188,7 @@ Deno.serve(async (req) => {
       const companyName = companyRow?.name ?? "";
 
       const origin = req.headers.get("origin") || req.headers.get("referer")?.replace(/\/$/, "") || "";
-      const redirectTo = origin ? `${origin}/` : undefined;
+      const redirectTo = origin ? `${origin}/welcome` : undefined;
 
       const results: Array<{ email: string; status: string; error?: string; employee_id?: string }> = [];
 
@@ -288,7 +288,7 @@ Deno.serve(async (req) => {
       }
 
       const origin = req.headers.get("origin") || req.headers.get("referer")?.replace(/\/$/, "") || "";
-      const redirectTo = origin ? `${origin}/` : undefined;
+      const redirectTo = origin ? `${origin}/welcome` : undefined;
 
       // Check if user already exists
       const { data: { users: existingUsers } } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
