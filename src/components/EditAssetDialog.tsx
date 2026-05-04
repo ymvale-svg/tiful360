@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Package, FileSignature, History, FileText } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useAssetCategories, useEmployees } from "@/hooks/useData";
+import { useCategoryFields } from "@/hooks/useCategories";
 import { useUpdateAsset } from "@/hooks/useMutations";
 import { useToast } from "@/hooks/use-toast";
 import { AssignAssetWithFormDialog } from "./AssignAssetWithFormDialog";
 import { AssetDocumentsSection } from "./AssetDocumentsSection";
+import { CustomFieldsRenderer } from "./CustomFieldsRenderer";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -25,8 +27,9 @@ interface Asset {
   condition?: string | null;
   expiry_date: string | null;
   notes: string | null;
+  custom_fields?: Record<string, any> | null;
   company_id?: string | null;
-  asset_categories?: { category_name?: string | null } | null;
+  asset_categories?: { category_name?: string | null; prefix?: string | null; is_assignable?: boolean | null } | null;
   employees?: { full_name?: string | null } | null;
 }
 
