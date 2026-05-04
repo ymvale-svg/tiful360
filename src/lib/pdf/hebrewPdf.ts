@@ -82,7 +82,7 @@ export function drawRtlText(opts: DrawTextOpts) {
 }
 
 export function drawLtrText(opts: Omit<DrawTextOpts, "rightX"> & { x: number }) {
-  page: opts.page.drawText(opts.text ?? "", {
+  opts.page.drawText(opts.text ?? "", {
     x: opts.x,
     y: opts.y,
     size: opts.size,
