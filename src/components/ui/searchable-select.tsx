@@ -82,7 +82,11 @@ export function SearchableSelect({
             dir={dir}
           />
         </div>
-        <div className="max-h-[min(260px,var(--radix-popover-content-available-height))] overflow-y-auto p-1">
+        <div
+          className="max-h-[min(260px,var(--radix-popover-content-available-height))] overflow-y-auto overscroll-contain p-1"
+          onWheel={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+        >
           {filtered.length === 0 && !(allowCreate && query.trim()) ? (
             <div className="py-6 text-center text-sm text-muted-foreground">{emptyText}</div>
           ) : (
