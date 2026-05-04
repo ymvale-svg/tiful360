@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import {
   Plus, GripVertical, Trash2, Save, ChevronLeft, Pencil,
-  Type, Hash, Calendar, List, Package, Settings2, Check, X,
+  Type, Hash, Calendar, List, ListChecks, Package, Settings2, Check, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
