@@ -135,46 +135,9 @@ export function useUpdateEmployee() {
   });
 }
 
-export function useUpsertDigitalAccess() {
-  const queryClient = useQueryClient();
-  const { activeCompanyId } = useCompany();
-  return useMutation({
-    mutationFn: async (params: {
-      id?: string;
-      employee_id: string;
-      access_type: string;
-      resource_path: string;
-      permission_level: "read" | "write" | "admin";
-      status: "active" | "suspended" | "blocked";
-      notes?: string;
-    }) => {
-      if (params.id) {
-        const { id, ...patch } = params;
-        const { error } = await (supabase.from("digital_access") as any).update(patch).eq("id", id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("digital_access").insert({ ...params, company_id: activeCompanyId });
-        if (error) throw error;
-      }
-    },
-    onSuccess: (_d, vars) => {
-      queryClient.invalidateQueries({ queryKey: ["employee-digital-access", vars.employee_id] });
-    },
-  });
-}
-
-export function useDeleteDigitalAccess() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ id }: { id: string; employee_id: string }) => {
-      const { error } = await supabase.from("digital_access").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: (_d, vars) => {
-      queryClient.invalidateQueries({ queryKey: ["employee-digital-access", vars.employee_id] });
-    },
-  });
-}
+// useUpsertDigitalAccess and useDeleteDigitalAccess removed -
+// digital access is now managed via the assets table (DACC category).
+// Use useUpsertAsset / useDeleteAsset (if available) or direct supabase calls.
 
 export function useUnassignAsset() {
   const queryClient = useQueryClient();

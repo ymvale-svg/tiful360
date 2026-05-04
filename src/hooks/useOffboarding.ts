@@ -22,13 +22,29 @@ export function useStartOffboarding() {
         .eq("id", params.employeeId);
       if (empError) throw empError;
 
-      // 2. Suspend all digital access
-      const { error: accessError } = await supabase
-        .from("digital_access")
-        .update({ status: "suspended" })
-        .eq("employee_id", params.employeeId)
-        .eq("status", "active");
-      if (accessError) throw accessError;
+      // 2. Mark all digital access assets (DACC) as 'lost' for this employee (suspended access)
+      // Find DACC category for this company first
+      const { data: empRow } = await supabase
+        .from("employees")
+        .select("company_id")
+        .eq("id", params.employeeId)
+        .single();
+      if (empRow?.company_id) {
+        const { data: daccCat } = await supabase
+          .from("asset_categories")
+          .select("id")
+          .eq("company_id", empRow.company_id)
+          .eq("prefix", "DACC")
+          .maybeSingle();
+        if (daccCat?.id) {
+          const { error: accessError } = await supabase
+            .from("assets")
+            .update({ status: "in_repair" })
+            .eq("current_owner_id", params.employeeId)
+            .eq("category_id", daccCat.id);
+          if (accessError) throw accessError;
+        }
+      }
 
       // 3. Generate ticket code
       const { data: lastTicket } = await supabase
@@ -96,7 +112,8 @@ export function useStartOffboarding() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["employee"] });
       queryClient.invalidateQueries({ queryKey: ["employees"] });
-      queryClient.invalidateQueries({ queryKey: ["employee-digital-access"] });
+      queryClient.invalidateQueries({ queryKey: ["employee-assets"] });
+      queryClient.invalidateQueries({ queryKey: ["assets"] });
       queryClient.invalidateQueries({ queryKey: ["it-tickets"] });
       queryClient.invalidateQueries({ queryKey: ["activity-log"] });
       queryClient.invalidateQueries({ queryKey: ["alerts"] });

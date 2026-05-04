@@ -7,8 +7,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { useEmployee, useEmployeeAssets, useEmployeeDigitalAccess, useActivityLog, useAssets } from "@/hooks/useData";
-import { useDeleteDigitalAccess, useUnassignAsset } from "@/hooks/useMutations";
+import { useEmployee, useEmployeeAssets, useActivityLog, useAssets } from "@/hooks/useData";
+import { useUnassignAsset } from "@/hooks/useMutations";
 import { useEmployeeLeaveRequests } from "@/hooks/useLeaveRequests";
 import { useToast } from "@/hooks/use-toast";
 import { OffboardingDialog } from "@/components/OffboardingDialog";
@@ -17,7 +17,7 @@ import { HandoverFormsList } from "@/components/HandoverFormsList";
 import { EmployeeTax101FormsList } from "@/components/EmployeeTax101FormsList";
 import { LeaveRequestsList } from "@/components/LeaveRequestsList";
 import { EditEmployeeDialog } from "@/components/EditEmployeeDialog";
-import { AddDigitalAccessDialog } from "@/components/AddDigitalAccessDialog";
+
 import { UploadSignedFormDialog } from "@/components/UploadSignedFormDialog";
 import { AssignAssetWithFormDialog } from "@/components/AssignAssetWithFormDialog";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -27,8 +27,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 const allTabs = [
   { id: "personal", label: "פרטים אישיים", icon: User },
-  { id: "assets", label: "ציוד משויך", icon: Package },
-  { id: "digital", label: "גישות דיגיטליות", icon: Key },
+  { id: "assets", label: "ציוד וגישות", icon: Package },
   { id: "forms", label: "טפסים חתומים", icon: FileText },
   { id: "leave", label: "חופשה ומחלה", icon: CalendarDays },
   { id: "payslips", label: "תלושי שכר", icon: FileText },
@@ -70,8 +69,6 @@ export default function EmployeeDetail() {
   const [offboardingOpen, setOffboardingOpen] = useState(false);
   const [transferAsset, setTransferAsset] = useState<any>(null);
   const [editEmployeeOpen, setEditEmployeeOpen] = useState(false);
-  const [addAccessOpen, setAddAccessOpen] = useState(false);
-  const [editAccess, setEditAccess] = useState<any>(null);
   const [uploadFormOpen, setUploadFormOpen] = useState(false);
   const [assignAssetOpen, setAssignAssetOpen] = useState(false);
   const [pickAssetId, setPickAssetId] = useState("");
@@ -79,11 +76,14 @@ export default function EmployeeDetail() {
   const { data: employee, isLoading } = useEmployee(id!);
   const { data: assets } = useEmployeeAssets(id!);
   const { data: allAssets } = useAssets();
-  const { data: digitalAccess } = useEmployeeDigitalAccess(id!);
   const { data: activityLog } = useActivityLog(id);
-  const deleteAccess = useDeleteDigitalAccess();
   const unassignAsset = useUnassignAsset();
   const { data: leaveRequests } = useEmployeeLeaveRequests(id!);
+
+  // Split employee assets into physical equipment and digital access (DACC category)
+  const employeeAssets = assets ?? [];
+  const physicalAssets = employeeAssets.filter((a: any) => (a.asset_categories?.prefix ?? "") !== "DACC");
+  const digitalAccessAssets = employeeAssets.filter((a: any) => (a.asset_categories?.prefix ?? "") === "DACC");
   const { isAdmin, isSuperAdmin, isPayroll, user } = useAuth();
 
   const canSeePayslips =
@@ -160,7 +160,7 @@ export default function EmployeeDetail() {
             <p className="text-xs text-muted-foreground mt-1">פריטי ציוד</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-info">{digitalAccess?.length ?? 0}</p>
+            <p className="text-2xl font-bold text-info">{digitalAccessAssets.length}</p>
             <p className="text-xs text-muted-foreground mt-1">הרשאות דיגיטליות</p>
           </div>
           <div className="text-center">
@@ -324,71 +324,7 @@ export default function EmployeeDetail() {
         <EmployeePayslipsTab employeeId={id!} employee={employee} canSeeSalary={isAdmin} />
       )}
 
-      {/* Digital access tab */}
-      {activeTab === "digital" && (
-        <div className="space-y-4 animate-fade-in">
-          <div className="flex justify-end">
-            <Button size="sm" className="gap-1.5" onClick={() => { setEditAccess(null); setAddAccessOpen(true); }}>
-              <Plus className="w-4 h-4" />
-              הוסף גישה
-            </Button>
-          </div>
-          <div className="bg-card rounded-xl border border-border/50 shadow-card overflow-hidden">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>סוג גישה</th>
-                  <th>משאב</th>
-                  <th>רמת הרשאה</th>
-                  <th>סטטוס</th>
-                  <th className="w-32">פעולות</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(digitalAccess ?? []).map((access) => (
-                  <tr key={access.id}>
-                    <td>{access.access_type}</td>
-                    <td className="font-mono text-xs">{access.resource_path}</td>
-                    <td>{permissionLabels[access.permission_level] ?? access.permission_level}</td>
-                    <td><span className="status-badge status-active">{accessStatusLabels[access.status] ?? access.status}</span></td>
-                    <td>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0"
-                          onClick={() => { setEditAccess(access); setAddAccessOpen(true); }}
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0 text-destructive"
-                          onClick={async () => {
-                            if (!confirm("למחוק את הגישה?")) return;
-                            try {
-                              await deleteAccess.mutateAsync({ id: access.id, employee_id: id! });
-                              toast({ title: "הגישה נמחקה" });
-                            } catch (err: any) {
-                              toast({ title: "שגיאה", description: err.message, variant: "destructive" });
-                            }
-                          }}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {(!digitalAccess || digitalAccess.length === 0) && (
-                  <tr><td colSpan={5} className="text-center py-8 text-muted-foreground">אין הרשאות</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      {/* Digital access tab removed - now part of Assets tab via DACC category */}
 
       {/* History tab */}
       {activeTab === "history" && (
@@ -431,11 +367,11 @@ export default function EmployeeDetail() {
           serial_number: a.serial_number,
           asset_categories: (a as any).asset_categories,
         }))}
-        digitalAccess={(digitalAccess ?? []).map(da => ({
-          id: da.id,
-          access_type: da.access_type,
-          resource_path: da.resource_path,
-          permission_level: da.permission_level,
+        digitalAccess={digitalAccessAssets.map((a: any) => ({
+          id: a.id,
+          access_type: a.custom_fields?.["סוג גישה"] ?? a.asset_name,
+          resource_path: a.custom_fields?.["נתיב/משאב"] ?? a.serial_number ?? "",
+          permission_level: a.custom_fields?.["רמת הרשאה"] ?? "read",
         }))}
       />
 
@@ -456,13 +392,7 @@ export default function EmployeeDetail() {
         employee={employee}
       />
 
-      {/* Add/edit digital access */}
-      <AddDigitalAccessDialog
-        open={addAccessOpen}
-        onOpenChange={(o) => { setAddAccessOpen(o); if (!o) setEditAccess(null); }}
-        employeeId={id!}
-        existing={editAccess}
-      />
+      {/* Digital access dialog removed - managed via Asset dialog (DACC category) */}
 
       {/* Upload signed form */}
       <UploadSignedFormDialog

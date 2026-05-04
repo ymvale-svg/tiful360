@@ -47,20 +47,8 @@ export function useEmployeeAssets(employeeId: string) {
   });
 }
 
-export function useEmployeeDigitalAccess(employeeId: string) {
-  return useQuery({
-    queryKey: ["employee-digital-access", employeeId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("digital_access")
-        .select("*")
-        .eq("employee_id", employeeId);
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!employeeId,
-  });
-}
+// useEmployeeDigitalAccess removed - digital access is now stored as assets in DACC category
+// Use useEmployeeAssets and filter by asset_categories.prefix === 'DACC'
 
 export function useAssets() {
   const { activeCompanyId } = useCompany();
