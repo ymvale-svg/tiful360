@@ -201,6 +201,54 @@ export default function EmployeePortal() {
 
   const employeeName = myEmployee?.full_name || displayName;
 
+  const handlePunch = (direction: "in" | "out") => {
+    if (!myEmployee) return;
+    if (!navigator.geolocation) {
+      toast({
+        title: "GPS לא נתמך",
+        description: "הדפדפן שלך לא תומך בשירותי מיקום",
+        variant: "destructive",
+      });
+      return;
+    }
+    setPunchingDir(direction);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          await createPunch.mutateAsync({
+            companyId: myEmployee.company_id!,
+            employeeId: myEmployee.id,
+            employeeCode: myEmployee.employee_code,
+            direction,
+            geo: {
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude,
+              accuracy: pos.coords.accuracy,
+            },
+          });
+          toast({ title: direction === "in" ? "כניסה נרשמה ✓" : "יציאה נרשמה ✓" });
+        } catch (err: any) {
+          toast({ title: "שגיאה בשליחה", description: err.message, variant: "destructive" });
+        } finally {
+          setPunchingDir(null);
+        }
+      },
+      (err) => {
+        setPunchingDir(null);
+        toast({
+          title: "מיקום לא זמין",
+          description:
+            err.code === err.PERMISSION_DENIED
+              ? "יש לאפשר גישה למיקום בדפדפן כדי לבצע החתמה מרחוק"
+              : "לא ניתן לאתר את המיקום שלך כעת. ודא ש-GPS פעיל ונסה שוב.",
+          variant: "destructive",
+        });
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
+    );
+  };
+
+
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Mobile-friendly top bar */}
