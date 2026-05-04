@@ -69,28 +69,30 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
   const isVirtualAsset =
     /תוכנ|וירטואל|software|virtual|subscription|מנוי/i.test(categoryName);
 
-  // For virtual assets: do a direct assignment without any form
+  // Direct assignment for virtual assets — no form, no signature
+  const handleDirectAssign = async () => {
+    if (!asset || !employeeId) return;
+    setBusy(true);
+    try {
+      const { error } = await supabase
+        .from("assets")
+        .update({ current_owner_id: employeeId, status: "in_use" })
+        .eq("id", asset.id);
+      if (error) throw error;
+      toast({ title: "הציוד שויך", description: "פריטים וירטואליים אינם דורשים טופס מסירה" });
+      qc.invalidateQueries({ queryKey: ["assets"] });
+      close();
+    } catch (err: any) {
+      toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Auto-assign virtual asset when an owner is already preselected (skip dialog UI entirely)
   useEffect(() => {
-    if (!open || !isVirtualAsset || !asset) return;
-    const targetEmployeeId = preassignedOwnerId || employeeId;
-    if (!targetEmployeeId || busy) return;
-    (async () => {
-      setBusy(true);
-      try {
-        const { error } = await supabase
-          .from("assets")
-          .update({ current_owner_id: targetEmployeeId, status: "in_use" })
-          .eq("id", asset.id);
-        if (error) throw error;
-        toast({ title: "הציוד שויך", description: "פריטים וירטואליים אינם דורשים טופס מסירה" });
-        qc.invalidateQueries({ queryKey: ["assets"] });
-        close();
-      } catch (err: any) {
-        toast({ title: "שגיאה", description: err.message, variant: "destructive" });
-      } finally {
-        setBusy(false);
-      }
-    })();
+    if (!open || !isVirtualAsset || !asset || !preassignedOwnerId || busy) return;
+    handleDirectAssign();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, isVirtualAsset, asset?.id, preassignedOwnerId]);
 
