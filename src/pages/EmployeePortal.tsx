@@ -72,6 +72,9 @@ export default function EmployeePortal() {
     enabled: !!activeCompanyId && !!user?.id,
   });
 
+  // Prefixes considered "digital" (shown in הרשאות ומערכות section instead of ציוד פיזי)
+  const DIGITAL_PREFIXES = ["DACC", "SFT"];
+
   // Fetch assets assigned to my employee
   const { data: myAssets = [] } = useQuery({
     queryKey: ["my_assets", myEmployee?.id],
@@ -83,13 +86,15 @@ export default function EmployeePortal() {
         .eq("current_owner_id", myEmployee.id)
         .eq("status", "in_use");
       if (error) throw error;
-      // Exclude digital access items - they appear in their own section
-      return (data ?? []).filter((a: any) => (a.asset_categories?.prefix ?? "") !== "DACC");
+      // Exclude digital items - they appear in their own section
+      return (data ?? []).filter(
+        (a: any) => !DIGITAL_PREFIXES.includes(a.asset_categories?.prefix ?? "")
+      );
     },
     enabled: !!myEmployee?.id,
   });
 
-  // Fetch digital access for my employee (now stored as assets in DACC category)
+  // Fetch digital access for my employee (DACC + SFT categories)
   const { data: myDigitalAccess = [] } = useQuery({
     queryKey: ["my_digital_access", myEmployee?.id],
     queryFn: async () => {
@@ -98,12 +103,19 @@ export default function EmployeePortal() {
         .from("assets")
         .select("*, asset_categories!inner(category_name, prefix)")
         .eq("current_owner_id", myEmployee.id)
-        .eq("asset_categories.prefix", "DACC");
+        .in("asset_categories.prefix", DIGITAL_PREFIXES);
       if (error) throw error;
       return (data ?? []).map((a: any) => ({
         id: a.id,
-        access_type: a.custom_fields?.["סוג גישה"] ?? a.asset_name,
-        resource_path: a.custom_fields?.["נתיב/משאב"] ?? a.serial_number ?? a.asset_name,
+        access_type:
+          a.custom_fields?.["סוג גישה"] ??
+          a.asset_categories?.category_name ??
+          a.asset_name,
+        resource_path:
+          a.custom_fields?.["נתיב/משאב"] ??
+          a.asset_name ??
+          a.serial_number ??
+          "—",
         permission_level: a.custom_fields?.["רמת הרשאה"] ?? "—",
       }));
     },
