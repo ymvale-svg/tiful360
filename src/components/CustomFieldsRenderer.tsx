@@ -85,11 +85,51 @@ export function CustomFieldsRenderer({
                 {cf.is_required && !readOnly && <span className="text-destructive mr-1">*</span>}
               </label>
               {readOnly ? (
-                <div className="px-3 py-2 bg-muted/40 rounded-lg text-sm min-h-[40px] whitespace-pre-wrap break-words" dir={cf.field_type === "date" || cf.field_type === "number" ? "ltr" : "rtl"}>
-                  {cf.field_type === "date" && value
-                    ? new Date(value).toLocaleDateString("he-IL")
-                    : (value || <span className="text-muted-foreground">—</span>)}
-                </div>
+                (() => {
+                  const isDate = cf.field_type === "date";
+                  const isNumber = cf.field_type === "number";
+                  const fname = cf.field_name;
+                  const isPhone = /טלפון|נייד|פקס|phone|mobile/i.test(fname);
+                  const isEmail = /אימייל|מייל|email|דוא"?ל/i.test(fname);
+                  const baseCls = "px-3 py-2 bg-muted/40 rounded-lg text-sm min-h-[40px] whitespace-pre-wrap break-words text-right";
+                  if (!value) {
+                    return <div className={baseCls} dir="rtl"><span className="text-muted-foreground">—</span></div>;
+                  }
+                  if (isPhone) {
+                    const digits = value.replace(/[^\d+]/g, "");
+                    // Convert local Israeli mobile (05x...) to international 9725x...
+                    let intl = digits;
+                    if (intl.startsWith("0")) intl = "972" + intl.slice(1);
+                    intl = intl.replace(/^\+/, "");
+                    return (
+                      <a
+                        href={`https://wa.me/${intl}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        dir="ltr"
+                        className={cn(baseCls, "block text-primary hover:underline")}
+                      >
+                        {value}
+                      </a>
+                    );
+                  }
+                  if (isEmail) {
+                    return (
+                      <a
+                        href={`mailto:${value}`}
+                        dir="ltr"
+                        className={cn(baseCls, "block text-primary hover:underline")}
+                      >
+                        {value}
+                      </a>
+                    );
+                  }
+                  return (
+                    <div className={baseCls} dir={isDate || isNumber ? "ltr" : "rtl"}>
+                      {isDate ? new Date(value).toLocaleDateString("he-IL") : value}
+                    </div>
+                  );
+                })()
               ) : cf.field_type === "list" ? (
                 <SearchableSelect
                   value={value}
