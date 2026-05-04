@@ -1,8 +1,8 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Plus, Boxes, Download, Upload, FileSignature, Trash2, UserMinus, User, Building2 } from "lucide-react";
+import { Search, Plus, Boxes, Download, Upload, FileSignature, Trash2, UserMinus, User, Building2, ChevronDown, ChevronRight, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
@@ -38,6 +38,7 @@ export default function Assets() {
 
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedEmployee, setSelectedEmployee] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [scope, setScope] = useState<"all" | "allocated" | "institutional">("all");
   const [addOpen, setAddOpen] = useState(false);
@@ -46,6 +47,53 @@ export default function Assets() {
   const [assignAsset, setAssignAsset] = useState<any>(null);
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const [unassignTarget, setUnassignTarget] = useState<any>(null);
+
+  // Grouping & sorting
+  type GroupBy = "category" | "employee" | "none";
+  type SortKey = "asset_code" | "asset_name" | "category" | "owner" | "status" | "expiry";
+  const [groupBy, setGroupBy] = useState<GroupBy>("category");
+  const [sortKey, setSortKey] = useState<SortKey>("asset_code");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  // When user picks a specific category — switch grouping to employee automatically
+  const effectiveGroupBy: GroupBy = selectedCategory !== "all" && groupBy === "category" ? "employee" : groupBy;
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setSortDir("asc"); }
+  };
+  const SortIcon = ({ k }: { k: SortKey }) =>
+    sortKey !== k
+      ? <ArrowUpDown className="w-3 h-3 inline opacity-40 mr-1" />
+      : sortDir === "asc"
+        ? <ArrowUp className="w-3 h-3 inline mr-1" />
+        : <ArrowDown className="w-3 h-3 inline mr-1" />;
+
+  const cmp = (a: any, b: any, key: SortKey): number => {
+    const dir = sortDir === "asc" ? 1 : -1;
+    const av = (() => {
+      switch (key) {
+        case "asset_code": return a.asset_code ?? "";
+        case "asset_name": return a.asset_name ?? "";
+        case "category": return a.asset_categories?.category_name ?? "";
+        case "owner": return a.employees?.full_name ?? "\uFFFF"; // unassigned last on asc
+        case "status": return assetStatusLabels[a.status] ?? a.status ?? "";
+        case "expiry": return a.expiry_date ?? "";
+      }
+    })();
+    const bv = (() => {
+      switch (key) {
+        case "asset_code": return b.asset_code ?? "";
+        case "asset_name": return b.asset_name ?? "";
+        case "category": return b.asset_categories?.category_name ?? "";
+        case "owner": return b.employees?.full_name ?? "\uFFFF";
+        case "status": return assetStatusLabels[b.status] ?? b.status ?? "";
+        case "expiry": return b.expiry_date ?? "";
+      }
+    })();
+    return String(av).localeCompare(String(bv), "he", { numeric: true, sensitivity: "base" }) * dir;
+  };
 
   const filtered = (assets ?? []).filter((a) => {
     const isAssignable = (a as any).asset_categories?.is_assignable !== false;
@@ -57,10 +105,46 @@ export default function Assets() {
     const matchEmp =
       selectedEmployee === "all" ||
       (selectedEmployee === "__unassigned__" ? !a.current_owner_id : a.current_owner_id === selectedEmployee);
+    const matchStatus = selectedStatus === "all" || a.status === selectedStatus;
     const matchSearch = a.asset_name.includes(search) || a.asset_code.includes(search) ||
       ((a as any).employees?.full_name ?? "").includes(search);
-    return matchScope && matchCat && matchEmp && matchSearch;
+    return matchScope && matchCat && matchEmp && matchStatus && matchSearch;
   });
+
+  // Sort the filtered list by current sort key
+  const sorted = [...filtered].sort((a, b) => cmp(a, b, sortKey));
+
+  // Group rows
+  const groups: Array<{ key: string; label: string; items: any[] }> = (() => {
+    if (effectiveGroupBy === "none") {
+      return [{ key: "__all__", label: "", items: sorted }];
+    }
+    const map = new Map<string, { key: string; label: string; items: any[] }>();
+    for (const a of sorted) {
+      let key: string; let label: string;
+      if (effectiveGroupBy === "category") {
+        key = (a as any).category_id ?? "__none__";
+        label = (a as any).asset_categories?.category_name ?? "ללא קטגוריה";
+      } else {
+        key = (a as any).current_owner_id ?? "__stock__";
+        label = (a as any).employees?.full_name ?? "במלאי / ללא שיוך";
+      }
+      if (!map.has(key)) map.set(key, { key, label, items: [] });
+      map.get(key)!.items.push(a);
+    }
+    // Sort groups: stock/none last when ascending
+    return Array.from(map.values()).sort((g1, g2) => {
+      const sentinel = (k: string) => k === "__stock__" || k === "__none__" ? 1 : 0;
+      const s = sentinel(g1.key) - sentinel(g2.key);
+      if (s !== 0) return s;
+      return g1.label.localeCompare(g2.label, "he", { numeric: true });
+    });
+  })();
+
+  // Summary stats
+  const statusCounts = filtered.reduce((acc: Record<string, number>, a: any) => {
+    acc[a.status] = (acc[a.status] ?? 0) + 1; return acc;
+  }, {});
 
   // Categories that match the current scope (so the pill row narrows correctly)
   const visibleCategories = (categories ?? []).filter((c: any) => {
@@ -237,15 +321,56 @@ export default function Assets() {
             />
           </div>
         )}
-        {(selectedEmployee !== "all" || selectedCategory !== "all" || search) && (
+        <select
+          value={selectedStatus}
+          onChange={(e) => setSelectedStatus(e.target.value)}
+          className="bg-card border border-border rounded-lg px-3 py-2 text-sm outline-none"
+        >
+          <option value="all">כל הסטטוסים</option>
+          <option value="in_use">בשימוש</option>
+          <option value="in_stock">במלאי</option>
+          <option value="in_repair">בתיקון</option>
+          <option value="lost">אבד</option>
+        </select>
+
+        {/* Group-by toggle */}
+        <div className="flex items-center gap-1 bg-card border border-border rounded-lg p-1">
+          <span className="text-xs text-muted-foreground px-2">קיבוץ:</span>
+          {([
+            { v: "category", l: "קטגוריה" },
+            { v: "employee", l: "עובד" },
+            { v: "none", l: "ללא" },
+          ] as Array<{ v: GroupBy; l: string }>).map((g) => (
+            <button
+              key={g.v}
+              onClick={() => setGroupBy(g.v)}
+              className={cn(
+                "px-3 py-1 rounded-md text-xs font-medium transition-colors",
+                groupBy === g.v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+              )}
+            >
+              {g.l}
+            </button>
+          ))}
+        </div>
+
+        {(selectedEmployee !== "all" || selectedCategory !== "all" || selectedStatus !== "all" || search) && (
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => { setSelectedEmployee("all"); setSelectedCategory("all"); setSearch(""); }}
+            onClick={() => { setSelectedEmployee("all"); setSelectedCategory("all"); setSelectedStatus("all"); setSearch(""); }}
           >
             נקה סינון
           </Button>
         )}
+      </div>
+
+      {/* Summary bar */}
+      <div className="text-xs text-muted-foreground flex items-center gap-3 flex-wrap">
+        <span>מציג <strong className="text-foreground">{filtered.length}</strong> מתוך {assets?.length ?? 0} פריטים</span>
+        {Object.entries(statusCounts).map(([k, v]) => (
+          <span key={k}>· {assetStatusLabels[k] ?? k}: <strong className="text-foreground">{v}</strong></span>
+        ))}
       </div>
 
       {/* Table */}
@@ -254,92 +379,100 @@ export default function Assets() {
           <div className="p-8 text-center text-muted-foreground">טוען...</div>
         ) : (
           <table className="data-table">
-            <thead>
+            <thead className="sticky top-0 bg-card z-10">
               <tr>
-                <th>מזהה</th>
-                <th>שם פריט</th>
-                <th>קטגוריה</th>
-                <th>בעלות</th>
-                <th>סטטוס</th>
-                <th>תפוגה</th>
+                <th onClick={() => toggleSort("asset_code")} className="cursor-pointer select-none hover:bg-muted/40"><SortIcon k="asset_code" />מזהה</th>
+                <th onClick={() => toggleSort("asset_name")} className="cursor-pointer select-none hover:bg-muted/40"><SortIcon k="asset_name" />שם פריט</th>
+                <th onClick={() => toggleSort("category")} className="cursor-pointer select-none hover:bg-muted/40"><SortIcon k="category" />קטגוריה</th>
+                <th onClick={() => toggleSort("owner")} className="cursor-pointer select-none hover:bg-muted/40"><SortIcon k="owner" />בעלות</th>
+                <th onClick={() => toggleSort("status")} className="cursor-pointer select-none hover:bg-muted/40"><SortIcon k="status" />סטטוס</th>
+                <th onClick={() => toggleSort("expiry")} className="cursor-pointer select-none hover:bg-muted/40"><SortIcon k="expiry" />תפוגה</th>
                 <th className="text-left">פעולות</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((asset) => {
-                const cat = (asset as any).asset_categories;
-                const categoryName = cat?.category_name ?? "";
-                const isAssignable = cat?.is_assignable !== false;
-                const isVirtualAsset = cat?.skip_handover_form === true || /תוכנ|וירטואל|software|virtual|subscription|מנוי/i.test(categoryName);
+              {groups.map((grp) => {
+                const isCollapsed = !!collapsed[grp.key];
+                const showHeader = effectiveGroupBy !== "none";
                 return (
-                <tr
-                  key={asset.id}
-                  onClick={() => setEditAsset(asset)}
-                  className="cursor-pointer hover:bg-muted/40 transition-colors"
-                >
-                  <td className="font-mono text-xs text-muted-foreground">{asset.asset_code}</td>
-                  <td className="font-medium">
-                    <div className="flex items-center gap-2">
-                      {!isAssignable && (
-                        <Building2 className="w-3.5 h-3.5 text-primary/70 shrink-0" aria-label="נכס חברה" />
-                      )}
-                      {asset.asset_name}
-                    </div>
-                  </td>
-                  <td>{categoryName || "—"}</td>
-                  <td>
-                    {isAssignable
-                      ? ((asset as any).employees?.full_name ?? "במלאי")
-                      : <span className="text-xs text-muted-foreground">נכס חברה</span>}
-                  </td>
-                  <td>
-                    {isAssignable ? (
-                      <span className={`status-badge ${assetStatusClasses[asset.status] ?? ""}`}>
-                        {assetStatusLabels[asset.status] ?? asset.status}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground text-xs">—</span>
-                    )}
-                  </td>
-                  <td className="text-muted-foreground text-xs">
-                    {asset.expiry_date ? new Date(asset.expiry_date).toLocaleDateString("he-IL") : "—"}
-                  </td>
-                  <td onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center gap-1">
-                      {isAssignable && !isVirtualAsset && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          title="שיוך לעובד וחתימה"
-                          onClick={(e) => { e.stopPropagation(); setAssignAsset(asset); }}
-                        >
-                          <FileSignature className="w-4 h-4 text-primary" />
-                        </Button>
-                      )}
-                      {isAssignable && asset.current_owner_id && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          title="ביטול שיוך — החזרה למלאי"
-                          onClick={(e) => { e.stopPropagation(); setUnassignTarget(asset); }}
-                        >
-                          <UserMinus className="w-4 h-4 text-warning" />
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        title="מחיקה"
-                        onClick={(e) => { e.stopPropagation(); setDeleteTarget(asset); }}
+                  <React.Fragment key={grp.key}>
+                    {showHeader && (
+                      <tr
+                        key={`hdr-${grp.key}`}
+                        className="bg-muted/40 hover:bg-muted/60 cursor-pointer sticky"
+                        onClick={() => setCollapsed((c) => ({ ...c, [grp.key]: !c[grp.key] }))}
                       >
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
+                        <td colSpan={7} className="font-semibold text-sm py-2">
+                          <div className="flex items-center gap-2">
+                            {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            <span>{grp.label}</span>
+                            <span className="text-xs text-muted-foreground font-normal">· {grp.items.length}</span>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    {!isCollapsed && grp.items.map((asset: any) => {
+                      const cat = asset.asset_categories;
+                      const categoryName = cat?.category_name ?? "";
+                      const isAssignable = cat?.is_assignable !== false;
+                      const isVirtualAsset = cat?.skip_handover_form === true || /תוכנ|וירטואל|software|virtual|subscription|מנוי/i.test(categoryName);
+                      return (
+                        <tr
+                          key={asset.id}
+                          onClick={() => setEditAsset(asset)}
+                          className="cursor-pointer hover:bg-muted/40 transition-colors"
+                        >
+                          <td className="font-mono text-xs text-muted-foreground">{asset.asset_code}</td>
+                          <td className="font-medium">
+                            <div className="flex items-center gap-2">
+                              {!isAssignable && (
+                                <Building2 className="w-3.5 h-3.5 text-primary/70 shrink-0" aria-label="נכס חברה" />
+                              )}
+                              {asset.asset_name}
+                            </div>
+                          </td>
+                          <td>{categoryName || "—"}</td>
+                          <td>
+                            {isAssignable
+                              ? (asset.employees?.full_name ?? "במלאי")
+                              : <span className="text-xs text-muted-foreground">נכס חברה</span>}
+                          </td>
+                          <td>
+                            {isAssignable ? (
+                              <span className={`status-badge ${assetStatusClasses[asset.status] ?? ""}`}>
+                                {assetStatusLabels[asset.status] ?? asset.status}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">—</span>
+                            )}
+                          </td>
+                          <td className="text-muted-foreground text-xs">
+                            {asset.expiry_date ? new Date(asset.expiry_date).toLocaleDateString("he-IL") : "—"}
+                          </td>
+                          <td onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-1">
+                              {isAssignable && !isVirtualAsset && (
+                                <Button variant="ghost" size="icon" className="h-8 w-8" title="שיוך לעובד וחתימה"
+                                  onClick={(e) => { e.stopPropagation(); setAssignAsset(asset); }}>
+                                  <FileSignature className="w-4 h-4 text-primary" />
+                                </Button>
+                              )}
+                              {isAssignable && asset.current_owner_id && (
+                                <Button variant="ghost" size="icon" className="h-8 w-8" title="ביטול שיוך — החזרה למלאי"
+                                  onClick={(e) => { e.stopPropagation(); setUnassignTarget(asset); }}>
+                                  <UserMinus className="w-4 h-4 text-warning" />
+                                </Button>
+                              )}
+                              <Button variant="ghost" size="icon" className="h-8 w-8" title="מחיקה"
+                                onClick={(e) => { e.stopPropagation(); setDeleteTarget(asset); }}>
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </React.Fragment>
                 );
               })}
               {filtered.length === 0 && (
