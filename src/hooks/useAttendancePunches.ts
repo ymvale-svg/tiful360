@@ -53,6 +53,7 @@ export function useOrphanPunches() {
         .select("*")
         .eq("company_id", activeCompanyId)
         .is("employee_id", null)
+        .neq("status", "rejected")
         .order("punch_at", { ascending: false })
         .limit(200);
       if (error) throw error;
