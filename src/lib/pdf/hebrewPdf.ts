@@ -9,16 +9,19 @@ import notoSansHebrewBoldUrl from "@/assets/fonts/NotoSansHebrew-Bold.ttf?url";
 
 const bidi = bidiFactory();
 
-let cachedRegular: ArrayBuffer | null = null;
-let cachedBold: ArrayBuffer | null = null;
+// Cached as Uint8Array. We hand a *fresh copy* to pdf-lib on every embed
+// because pdf-lib/fontkit may detach or mutate the underlying ArrayBuffer,
+// which would corrupt subsequent PDFs that share the same cached bytes.
+let cachedRegular: Uint8Array | null = null;
+let cachedBold: Uint8Array | null = null;
 
-async function loadFontBytes(url: string): Promise<ArrayBuffer> {
+async function loadFontBytes(url: string): Promise<Uint8Array> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to load font: ${url} (${res.status})`);
-  const buf = await res.arrayBuffer();
+  const buf = new Uint8Array(await res.arrayBuffer());
   // Sanity-check the magic header so we fail loudly if the dev server
   // returned an HTML fallback instead of the actual font.
-  const head = new Uint8Array(buf.slice(0, 4));
+  const head = buf.subarray(0, 4);
   const isTTF = head[0] === 0x00 && head[1] === 0x01 && head[2] === 0x00 && head[3] === 0x00;
   const isOTF = head[0] === 0x4f && head[1] === 0x54 && head[2] === 0x54 && head[3] === 0x4f; // 'OTTO'
   if (!isTTF && !isOTF) {
@@ -37,8 +40,11 @@ async function embedHebrewFonts(pdf: PDFDocument) {
   pdf.registerFontkit(fontkit);
   if (!cachedRegular) cachedRegular = await loadFontBytes(notoSansHebrewRegularUrl);
   if (!cachedBold) cachedBold = await loadFontBytes(notoSansHebrewBoldUrl);
-  const regular = await pdf.embedFont(cachedRegular!, { subset: true });
-  const bold = await pdf.embedFont(cachedBold!, { subset: true });
+  // Pass a fresh copy each time — pdf-lib/fontkit may mutate or detach
+  // the buffer it receives, which would silently corrupt the next PDF
+  // built from the same cached bytes.
+  const regular = await pdf.embedFont(new Uint8Array(cachedRegular), { subset: true });
+  const bold = await pdf.embedFont(new Uint8Array(cachedBold), { subset: true });
   return { regular, bold };
 }
 
