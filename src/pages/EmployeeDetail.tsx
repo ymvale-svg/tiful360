@@ -160,7 +160,7 @@ export default function EmployeeDetail() {
             <p className="text-xs text-muted-foreground mt-1">פריטי ציוד</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-info">{digitalAccess?.length ?? 0}</p>
+            <p className="text-2xl font-bold text-info">{digitalAccessAssets.length}</p>
             <p className="text-xs text-muted-foreground mt-1">הרשאות דיגיטליות</p>
           </div>
           <div className="text-center">
@@ -324,71 +324,7 @@ export default function EmployeeDetail() {
         <EmployeePayslipsTab employeeId={id!} employee={employee} canSeeSalary={isAdmin} />
       )}
 
-      {/* Digital access tab */}
-      {activeTab === "digital" && (
-        <div className="space-y-4 animate-fade-in">
-          <div className="flex justify-end">
-            <Button size="sm" className="gap-1.5" onClick={() => { setEditAccess(null); setAddAccessOpen(true); }}>
-              <Plus className="w-4 h-4" />
-              הוסף גישה
-            </Button>
-          </div>
-          <div className="bg-card rounded-xl border border-border/50 shadow-card overflow-hidden">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>סוג גישה</th>
-                  <th>משאב</th>
-                  <th>רמת הרשאה</th>
-                  <th>סטטוס</th>
-                  <th className="w-32">פעולות</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(digitalAccess ?? []).map((access) => (
-                  <tr key={access.id}>
-                    <td>{access.access_type}</td>
-                    <td className="font-mono text-xs">{access.resource_path}</td>
-                    <td>{permissionLabels[access.permission_level] ?? access.permission_level}</td>
-                    <td><span className="status-badge status-active">{accessStatusLabels[access.status] ?? access.status}</span></td>
-                    <td>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0"
-                          onClick={() => { setEditAccess(access); setAddAccessOpen(true); }}
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0 text-destructive"
-                          onClick={async () => {
-                            if (!confirm("למחוק את הגישה?")) return;
-                            try {
-                              await deleteAccess.mutateAsync({ id: access.id, employee_id: id! });
-                              toast({ title: "הגישה נמחקה" });
-                            } catch (err: any) {
-                              toast({ title: "שגיאה", description: err.message, variant: "destructive" });
-                            }
-                          }}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {(!digitalAccess || digitalAccess.length === 0) && (
-                  <tr><td colSpan={5} className="text-center py-8 text-muted-foreground">אין הרשאות</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      {/* Digital access tab removed - now part of Assets tab via DACC category */}
 
       {/* History tab */}
       {activeTab === "history" && (
