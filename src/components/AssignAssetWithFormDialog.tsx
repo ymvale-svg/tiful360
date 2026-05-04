@@ -64,6 +64,38 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
     if (open && preassignedOwnerId) setEmployeeId(preassignedOwnerId);
   }, [open, preassignedOwnerId]);
 
+  // Virtual assets (software / virtual assets) don't require a handover form
+  const categoryName = asset?.asset_categories?.category_name ?? "";
+  const isVirtualAsset =
+    /תוכנ|וירטואל|software|virtual|subscription|מנוי/i.test(categoryName);
+
+  // Direct assignment for virtual assets — no form, no signature
+  const handleDirectAssign = async () => {
+    if (!asset || !employeeId) return;
+    setBusy(true);
+    try {
+      const { error } = await supabase
+        .from("assets")
+        .update({ current_owner_id: employeeId, status: "in_use" })
+        .eq("id", asset.id);
+      if (error) throw error;
+      toast({ title: "הציוד שויך", description: "פריטים וירטואליים אינם דורשים טופס מסירה" });
+      qc.invalidateQueries({ queryKey: ["assets"] });
+      close();
+    } catch (err: any) {
+      toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Auto-assign virtual asset when an owner is already preselected (skip dialog UI entirely)
+  useEffect(() => {
+    if (!open || !isVirtualAsset || !asset || !preassignedOwnerId || busy) return;
+    handleDirectAssign();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, isVirtualAsset, asset?.id, preassignedOwnerId]);
+
   const reset = () => {
     setEmployeeId(preassignedOwnerId); setMethod("portal"); setStep("choose");
     setAttachment(null); setIssuerDataUrl(null); setReceiverDataUrl(null);
@@ -242,10 +274,17 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSignature className="w-5 h-5 text-primary" />
-            {step === "choose" ? "שיוך ציוד עם טופס חתימה" : "חתימה על טופס קבלת ציוד"}
+            {isVirtualAsset
+              ? "שיוך פריט וירטואלי"
+              : step === "choose"
+                ? "שיוך ציוד עם טופס חתימה"
+                : "חתימה על טופס קבלת ציוד"}
           </DialogTitle>
           <DialogDescription>
             {asset ? `${asset.asset_name} (${asset.asset_code})` : ""}
+            {isVirtualAsset && (
+              <span className="block mt-1 text-xs">פריטים וירטואליים אינם דורשים טופס מסירה / החתמה</span>
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -272,80 +311,102 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
               </div>
             )}
 
-            {!attachment && (
-              <div>
-                <label className="text-sm font-medium mb-2 block">מסלול חתימה</label>
-                <div className="space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => setMethod("portal")}
-                    className={`w-full text-right p-3 rounded-lg border-2 transition-colors flex items-center gap-3 ${method === "portal" ? "border-primary bg-primary/5" : "border-border hover:bg-muted"}`}
+            {isVirtualAsset ? (
+              <>
+                {!employeeId && (
+                  <div className="text-xs text-muted-foreground flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" /> נא לבחור עובד תחילה
+                  </div>
+                )}
+                <div className="flex gap-2 pt-2">
+                  <Button variant="outline" className="flex-1" onClick={close}>ביטול</Button>
+                  <Button
+                    className="flex-1"
+                    disabled={!employeeId || busy}
+                    onClick={handleDirectAssign}
                   >
-                    <Send className="w-5 h-5 text-primary shrink-0" />
-                    <div className="flex-1">
-                      <div className="font-medium text-sm">שליחה לאזור האישי בפורטל</div>
-                      <div className="text-xs text-muted-foreground">העובד יחתום מתוך הפורטל שלו</div>
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMethod("manager_present")}
-                    className={`w-full text-right p-3 rounded-lg border-2 transition-colors flex items-center gap-3 ${method === "manager_present" ? "border-primary bg-primary/5" : "border-border hover:bg-muted"}`}
-                  >
-                    <PenTool className="w-5 h-5 text-primary shrink-0" />
-                    <div className="flex-1">
-                      <div className="font-medium text-sm">חתימה מול מנהל התפעול</div>
-                      <div className="text-xs text-muted-foreground">העובד חותם כעת על המכשיר</div>
-                    </div>
-                  </button>
+                    {busy ? "משייך..." : "שייך"}
+                  </Button>
                 </div>
-              </div>
+              </>
+            ) : (
+              <>
+                {!attachment && (
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">מסלול חתימה</label>
+                    <div className="space-y-2">
+                      <button
+                        type="button"
+                        onClick={() => setMethod("portal")}
+                        className={`w-full text-right p-3 rounded-lg border-2 transition-colors flex items-center gap-3 ${method === "portal" ? "border-primary bg-primary/5" : "border-border hover:bg-muted"}`}
+                      >
+                        <Send className="w-5 h-5 text-primary shrink-0" />
+                        <div className="flex-1">
+                          <div className="font-medium text-sm">שליחה לאזור האישי בפורטל</div>
+                          <div className="text-xs text-muted-foreground">העובד יחתום מתוך הפורטל שלו</div>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMethod("manager_present")}
+                        className={`w-full text-right p-3 rounded-lg border-2 transition-colors flex items-center gap-3 ${method === "manager_present" ? "border-primary bg-primary/5" : "border-border hover:bg-muted"}`}
+                      >
+                        <PenTool className="w-5 h-5 text-primary shrink-0" />
+                        <div className="flex-1">
+                          <div className="font-medium text-sm">חתימה מול מנהל התפעול</div>
+                          <div className="text-xs text-muted-foreground">העובד חותם כעת על המכשיר</div>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="text-sm font-medium mb-1 block">מסמך חתום מצורף (אופציונלי)</label>
+                  <label className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg text-sm cursor-pointer hover:bg-muted/70">
+                    <Upload className="w-4 h-4" />
+                    <span className="truncate">{attachment ? attachment.name : "בחר קובץ PDF/תמונה..."}</span>
+                    <input
+                      type="file"
+                      accept="application/pdf,image/*"
+                      className="hidden"
+                      onChange={(e) => setAttachment(e.target.files?.[0] ?? null)}
+                    />
+                  </label>
+                </div>
+
+                {!employeeId && (
+                  <div className="text-xs text-muted-foreground flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" /> נא לבחור עובד תחילה
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-2">
+                  <Button variant="outline" className="flex-1" onClick={close}>ביטול</Button>
+                  <Button
+                    className="flex-1"
+                    disabled={!employeeId || busy}
+                    onClick={() => {
+                      if (attachment) {
+                        setConfirmOpen(true);
+                      } else if (method === "portal") {
+                        handleSendToPortal();
+                      } else {
+                        setStep("sign");
+                      }
+                    }}
+                  >
+                    {busy
+                      ? "שומר..."
+                      : attachment
+                        ? "שמור"
+                        : method === "portal"
+                          ? "שלח לפורטל"
+                          : "המשך לחתימה"}
+                  </Button>
+                </div>
+              </>
             )}
-
-            <div>
-              <label className="text-sm font-medium mb-1 block">מסמך חתום מצורף (אופציונלי)</label>
-              <label className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg text-sm cursor-pointer hover:bg-muted/70">
-                <Upload className="w-4 h-4" />
-                <span className="truncate">{attachment ? attachment.name : "בחר קובץ PDF/תמונה..."}</span>
-                <input
-                  type="file"
-                  accept="application/pdf,image/*"
-                  className="hidden"
-                  onChange={(e) => setAttachment(e.target.files?.[0] ?? null)}
-                />
-              </label>
-            </div>
-
-            {!employeeId && (
-              <div className="text-xs text-muted-foreground flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" /> נא לבחור עובד תחילה
-              </div>
-            )}
-
-            <div className="flex gap-2 pt-2">
-              <Button variant="outline" className="flex-1" onClick={close}>ביטול</Button>
-              <Button
-                className="flex-1"
-                disabled={!employeeId || busy}
-                onClick={() => {
-                  if (attachment) {
-                    setConfirmOpen(true);
-                  } else if (method === "portal") {
-                    handleSendToPortal();
-                  } else {
-                    setStep("sign");
-                  }
-                }}
-              >
-                {busy
-                  ? "שומר..."
-                  : attachment
-                    ? "שמור"
-                    : method === "portal"
-                      ? "שלח לפורטל"
-                      : "המשך לחתימה"}
-              </Button>
-            </div>
           </div>
         )}
 
