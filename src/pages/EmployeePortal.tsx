@@ -79,11 +79,12 @@ export default function EmployeePortal() {
       if (!myEmployee?.id) return [];
       const { data, error } = await supabase
         .from("assets")
-        .select("*, asset_categories(category_name, icon)")
+        .select("*, asset_categories(category_name, icon, prefix)")
         .eq("current_owner_id", myEmployee.id)
         .eq("status", "in_use");
       if (error) throw error;
-      return data;
+      // Exclude digital access items - they appear in their own section
+      return (data ?? []).filter((a: any) => (a.asset_categories?.prefix ?? "") !== "DACC");
     },
     enabled: !!myEmployee?.id,
   });
