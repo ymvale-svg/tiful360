@@ -3,10 +3,7 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, FileSignature, Upload } from "lucide-react";
-import {
-  OffboardingFormView,
-  OffboardingFormData,
-} from "@/components/OffboardingFormView";
+import type { OffboardingFormData } from "@/components/OffboardingFormView";
 import { SignaturePad, SignaturePadHandle } from "@/components/SignaturePad";
 import { buildOffboardingPdf } from "@/lib/pdf/buildOffboardingPdf";
 import { uploadViaSignedToken } from "@/lib/signedFormUpload";
@@ -21,9 +18,9 @@ export default function SignOffboarding() {
   const [attachment, setAttachment] = useState<File | null>(null);
   const [done, setDone] = useState(false);
 
-  const formRef = useRef<HTMLDivElement>(null);
   const sigRef = useRef<SignaturePadHandle>(null);
   const [sigUrl, setSigUrl] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -38,8 +35,36 @@ export default function SignOffboarding() {
     })();
   }, [token]);
 
+  // Generate live PDF preview (with logo) whenever record loads or signature changes.
+  useEffect(() => {
+    if (!record) return;
+    let cancelled = false;
+    let createdUrl: string | null = null;
+    (async () => {
+      try {
+        const data: OffboardingFormData = {
+          ...(record.form_snapshot as OffboardingFormData),
+          receiver_signature: sigUrl,
+        };
+        const blob = await buildOffboardingPdf(data);
+        if (cancelled) return;
+        createdUrl = URL.createObjectURL(blob);
+        setPreviewUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return createdUrl;
+        });
+      } catch (e) {
+        console.error("preview pdf failed", e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (createdUrl) URL.revokeObjectURL(createdUrl);
+    };
+  }, [record, sigUrl]);
+
   const handleSign = async () => {
-    if (!record || !formRef.current) return;
+    if (!record) return;
     const sig = sigRef.current?.getDataUrl();
     if (!sig) {
       toast({ title: "נא לחתום בקנבס", variant: "destructive" });
@@ -169,13 +194,19 @@ export default function SignOffboarding() {
           </p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-card overflow-auto">
-          <div
-            className="origin-top-right mx-auto"
-            style={{ transform: "scale(0.85)", transformOrigin: "top center" }}
-          >
-            <OffboardingFormView ref={formRef} data={data} />
-          </div>
+        <div className="bg-white rounded-xl shadow-card overflow-hidden">
+          {previewUrl ? (
+            <iframe
+              src={previewUrl}
+              title="תצוגת הטופס"
+              className="w-full"
+              style={{ height: "85vh", border: 0 }}
+            />
+          ) : (
+            <div className="p-12 text-center text-sm text-muted-foreground">
+              טוען תצוגת טופס...
+            </div>
+          )}
         </div>
 
         <div className="bg-card border rounded-xl p-6 space-y-4">
