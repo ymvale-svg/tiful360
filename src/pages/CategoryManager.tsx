@@ -368,18 +368,20 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
         {fields.map((field, index) => (
           <div
             key={field.tempId}
-            draggable
-            onDragStart={() => handleDragStart(index)}
             onDragEnter={() => handleDragEnter(index)}
-            onDragEnd={handleDragEnd}
             onDragOver={(e) => e.preventDefault()}
             className={cn(
               "flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-background",
-              "hover:border-primary/30 transition-all cursor-move group"
+              "hover:border-primary/30 transition-all group"
             )}
           >
             {/* Drag handle */}
-            <div className="text-muted-foreground/40 group-hover:text-muted-foreground transition-colors cursor-grab active:cursor-grabbing">
+            <div
+              draggable
+              onDragStart={() => handleDragStart(index)}
+              onDragEnd={handleDragEnd}
+              className="text-muted-foreground/40 group-hover:text-muted-foreground transition-colors cursor-grab active:cursor-grabbing"
+            >
               <GripVertical className="w-4 h-4" />
             </div>
 
