@@ -9,6 +9,7 @@ import { useAssetCategories, useEmployees } from "@/hooks/useData";
 import { useUpdateAsset } from "@/hooks/useMutations";
 import { useToast } from "@/hooks/use-toast";
 import { AssignAssetWithFormDialog } from "./AssignAssetWithFormDialog";
+import { AssetDocumentsSection } from "./AssetDocumentsSection";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -206,31 +207,46 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-sm font-medium mb-1 block">שיוך לעובד</label>
-              <SearchableSelect
-                value={form.current_owner_id}
-                onChange={(v) => setForm({ ...form, current_owner_id: v })}
-                options={[
-                  { value: "", label: "במלאי (ללא שיוך)" },
-                  ...(employees ?? [])
-                    .filter((e: any) => e.status === "active" || e.status === "onboarding")
-                    .map((e: any) => ({ value: e.id, label: `${e.full_name} (${e.employee_code})` })),
-                ]}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">תאריך תפוגה</label>
-              <input
-                type="date"
-                value={form.expiry_date}
-                onChange={(e) => setForm({ ...form, expiry_date: e.target.value })}
-                className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
-                dir="ltr"
-              />
-            </div>
-          </div>
+          {(() => {
+            const cat = (categories ?? []).find(c => c.id === form.category_id) as any;
+            const isAssignable = cat?.is_assignable !== false; // default true
+            return (
+              <div className="grid grid-cols-2 gap-3">
+                {isAssignable ? (
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">שיוך לעובד</label>
+                    <SearchableSelect
+                      value={form.current_owner_id}
+                      onChange={(v) => setForm({ ...form, current_owner_id: v })}
+                      options={[
+                        { value: "", label: "במלאי (ללא שיוך)" },
+                        ...(employees ?? [])
+                          .filter((e: any) => e.status === "active" || e.status === "onboarding")
+                          .map((e: any) => ({ value: e.id, label: `${e.full_name} (${e.employee_code})` })),
+                      ]}
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">סוג נכס</label>
+                    <div className="px-3 py-2 bg-primary/5 border border-primary/20 rounded-lg text-sm text-primary">
+                      נכס מוסדי (לא משוייך לעובד)
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <label className="text-sm font-medium mb-1 block">תאריך תפוגה</label>
+                  <input
+                    type="date"
+                    value={form.expiry_date}
+                    onChange={(e) => setForm({ ...form, expiry_date: e.target.value })}
+                    className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
+                    dir="ltr"
+                  />
+                </div>
+              </div>
+            );
+          })()}
 
           {form.current_owner_id && (
             <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
@@ -309,6 +325,8 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
               </ul>
             )}
           </div>
+
+          <AssetDocumentsSection assetId={asset.id} />
 
           <div>
             <label className="text-sm font-medium mb-1 block">הערות</label>

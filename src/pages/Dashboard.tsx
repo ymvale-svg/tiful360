@@ -5,6 +5,7 @@ import {
 import { Link, Navigate } from "react-router-dom";
 import { useDashboardStats, useAlerts, useEmployees, useActivityLog } from "@/hooks/useData";
 import { useAuth } from "@/hooks/useAuth";
+import { ExpiringAssetsCard } from "@/components/ExpiringAssetsCard";
 
 export default function Dashboard() {
   const { roles } = useAuth();
@@ -51,6 +52,9 @@ export default function Dashboard() {
           </div>
         ))}
       </div>
+
+      {/* Expiring assets */}
+      <ExpiringAssetsCard />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Activity */}
