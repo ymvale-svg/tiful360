@@ -293,9 +293,13 @@ export default function Assets() {
                       : <span className="text-xs text-muted-foreground">נכס חברה</span>}
                   </td>
                   <td>
-                    <span className={`status-badge ${assetStatusClasses[asset.status] ?? ""}`}>
-                      {assetStatusLabels[asset.status] ?? asset.status}
-                    </span>
+                    {isAssignable ? (
+                      <span className={`status-badge ${assetStatusClasses[asset.status] ?? ""}`}>
+                        {assetStatusLabels[asset.status] ?? asset.status}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">—</span>
+                    )}
                   </td>
                   <td className="text-muted-foreground text-xs">
                     {asset.expiry_date ? new Date(asset.expiry_date).toLocaleDateString("he-IL") : "—"}
