@@ -25,12 +25,10 @@ interface Props {
   title?: string;
   /** Number of columns (default 2) */
   columns?: 1 | 2;
+  /** When true, render values as read-only text instead of inputs */
+  readOnly?: boolean;
 }
 
-/**
- * Renders dynamic custom fields stored on assets.custom_fields.
- * Adds contextual helper text for known categories (currently: LEASE direction).
- */
 export function CustomFieldsRenderer({
   fields,
   values,
@@ -39,6 +37,7 @@ export function CustomFieldsRenderer({
   categoryPrefix,
   title,
   columns = 2,
+  readOnly = false,
 }: Props) {
   const sortedFields = useMemo(
     () => [...fields].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
