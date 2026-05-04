@@ -379,92 +379,100 @@ export default function Assets() {
           <div className="p-8 text-center text-muted-foreground">טוען...</div>
         ) : (
           <table className="data-table">
-            <thead>
+            <thead className="sticky top-0 bg-card z-10">
               <tr>
-                <th>מזהה</th>
-                <th>שם פריט</th>
-                <th>קטגוריה</th>
-                <th>בעלות</th>
-                <th>סטטוס</th>
-                <th>תפוגה</th>
+                <th onClick={() => toggleSort("asset_code")} className="cursor-pointer select-none hover:bg-muted/40"><SortIcon k="asset_code" />מזהה</th>
+                <th onClick={() => toggleSort("asset_name")} className="cursor-pointer select-none hover:bg-muted/40"><SortIcon k="asset_name" />שם פריט</th>
+                <th onClick={() => toggleSort("category")} className="cursor-pointer select-none hover:bg-muted/40"><SortIcon k="category" />קטגוריה</th>
+                <th onClick={() => toggleSort("owner")} className="cursor-pointer select-none hover:bg-muted/40"><SortIcon k="owner" />בעלות</th>
+                <th onClick={() => toggleSort("status")} className="cursor-pointer select-none hover:bg-muted/40"><SortIcon k="status" />סטטוס</th>
+                <th onClick={() => toggleSort("expiry")} className="cursor-pointer select-none hover:bg-muted/40"><SortIcon k="expiry" />תפוגה</th>
                 <th className="text-left">פעולות</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((asset) => {
-                const cat = (asset as any).asset_categories;
-                const categoryName = cat?.category_name ?? "";
-                const isAssignable = cat?.is_assignable !== false;
-                const isVirtualAsset = cat?.skip_handover_form === true || /תוכנ|וירטואל|software|virtual|subscription|מנוי/i.test(categoryName);
+              {groups.map((grp) => {
+                const isCollapsed = !!collapsed[grp.key];
+                const showHeader = effectiveGroupBy !== "none";
                 return (
-                <tr
-                  key={asset.id}
-                  onClick={() => setEditAsset(asset)}
-                  className="cursor-pointer hover:bg-muted/40 transition-colors"
-                >
-                  <td className="font-mono text-xs text-muted-foreground">{asset.asset_code}</td>
-                  <td className="font-medium">
-                    <div className="flex items-center gap-2">
-                      {!isAssignable && (
-                        <Building2 className="w-3.5 h-3.5 text-primary/70 shrink-0" aria-label="נכס חברה" />
-                      )}
-                      {asset.asset_name}
-                    </div>
-                  </td>
-                  <td>{categoryName || "—"}</td>
-                  <td>
-                    {isAssignable
-                      ? ((asset as any).employees?.full_name ?? "במלאי")
-                      : <span className="text-xs text-muted-foreground">נכס חברה</span>}
-                  </td>
-                  <td>
-                    {isAssignable ? (
-                      <span className={`status-badge ${assetStatusClasses[asset.status] ?? ""}`}>
-                        {assetStatusLabels[asset.status] ?? asset.status}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground text-xs">—</span>
-                    )}
-                  </td>
-                  <td className="text-muted-foreground text-xs">
-                    {asset.expiry_date ? new Date(asset.expiry_date).toLocaleDateString("he-IL") : "—"}
-                  </td>
-                  <td onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center gap-1">
-                      {isAssignable && !isVirtualAsset && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          title="שיוך לעובד וחתימה"
-                          onClick={(e) => { e.stopPropagation(); setAssignAsset(asset); }}
-                        >
-                          <FileSignature className="w-4 h-4 text-primary" />
-                        </Button>
-                      )}
-                      {isAssignable && asset.current_owner_id && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          title="ביטול שיוך — החזרה למלאי"
-                          onClick={(e) => { e.stopPropagation(); setUnassignTarget(asset); }}
-                        >
-                          <UserMinus className="w-4 h-4 text-warning" />
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        title="מחיקה"
-                        onClick={(e) => { e.stopPropagation(); setDeleteTarget(asset); }}
+                  <>
+                    {showHeader && (
+                      <tr
+                        key={`hdr-${grp.key}`}
+                        className="bg-muted/40 hover:bg-muted/60 cursor-pointer sticky"
+                        onClick={() => setCollapsed((c) => ({ ...c, [grp.key]: !c[grp.key] }))}
                       >
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
+                        <td colSpan={7} className="font-semibold text-sm py-2">
+                          <div className="flex items-center gap-2">
+                            {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            <span>{grp.label}</span>
+                            <span className="text-xs text-muted-foreground font-normal">· {grp.items.length}</span>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    {!isCollapsed && grp.items.map((asset: any) => {
+                      const cat = asset.asset_categories;
+                      const categoryName = cat?.category_name ?? "";
+                      const isAssignable = cat?.is_assignable !== false;
+                      const isVirtualAsset = cat?.skip_handover_form === true || /תוכנ|וירטואל|software|virtual|subscription|מנוי/i.test(categoryName);
+                      return (
+                        <tr
+                          key={asset.id}
+                          onClick={() => setEditAsset(asset)}
+                          className="cursor-pointer hover:bg-muted/40 transition-colors"
+                        >
+                          <td className="font-mono text-xs text-muted-foreground">{asset.asset_code}</td>
+                          <td className="font-medium">
+                            <div className="flex items-center gap-2">
+                              {!isAssignable && (
+                                <Building2 className="w-3.5 h-3.5 text-primary/70 shrink-0" aria-label="נכס חברה" />
+                              )}
+                              {asset.asset_name}
+                            </div>
+                          </td>
+                          <td>{categoryName || "—"}</td>
+                          <td>
+                            {isAssignable
+                              ? (asset.employees?.full_name ?? "במלאי")
+                              : <span className="text-xs text-muted-foreground">נכס חברה</span>}
+                          </td>
+                          <td>
+                            {isAssignable ? (
+                              <span className={`status-badge ${assetStatusClasses[asset.status] ?? ""}`}>
+                                {assetStatusLabels[asset.status] ?? asset.status}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">—</span>
+                            )}
+                          </td>
+                          <td className="text-muted-foreground text-xs">
+                            {asset.expiry_date ? new Date(asset.expiry_date).toLocaleDateString("he-IL") : "—"}
+                          </td>
+                          <td onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-1">
+                              {isAssignable && !isVirtualAsset && (
+                                <Button variant="ghost" size="icon" className="h-8 w-8" title="שיוך לעובד וחתימה"
+                                  onClick={(e) => { e.stopPropagation(); setAssignAsset(asset); }}>
+                                  <FileSignature className="w-4 h-4 text-primary" />
+                                </Button>
+                              )}
+                              {isAssignable && asset.current_owner_id && (
+                                <Button variant="ghost" size="icon" className="h-8 w-8" title="ביטול שיוך — החזרה למלאי"
+                                  onClick={(e) => { e.stopPropagation(); setUnassignTarget(asset); }}>
+                                  <UserMinus className="w-4 h-4 text-warning" />
+                                </Button>
+                              )}
+                              <Button variant="ghost" size="icon" className="h-8 w-8" title="מחיקה"
+                                onClick={(e) => { e.stopPropagation(); setDeleteTarget(asset); }}>
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </>
                 );
               })}
               {filtered.length === 0 && (
