@@ -17,6 +17,11 @@ export default function ResetPassword() {
 
   useEffect(() => {
     const hash = window.location.hash;
+    // Invitation links land here in some flows — redirect to /welcome
+    if (hash && hash.includes("type=invite")) {
+      navigate("/welcome" + hash, { replace: true });
+      return;
+    }
     if (hash && hash.includes("type=recovery")) {
       setIsRecovery(true);
     }
