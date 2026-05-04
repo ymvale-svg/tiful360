@@ -17,7 +17,7 @@ import { HandoverFormsList } from "@/components/HandoverFormsList";
 import { EmployeeTax101FormsList } from "@/components/EmployeeTax101FormsList";
 import { LeaveRequestsList } from "@/components/LeaveRequestsList";
 import { EditEmployeeDialog } from "@/components/EditEmployeeDialog";
-import { AddDigitalAccessDialog } from "@/components/AddDigitalAccessDialog";
+
 import { UploadSignedFormDialog } from "@/components/UploadSignedFormDialog";
 import { AssignAssetWithFormDialog } from "@/components/AssignAssetWithFormDialog";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -69,8 +69,6 @@ export default function EmployeeDetail() {
   const [offboardingOpen, setOffboardingOpen] = useState(false);
   const [transferAsset, setTransferAsset] = useState<any>(null);
   const [editEmployeeOpen, setEditEmployeeOpen] = useState(false);
-  const [addAccessOpen, setAddAccessOpen] = useState(false);
-  const [editAccess, setEditAccess] = useState<any>(null);
   const [uploadFormOpen, setUploadFormOpen] = useState(false);
   const [assignAssetOpen, setAssignAssetOpen] = useState(false);
   const [pickAssetId, setPickAssetId] = useState("");
@@ -78,11 +76,14 @@ export default function EmployeeDetail() {
   const { data: employee, isLoading } = useEmployee(id!);
   const { data: assets } = useEmployeeAssets(id!);
   const { data: allAssets } = useAssets();
-  const { data: digitalAccess } = useEmployeeDigitalAccess(id!);
   const { data: activityLog } = useActivityLog(id);
-  const deleteAccess = useDeleteDigitalAccess();
   const unassignAsset = useUnassignAsset();
   const { data: leaveRequests } = useEmployeeLeaveRequests(id!);
+
+  // Split employee assets into physical equipment and digital access (DACC category)
+  const employeeAssets = assets ?? [];
+  const physicalAssets = employeeAssets.filter((a: any) => (a.asset_categories?.prefix ?? "") !== "DACC");
+  const digitalAccessAssets = employeeAssets.filter((a: any) => (a.asset_categories?.prefix ?? "") === "DACC");
   const { isAdmin, isSuperAdmin, isPayroll, user } = useAuth();
 
   const canSeePayslips =
