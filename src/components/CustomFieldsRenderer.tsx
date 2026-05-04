@@ -1,12 +1,14 @@
 import { useMemo } from "react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import { AlertCircle, Info } from "lucide-react";
+import { AlertCircle, Info, ChevronDown, X as XIcon } from "lucide-react";
 
 export interface CustomField {
   id: string;
   field_name: string;
-  field_type: "text" | "number" | "date" | "list" | string;
+  field_type: "text" | "number" | "date" | "list" | "list_multi" | string;
   field_options?: any;
   is_required?: boolean;
   sort_order?: number;
