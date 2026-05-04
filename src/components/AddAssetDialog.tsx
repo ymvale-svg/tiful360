@@ -12,6 +12,8 @@ import { format } from "date-fns";
 import { useCreateAsset } from "@/hooks/useMutations";
 import { useAssetCategories, useEmployees, useAssets } from "@/hooks/useData";
 import { useCategoryFields } from "@/hooks/useCategories";
+import { useUploadAssetDocument } from "@/hooks/useAssetDocuments";
+import { FileText, Upload, Trash2 } from "lucide-react";
 import { useCompany } from "@/hooks/useCompany";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
