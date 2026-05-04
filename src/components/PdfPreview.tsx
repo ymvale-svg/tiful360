@@ -61,7 +61,7 @@ export function PdfPreview({ src, title = "תצוגת הטופס", className, he
           const context = canvas.getContext("2d", { alpha: false });
           if (!context) throw new Error("PDF canvas is unavailable");
           context.setTransform(dpr, 0, 0, dpr, 0, 0);
-          activeRenderTask = page.render({ canvasContext: context, viewport });
+          activeRenderTask = page.render({ canvas, canvasContext: context, viewport });
           await activeRenderTask.promise;
           activeRenderTask = null;
         }
