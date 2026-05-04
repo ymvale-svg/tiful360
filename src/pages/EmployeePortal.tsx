@@ -505,10 +505,7 @@ export default function EmployeePortal() {
                   <p className="text-center text-sm text-muted-foreground py-4">אין הרשאות דיגיטליות</p>
                 )}
 
-                <Button variant="outline" className="gap-2 w-full text-sm">
-                  <AlertCircle className="w-4 h-4" />
-                  דווח על ציוד תקול / בקשה לציוד חדש
-                </Button>
+                {/* כפתור "דווח על ציוד תקול / בקשה לציוד חדש" הוסתר זמנית עד שיהיה פעיל */}
               </>
             )}
           </div>
