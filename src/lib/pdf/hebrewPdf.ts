@@ -2,6 +2,10 @@ import { PDFDocument, PDFFont, PDFPage, rgb, StandardFonts } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 // @ts-ignore - no types
 import bidiFactory from "bidi-js";
+// Bundled via Vite — guarantees we always get the real TTF bytes (not an
+// HTML fallback served by the dev server when a /public file is missing).
+import notoSansHebrewRegularUrl from "@/assets/fonts/NotoSansHebrew-Regular.ttf?url";
+import notoSansHebrewBoldUrl from "@/assets/fonts/NotoSansHebrew-Bold.ttf?url";
 
 const bidi = bidiFactory();
 
@@ -10,8 +14,17 @@ let cachedBold: ArrayBuffer | null = null;
 
 async function loadFontBytes(url: string): Promise<ArrayBuffer> {
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to load font: ${url}`);
-  return await res.arrayBuffer();
+  if (!res.ok) throw new Error(`Failed to load font: ${url} (${res.status})`);
+  const buf = await res.arrayBuffer();
+  // Sanity-check the magic header so we fail loudly if the dev server
+  // returned an HTML fallback instead of the actual font.
+  const head = new Uint8Array(buf.slice(0, 4));
+  const isTTF = head[0] === 0x00 && head[1] === 0x01 && head[2] === 0x00 && head[3] === 0x00;
+  const isOTF = head[0] === 0x4f && head[1] === 0x54 && head[2] === 0x54 && head[3] === 0x4f; // 'OTTO'
+  if (!isTTF && !isOTF) {
+    throw new Error(`Font at ${url} is not a valid TTF/OTF (got header ${Array.from(head).map((b) => b.toString(16)).join(" ")})`);
+  }
+  return buf;
 }
 
 export interface HebrewDoc {
@@ -22,8 +35,8 @@ export interface HebrewDoc {
 
 async function embedHebrewFonts(pdf: PDFDocument) {
   pdf.registerFontkit(fontkit);
-  if (!cachedRegular) cachedRegular = await loadFontBytes("/fonts/NotoSansHebrew-Regular.ttf");
-  if (!cachedBold) cachedBold = await loadFontBytes("/fonts/NotoSansHebrew-Bold.ttf");
+  if (!cachedRegular) cachedRegular = await loadFontBytes(notoSansHebrewRegularUrl);
+  if (!cachedBold) cachedBold = await loadFontBytes(notoSansHebrewBoldUrl);
   const regular = await pdf.embedFont(cachedRegular!, { subset: true });
   const bold = await pdf.embedFont(cachedBold!, { subset: true });
   return { regular, bold };
