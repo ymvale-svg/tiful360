@@ -22,6 +22,7 @@ const ROLE_OPTIONS = [
   { value: "payroll", label: "חשב/ת שכר" },
   { value: "operations", label: "עובד תפעול" },
   { value: "direct_manager", label: "מנהל ישיר" },
+  { value: "finance", label: "כספים" },
 ];
 
 export function InviteExternalUserDialog({ open, onOpenChange }: Props) {
