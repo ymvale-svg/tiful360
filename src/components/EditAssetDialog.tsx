@@ -399,6 +399,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
               onChange={(name, value) => setCustomFields((prev) => ({ ...prev, [name]: value }))}
               categoryPrefix={selectedCategory?.prefix}
               title="פרטי קטגוריה"
+              readOnly={isView}
             />
           )}
 
@@ -406,18 +407,32 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
 
           <div>
             <label className="text-sm font-medium mb-1 block">הערות</label>
-            <textarea
-              value={form.notes}
-              onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              rows={2}
-              className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-            />
+            {isView ? (
+              <div className={`${readCls} whitespace-pre-wrap`}>{display(form.notes)}</div>
+            ) : (
+              <textarea
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                rows={2}
+                className={`${inputCls} resize-none`}
+              />
+            )}
           </div>
 
           <div className="flex gap-3 pt-3">
-            <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>ביטול</Button>
-            <Button className="flex-1" onClick={handleSubmit} disabled={mutation.isPending}>
-              {mutation.isPending ? "שומר..." : "שמור שינויים"}
+            {isView ? (
+              <>
+                <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>סגור</Button>
+                <Button className="flex-1 gap-2" onClick={() => setMode("edit")}>
+                  <Pencil className="w-4 h-4" />
+                  ערוך
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" className="flex-1" onClick={() => setMode("view")}>ביטול</Button>
+                <Button className="flex-1" onClick={handleSubmit} disabled={mutation.isPending}>
+                  {mutation.isPending ? "שומר..." : "שמור שינויים"}
             </Button>
           </div>
         </div>
