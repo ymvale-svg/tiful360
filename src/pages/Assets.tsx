@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Plus, Boxes, Download, Upload, FileSignature, Trash2, UserMinus } from "lucide-react";
+import { Search, Plus, Boxes, Download, Upload, FileSignature, Trash2, UserMinus, User, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
@@ -150,36 +150,58 @@ export default function Assets() {
         </div>
       </div>
 
+      {/* Scope tabs: Allocated vs Institutional */}
+      <div className="flex items-center gap-2">
+        {[
+          { value: "all", label: "הכל", icon: Boxes, count: assets?.length ?? 0 },
+          { value: "allocated", label: "מוקצים לעובדים", icon: User, count: allocatedCount },
+          { value: "institutional", label: "נכסי חברה", icon: Building2, count: institutionalCount },
+        ].map((s) => (
+          <button
+            key={s.value}
+            onClick={() => { setScope(s.value as any); setSelectedCategory("all"); }}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors border",
+              scope === s.value
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-card text-muted-foreground border-border hover:bg-muted"
+            )}
+          >
+            <s.icon className="w-4 h-4" />
+            {s.label}
+            <span className={cn("text-xs px-1.5 py-0.5 rounded-md", scope === s.value ? "bg-primary-foreground/20" : "bg-muted")}>
+              {s.count}
+            </span>
+          </button>
+        ))}
+      </div>
+
       {/* Category pills */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
         <button
           onClick={() => setSelectedCategory("all")}
           className={cn(
-            "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors border",
+            "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors border",
             selectedCategory === "all"
-              ? "bg-primary text-primary-foreground border-primary"
+              ? "bg-secondary text-secondary-foreground border-secondary"
               : "bg-card text-muted-foreground border-border hover:bg-muted"
           )}
         >
-          <Boxes className="w-4 h-4" />
-          הכל
-          <span className={cn("text-xs px-1.5 py-0.5 rounded-md", selectedCategory === "all" ? "bg-primary-foreground/20" : "bg-muted")}>
-            {assets?.length ?? 0}
-          </span>
+          כל הקטגוריות
         </button>
-        {(categories ?? []).map((cat) => (
+        {visibleCategories.map((cat: any) => (
           <button
             key={cat.id}
             onClick={() => setSelectedCategory(cat.id)}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors border",
+              "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors border",
               selectedCategory === cat.id
-                ? "bg-primary text-primary-foreground border-primary"
+                ? "bg-secondary text-secondary-foreground border-secondary"
                 : "bg-card text-muted-foreground border-border hover:bg-muted"
             )}
           >
             {cat.category_name}
-            <span className={cn("text-xs px-1.5 py-0.5 rounded-md", selectedCategory === cat.id ? "bg-primary-foreground/20" : "bg-muted")}>
+            <span className={cn("text-xs px-1.5 py-0.5 rounded-md", selectedCategory === cat.id ? "bg-secondary-foreground/20" : "bg-muted")}>
               {(cat as any).assets?.[0]?.count ?? 0}
             </span>
           </button>
