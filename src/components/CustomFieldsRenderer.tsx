@@ -82,9 +82,15 @@ export function CustomFieldsRenderer({
             <div key={cf.id}>
               <label className="text-sm font-medium mb-1 block">
                 {cf.field_name}
-                {cf.is_required && <span className="text-destructive mr-1">*</span>}
+                {cf.is_required && !readOnly && <span className="text-destructive mr-1">*</span>}
               </label>
-              {cf.field_type === "list" ? (
+              {readOnly ? (
+                <div className="px-3 py-2 bg-muted/40 rounded-lg text-sm min-h-[40px] whitespace-pre-wrap break-words" dir={cf.field_type === "date" || cf.field_type === "number" ? "ltr" : "rtl"}>
+                  {cf.field_type === "date" && value
+                    ? new Date(value).toLocaleDateString("he-IL")
+                    : (value || <span className="text-muted-foreground">—</span>)}
+                </div>
+              ) : cf.field_type === "list" ? (
                 <SearchableSelect
                   value={value}
                   onChange={(v) => onChange(cf.field_name, v)}
