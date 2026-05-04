@@ -38,9 +38,46 @@ export function useCreateCategory() {
 export function useUpdateCategory() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...params }: { id: string; category_name?: string; prefix?: string; description?: string; icon?: string }) => {
+    mutationFn: async ({ id, ...params }: { id: string; category_name?: string; prefix?: string; description?: string; icon?: string; sort_order?: number }) => {
       const { error } = await supabase.from("asset_categories").update(params).eq("id", id);
       if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["asset-categories"] }),
+  });
+}
+
+export function useDeleteCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      // Block deletion if category has assets
+      const { count, error: countErr } = await supabase
+        .from("assets")
+        .select("id", { count: "exact", head: true })
+        .eq("category_id", id);
+      if (countErr) throw countErr;
+      if ((count ?? 0) > 0) {
+        throw new Error(`לא ניתן למחוק - קיימים ${count} פריטים בקטגוריה זו`);
+      }
+      // Delete custom fields first
+      await supabase.from("category_fields").delete().eq("category_id", id);
+      const { error } = await supabase.from("asset_categories").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["asset-categories"] }),
+  });
+}
+
+export function useReorderCategories() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (orderedIds: string[]) => {
+      // Update each category's sort_order
+      await Promise.all(
+        orderedIds.map((id, index) =>
+          supabase.from("asset_categories").update({ sort_order: index }).eq("id", id)
+        )
+      );
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["asset-categories"] }),
   });
