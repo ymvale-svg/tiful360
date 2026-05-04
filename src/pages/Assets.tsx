@@ -219,22 +219,24 @@ export default function Assets() {
             className="bg-transparent text-sm outline-none w-full"
           />
         </div>
-        <div className="w-72">
-          <SearchableSelect
-            value={selectedEmployee}
-            onChange={setSelectedEmployee}
-            placeholder="סינון לפי עובד"
-            searchPlaceholder="חיפוש עובד..."
-            options={[
-              { value: "all", label: "כל העובדים" },
-              { value: "__unassigned__", label: "במלאי (ללא שיוך)" },
-              ...((employees ?? []).map((e: any) => ({
-                value: e.id,
-                label: `${e.full_name}${e.department ? ` — ${e.department}` : ""}`,
-              }))),
-            ]}
-          />
-        </div>
+        {scope !== "institutional" && (
+          <div className="w-72">
+            <SearchableSelect
+              value={selectedEmployee}
+              onChange={setSelectedEmployee}
+              placeholder="סינון לפי עובד"
+              searchPlaceholder="חיפוש עובד..."
+              options={[
+                { value: "all", label: "כל העובדים" },
+                { value: "__unassigned__", label: "במלאי (ללא שיוך)" },
+                ...((employees ?? []).map((e: any) => ({
+                  value: e.id,
+                  label: `${e.full_name}${e.department ? ` — ${e.department}` : ""}`,
+                }))),
+              ]}
+            />
+          </div>
+        )}
         {(selectedEmployee !== "all" || selectedCategory !== "all" || search) && (
           <Button
             variant="ghost"
@@ -265,7 +267,9 @@ export default function Assets() {
             </thead>
             <tbody>
               {filtered.map((asset) => {
-                const categoryName = (asset as any).asset_categories?.category_name ?? "";
+                const cat = (asset as any).asset_categories;
+                const categoryName = cat?.category_name ?? "";
+                const isAssignable = cat?.is_assignable !== false;
                 const isVirtualAsset = /תוכנ|וירטואל|software|virtual|subscription|מנוי/i.test(categoryName);
                 return (
                 <tr
@@ -274,9 +278,20 @@ export default function Assets() {
                   className="cursor-pointer hover:bg-muted/40 transition-colors"
                 >
                   <td className="font-mono text-xs text-muted-foreground">{asset.asset_code}</td>
-                  <td className="font-medium">{asset.asset_name}</td>
+                  <td className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {!isAssignable && (
+                        <Building2 className="w-3.5 h-3.5 text-primary/70 shrink-0" aria-label="נכס חברה" />
+                      )}
+                      {asset.asset_name}
+                    </div>
+                  </td>
                   <td>{categoryName || "—"}</td>
-                  <td>{(asset as any).employees?.full_name ?? "במלאי"}</td>
+                  <td>
+                    {isAssignable
+                      ? ((asset as any).employees?.full_name ?? "במלאי")
+                      : <span className="text-xs text-muted-foreground">נכס חברה</span>}
+                  </td>
                   <td>
                     <span className={`status-badge ${assetStatusClasses[asset.status] ?? ""}`}>
                       {assetStatusLabels[asset.status] ?? asset.status}
@@ -287,7 +302,7 @@ export default function Assets() {
                   </td>
                   <td onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-1">
-                      {!isVirtualAsset && (
+                      {isAssignable && !isVirtualAsset && (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -298,7 +313,7 @@ export default function Assets() {
                           <FileSignature className="w-4 h-4 text-primary" />
                         </Button>
                       )}
-                      {asset.current_owner_id && (
+                      {isAssignable && asset.current_owner_id && (
                         <Button
                           variant="ghost"
                           size="icon"
