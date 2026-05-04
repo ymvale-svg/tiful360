@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Package, FileSignature, History, FileText } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useAssetCategories, useEmployees } from "@/hooks/useData";
+import { useCategoryFields } from "@/hooks/useCategories";
 import { useUpdateAsset } from "@/hooks/useMutations";
 import { useToast } from "@/hooks/use-toast";
 import { AssignAssetWithFormDialog } from "./AssignAssetWithFormDialog";
 import { AssetDocumentsSection } from "./AssetDocumentsSection";
+import { CustomFieldsRenderer } from "./CustomFieldsRenderer";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -25,8 +27,9 @@ interface Asset {
   condition?: string | null;
   expiry_date: string | null;
   notes: string | null;
+  custom_fields?: Record<string, any> | null;
   company_id?: string | null;
-  asset_categories?: { category_name?: string | null } | null;
+  asset_categories?: { category_name?: string | null; prefix?: string | null; is_assignable?: boolean | null } | null;
   employees?: { full_name?: string | null } | null;
 }
 
@@ -48,6 +51,10 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
     status: "in_stock", manufacturer_model: "", condition: "good",
     expiry_date: "", notes: "",
   });
+  const [customFields, setCustomFields] = useState<Record<string, string>>({});
+
+  const { data: catFields } = useCategoryFields(form.category_id);
+  const selectedCategory = (categories ?? []).find((c: any) => c.id === form.category_id) as any;
 
   useEffect(() => {
     if (asset) {
@@ -62,6 +69,11 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
         expiry_date: asset.expiry_date ?? "",
         notes: asset.notes ?? "",
       });
+      // Load existing custom_fields as strings
+      const cf: Record<string, string> = {};
+      const raw = (asset as any).custom_fields ?? {};
+      Object.keys(raw).forEach((k) => { cf[k] = raw[k] == null ? "" : String(raw[k]); });
+      setCustomFields(cf);
     }
   }, [asset]);
 
@@ -120,6 +132,11 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
   const handleSubmit = async () => {
     if (!asset) return;
     try {
+      // Strip empty custom field values
+      const cleanCustom: Record<string, string> = {};
+      Object.entries(customFields).forEach(([k, v]) => {
+        if (v && v.toString().trim() !== "") cleanCustom[k] = v;
+      });
       await mutation.mutateAsync({
         id: asset.id,
         asset_name: form.asset_name,
@@ -131,6 +148,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
         condition: form.condition,
         expiry_date: form.expiry_date || null,
         notes: form.notes || null,
+        custom_fields: cleanCustom,
       });
       toast({ title: "פריט עודכן בהצלחה" });
       onOpenChange(false);
@@ -325,6 +343,16 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
               </ul>
             )}
           </div>
+
+          {(catFields ?? []).length > 0 && (
+            <CustomFieldsRenderer
+              fields={catFields as any}
+              values={customFields}
+              onChange={(name, value) => setCustomFields((prev) => ({ ...prev, [name]: value }))}
+              categoryPrefix={selectedCategory?.prefix}
+              title="פרטי קטגוריה"
+            />
+          )}
 
           <AssetDocumentsSection assetId={asset.id} />
 

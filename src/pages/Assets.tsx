@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Plus, Boxes, Download, Upload, FileSignature, Trash2, UserMinus } from "lucide-react";
+import { Search, Plus, Boxes, Download, Upload, FileSignature, Trash2, UserMinus, User, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
@@ -39,6 +39,7 @@ export default function Assets() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedEmployee, setSelectedEmployee] = useState("all");
   const [search, setSearch] = useState("");
+  const [scope, setScope] = useState<"all" | "allocated" | "institutional">("all");
   const [addOpen, setAddOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [editAsset, setEditAsset] = useState<any>(null);
@@ -47,14 +48,29 @@ export default function Assets() {
   const [unassignTarget, setUnassignTarget] = useState<any>(null);
 
   const filtered = (assets ?? []).filter((a) => {
+    const isAssignable = (a as any).asset_categories?.is_assignable !== false;
+    const matchScope =
+      scope === "all" ||
+      (scope === "allocated" && isAssignable) ||
+      (scope === "institutional" && !isAssignable);
     const matchCat = selectedCategory === "all" || a.category_id === selectedCategory;
     const matchEmp =
       selectedEmployee === "all" ||
       (selectedEmployee === "__unassigned__" ? !a.current_owner_id : a.current_owner_id === selectedEmployee);
     const matchSearch = a.asset_name.includes(search) || a.asset_code.includes(search) ||
       ((a as any).employees?.full_name ?? "").includes(search);
-    return matchCat && matchEmp && matchSearch;
+    return matchScope && matchCat && matchEmp && matchSearch;
   });
+
+  // Categories that match the current scope (so the pill row narrows correctly)
+  const visibleCategories = (categories ?? []).filter((c: any) => {
+    if (scope === "allocated") return c.is_assignable !== false;
+    if (scope === "institutional") return c.is_assignable === false;
+    return true;
+  });
+
+  const allocatedCount = (assets ?? []).filter((a: any) => (a as any).asset_categories?.is_assignable !== false).length;
+  const institutionalCount = (assets ?? []).filter((a: any) => (a as any).asset_categories?.is_assignable === false).length;
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -134,36 +150,58 @@ export default function Assets() {
         </div>
       </div>
 
+      {/* Scope tabs: Allocated vs Institutional */}
+      <div className="flex items-center gap-2">
+        {[
+          { value: "all", label: "הכל", icon: Boxes, count: assets?.length ?? 0 },
+          { value: "allocated", label: "מוקצים לעובדים", icon: User, count: allocatedCount },
+          { value: "institutional", label: "נכסי חברה", icon: Building2, count: institutionalCount },
+        ].map((s) => (
+          <button
+            key={s.value}
+            onClick={() => { setScope(s.value as any); setSelectedCategory("all"); }}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors border",
+              scope === s.value
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-card text-muted-foreground border-border hover:bg-muted"
+            )}
+          >
+            <s.icon className="w-4 h-4" />
+            {s.label}
+            <span className={cn("text-xs px-1.5 py-0.5 rounded-md", scope === s.value ? "bg-primary-foreground/20" : "bg-muted")}>
+              {s.count}
+            </span>
+          </button>
+        ))}
+      </div>
+
       {/* Category pills */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
         <button
           onClick={() => setSelectedCategory("all")}
           className={cn(
-            "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors border",
+            "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors border",
             selectedCategory === "all"
-              ? "bg-primary text-primary-foreground border-primary"
+              ? "bg-secondary text-secondary-foreground border-secondary"
               : "bg-card text-muted-foreground border-border hover:bg-muted"
           )}
         >
-          <Boxes className="w-4 h-4" />
-          הכל
-          <span className={cn("text-xs px-1.5 py-0.5 rounded-md", selectedCategory === "all" ? "bg-primary-foreground/20" : "bg-muted")}>
-            {assets?.length ?? 0}
-          </span>
+          כל הקטגוריות
         </button>
-        {(categories ?? []).map((cat) => (
+        {visibleCategories.map((cat: any) => (
           <button
             key={cat.id}
             onClick={() => setSelectedCategory(cat.id)}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors border",
+              "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors border",
               selectedCategory === cat.id
-                ? "bg-primary text-primary-foreground border-primary"
+                ? "bg-secondary text-secondary-foreground border-secondary"
                 : "bg-card text-muted-foreground border-border hover:bg-muted"
             )}
           >
             {cat.category_name}
-            <span className={cn("text-xs px-1.5 py-0.5 rounded-md", selectedCategory === cat.id ? "bg-primary-foreground/20" : "bg-muted")}>
+            <span className={cn("text-xs px-1.5 py-0.5 rounded-md", selectedCategory === cat.id ? "bg-secondary-foreground/20" : "bg-muted")}>
               {(cat as any).assets?.[0]?.count ?? 0}
             </span>
           </button>
@@ -181,22 +219,24 @@ export default function Assets() {
             className="bg-transparent text-sm outline-none w-full"
           />
         </div>
-        <div className="w-72">
-          <SearchableSelect
-            value={selectedEmployee}
-            onChange={setSelectedEmployee}
-            placeholder="סינון לפי עובד"
-            searchPlaceholder="חיפוש עובד..."
-            options={[
-              { value: "all", label: "כל העובדים" },
-              { value: "__unassigned__", label: "במלאי (ללא שיוך)" },
-              ...((employees ?? []).map((e: any) => ({
-                value: e.id,
-                label: `${e.full_name}${e.department ? ` — ${e.department}` : ""}`,
-              }))),
-            ]}
-          />
-        </div>
+        {scope !== "institutional" && (
+          <div className="w-72">
+            <SearchableSelect
+              value={selectedEmployee}
+              onChange={setSelectedEmployee}
+              placeholder="סינון לפי עובד"
+              searchPlaceholder="חיפוש עובד..."
+              options={[
+                { value: "all", label: "כל העובדים" },
+                { value: "__unassigned__", label: "במלאי (ללא שיוך)" },
+                ...((employees ?? []).map((e: any) => ({
+                  value: e.id,
+                  label: `${e.full_name}${e.department ? ` — ${e.department}` : ""}`,
+                }))),
+              ]}
+            />
+          </div>
+        )}
         {(selectedEmployee !== "all" || selectedCategory !== "all" || search) && (
           <Button
             variant="ghost"
@@ -227,7 +267,9 @@ export default function Assets() {
             </thead>
             <tbody>
               {filtered.map((asset) => {
-                const categoryName = (asset as any).asset_categories?.category_name ?? "";
+                const cat = (asset as any).asset_categories;
+                const categoryName = cat?.category_name ?? "";
+                const isAssignable = cat?.is_assignable !== false;
                 const isVirtualAsset = /תוכנ|וירטואל|software|virtual|subscription|מנוי/i.test(categoryName);
                 return (
                 <tr
@@ -236,9 +278,20 @@ export default function Assets() {
                   className="cursor-pointer hover:bg-muted/40 transition-colors"
                 >
                   <td className="font-mono text-xs text-muted-foreground">{asset.asset_code}</td>
-                  <td className="font-medium">{asset.asset_name}</td>
+                  <td className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {!isAssignable && (
+                        <Building2 className="w-3.5 h-3.5 text-primary/70 shrink-0" aria-label="נכס חברה" />
+                      )}
+                      {asset.asset_name}
+                    </div>
+                  </td>
                   <td>{categoryName || "—"}</td>
-                  <td>{(asset as any).employees?.full_name ?? "במלאי"}</td>
+                  <td>
+                    {isAssignable
+                      ? ((asset as any).employees?.full_name ?? "במלאי")
+                      : <span className="text-xs text-muted-foreground">נכס חברה</span>}
+                  </td>
                   <td>
                     <span className={`status-badge ${assetStatusClasses[asset.status] ?? ""}`}>
                       {assetStatusLabels[asset.status] ?? asset.status}
@@ -249,7 +302,7 @@ export default function Assets() {
                   </td>
                   <td onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-1">
-                      {!isVirtualAsset && (
+                      {isAssignable && !isVirtualAsset && (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -260,7 +313,7 @@ export default function Assets() {
                           <FileSignature className="w-4 h-4 text-primary" />
                         </Button>
                       )}
-                      {asset.current_owner_id && (
+                      {isAssignable && asset.current_owner_id && (
                         <Button
                           variant="ghost"
                           size="icon"
