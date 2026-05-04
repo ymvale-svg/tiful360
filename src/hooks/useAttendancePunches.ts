@@ -164,7 +164,7 @@ export function useCreateRemotePunch() {
       employeeId: string;
       employeeCode: string;
       direction: "in" | "out";
-      signatureDataUrl: string;
+      signatureDataUrl?: string;
       note?: string;
       geo?: { lat: number; lng: number; accuracy?: number } | null;
     }) => {
@@ -177,7 +177,7 @@ export function useCreateRemotePunch() {
         source: "portal_remote",
         status: "pending",
         raw_payload: {
-          signature_data_url: params.signatureDataUrl,
+          signature_data_url: params.signatureDataUrl ?? null,
           note: params.note ?? null,
           geo: params.geo ?? null,
           user_agent: navigator.userAgent,

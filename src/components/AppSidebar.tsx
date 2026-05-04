@@ -12,6 +12,7 @@ import {
   LogOut,
   Crown,
   Wallet,
+  MapPin,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,7 @@ const mainNav: NavItem[] = [
   { label: "נכסים וציוד", icon: Package, path: "/assets", roles: ["admin", "it_manager", "super_admin", "operations"] },
   { label: "משימות IT", icon: Shield, path: "/it-tickets", roles: ["admin", "it_manager", "super_admin", "operations"] },
   { label: "מחלקת שכר", icon: Wallet, path: "/payroll", roles: ["admin", "super_admin", "payroll"] },
+  { label: "מפת נוכחות", icon: MapPin, path: "/attendance-map", roles: ["admin", "super_admin", "payroll", "direct_manager"] },
 ];
 
 const superAdminNav: NavItem[] = [

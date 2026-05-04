@@ -21,8 +21,8 @@ import { useMyAttendanceCorrections } from "@/hooks/useAttendanceCorrections";
 import { EmployeePayslipsTab } from "@/components/EmployeePayslipsTab";
 import { Tax101Banner } from "@/components/portal/Tax101Banner";
 import { MyTax101FormsList } from "@/components/portal/MyTax101FormsList";
-import { RemotePunchDialog } from "@/components/portal/RemotePunchDialog";
-import { useMyPunches } from "@/hooks/useAttendancePunches";
+import { useMyPunches, useCreateRemotePunch } from "@/hooks/useAttendancePunches";
+import { useToast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
 
 const portalTabs = [
@@ -38,11 +38,13 @@ export default function EmployeePortal() {
   const [activeTab, setActiveTab] = useState("assets");
   const [newLeaveOpen, setNewLeaveOpen] = useState(false);
   const [correctionOpen, setCorrectionOpen] = useState(false);
-  const [remotePunchDir, setRemotePunchDir] = useState<"in" | "out" | null>(null);
+  const [punchingDir, setPunchingDir] = useState<"in" | "out" | null>(null);
   const { user, signOut } = useAuth();
   const { data: profile } = useProfile();
   const { activeCompanyId } = useCompany();
   const navigate = useNavigate();
+  const createPunch = useCreateRemotePunch();
+  const { toast } = useToast();
 
   const handleSignOut = async () => {
     await signOut();
@@ -198,6 +200,54 @@ export default function EmployeePortal() {
   };
 
   const employeeName = myEmployee?.full_name || displayName;
+
+  const handlePunch = (direction: "in" | "out") => {
+    if (!myEmployee) return;
+    if (!navigator.geolocation) {
+      toast({
+        title: "GPS לא נתמך",
+        description: "הדפדפן שלך לא תומך בשירותי מיקום",
+        variant: "destructive",
+      });
+      return;
+    }
+    setPunchingDir(direction);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          await createPunch.mutateAsync({
+            companyId: myEmployee.company_id!,
+            employeeId: myEmployee.id,
+            employeeCode: myEmployee.employee_code,
+            direction,
+            geo: {
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude,
+              accuracy: pos.coords.accuracy,
+            },
+          });
+          toast({ title: direction === "in" ? "כניסה נרשמה ✓" : "יציאה נרשמה ✓" });
+        } catch (err: any) {
+          toast({ title: "שגיאה בשליחה", description: err.message, variant: "destructive" });
+        } finally {
+          setPunchingDir(null);
+        }
+      },
+      (err) => {
+        setPunchingDir(null);
+        toast({
+          title: "מיקום לא זמין",
+          description:
+            err.code === err.PERMISSION_DENIED
+              ? "יש לאפשר גישה למיקום בדפדפן כדי לבצע החתמה מרחוק"
+              : "לא ניתן לאתר את המיקום שלך כעת. ודא ש-GPS פעיל ונסה שוב.",
+          variant: "destructive",
+        });
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
+    );
+  };
+
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
@@ -424,28 +474,36 @@ export default function EmployeePortal() {
 
             {myEmployee?.can_remote_punch && (
               <div className="bg-card rounded-xl border border-border/50 p-3">
-                <p className="text-xs font-semibold text-muted-foreground mb-2">דיווח נוכחות מרחוק</p>
+                <p className="text-xs font-semibold text-muted-foreground mb-2">
+                  דיווח נוכחות מרחוק (GPS)
+                </p>
                 <div className="flex gap-2">
                   <Button
                     size="sm"
                     className="flex-1 gap-1"
-                    onClick={() => setRemotePunchDir("in")}
+                    disabled={punchingDir !== null}
+                    onClick={() => handlePunch("in")}
                   >
                     <Clock className="w-3 h-3" />
-                    כניסה
+                    {punchingDir === "in" ? "מאתר מיקום..." : "כניסה"}
                   </Button>
                   <Button
                     size="sm"
                     variant="outline"
                     className="flex-1 gap-1"
-                    onClick={() => setRemotePunchDir("out")}
+                    disabled={punchingDir !== null}
+                    onClick={() => handlePunch("out")}
                   >
                     <Clock className="w-3 h-3" />
-                    יציאה
+                    {punchingDir === "out" ? "מאתר מיקום..." : "יציאה"}
                   </Button>
                 </div>
+                <p className="text-[10px] text-muted-foreground mt-2">
+                  בלחיצה ראשונה הדפדפן יבקש אישור גישה למיקום. לאחר אישור, ההחתמה תתבצע מיידית.
+                </p>
               </div>
             )}
+
 
             {myEmployee && myPunches.length > 0 ? (
               <div className="space-y-2">
@@ -645,19 +703,6 @@ export default function EmployeePortal() {
             managerId={myEmployee.direct_manager_id ?? null}
             initiatedBy="employee"
           />
-          {myEmployee.can_remote_punch && remotePunchDir && (
-            <RemotePunchDialog
-              open={!!remotePunchDir}
-              onOpenChange={(v) => !v && setRemotePunchDir(null)}
-              direction={remotePunchDir}
-              employee={{
-                id: myEmployee.id,
-                company_id: myEmployee.company_id,
-                employee_code: myEmployee.employee_code,
-                full_name: myEmployee.full_name,
-              }}
-            />
-          )}
         </>
       )}
     </div>
