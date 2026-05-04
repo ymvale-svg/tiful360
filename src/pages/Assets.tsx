@@ -226,7 +226,10 @@ export default function Assets() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((asset) => (
+              {filtered.map((asset) => {
+                const categoryName = (asset as any).asset_categories?.category_name ?? "";
+                const isVirtualAsset = /תוכנ|וירטואל|software|virtual|subscription|מנוי/i.test(categoryName);
+                return (
                 <tr
                   key={asset.id}
                   onClick={() => setEditAsset(asset)}
@@ -234,7 +237,7 @@ export default function Assets() {
                 >
                   <td className="font-mono text-xs text-muted-foreground">{asset.asset_code}</td>
                   <td className="font-medium">{asset.asset_name}</td>
-                  <td>{(asset as any).asset_categories?.category_name ?? "—"}</td>
+                  <td>{categoryName || "—"}</td>
                   <td>{(asset as any).employees?.full_name ?? "במלאי"}</td>
                   <td>
                     <span className={`status-badge ${assetStatusClasses[asset.status] ?? ""}`}>
@@ -246,15 +249,17 @@ export default function Assets() {
                   </td>
                   <td onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        title="שיוך לעובד וחתימה"
-                        onClick={(e) => { e.stopPropagation(); setAssignAsset(asset); }}
-                      >
-                        <FileSignature className="w-4 h-4 text-primary" />
-                      </Button>
+                      {!isVirtualAsset && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title="שיוך לעובד וחתימה"
+                          onClick={(e) => { e.stopPropagation(); setAssignAsset(asset); }}
+                        >
+                          <FileSignature className="w-4 h-4 text-primary" />
+                        </Button>
+                      )}
                       {asset.current_owner_id && (
                         <Button
                           variant="ghost"
@@ -278,7 +283,8 @@ export default function Assets() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
               {filtered.length === 0 && (
                 <tr><td colSpan={7} className="text-center py-8 text-muted-foreground">לא נמצאו פריטים</td></tr>
               )}
