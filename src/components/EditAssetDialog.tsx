@@ -3,7 +3,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Package, FileSignature, History, FileText } from "lucide-react";
+import { Package, FileSignature, History, FileText, Pencil } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useAssetCategories, useEmployees } from "@/hooks/useData";
 import { useCategoryFields } from "@/hooks/useCategories";
@@ -45,6 +45,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
   const mutation = useUpdateAsset();
   const { toast } = useToast();
   const [handoverOpen, setHandoverOpen] = useState(false);
+  const [mode, setMode] = useState<"view" | "edit">("view");
 
   const [form, setForm] = useState({
     asset_name: "", category_id: "", serial_number: "", current_owner_id: "",
@@ -74,8 +75,9 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
       const raw = (asset as any).custom_fields ?? {};
       Object.keys(raw).forEach((k) => { cf[k] = raw[k] == null ? "" : String(raw[k]); });
       setCustomFields(cf);
+      setMode("view");
     }
-  }, [asset]);
+  }, [asset?.id]);
 
   // History of past owners — derived from signed handover forms for this asset
   const { data: handoverHistory } = useQuery({
@@ -151,7 +153,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
         custom_fields: cleanCustom,
       });
       toast({ title: "פריט עודכן בהצלחה" });
-      onOpenChange(false);
+      setMode("view");
     } catch (err: any) {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
     }
@@ -159,13 +161,31 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
 
   if (!asset) return null;
 
+  const isView = mode === "view";
+  const inputCls = "w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30";
+  const readCls = "w-full px-3 py-2 bg-muted/40 rounded-lg text-sm min-h-[40px]";
+  const display = (v: string | null | undefined) =>
+    v && String(v).trim() !== "" ? String(v) : <span className="text-muted-foreground">—</span>;
+
+  const ownerName = (employees ?? []).find((e: any) => e.id === form.current_owner_id)?.full_name;
+  const categoryName = (categories ?? []).find((c: any) => c.id === form.category_id)?.category_name;
+  const conditionLabels: Record<string, string> = { new: "חדש", good: "תקין", fair: "בינוני" };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" dir="rtl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Package className="w-5 h-5 text-primary" />
-            עריכת פריט ציוד
+          <DialogTitle className="flex items-center justify-between gap-2">
+            <span className="flex items-center gap-2">
+              <Package className="w-5 h-5 text-primary" />
+              {isView ? "פרטי פריט ציוד" : "עריכת פריט ציוד"}
+            </span>
+            {isView && (
+              <Button size="sm" variant="outline" className="gap-1.5 h-8" onClick={() => setMode("edit")}>
+                <Pencil className="w-3.5 h-3.5" />
+                ערוך
+              </Button>
+            )}
           </DialogTitle>
           <DialogDescription>מזהה: <span className="font-mono">{asset.asset_code}</span></DialogDescription>
         </DialogHeader>
@@ -173,55 +193,75 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
         <div className="space-y-3 mt-4">
           <div>
             <label className="text-sm font-medium mb-1 block">שם פריט</label>
-            <input
-              value={form.asset_name}
-              onChange={(e) => setForm({ ...form, asset_name: e.target.value })}
-              className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
-            />
+            {isView ? (
+              <div className={readCls}>{display(form.asset_name)}</div>
+            ) : (
+              <input
+                value={form.asset_name}
+                onChange={(e) => setForm({ ...form, asset_name: e.target.value })}
+                className={inputCls}
+              />
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-sm font-medium mb-1 block">קטגוריה</label>
-              <SearchableSelect
-                value={form.category_id}
-                onChange={(v) => setForm({ ...form, category_id: v })}
-                options={(categories ?? []).map(c => ({ value: c.id, label: c.category_name }))}
-                placeholder="בחר..."
-              />
+              {isView ? (
+                <div className={readCls}>{display(categoryName)}</div>
+              ) : (
+                <SearchableSelect
+                  value={form.category_id}
+                  onChange={(v) => setForm({ ...form, category_id: v })}
+                  options={(categories ?? []).map(c => ({ value: c.id, label: c.category_name }))}
+                  placeholder="בחר..."
+                />
+              )}
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">מצב הציוד</label>
-              <SearchableSelect
-                value={form.condition}
-                onChange={(v) => setForm({ ...form, condition: v })}
-                options={[
-                  { value: "new", label: "חדש" },
-                  { value: "good", label: "תקין" },
-                  { value: "fair", label: "בינוני" },
-                ]}
-              />
+              {isView ? (
+                <div className={readCls}>{display(conditionLabels[form.condition] ?? form.condition)}</div>
+              ) : (
+                <SearchableSelect
+                  value={form.condition}
+                  onChange={(v) => setForm({ ...form, condition: v })}
+                  options={[
+                    { value: "new", label: "חדש" },
+                    { value: "good", label: "תקין" },
+                    { value: "fair", label: "בינוני" },
+                  ]}
+                />
+              )}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-sm font-medium mb-1 block">יצרן ומודל</label>
-              <input
-                value={form.manufacturer_model}
-                onChange={(e) => setForm({ ...form, manufacturer_model: e.target.value })}
-                placeholder="למשל: Apple MacBook Pro 16"
-                className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
-              />
+              {isView ? (
+                <div className={readCls}>{display(form.manufacturer_model)}</div>
+              ) : (
+                <input
+                  value={form.manufacturer_model}
+                  onChange={(e) => setForm({ ...form, manufacturer_model: e.target.value })}
+                  placeholder="למשל: Apple MacBook Pro 16"
+                  className={inputCls}
+                />
+              )}
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">מספר סידורי</label>
-              <input
-                value={form.serial_number}
-                onChange={(e) => setForm({ ...form, serial_number: e.target.value })}
-                className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 font-mono"
-                dir="ltr"
-              />
+              {isView ? (
+                <div className={`${readCls} font-mono`} dir="ltr">{display(form.serial_number)}</div>
+              ) : (
+                <input
+                  value={form.serial_number}
+                  onChange={(e) => setForm({ ...form, serial_number: e.target.value })}
+                  className={`${inputCls} font-mono`}
+                  dir="ltr"
+                />
+              )}
             </div>
           </div>
 
@@ -233,16 +273,20 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                 {isAssignable ? (
                   <div>
                     <label className="text-sm font-medium mb-1 block">שיוך לעובד</label>
-                    <SearchableSelect
-                      value={form.current_owner_id}
-                      onChange={(v) => setForm({ ...form, current_owner_id: v })}
-                      options={[
-                        { value: "", label: "במלאי (ללא שיוך)" },
-                        ...(employees ?? [])
-                          .filter((e: any) => e.status === "active" || e.status === "onboarding")
-                          .map((e: any) => ({ value: e.id, label: `${e.full_name} (${e.employee_code})` })),
-                      ]}
-                    />
+                    {isView ? (
+                      <div className={readCls}>{ownerName ? ownerName : <span className="text-muted-foreground">במלאי (ללא שיוך)</span>}</div>
+                    ) : (
+                      <SearchableSelect
+                        value={form.current_owner_id}
+                        onChange={(v) => setForm({ ...form, current_owner_id: v })}
+                        options={[
+                          { value: "", label: "במלאי (ללא שיוך)" },
+                          ...(employees ?? [])
+                            .filter((e: any) => e.status === "active" || e.status === "onboarding")
+                            .map((e: any) => ({ value: e.id, label: `${e.full_name} (${e.employee_code})` })),
+                        ]}
+                      />
+                    )}
                   </div>
                 ) : (
                   <div>
@@ -254,13 +298,17 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                 )}
                 <div>
                   <label className="text-sm font-medium mb-1 block">תאריך תפוגה</label>
-                  <input
-                    type="date"
-                    value={form.expiry_date}
-                    onChange={(e) => setForm({ ...form, expiry_date: e.target.value })}
-                    className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
-                    dir="ltr"
-                  />
+                  {isView ? (
+                    <div className={readCls} dir="ltr">{form.expiry_date ? new Date(form.expiry_date).toLocaleDateString("he-IL") : display(null)}</div>
+                  ) : (
+                    <input
+                      type="date"
+                      value={form.expiry_date}
+                      onChange={(e) => setForm({ ...form, expiry_date: e.target.value })}
+                      className={inputCls}
+                      dir="ltr"
+                    />
+                  )}
                 </div>
               </div>
             );
@@ -351,6 +399,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
               onChange={(name, value) => setCustomFields((prev) => ({ ...prev, [name]: value }))}
               categoryPrefix={selectedCategory?.prefix}
               title="פרטי קטגוריה"
+              readOnly={isView}
             />
           )}
 
@@ -358,19 +407,35 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
 
           <div>
             <label className="text-sm font-medium mb-1 block">הערות</label>
-            <textarea
-              value={form.notes}
-              onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              rows={2}
-              className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-            />
+            {isView ? (
+              <div className={`${readCls} whitespace-pre-wrap`}>{display(form.notes)}</div>
+            ) : (
+              <textarea
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                rows={2}
+                className={`${inputCls} resize-none`}
+              />
+            )}
           </div>
 
           <div className="flex gap-3 pt-3">
-            <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>ביטול</Button>
-            <Button className="flex-1" onClick={handleSubmit} disabled={mutation.isPending}>
-              {mutation.isPending ? "שומר..." : "שמור שינויים"}
-            </Button>
+            {isView ? (
+              <>
+                <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>סגור</Button>
+                <Button className="flex-1 gap-2" onClick={() => setMode("edit")}>
+                  <Pencil className="w-4 h-4" />
+                  ערוך
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" className="flex-1" onClick={() => setMode("view")}>ביטול</Button>
+                <Button className="flex-1" onClick={handleSubmit} disabled={mutation.isPending}>
+                  {mutation.isPending ? "שומר..." : "שמור שינויים"}
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </DialogContent>
