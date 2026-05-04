@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -472,7 +472,7 @@ export default function Assets() {
                         </tr>
                       );
                     })}
-                  </>
+                  </React.Fragment>
                 );
               })}
               {filtered.length === 0 && (
