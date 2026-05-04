@@ -64,6 +64,36 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
     if (open && preassignedOwnerId) setEmployeeId(preassignedOwnerId);
   }, [open, preassignedOwnerId]);
 
+  // Virtual assets (software / virtual assets) don't require a handover form
+  const categoryName = asset?.asset_categories?.category_name ?? "";
+  const isVirtualAsset =
+    /תוכנ|וירטואל|software|virtual|subscription|מנוי/i.test(categoryName);
+
+  // For virtual assets: do a direct assignment without any form
+  useEffect(() => {
+    if (!open || !isVirtualAsset || !asset) return;
+    const targetEmployeeId = preassignedOwnerId || employeeId;
+    if (!targetEmployeeId || busy) return;
+    (async () => {
+      setBusy(true);
+      try {
+        const { error } = await supabase
+          .from("assets")
+          .update({ current_owner_id: targetEmployeeId, status: "in_use" })
+          .eq("id", asset.id);
+        if (error) throw error;
+        toast({ title: "הציוד שויך", description: "פריטים וירטואליים אינם דורשים טופס מסירה" });
+        qc.invalidateQueries({ queryKey: ["assets"] });
+        close();
+      } catch (err: any) {
+        toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+      } finally {
+        setBusy(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, isVirtualAsset, asset?.id, preassignedOwnerId]);
+
   const reset = () => {
     setEmployeeId(preassignedOwnerId); setMethod("portal"); setStep("choose");
     setAttachment(null); setIssuerDataUrl(null); setReceiverDataUrl(null);
