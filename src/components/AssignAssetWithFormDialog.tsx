@@ -14,9 +14,9 @@ import { useCompany } from "@/hooks/useCompany";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { HandoverFormView, HandoverFormData } from "./HandoverFormView";
+import type { HandoverFormData } from "@/lib/pdf/types";
+import { buildHandoverPdf } from "@/lib/pdf/buildHandoverPdf";
 import { SignaturePad, SignaturePadHandle } from "./SignaturePad";
-import { generateAndUploadHandoverPdf } from "@/lib/generateHandoverPdf";
 
 interface Asset {
   id: string;
@@ -53,7 +53,7 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
     ? { url: URL.createObjectURL(attachment), isImage: attachment.type.startsWith("image/") }
     : null;
 
-  const formRef = useRef<HTMLDivElement>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const issuerSigRef = useRef<SignaturePadHandle>(null);
   const receiverSigRef = useRef<SignaturePadHandle>(null);
   const [issuerDataUrl, setIssuerDataUrl] = useState<string | null>(null);
@@ -88,6 +88,22 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
     issuer_signature: issuerDataUrl,
     receiver_signature: receiverDataUrl,
   } : null;
+
+  // Live PDF preview
+  useEffect(() => {
+    if (step !== "sign" || !formData) { setPreviewUrl(null); return; }
+    let cancelled = false;
+    let createdUrl: string | null = null;
+    (async () => {
+      try {
+        const blob = await buildHandoverPdf(formData);
+        if (cancelled) return;
+        createdUrl = URL.createObjectURL(blob);
+        setPreviewUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return createdUrl; });
+      } catch (e) { console.error("preview pdf failed", e); }
+    })();
+    return () => { cancelled = true; if (createdUrl) URL.revokeObjectURL(createdUrl); };
+  }, [step, formData?.employee_name, formData?.asset_code, issuerDataUrl, receiverDataUrl]);
 
   // ---- Action: Send to portal ----
   const handleSendToPortal = async () => {
@@ -145,8 +161,7 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
       toast({ title: "חסרה חתימה או מסמך חתום מצורף", variant: "destructive" });
       return;
     }
-    // When generating PDF from the form view, we need formRef to be mounted
-    if (!hasUploaded && !formRef.current) {
+    if (!hasUploaded && !formData) {
       toast({ title: "שגיאה פנימית — לא נטען טופס לחתימה", variant: "destructive" });
       return;
     }
@@ -154,8 +169,6 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
     try {
       setIssuerDataUrl(issuer ?? null);
       setReceiverDataUrl(receiver ?? null);
-      // Wait one frame so the form view re-renders with signatures
-      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
       const { data: { user } } = await supabase.auth.getUser();
 
@@ -168,16 +181,24 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
         attachedUrl = supabase.storage.from("handover-forms").getPublicUrl(path).data.publicUrl;
       }
 
-      // If a signed PDF was uploaded — use it as the canonical PDF; otherwise generate one from the form.
+      // If a signed PDF was uploaded — use it as the canonical PDF; otherwise generate one from the template.
       let pdfUrl: string | null = null;
       if (attachedUrl && attachment?.type === "application/pdf") {
         pdfUrl = attachedUrl;
       } else if (attachedUrl) {
-        // Image attachment — keep it as the attached doc; no generated PDF needed
         pdfUrl = null;
-      } else if (formRef.current) {
+      } else if (formData) {
+        const blob = await buildHandoverPdf({
+          ...formData,
+          issuer_signature: issuer ?? null,
+          receiver_signature: receiver ?? null,
+        });
         const pdfPath = `${activeCompanyId}/${employee.id}/${asset.id}-${Date.now()}.pdf`;
-        pdfUrl = await generateAndUploadHandoverPdf(formRef.current, pdfPath);
+        const { error: upErr } = await supabase.storage
+          .from("handover-forms")
+          .upload(pdfPath, blob, { contentType: "application/pdf", upsert: true });
+        if (upErr) throw upErr;
+        pdfUrl = supabase.storage.from("handover-forms").getPublicUrl(pdfPath).data.publicUrl;
       }
 
       const { error } = await supabase.from("asset_handover_forms").insert({
@@ -330,10 +351,12 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
 
         {step === "sign" && formData && (
           <div className="space-y-4 mt-2">
-            <div className="border rounded-lg overflow-auto bg-muted/30 p-4">
-              <div className="origin-top-right" style={{ transform: "scale(0.75)", transformOrigin: "top right" }}>
-                <HandoverFormView ref={formRef} data={formData} />
-              </div>
+            <div className="border rounded-lg overflow-hidden bg-white">
+              {previewUrl ? (
+                <iframe src={previewUrl} title="תצוגת הטופס" className="w-full" style={{ height: "70vh", border: 0 }} />
+              ) : (
+                <div className="p-12 text-center text-sm text-muted-foreground">טוען תצוגת טופס...</div>
+              )}
             </div>
 
             {attachment ? (
