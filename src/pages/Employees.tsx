@@ -416,7 +416,7 @@ export default function Employees() {
                       );
                     })}
                     {filtered.length === 0 && (
-                      <tr><td colSpan={9} className="text-center py-8 text-muted-foreground">לא נמצאו עובדים</td></tr>
+                      <tr><td colSpan={canManageUsers ? 9 : 7} className="text-center py-8 text-muted-foreground">לא נמצאו עובדים</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -424,9 +424,11 @@ export default function Employees() {
             </div>
           </TabsContent>
 
-          <TabsContent value="users" className="mt-4">
-            <UsersAndRolesTab />
-          </TabsContent>
+          {canManageUsers && (
+            <TabsContent value="users" className="mt-4">
+              <UsersAndRolesTab />
+            </TabsContent>
+          )}
         </Tabs>
 
         <AddEmployeeDialog open={addOpen} onOpenChange={setAddOpen} />
