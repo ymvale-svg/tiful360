@@ -97,7 +97,15 @@ export function AssetDocumentsSection({ assetId }: Props) {
   const typeLabel = (t: string) => DOCUMENT_TYPES.find(d => d.value === t)?.label ?? t;
 
   return (
-    <div className="rounded-lg border bg-card p-3 space-y-3">
+    <div
+      className={cn(
+        "rounded-lg border bg-card p-3 space-y-3 transition-colors",
+        isDragging && "border-primary border-2 bg-primary/5"
+      )}
+      onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+      onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
+      onDrop={handleDrop}
+    >
       <div className="flex items-center justify-between">
         <div className="text-sm font-medium flex items-center gap-2">
           <FileText className="w-4 h-4 text-primary" />
@@ -105,6 +113,7 @@ export function AssetDocumentsSection({ assetId }: Props) {
           {documents && documents.length > 0 && (
             <span className="text-xs text-muted-foreground font-normal">({documents.length})</span>
           )}
+          {isDragging && <span className="text-xs text-primary">שחרר כאן להעלאה</span>}
         </div>
         {!showForm && (
           <Button size="sm" variant="outline" className="h-7 gap-1.5" onClick={() => setShowForm(true)}>
