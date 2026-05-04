@@ -26,7 +26,7 @@ interface Asset {
   condition?: string | null;
   company_id?: string | null;
   current_owner_id?: string | null;
-  asset_categories?: { category_name?: string | null } | null;
+  asset_categories?: { category_name?: string | null; skip_handover_form?: boolean | null } | null;
   employees?: { full_name?: string | null } | null;
 }
 
