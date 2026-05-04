@@ -149,17 +149,20 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
     if (!bulkMode || !selectedCategory || !existingAssets) return;
     setPerEmpRows(prev => {
       const next: Record<string, Record<string, string>> = { ...prev };
-      const now = new Date();
-      const mm = String(now.getMonth() + 1).padStart(2, "0");
-      const yy = String(now.getFullYear()).slice(-2);
-      const dateStr = `${mm}${yy}`;
-      const pattern = `${selectedCategory.prefix}-${dateStr}-`;
-      const baseNum = existingAssets.filter(a => a.asset_code.startsWith(pattern)).length;
+      const pattern = `${selectedCategory.prefix}-`;
+      const maxNum = existingAssets
+        .filter(a => a.asset_code.startsWith(pattern))
+        .reduce((max, a) => {
+          const tail = a.asset_code.slice(pattern.length);
+          const m = tail.match(/(\d+)\s*$/);
+          const n = m ? parseInt(m[1], 10) : 0;
+          return n > max ? n : max;
+        }, 0);
       selectedEmployeeIds.forEach((empId, idx) => {
         if (!next[empId]) next[empId] = {};
         if (!next[empId][SYSTEM_FIELD_KEYS.asset_code]) {
           next[empId][SYSTEM_FIELD_KEYS.asset_code] =
-            `${selectedCategory.prefix}-${dateStr}-${String(baseNum + idx + 1).padStart(3, "0")}`;
+            `${selectedCategory.prefix}-${String(maxNum + idx + 1).padStart(4, "0")}`;
         }
       });
       // Cleanup rows of unselected employees
