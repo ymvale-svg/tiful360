@@ -21,8 +21,8 @@ import { useMyAttendanceCorrections } from "@/hooks/useAttendanceCorrections";
 import { EmployeePayslipsTab } from "@/components/EmployeePayslipsTab";
 import { Tax101Banner } from "@/components/portal/Tax101Banner";
 import { MyTax101FormsList } from "@/components/portal/MyTax101FormsList";
-import { RemotePunchDialog } from "@/components/portal/RemotePunchDialog";
-import { useMyPunches } from "@/hooks/useAttendancePunches";
+import { useMyPunches, useCreateRemotePunch } from "@/hooks/useAttendancePunches";
+import { useToast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
 
 const portalTabs = [
@@ -38,11 +38,13 @@ export default function EmployeePortal() {
   const [activeTab, setActiveTab] = useState("assets");
   const [newLeaveOpen, setNewLeaveOpen] = useState(false);
   const [correctionOpen, setCorrectionOpen] = useState(false);
-  const [remotePunchDir, setRemotePunchDir] = useState<"in" | "out" | null>(null);
+  const [punchingDir, setPunchingDir] = useState<"in" | "out" | null>(null);
   const { user, signOut } = useAuth();
   const { data: profile } = useProfile();
   const { activeCompanyId } = useCompany();
   const navigate = useNavigate();
+  const createPunch = useCreateRemotePunch();
+  const { toast } = useToast();
 
   const handleSignOut = async () => {
     await signOut();
