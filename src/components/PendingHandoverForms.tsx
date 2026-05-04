@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -6,9 +6,9 @@ import { FileSignature, ExternalLink, CheckCircle2 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { HandoverFormView, HandoverFormData } from "./HandoverFormView";
+import type { HandoverFormData } from "@/lib/pdf/types";
+import { buildHandoverPdf } from "@/lib/pdf/buildHandoverPdf";
 import { SignaturePad, SignaturePadHandle } from "./SignaturePad";
-import { generateAndUploadHandoverPdf } from "@/lib/generateHandoverPdf";
 import { useToast } from "@/hooks/use-toast";
 
 interface Props {
@@ -21,7 +21,7 @@ export function PendingHandoverForms({ employeeId }: Props) {
   const [active, setActive] = useState<any>(null);
   const [busy, setBusy] = useState(false);
   const [sigUrl, setSigUrl] = useState<string | null>(null);
-  const formRef = useRef<HTMLDivElement>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const sigRef = useRef<SignaturePadHandle>(null);
 
   const { data: pending } = useQuery({
