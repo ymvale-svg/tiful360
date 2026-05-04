@@ -3,7 +3,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Package, FileSignature, History, FileText } from "lucide-react";
+import { Package, FileSignature, History, FileText, Pencil } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useAssetCategories, useEmployees } from "@/hooks/useData";
 import { useCategoryFields } from "@/hooks/useCategories";
@@ -45,6 +45,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
   const mutation = useUpdateAsset();
   const { toast } = useToast();
   const [handoverOpen, setHandoverOpen] = useState(false);
+  const [mode, setMode] = useState<"view" | "edit">("view");
 
   const [form, setForm] = useState({
     asset_name: "", category_id: "", serial_number: "", current_owner_id: "",
