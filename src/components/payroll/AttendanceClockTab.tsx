@@ -221,7 +221,14 @@ function OrphansPanel({ punches, employees }: { punches: AttendancePunch[]; empl
                       variant="outline"
                       className="text-destructive border-destructive/40 hover:bg-destructive hover:text-destructive-foreground"
                       disabled={update.isPending}
-                      onClick={() => update.mutate({ ids: [p.id], status: "rejected" })}
+                      onClick={async () => {
+                        try {
+                          await update.mutateAsync({ ids: [p.id], status: "rejected" });
+                          toast({ title: "הפעימה נדחתה", description: "הוסרה מרשימת הפעימות הלא משויכות." });
+                        } catch (e: any) {
+                          toast({ title: "שגיאה בדחייה", description: e?.message ?? String(e), variant: "destructive" });
+                        }
+                      }}
                     >
                       <X className="w-4 h-4 ml-1" /> דחה
                     </Button>
