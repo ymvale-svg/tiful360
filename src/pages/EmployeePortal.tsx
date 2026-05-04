@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { 
   Package, Clock, Megaphone, BookOpen, Phone, ExternalLink,
   FileText, CalendarDays, AlertCircle, LogOut, Cake, PartyPopper,
-  Box, Wifi
+  Box, Wifi, LayoutDashboard
 } from "lucide-react";
+import { hasDualAccess } from "@/lib/dualAccess";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -39,7 +40,7 @@ export default function EmployeePortal() {
   const [newLeaveOpen, setNewLeaveOpen] = useState(false);
   const [correctionOpen, setCorrectionOpen] = useState(false);
   const [punchingDir, setPunchingDir] = useState<"in" | "out" | null>(null);
-  const { user, signOut } = useAuth();
+  const { user, signOut, roles } = useAuth();
   const { data: profile } = useProfile();
   const { activeCompanyId } = useCompany();
   const navigate = useNavigate();
@@ -326,13 +327,28 @@ export default function EmployeePortal() {
             </p>
           </div>
         </div>
-        <button
-          onClick={handleSignOut}
-          className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground shrink-0"
-          title="יציאה"
-        >
-          <LogOut className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-1 shrink-0">
+          {hasDualAccess(roles) && (
+            <button
+              onClick={() => {
+                sessionStorage.setItem("activeExperience", "ops");
+                navigate("/");
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-muted hover:bg-muted/70 transition-colors"
+              title="מעבר לתפעול 360"
+            >
+              <LayoutDashboard className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">תפעול 360</span>
+            </button>
+          )}
+          <button
+            onClick={handleSignOut}
+            className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground"
+            title="יציאה"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
       </header>
 
       <div className="max-w-2xl mx-auto px-4 py-4 space-y-4 overflow-x-hidden">

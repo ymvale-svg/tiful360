@@ -1,12 +1,13 @@
 import { Outlet, useNavigate } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { CompanySelector } from "./CompanySelector";
-import { Bell, Search, LogOut } from "lucide-react";
+import { Bell, Search, LogOut, UserRound } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useData";
+import { hasDualAccess } from "@/lib/dualAccess";
 
 export function AppLayout() {
-  const { user, signOut, isSuperAdmin } = useAuth();
+  const { user, signOut, isSuperAdmin, roles } = useAuth();
   const { data: profile } = useProfile();
   const navigate = useNavigate();
 
@@ -40,6 +41,19 @@ export function AppLayout() {
           </div>
 
           <div className="flex items-center gap-4">
+            {hasDualAccess(roles) && (
+              <button
+                onClick={() => {
+                  sessionStorage.setItem("activeExperience", "portal");
+                  navigate("/portal");
+                }}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-muted hover:bg-muted/70 transition-colors"
+                title="מעבר לפורטל עובדים"
+              >
+                <UserRound className="w-4 h-4" />
+                <span className="hidden sm:inline">פורטל עובדים</span>
+              </button>
+            )}
             <button className="relative p-2 rounded-lg hover:bg-muted transition-colors">
               <Bell className="w-5 h-5 text-muted-foreground" />
               <span className="absolute top-1.5 left-1.5 w-2 h-2 bg-destructive rounded-full animate-pulse-dot" />

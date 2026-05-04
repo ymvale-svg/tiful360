@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
 import { Building2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { hasDualAccess } from "@/lib/dualAccess";
 
 interface CompanyOption {
   id: string;
@@ -33,13 +34,14 @@ function getDefaultRoute(opts: {
 
 export default function SelectCompany() {
   const auth = useAuth();
-  const { user, loading: authLoading, isSuperAdmin } = auth;
+  const { user, loading: authLoading, isSuperAdmin, roles } = auth;
   const { setActiveCompanyId } = useCompany();
   const navigate = useNavigate();
   const [companies, setCompanies] = useState<CompanyOption[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const defaultRoute = getDefaultRoute(auth);
+  const dual = hasDualAccess(roles);
+  const defaultRoute = dual ? "/select-experience" : getDefaultRoute(auth);
 
   useEffect(() => {
     if (authLoading) return;
