@@ -10,7 +10,6 @@ import type { HandoverFormData } from "@/lib/pdf/types";
 import { buildHandoverPdf } from "@/lib/pdf/buildHandoverPdf";
 import { SignaturePad, SignaturePadHandle } from "./SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { PdfPreview } from "./PdfPreview";
 
 interface Props {
   employeeId: string;
@@ -138,7 +137,13 @@ export function PendingHandoverForms({ employeeId }: Props) {
 
           {active && (
             <div className="space-y-4">
-              <PdfPreview src={previewUrl} title="תצוגת הטופס" height="65vh" />
+              <div className="border rounded-lg overflow-hidden bg-white">
+                {previewUrl ? (
+                  <iframe src={previewUrl} title="תצוגת הטופס" className="w-full" style={{ height: "65vh", border: 0 }} />
+                ) : (
+                  <div className="p-12 text-center text-sm text-muted-foreground">טוען תצוגת טופס...</div>
+                )}
+              </div>
               <SignaturePad ref={sigRef} label="חתימתי" height={180} />
               <Button className="w-full gap-2" disabled={busy} onClick={handleSign}>
                 <CheckCircle2 className="w-4 h-4" />

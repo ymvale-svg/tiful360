@@ -8,7 +8,6 @@ import { SignaturePad, SignaturePadHandle } from "@/components/SignaturePad";
 import { buildHandoverPdf } from "@/lib/pdf/buildHandoverPdf";
 import { uploadViaSignedToken } from "@/lib/signedFormUpload";
 import { useToast } from "@/hooks/use-toast";
-import { PdfPreview } from "@/components/PdfPreview";
 
 export default function SignHandover() {
   const { token } = useParams();
@@ -145,7 +144,18 @@ export default function SignHandover() {
           <p className="text-sm text-muted-foreground">אנא קרא את הטופס וחתום למטה.</p>
         </div>
 
-        <PdfPreview src={previewUrl} title="תצוגת הטופס" height="85vh" />
+        <div className="bg-white rounded-xl shadow-card overflow-hidden">
+          {previewUrl ? (
+            <iframe
+              src={previewUrl}
+              title="תצוגת הטופס"
+              className="w-full"
+              style={{ height: "85vh", border: 0 }}
+            />
+          ) : (
+            <div className="p-12 text-center text-sm text-muted-foreground">טוען תצוגת טופס...</div>
+          )}
+        </div>
 
         <div className="bg-card border rounded-xl p-6 space-y-4">
           <SignaturePad ref={sigRef} label="חתימתי על קבלת הציוד" height={180} />
