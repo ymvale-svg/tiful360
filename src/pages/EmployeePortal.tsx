@@ -212,40 +212,102 @@ export default function EmployeePortal() {
       return;
     }
     setPunchingDir(direction);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          await createPunch.mutateAsync({
-            companyId: myEmployee.company_id!,
-            employeeId: myEmployee.id,
-            employeeCode: myEmployee.employee_code,
-            direction,
-            geo: {
-              lat: pos.coords.latitude,
-              lng: pos.coords.longitude,
-              accuracy: pos.coords.accuracy,
-            },
-          });
-          toast({ title: direction === "in" ? "כניסה נרשמה ✓" : "יציאה נרשמה ✓" });
-        } catch (err: any) {
-          toast({ title: "שגיאה בשליחה", description: err.message, variant: "destructive" });
-        } finally {
-          setPunchingDir(null);
-        }
-      },
-      (err) => {
+
+    let settled = false;
+    let watchId: number | null = null;
+    let fallbackTimer: number | null = null;
+    let hardTimer: number | null = null;
+    let bestPos: GeolocationPosition | null = null;
+
+    const finish = async (
+      pos: GeolocationPosition | null,
+      err?: GeolocationPositionError | { code?: number; message: string },
+    ) => {
+      if (settled) return;
+      settled = true;
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+      if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
+      if (hardTimer !== null) window.clearTimeout(hardTimer);
+
+      if (!pos) {
         setPunchingDir(null);
-        toast({
-          title: "מיקום לא זמין",
-          description:
-            err.code === err.PERMISSION_DENIED
-              ? "יש לאפשר גישה למיקום בדפדפן כדי לבצע החתמה מרחוק"
-              : "לא ניתן לאתר את המיקום שלך כעת. ודא ש-GPS פעיל ונסה שוב.",
-          variant: "destructive",
+        const code = (err as GeolocationPositionError | undefined)?.code;
+        let description =
+          "לא ניתן לאתר את המיקום שלך כעת. ודא ש-GPS פעיל ונסה שוב.";
+        if (code === 1) {
+          description =
+            "יש לאפשר גישה למיקום בדפדפן (לחץ על סמל המנעול בכתובת) ולנסות שוב.";
+        } else if (code === 3) {
+          description =
+            "איתור המיקום נמשך זמן רב מדי. צא לאוויר הפתוח או ליד חלון ונסה שוב.";
+        } else if (code === 2) {
+          description =
+            "שירות המיקום אינו זמין כרגע. ודא שה-GPS דלוק במכשיר.";
+        }
+        toast({ title: "מיקום לא זמין", description, variant: "destructive" });
+        return;
+      }
+
+      try {
+        await createPunch.mutateAsync({
+          companyId: myEmployee.company_id!,
+          employeeId: myEmployee.id,
+          employeeCode: myEmployee.employee_code,
+          direction,
+          geo: {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            accuracy: pos.coords.accuracy,
+          },
         });
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
-    );
+        toast({ title: direction === "in" ? "כניסה נרשמה ✓" : "יציאה נרשמה ✓" });
+      } catch (e: any) {
+        toast({ title: "שגיאה בשליחה", description: e.message, variant: "destructive" });
+      } finally {
+        setPunchingDir(null);
+      }
+    };
+
+    // High-accuracy stream — accept first reading ≤100m, otherwise keep collecting.
+    try {
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          if (!bestPos || pos.coords.accuracy < bestPos.coords.accuracy) {
+            bestPos = pos;
+          }
+          if (pos.coords.accuracy <= 100) finish(pos);
+        },
+        (err) => {
+          if (err.code === 1) finish(null, err);
+          // codes 2/3 → keep waiting for fallback timers
+        },
+        { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 },
+      );
+    } catch (e: any) {
+      finish(null, { message: e?.message ?? "watch failed" });
+      return;
+    }
+
+    // After 8s — accept best reading or trigger low-accuracy fallback (Wi-Fi/cell).
+    fallbackTimer = window.setTimeout(() => {
+      if (bestPos) {
+        finish(bestPos);
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => finish(pos),
+        (err) => {
+          if (err.code === 1) finish(null, err);
+        },
+        { enableHighAccuracy: false, timeout: 12000, maximumAge: 120000 },
+      );
+    }, 8000);
+
+    // Absolute give-up after 25s.
+    hardTimer = window.setTimeout(() => {
+      if (bestPos) finish(bestPos);
+      else finish(null, { code: 3, message: "timeout" } as GeolocationPositionError);
+    }, 25000);
   };
 
 

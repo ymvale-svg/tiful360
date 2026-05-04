@@ -1,46 +1,22 @@
-## מטרה
-להשתמש באותה גישת template-PDF (כמו שהוצעה לטופס מסירת ציוד) גם בטופס **החזרת ציוד**, כדי לפתור בעיות פונט עברי, רווחים, והצגת לוגו.
+## הבעיה
+בקובץ `src/pages/EmployeePortal.tsx` (שורה 215) ההחתמה מרחוק קוראת ל-`navigator.geolocation.getCurrentPosition` עם:
+```js
+{ enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+```
+זו קריאה **בודדת** עם דרישת דיוק גבוהה ו-timeout קצר. כש-GPS עוד לא "התחמם" (בהפעלה ראשונה, בתוך מבנה, או בדפדפן Safari/Chrome מוביילי) הקריאה נכשלת ב-`TIMEOUT (code 3)` או `POSITION_UNAVAILABLE (code 2)` — גם כשבאפליקציות אחרות (Maps, Waze) GPS עובד, כי הן מחזיקות **stream רציף** של מדידות במקום קריאה חד-פעמית.
 
-## שינויים
+## התיקון
 
-### 1. תבניות PDF
-- `public/templates/handover-template.pdf` — תבנית מסירת ציוד (קיים מהמשימה הקודמת).
-- `public/templates/offboarding-template.pdf` — תבנית חדשה להחזרת ציוד (מבוססת על אותו עיצוב, עם כותרת "טופס החזרת ציוד" ועמודה נוספת "מצב בעת ההחזרה").
+ב-`src/pages/EmployeePortal.tsx` בפונקציה `handlePunch`:
 
-### 2. ספרייה משותפת — `src/lib/pdfTemplate/`
-- `loadHebrewFont.ts` — טעינה והטמעה של `NotoSansHebrew` עם `@pdf-lib/fontkit`.
-- `drawRtlText.ts` — עזר לציור טקסט עברי מימין-לשמאל בקואורדינטות נתונות.
-- `embedSignaturePng.ts` — הטמעת חתימה (data URL) כתמונה.
-- `embedLogo.ts` — שליפת לוגו (URL) והטמעתו ב־PDF (תומך CORS דרך fetch).
+1. להחליף את `getCurrentPosition` ב-`watchPosition` שמזרים מדידות ככל שה-GPS מתחזק.
+2. לקבל את המדידה הראשונה עם accuracy ≤ 100מ׳ — מסיים מיד.
+3. אחרי 8 שניות — לקבל כל מדידה שהגיעה, גם אם דיוק נמוך.
+4. אם עדיין אין כלום — לבצע fallback ל-`getCurrentPosition` עם `enableHighAccuracy: false` (משתמש ב-Wi-Fi/סלולר), כמו שמפות עושים.
+5. timeout מוחלט 25 שניות במקום 15.
+6. הודעות שגיאה ספציפיות לכל קוד שגיאה (1=denied, 2=unavailable, 3=timeout).
 
-### 3. מילוי תבניות
-- `src/lib/fillHandoverPdfTemplate.ts` — קיים (טופס מסירה).
-- `src/lib/fillOffboardingPdfTemplate.ts` — **חדש**:
-  - מקבל `OffboardingFormData`.
-  - טוען את `offboarding-template.pdf`.
-  - ממלא: שם חברה/לוגו, תאריך, שם עובד, ת״ז, מחלקה, תפקיד, תאריך סיום.
-  - מצייר טבלת ציוד דינמית (תיאור, יצרן/דגם, מס׳ סידורי, מצב בעת החזרה, הערות) — תמיכה במספר שורות + page break אוטומטי כשעוברים שורה X.
-  - חתימת המחזיר וחתימת מקבל הציוד.
-
-### 4. החלפת ה־engine ב־flow ההחזרה
-- `src/lib/generateOffboardingPdf.ts` — מתחלף לקבלת `OffboardingFormData` (במקום `HTMLElement`). מחזיר `Blob` או מעלה לפי הצורך.
-- `src/pages/SignOffboarding.tsx`:
-  - מסיר את ה־`OffboardingFormView` המוסתר וה־`renderHandoverPdfBlob`.
-  - בלחיצה על "אישור וחתימה" → קורא ל־`fillOffboardingPdfTemplate({ ...record.form_snapshot, receiver_signature: sig })` → מעלה דרך `uploadViaSignedToken`.
-  - התצוגה למשתמש (preview) נשארת עם `OffboardingFormView` הקיים — רק ה־PDF הסופי משתנה.
-- `src/components/OffboardingFormsManager.tsx`: ללא שינוי לוגי (מצוקה), אך אם יש כפתור "הורד PDF לפני חתימה" — יקרא לפונקציה החדשה.
-
-### 5. Dependencies
-- `pdf-lib`, `@pdf-lib/fontkit` — כבר יותקנו עבור טופס המסירה; משתמשים מחדש.
+תוצאה: ההחתמה תצליח ברוב המוחץ של המקרים שבהם GPS פעיל אך עדיין לא תפס נעילה מדויקת.
 
 ## קבצים
-- חדש: `public/templates/offboarding-template.pdf`
-- חדש: `src/lib/fillOffboardingPdfTemplate.ts`
-- ערוך: `src/lib/generateOffboardingPdf.ts`
-- ערוך: `src/pages/SignOffboarding.tsx`
-- שיתוף: `src/lib/pdfTemplate/*` (יווצר במשימה של טופס המסירה ומשמש כאן)
-
-## תוצאה
-PDF וקטורי איכותי, עברית תקינה עם רווחים נכונים, לוגו חברה מוצג כראוי, וטבלת ציוד דינמית התומכת בכמות פריטים משתנה — לטופס החזרת הציוד.
-
-האם לאשר ולהמשיך?
+- ערוך: `src/pages/EmployeePortal.tsx` (החלפת לוגיקת `handlePunch`).
