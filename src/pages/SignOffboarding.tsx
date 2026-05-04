@@ -36,7 +36,7 @@ export default function SignOffboarding() {
   }, [token]);
 
   const handleSign = async () => {
-    if (!record || !formRef.current) return;
+    if (!record) return;
     const sig = sigRef.current?.getDataUrl();
     if (!sig) {
       toast({ title: "נא לחתום בקנבס", variant: "destructive" });
