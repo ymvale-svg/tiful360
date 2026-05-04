@@ -274,10 +274,17 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSignature className="w-5 h-5 text-primary" />
-            {step === "choose" ? "שיוך ציוד עם טופס חתימה" : "חתימה על טופס קבלת ציוד"}
+            {isVirtualAsset
+              ? "שיוך פריט וירטואלי"
+              : step === "choose"
+                ? "שיוך ציוד עם טופס חתימה"
+                : "חתימה על טופס קבלת ציוד"}
           </DialogTitle>
           <DialogDescription>
             {asset ? `${asset.asset_name} (${asset.asset_code})` : ""}
+            {isVirtualAsset && (
+              <span className="block mt-1 text-xs">פריטים וירטואליים אינם דורשים טופס מסירה / החתמה</span>
+            )}
           </DialogDescription>
         </DialogHeader>
 
