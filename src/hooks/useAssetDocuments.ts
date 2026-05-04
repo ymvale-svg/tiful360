@@ -56,8 +56,8 @@ export function useUploadAssetDocument() {
     }) => {
       if (!activeCompanyId) throw new Error("לא נבחרה חברה");
       const ext = params.file.name.split(".").pop() || "bin";
-      const safeName = params.file.name.replace(/[^\w.\-א-ת]+/g, "_");
-      const path = `${activeCompanyId}/${params.asset_id}/${Date.now()}_${safeName}`;
+      // Storage keys must be ASCII-safe — strip Hebrew/unicode from the path key
+      const path = `${activeCompanyId}/${params.asset_id}/${Date.now()}.${ext}`;
 
       const up = await supabase.storage.from("asset-documents").upload(path, params.file, {
         cacheControl: "3600",
