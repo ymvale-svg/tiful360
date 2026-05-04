@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import logoImg from "@/assets/logo.png";
 
-type AppRole = "admin" | "it_manager" | "employee" | "super_admin" | "direct_manager" | "payroll" | "operations";
+type AppRole = "admin" | "it_manager" | "employee" | "super_admin" | "direct_manager" | "payroll" | "operations" | "finance";
 
 interface NavItem {
   label: string;
@@ -29,11 +29,11 @@ interface NavItem {
 }
 
 const mainNav: NavItem[] = [
-  { label: "לוח בקרה", icon: LayoutDashboard, path: "/", roles: ["admin", "it_manager", "super_admin", "operations", "payroll"] },
-  { label: "עובדים", icon: Users, path: "/employees", roles: ["admin", "super_admin", "operations"] },
-  { label: "נכסים וציוד", icon: Package, path: "/assets", roles: ["admin", "it_manager", "super_admin", "operations"] },
+  { label: "לוח בקרה", icon: LayoutDashboard, path: "/", roles: ["admin", "it_manager", "super_admin", "operations", "payroll", "finance"] },
+  { label: "עובדים", icon: Users, path: "/employees", roles: ["admin", "super_admin", "operations", "payroll", "finance"] },
+  { label: "נכסים וציוד", icon: Package, path: "/assets", roles: ["admin", "it_manager", "super_admin", "operations", "finance"] },
   { label: "משימות IT", icon: Shield, path: "/it-tickets", roles: ["admin", "it_manager", "super_admin", "operations"] },
-  { label: "מחלקת שכר", icon: Wallet, path: "/payroll", roles: ["admin", "super_admin", "payroll"] },
+  { label: "מחלקת שכר", icon: Wallet, path: "/payroll", roles: ["admin", "super_admin", "payroll", "finance"] },
   { label: "מפת נוכחות", icon: MapPin, path: "/attendance-map", roles: ["admin", "super_admin", "payroll", "direct_manager"] },
 ];
 

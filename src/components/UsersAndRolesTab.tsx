@@ -37,6 +37,7 @@ const ROLE_LABELS: Record<string, string> = {
   operations: "עובד תפעול",
   direct_manager: "מנהל ישיר",
   payroll: "חשב/ת שכר",
+  finance: "כספים",
   employee: "עובד",
 };
 
@@ -47,6 +48,7 @@ const ROLE_COLORS: Record<string, string> = {
   operations: "bg-cyan-500/10 text-cyan-600 border-cyan-500/20 dark:text-cyan-400",
   direct_manager: "bg-orange-500/10 text-orange-600 border-orange-500/20 dark:text-orange-400",
   payroll: "bg-purple-500/10 text-purple-600 border-purple-500/20 dark:text-purple-400",
+  finance: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400",
   employee: "bg-secondary text-secondary-foreground border-secondary",
 };
 
