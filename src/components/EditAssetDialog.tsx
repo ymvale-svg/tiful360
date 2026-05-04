@@ -75,8 +75,9 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
       const raw = (asset as any).custom_fields ?? {};
       Object.keys(raw).forEach((k) => { cf[k] = raw[k] == null ? "" : String(raw[k]); });
       setCustomFields(cf);
+      setMode("view");
     }
-  }, [asset]);
+  }, [asset?.id]);
 
   // History of past owners — derived from signed handover forms for this asset
   const { data: handoverHistory } = useQuery({
