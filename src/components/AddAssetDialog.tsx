@@ -98,6 +98,8 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
       setPerEmpFieldKeys(new Set());
       setPerEmpRows({});
       setErrors({});
+      setPendingDocs([]);
+      setDocDragging(false);
     }
   }, [open]);
 
