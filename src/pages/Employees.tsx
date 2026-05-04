@@ -222,7 +222,7 @@ export default function Employees() {
         <Tabs value={tab} onValueChange={switchTab} dir="rtl">
           <TabsList>
             <TabsTrigger value="employees">עובדים</TabsTrigger>
-            <TabsTrigger value="users">משתמשים ותפקידים</TabsTrigger>
+            {canManageUsers && <TabsTrigger value="users">משתמשים ותפקידים</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="employees" className="space-y-4 mt-4">
@@ -286,7 +286,7 @@ export default function Employees() {
                 ))}
               </div>
 
-              {selected.size > 0 && (
+              {canManageUsers && selected.size > 0 && (
                 <div className="flex items-center gap-2 mr-auto">
                   <span className="text-sm text-muted-foreground">{selected.size} נבחרו</span>
                   <Button
@@ -310,20 +310,22 @@ export default function Employees() {
                 <table className="data-table">
                   <thead>
                     <tr>
-                      <th className="w-10">
-                        <Checkbox
-                          checked={allSelected}
-                          onCheckedChange={toggleAll}
-                          disabled={selectableInPage.length === 0}
-                          aria-label="בחר הכל"
-                        />
-                      </th>
+                      {canManageUsers && (
+                        <th className="w-10">
+                          <Checkbox
+                            checked={allSelected}
+                            onCheckedChange={toggleAll}
+                            disabled={selectableInPage.length === 0}
+                            aria-label="בחר הכל"
+                          />
+                        </th>
+                      )}
                       <th>מזהה</th>
                       <th>שם מלא</th>
                       <th>תפקיד</th>
                       <th>מחלקה</th>
                       <th className="min-w-[200px]">מנהל ישיר</th>
-                      <th>גישה למערכת</th>
+                      {canManageUsers && <th>גישה למערכת</th>}
                       <th>בקשר</th>
                       <th>סטטוס</th>
                     </tr>
@@ -341,14 +343,16 @@ export default function Employees() {
                           onClick={() => navigate(`/employees/${emp.id}`)}
                           className="cursor-pointer hover:bg-muted/50"
                         >
-                          <td onClick={(e) => e.stopPropagation()}>
-                            <Checkbox
-                              checked={selected.has(emp.id)}
-                              onCheckedChange={() => toggleOne(emp.id)}
-                              disabled={!hasEmail}
-                              aria-label={`בחר ${emp.full_name}`}
-                            />
-                          </td>
+                          {canManageUsers && (
+                            <td onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={selected.has(emp.id)}
+                                onCheckedChange={() => toggleOne(emp.id)}
+                                disabled={!hasEmail}
+                                aria-label={`בחר ${emp.full_name}`}
+                              />
+                            </td>
+                          )}
                           <td className="font-mono text-xs text-muted-foreground">{emp.employee_code}</td>
                           <td className="font-medium">{emp.full_name}</td>
                           <td>{emp.role}</td>
