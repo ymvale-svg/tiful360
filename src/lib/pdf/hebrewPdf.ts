@@ -20,14 +20,64 @@ export interface HebrewDoc {
   bold: PDFFont;
 }
 
-export async function createHebrewDoc(): Promise<HebrewDoc> {
-  const pdf = await PDFDocument.create();
+async function embedHebrewFonts(pdf: PDFDocument) {
   pdf.registerFontkit(fontkit);
   if (!cachedRegular) cachedRegular = await loadFontBytes("/fonts/NotoSansHebrew-Regular.ttf");
   if (!cachedBold) cachedBold = await loadFontBytes("/fonts/NotoSansHebrew-Bold.ttf");
   const regular = await pdf.embedFont(cachedRegular!, { subset: true });
   const bold = await pdf.embedFont(cachedBold!, { subset: true });
+  return { regular, bold };
+}
+
+export async function createHebrewDoc(): Promise<HebrewDoc> {
+  const pdf = await PDFDocument.create();
+  const { regular, bold } = await embedHebrewFonts(pdf);
   return { pdf, regular, bold };
+}
+
+let templateBytesCache: Record<string, ArrayBuffer> = {};
+
+async function loadTemplateBytes(url: string): Promise<ArrayBuffer> {
+  if (!templateBytesCache[url]) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Failed to load template: ${url}`);
+    templateBytesCache[url] = await res.arrayBuffer();
+  }
+  // Return a copy — pdf-lib mutates the buffer when loading.
+  return templateBytesCache[url].slice(0);
+}
+
+export interface TemplateDoc {
+  pdf: PDFDocument;
+  regular: PDFFont;
+  bold: PDFFont;
+  width: number;
+  height: number;
+  /** Append a fresh copy of the template's first page to the doc and return it. */
+  appendTemplatePage: () => Promise<PDFPage>;
+}
+
+/**
+ * Load a PDF template into a new pdf-lib doc. The first page of the template
+ * becomes page 1 of the output. Use `appendTemplatePage()` to add more pages
+ * (each one is a fresh clone of the template's first page).
+ */
+export async function loadTemplateDoc(templateUrl: string): Promise<TemplateDoc> {
+  const bytes = await loadTemplateBytes(templateUrl);
+  const pdf = await PDFDocument.load(bytes);
+  const { regular, bold } = await embedHebrewFonts(pdf);
+  const firstPage = pdf.getPage(0);
+  const { width, height } = firstPage.getSize();
+
+  const appendTemplatePage = async () => {
+    const sourceBytes = await loadTemplateBytes(templateUrl);
+    const sourceDoc = await PDFDocument.load(sourceBytes);
+    const [copied] = await pdf.copyPages(sourceDoc, [0]);
+    pdf.addPage(copied);
+    return copied;
+  };
+
+  return { pdf, regular, bold, width, height, appendTemplatePage };
 }
 
 /**
