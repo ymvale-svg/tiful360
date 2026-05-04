@@ -170,15 +170,42 @@ export default function Assets() {
         ))}
       </div>
 
-      {/* Search */}
-      <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2 w-80">
-        <Search className="w-4 h-4 text-muted-foreground" />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="חיפוש ציוד..."
-          className="bg-transparent text-sm outline-none w-full"
-        />
+      {/* Search & filters */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2 w-80">
+          <Search className="w-4 h-4 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="חיפוש פריט / מזהה..."
+            className="bg-transparent text-sm outline-none w-full"
+          />
+        </div>
+        <div className="w-72">
+          <SearchableSelect
+            value={selectedEmployee}
+            onChange={setSelectedEmployee}
+            placeholder="סינון לפי עובד"
+            searchPlaceholder="חיפוש עובד..."
+            options={[
+              { value: "all", label: "כל העובדים" },
+              { value: "__unassigned__", label: "במלאי (ללא שיוך)" },
+              ...((employees ?? []).map((e: any) => ({
+                value: e.id,
+                label: `${e.full_name}${e.department ? ` — ${e.department}` : ""}`,
+              }))),
+            ]}
+          />
+        </div>
+        {(selectedEmployee !== "all" || selectedCategory !== "all" || search) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => { setSelectedEmployee("all"); setSelectedCategory("all"); setSearch(""); }}
+          >
+            נקה סינון
+          </Button>
+        )}
       </div>
 
       {/* Table */}
