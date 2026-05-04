@@ -17,6 +17,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { HandoverFormData } from "@/lib/pdf/types";
 import { buildHandoverPdf } from "@/lib/pdf/buildHandoverPdf";
 import { SignaturePad, SignaturePadHandle } from "./SignaturePad";
+import { PdfPreview } from "./PdfPreview";
 
 interface Asset {
   id: string;
@@ -351,13 +352,7 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
 
         {step === "sign" && formData && (
           <div className="space-y-4 mt-2">
-            <div className="border rounded-lg overflow-hidden bg-white">
-              {previewUrl ? (
-                <iframe src={previewUrl} title="תצוגת הטופס" className="w-full" style={{ height: "70vh", border: 0 }} />
-              ) : (
-                <div className="p-12 text-center text-sm text-muted-foreground">טוען תצוגת טופס...</div>
-              )}
-            </div>
+            <PdfPreview src={previewUrl} title="תצוגת הטופס" height="70vh" />
 
             {attachment ? (
               <div className="rounded-lg border bg-muted/40 p-3 flex items-center gap-2 text-sm">
