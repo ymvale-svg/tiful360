@@ -105,10 +105,46 @@ export default function Assets() {
     const matchEmp =
       selectedEmployee === "all" ||
       (selectedEmployee === "__unassigned__" ? !a.current_owner_id : a.current_owner_id === selectedEmployee);
+    const matchStatus = selectedStatus === "all" || a.status === selectedStatus;
     const matchSearch = a.asset_name.includes(search) || a.asset_code.includes(search) ||
       ((a as any).employees?.full_name ?? "").includes(search);
-    return matchScope && matchCat && matchEmp && matchSearch;
+    return matchScope && matchCat && matchEmp && matchStatus && matchSearch;
   });
+
+  // Sort the filtered list by current sort key
+  const sorted = [...filtered].sort((a, b) => cmp(a, b, sortKey));
+
+  // Group rows
+  const groups: Array<{ key: string; label: string; items: any[] }> = (() => {
+    if (effectiveGroupBy === "none") {
+      return [{ key: "__all__", label: "", items: sorted }];
+    }
+    const map = new Map<string, { key: string; label: string; items: any[] }>();
+    for (const a of sorted) {
+      let key: string; let label: string;
+      if (effectiveGroupBy === "category") {
+        key = (a as any).category_id ?? "__none__";
+        label = (a as any).asset_categories?.category_name ?? "ללא קטגוריה";
+      } else {
+        key = (a as any).current_owner_id ?? "__stock__";
+        label = (a as any).employees?.full_name ?? "במלאי / ללא שיוך";
+      }
+      if (!map.has(key)) map.set(key, { key, label, items: [] });
+      map.get(key)!.items.push(a);
+    }
+    // Sort groups: stock/none last when ascending
+    return Array.from(map.values()).sort((g1, g2) => {
+      const sentinel = (k: string) => k === "__stock__" || k === "__none__" ? 1 : 0;
+      const s = sentinel(g1.key) - sentinel(g2.key);
+      if (s !== 0) return s;
+      return g1.label.localeCompare(g2.label, "he", { numeric: true });
+    });
+  })();
+
+  // Summary stats
+  const statusCounts = filtered.reduce((acc: Record<string, number>, a: any) => {
+    acc[a.status] = (acc[a.status] ?? 0) + 1; return acc;
+  }, {});
 
   // Categories that match the current scope (so the pill row narrows correctly)
   const visibleCategories = (categories ?? []).filter((c: any) => {
