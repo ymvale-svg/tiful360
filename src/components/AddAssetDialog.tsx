@@ -669,6 +669,68 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
             />
           </div>
 
+          {/* Pending documents (single mode only) */}
+          {!bulkMode && (
+            <div
+              className={cn(
+                "border border-dashed rounded-lg p-3 space-y-2 transition-colors",
+                docDragging ? "border-primary bg-primary/5" : "border-border"
+              )}
+              onDragOver={(e) => { e.preventDefault(); setDocDragging(true); }}
+              onDragLeave={(e) => { e.preventDefault(); setDocDragging(false); }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDocDragging(false);
+                const files = Array.from(e.dataTransfer.files ?? []);
+                if (files.length > 0) setPendingDocs(prev => [...prev, ...files]);
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-primary" />
+                  מסמכים מצורפים
+                  {pendingDocs.length > 0 && (
+                    <span className="text-xs text-muted-foreground font-normal">({pendingDocs.length})</span>
+                  )}
+                </div>
+                <label className="text-xs text-primary hover:underline cursor-pointer flex items-center gap-1">
+                  <Upload className="w-3.5 h-3.5" />
+                  בחר קבצים
+                  <input
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files ?? []);
+                      if (files.length > 0) setPendingDocs(prev => [...prev, ...files]);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+              </div>
+              {pendingDocs.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-2">
+                  גרור קבצים לכאן או לחץ "בחר קבצים" — הם יועלו לאחר יצירת הפריט
+                </p>
+              ) : (
+                <ul className="space-y-1">
+                  {pendingDocs.map((f, idx) => (
+                    <li key={idx} className="flex items-center justify-between gap-2 text-xs bg-muted/40 rounded px-2 py-1">
+                      <span className="truncate">{f.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => setPendingDocs(prev => prev.filter((_, i) => i !== idx))}
+                        className="text-muted-foreground hover:text-destructive shrink-0"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
           {/* ============ BULK MODE TOGGLE ============ */}
           {/* Hidden for institutional categories — they cannot be assigned to employees */}
           {(selectedCategory as any)?.is_assignable !== false && (
