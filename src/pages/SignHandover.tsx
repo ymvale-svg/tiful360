@@ -57,7 +57,7 @@ export default function SignHandover() {
         });
       }
 
-      const pdfBlob = await renderHandoverPdfBlob(formRef.current);
+      const pdfBlob = await buildHandoverPdf({ ...(record.form_snapshot as HandoverFormData), receiver_signature: sig });
       const pdfUrl = await uploadViaSignedToken({
         sign_token: token!,
         form_type: "handover",
