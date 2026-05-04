@@ -31,9 +31,20 @@ export function AssetDocumentsSection({ assetId }: Props) {
   const [label, setLabel] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
   const [notes, setNotes] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
 
   const reset = () => {
     setFile(null); setDocType("other"); setLabel(""); setExpiryDate(""); setNotes(""); setShowForm(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const f = e.dataTransfer.files?.[0];
+    if (f) {
+      setFile(f);
+      setShowForm(true);
+    }
   };
 
   const handleUpload = async () => {
