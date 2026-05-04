@@ -16,7 +16,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type FieldType = "text" | "number" | "date" | "list";
+type FieldType = "text" | "number" | "date" | "list" | "list_multi";
 
 interface LocalField {
   id?: string;
@@ -33,13 +33,15 @@ const fieldTypeIcons: Record<FieldType, typeof Type> = {
   number: Hash,
   date: Calendar,
   list: List,
+  list_multi: ListChecks,
 };
 
 const fieldTypeLabels: Record<FieldType, string> = {
   text: "טקסט",
   number: "מספר",
   date: "תאריך",
-  list: "רשימה",
+  list: "רשימה (בחירה אחת)",
+  list_multi: "רשימה (בחירה מרובה)",
 };
 
 export default function CategoryManager() {
