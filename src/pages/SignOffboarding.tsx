@@ -8,7 +8,7 @@ import {
   OffboardingFormData,
 } from "@/components/OffboardingFormView";
 import { SignaturePad, SignaturePadHandle } from "@/components/SignaturePad";
-import { renderHandoverPdfBlob } from "@/lib/generateHandoverPdf";
+import { buildOffboardingPdf } from "@/lib/pdf/buildOffboardingPdf";
 import { uploadViaSignedToken } from "@/lib/signedFormUpload";
 import { useToast } from "@/hooks/use-toast";
 
