@@ -657,15 +657,33 @@ export default function EmployeePortal() {
               </h3>
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col items-center p-3 bg-muted/50 rounded-lg">
-                  <span className="text-2xl font-bold text-primary">—</span>
+                  <span className="text-2xl font-bold text-primary">
+                    {myEmployee?.vacation_balance != null
+                      ? Number(myEmployee.vacation_balance).toFixed(2)
+                      : "—"}
+                  </span>
                   <span className="text-[11px] text-muted-foreground">ימי חופשה</span>
                 </div>
                 <div className="flex flex-col items-center p-3 bg-muted/50 rounded-lg">
-                  <span className="text-2xl font-bold text-primary">—</span>
+                  <span className="text-2xl font-bold text-info">
+                    {myEmployee?.sick_balance != null
+                      ? Number(myEmployee.sick_balance).toFixed(2)
+                      : "—"}
+                  </span>
                   <span className="text-[11px] text-muted-foreground">ימי מחלה</span>
                 </div>
               </div>
-              <p className="text-[11px] text-muted-foreground mt-3">* יתרות חופש/מחלה ותלושי שכר ייטענו ממערכת השכר בעתיד</p>
+              <p className="text-[11px] text-muted-foreground mt-3">
+                {myEmployee?.balances_updated_at ? (
+                  <>
+                    עודכן לאחרונה: {new Date(myEmployee.balances_updated_at).toLocaleDateString("he-IL")}
+                    {" · "}
+                    מקור: {myEmployee?.balances_source === "payslip" ? "תלוש שכר" : "ידני"}
+                  </>
+                ) : (
+                  "* היתרות מתעדכנות אוטומטית מתלושי השכר"
+                )}
+              </p>
             </div>
 
             <div className="bg-card rounded-xl border border-border/50 p-4">
@@ -688,7 +706,7 @@ export default function EmployeePortal() {
                 תלושי שכר
               </h3>
               {myEmployee ? (
-                <EmployeePayslipsTab employeeId={myEmployee.id} employee={myEmployee} canSeeSalary={true} />
+                <EmployeePayslipsTab employeeId={myEmployee.id} employee={myEmployee} canSeeSalary={true} hideBalances />
               ) : (
                 <p className="text-center text-sm text-muted-foreground py-4">אין מידע זמין</p>
               )}
