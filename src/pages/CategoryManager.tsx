@@ -680,6 +680,8 @@ function NewCategoryDialog({
   const [name, setName] = useState("");
   const [prefix, setPrefix] = useState("");
   const [description, setDescription] = useState("");
+  const [skipHandover, setSkipHandover] = useState(false);
+  const [skipReturn, setSkipReturn] = useState(false);
   const createMutation = useCreateCategory();
   const { toast } = useToast();
 
@@ -693,12 +695,16 @@ function NewCategoryDialog({
         category_name: name,
         prefix: prefix.toUpperCase(),
         description: description || undefined,
+        skip_handover_form: skipHandover,
+        skip_return_form: skipReturn,
       });
       toast({ title: "קטגוריה נוצרה בהצלחה" });
       onCreated(cat.id);
       setName("");
       setPrefix("");
       setDescription("");
+      setSkipHandover(false);
+      setSkipReturn(false);
     } catch (err: any) {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
     }
@@ -741,6 +747,35 @@ function NewCategoryDialog({
               className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
             />
           </div>
+
+          <div className="space-y-2 pt-2 border-t border-border/50">
+            <p className="text-xs font-medium text-muted-foreground">הגדרות טופסי מסירה/החזרה</p>
+            <label className="flex items-start gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={skipHandover}
+                onChange={(e) => setSkipHandover(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded border-border accent-primary"
+              />
+              <div className="text-sm">
+                <div>דלג על אישור משיכה</div>
+                <div className="text-[11px] text-muted-foreground">פריטים בקטגוריה זו ישויכו לעובד ישירות, ללא טופס מסירה וחתימה.</div>
+              </div>
+            </label>
+            <label className="flex items-start gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={skipReturn}
+                onChange={(e) => setSkipReturn(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded border-border accent-primary"
+              />
+              <div className="text-sm">
+                <div>דלג על אישור זיכוי</div>
+                <div className="text-[11px] text-muted-foreground">החזרת פריטים בקטגוריה זו למלאי תתבצע ללא טופס החזרה וחתימה.</div>
+              </div>
+            </label>
+          </div>
+
           <div className="flex gap-3 pt-2">
             <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
               ביטול
