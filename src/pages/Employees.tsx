@@ -368,35 +368,37 @@ export default function Employees() {
                               className="h-8 text-xs"
                             />
                           </td>
-                          <td onClick={(e) => e.stopPropagation()}>
-                            {hasAccount ? (
-                              <Badge variant="outline" className="gap-1 text-[11px] bg-success/10 text-success border-success/20">
-                                <ShieldCheck className="w-3 h-3" />
-                                פעיל
-                              </Badge>
-                            ) : hasEmail ? (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 text-[11px] gap-1"
-                                disabled={inviteMutation.isPending}
-                                onClick={() => handleSingleInvite(emp.id, emp.full_name)}
-                              >
-                                <Mail className="w-3 h-3" />
-                                צור חשבון
-                              </Button>
-                            ) : (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                                    <ShieldAlert className="w-3 h-3" />
-                                    אין מייל
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent>הוסף כתובת מייל לעובד כדי ליצור חשבון</TooltipContent>
-                              </Tooltip>
-                            )}
-                          </td>
+                          {canManageUsers && (
+                            <td onClick={(e) => e.stopPropagation()}>
+                              {hasAccount ? (
+                                <Badge variant="outline" className="gap-1 text-[11px] bg-success/10 text-success border-success/20">
+                                  <ShieldCheck className="w-3 h-3" />
+                                  פעיל
+                                </Badge>
+                              ) : hasEmail ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-[11px] gap-1"
+                                  disabled={inviteMutation.isPending}
+                                  onClick={() => handleSingleInvite(emp.id, emp.full_name)}
+                                >
+                                  <Mail className="w-3 h-3" />
+                                  צור חשבון
+                                </Button>
+                              ) : (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                                      <ShieldAlert className="w-3 h-3" />
+                                      אין מייל
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>הוסף כתובת מייל לעובד כדי ליצור חשבון</TooltipContent>
+                                </Tooltip>
+                              )}
+                            </td>
+                          )}
                           <td>
                             {inContacts ? (
                               <UserCheck className="w-4 h-4 text-success" />
