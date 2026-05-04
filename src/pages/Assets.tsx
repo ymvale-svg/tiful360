@@ -31,11 +31,13 @@ const assetStatusClasses: Record<string, string> = {
 export default function Assets() {
   const { data: assets, isLoading } = useAssets();
   const { data: categories } = useAssetCategories();
+  const { data: employees } = useEmployees();
   const deleteMutation = useDeleteAsset();
   const { toast } = useToast();
   const qc = useQueryClient();
 
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedEmployee, setSelectedEmployee] = useState("all");
   const [search, setSearch] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
