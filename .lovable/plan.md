@@ -1,66 +1,46 @@
-## 1. ביטול הדיאלוג בהחתמה מרחוק
+## מטרה
+להשתמש באותה גישת template-PDF (כמו שהוצעה לטופס מסירת ציוד) גם בטופס **החזרת ציוד**, כדי לפתור בעיות פונט עברי, רווחים, והצגת לוגו.
 
-הכפתורים "כניסה" / "יציאה" בפורטל יבצעו החתמה ישירה בלחיצה אחת — ללא דיאלוג, ללא חתימה, ללא הערה.
+## שינויים
 
-**זרימה:**
-- בלחיצה ראשונה — הדפדפן יבקש הרשאת מיקום פעם אחת. לאחר אישור, לא יישאל שוב.
-- כל לחיצה קוראת ל-`navigator.geolocation.getCurrentPosition` — מיקום מוחזר שקוף.
-- מיקום הוחזר → נשלח פאנץ' (`source: portal_remote`) עם הקואורדינטות ב-`raw_payload.geo`, מוצג toast "כניסה/יציאה נרשמה".
-- הרשאה נדחתה → toast עם הסבר.
-- בזמן איתור — הכפתור "מאתר מיקום…" ומושבת.
+### 1. תבניות PDF
+- `public/templates/handover-template.pdf` — תבנית מסירת ציוד (קיים מהמשימה הקודמת).
+- `public/templates/offboarding-template.pdf` — תבנית חדשה להחזרת ציוד (מבוססת על אותו עיצוב, עם כותרת "טופס החזרת ציוד" ועמודה נוספת "מצב בעת ההחזרה").
 
-**שינויי קבצים:**
-- `src/components/portal/RemotePunchDialog.tsx` — נמחק.
-- `src/pages/EmployeePortal.tsx` — הסרת ה-Dialog; פונקציית `handlePunch(direction)` ישירה.
-- `src/hooks/useAttendancePunches.ts` — `signatureDataUrl` הופך לאופציונלי.
+### 2. ספרייה משותפת — `src/lib/pdfTemplate/`
+- `loadHebrewFont.ts` — טעינה והטמעה של `NotoSansHebrew` עם `@pdf-lib/fontkit`.
+- `drawRtlText.ts` — עזר לציור טקסט עברי מימין-לשמאל בקואורדינטות נתונות.
+- `embedSignaturePng.ts` — הטמעת חתימה (data URL) כתמונה.
+- `embedLogo.ts` — שליפת לוגו (URL) והטמעתו ב־PDF (תומך CORS דרך fetch).
 
-## 2. מסך חדש: "מפת נוכחות חיה"
+### 3. מילוי תבניות
+- `src/lib/fillHandoverPdfTemplate.ts` — קיים (טופס מסירה).
+- `src/lib/fillOffboardingPdfTemplate.ts` — **חדש**:
+  - מקבל `OffboardingFormData`.
+  - טוען את `offboarding-template.pdf`.
+  - ממלא: שם חברה/לוגו, תאריך, שם עובד, ת״ז, מחלקה, תפקיד, תאריך סיום.
+  - מצייר טבלת ציוד דינמית (תיאור, יצרן/דגם, מס׳ סידורי, מצב בעת החזרה, הערות) — תמיכה במספר שורות + page break אוטומטי כשעוברים שורה X.
+  - חתימת המחזיר וחתימת מקבל הציוד.
 
-מסך המציג בזמן אמת את מיקום העובדים שביצעו החתמת כניסה היום, על גבי **Leaflet + OpenStreetMap** (חינמי, ללא API Key).
+### 4. החלפת ה־engine ב־flow ההחזרה
+- `src/lib/generateOffboardingPdf.ts` — מתחלף לקבלת `OffboardingFormData` (במקום `HTMLElement`). מחזיר `Blob` או מעלה לפי הצורך.
+- `src/pages/SignOffboarding.tsx`:
+  - מסיר את ה־`OffboardingFormView` המוסתר וה־`renderHandoverPdfBlob`.
+  - בלחיצה על "אישור וחתימה" → קורא ל־`fillOffboardingPdfTemplate({ ...record.form_snapshot, receiver_signature: sig })` → מעלה דרך `uploadViaSignedToken`.
+  - התצוגה למשתמש (preview) נשארת עם `OffboardingFormView` הקיים — רק ה־PDF הסופי משתנה.
+- `src/components/OffboardingFormsManager.tsx`: ללא שינוי לוגי (מצוקה), אך אם יש כפתור "הורד PDF לפני חתימה" — יקרא לפונקציה החדשה.
 
-**הרשאות גישה:**
-- `super_admin`, `admin`, `payroll` — רואים את כל עובדי החברה.
-- `direct_manager` — רואה את כל הכפופים שלו **רקורסיבית** (כפופים של כפופים בכל עומק לפי `direct_manager_id`).
-- שאר התפקידים — אין כניסה לדף, פריט הסרגל מוסתר.
+### 5. Dependencies
+- `pdf-lib`, `@pdf-lib/fontkit` — כבר יותקנו עבור טופס המסירה; משתמשים מחדש.
 
-**מימוש ההיררכיה הרקורסיבית — ב-DB:**
+## קבצים
+- חדש: `public/templates/offboarding-template.pdf`
+- חדש: `src/lib/fillOffboardingPdfTemplate.ts`
+- ערוך: `src/lib/generateOffboardingPdf.ts`
+- ערוך: `src/pages/SignOffboarding.tsx`
+- שיתוף: `src/lib/pdfTemplate/*` (יווצר במשימה של טופס המסירה ומשמש כאן)
 
-פונקציית RPC חדשה `get_subordinate_employee_ids(_manager_user_id)` עם CTE רקורסיבי על `direct_manager_id`, מסומנת `SECURITY DEFINER` עם `search_path = public`:
+## תוצאה
+PDF וקטורי איכותי, עברית תקינה עם רווחים נכונים, לוגו חברה מוצג כראוי, וטבלת ציוד דינמית התומכת בכמות פריטים משתנה — לטופס החזרת הציוד.
 
-```sql
-WITH RECURSIVE subs AS (
-  SELECT e.id FROM employees e
-  JOIN employees mgr ON mgr.id = e.direct_manager_id
-  WHERE mgr.linked_user_id = _manager_user_id
-  UNION
-  SELECT e.id FROM employees e
-  JOIN subs s ON e.direct_manager_id = s.id
-)
-SELECT id FROM subs;
-```
-
-פונקציית RPC `get_live_employee_locations(_company_id)` שמחזירה לכל עובד רלוונטי את הפאנץ' האחרון שלו היום עם `geo` לא ריק. בתוכה תיאכף הרשאה: super_admin/admin/payroll → כל עובדי החברה; אחרת → רק `get_subordinate_employee_ids(auth.uid())`. אם אין הרשאה — מוחזר ריק.
-
-**תוכן המסך:**
-- צד ימין: רשימת עובדים — שם, מחלקה, שעת כניסה אחרונה, סטטוס (בעבודה / יצא / ללא מיקום), סינון לפי מחלקה.
-- צד שמאל: **מפת Leaflet אינטרקטיבית** (טייל-שכבת OSM) עם סיכות צבעוניות (ירוק = בעבודה, אפור = יצא). Popup עם שם, שעה, דיוק GPS וקישור "פתח ב-Google Maps".
-- רענון אוטומטי דרך Supabase Realtime על `attendance_punches`, וכפתור רענון ידני.
-
-## פרטים טכניים
-
-**מיגרציה:**
-- שתי פונקציות RPC חדשות (`get_subordinate_employee_ids`, `get_live_employee_locations`).
-- `ALTER PUBLICATION supabase_realtime ADD TABLE public.attendance_punches`.
-
-**Dependencies חדשים:** `leaflet`, `react-leaflet`, `@types/leaflet`.
-
-**קבצים חדשים:**
-- `src/pages/AttendanceMap.tsx`
-- `src/components/attendance/EmployeeMapView.tsx`
-- `src/hooks/useLiveEmployeeLocations.ts`
-
-**קבצים שמתעדכנים:**
-- `src/App.tsx` — רישום ראוט `/attendance-map`.
-- `src/components/AppSidebar.tsx` — פריט "מפת נוכחות" גלוי ל-`admin`, `payroll`, `direct_manager`, `super_admin`.
-- `src/pages/EmployeePortal.tsx`, `src/hooks/useAttendancePunches.ts` — לפי סעיף 1.
-- `src/index.css` — ייבוא `leaflet/dist/leaflet.css`.
+האם לאשר ולהמשיך?
