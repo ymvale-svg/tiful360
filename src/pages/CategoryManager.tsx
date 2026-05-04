@@ -6,11 +6,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAssetCategories } from "@/hooks/useData";
-import { useCategoryFields, useCreateCategory, useUpdateCategory, useSaveCategoryFields } from "@/hooks/useCategories";
+import { useCategoryFields, useCreateCategory, useUpdateCategory, useSaveCategoryFields, useDeleteCategory, useReorderCategories } from "@/hooks/useCategories";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type FieldType = "text" | "number" | "date" | "list";
 
@@ -42,14 +46,76 @@ export default function CategoryManager() {
   const { data: categories, isLoading } = useAssetCategories();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newCatOpen, setNewCatOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; assetCount: number } | null>(null);
   const { toast } = useToast();
+  const deleteMutation = useDeleteCategory();
+  const reorderMutation = useReorderCategories();
+
+  // Local ordered list (for optimistic drag)
+  const [localOrder, setLocalOrder] = useState<string[] | null>(null);
+  const dragId = useRef<string | null>(null);
+  const dragOverId = useRef<string | null>(null);
+
+  useEffect(() => {
+    setLocalOrder(null);
+  }, [categories]);
+
+  const orderedCategories = (() => {
+    if (!categories) return [];
+    if (!localOrder) return categories;
+    const map = new Map(categories.map(c => [c.id, c]));
+    return localOrder.map(id => map.get(id)).filter(Boolean) as typeof categories;
+  })();
+
+  const handleDragStart = (id: string) => { dragId.current = id; };
+  const handleDragEnter = (id: string) => { dragOverId.current = id; };
+  const handleDragEnd = async () => {
+    if (!dragId.current || !dragOverId.current || dragId.current === dragOverId.current) {
+      dragId.current = null; dragOverId.current = null; return;
+    }
+    const ids = orderedCategories.map(c => c.id);
+    const fromIdx = ids.indexOf(dragId.current);
+    const toIdx = ids.indexOf(dragOverId.current);
+    const [moved] = ids.splice(fromIdx, 1);
+    ids.splice(toIdx, 0, moved);
+    setLocalOrder(ids);
+    dragId.current = null; dragOverId.current = null;
+    try {
+      await reorderMutation.mutateAsync(ids);
+      toast({ title: "סדר הקטגוריות נשמר" });
+    } catch (err: any) {
+      toast({ title: "שגיאה בשמירת סדר", description: err.message, variant: "destructive" });
+      setLocalOrder(null);
+    }
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent, cat: any) => {
+    e.stopPropagation();
+    setDeleteTarget({
+      id: cat.id,
+      name: cat.category_name,
+      assetCount: cat.assets?.[0]?.count ?? 0,
+    });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      toast({ title: "הקטגוריה נמחקה" });
+      if (selectedId === deleteTarget.id) setSelectedId(null);
+      setDeleteTarget(null);
+    } catch (err: any) {
+      toast({ title: "לא ניתן למחוק", description: err.message, variant: "destructive" });
+    }
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-start justify-between">
         <div className="page-header">
           <h1 className="page-title">מחולל קטגוריות ציוד</h1>
-          <p className="page-subtitle">הגדר סוגי ציוד חדשים עם שדות מותאמים אישית</p>
+          <p className="page-subtitle">הגדר סוגי ציוד חדשים עם שדות מותאמים אישית • גרור לסידור מחדש</p>
         </div>
         <Button className="gap-2" onClick={() => setNewCatOpen(true)}>
           <Plus className="w-4 h-4" />
@@ -63,31 +129,48 @@ export default function CategoryManager() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Category list */}
           <div className="space-y-2 lg:order-last">
-            {(categories ?? []).map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedId(cat.id)}
-                className={cn(
-                  "w-full text-right bg-card rounded-xl border p-4 transition-all hover:shadow-md",
-                  selectedId === cat.id ? "ring-2 ring-primary border-primary" : "border-border/50"
-                )}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    <Package className="w-5 h-5 text-primary" />
+            {orderedCategories.map((cat) => {
+              const assetCount = (cat as any).assets?.[0]?.count ?? 0;
+              return (
+                <div
+                  key={cat.id}
+                  draggable
+                  onDragStart={() => handleDragStart(cat.id)}
+                  onDragEnter={() => handleDragEnter(cat.id)}
+                  onDragEnd={handleDragEnd}
+                  onDragOver={(e) => e.preventDefault()}
+                  onClick={() => setSelectedId(cat.id)}
+                  className={cn(
+                    "w-full text-right bg-card rounded-xl border p-4 transition-all hover:shadow-md cursor-pointer group",
+                    selectedId === cat.id ? "ring-2 ring-primary border-primary" : "border-border/50"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="text-muted-foreground/40 group-hover:text-muted-foreground cursor-grab active:cursor-grabbing shrink-0">
+                      <GripVertical className="w-4 h-4" />
+                    </div>
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <Package className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm">{cat.category_name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        קידומת: <span className="font-mono">{cat.prefix}</span>
+                        {" • "}
+                        {assetCount} פריטים
+                      </p>
+                    </div>
+                    <button
+                      onClick={(e) => handleDeleteClick(e, cat)}
+                      title="מחק קטגוריה"
+                      className="text-muted-foreground/40 hover:text-destructive transition-colors shrink-0 opacity-0 group-hover:opacity-100"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm">{cat.category_name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      קידומת: <span className="font-mono">{cat.prefix}</span>
-                      {" • "}
-                      {(cat as any).assets?.[0]?.count ?? 0} פריטים
-                    </p>
-                  </div>
-                  <Settings2 className="w-4 h-4 text-muted-foreground shrink-0" />
                 </div>
-              </button>
-            ))}
+              );
+            })}
             {(!categories || categories.length === 0) && (
               <div className="text-center py-8 text-muted-foreground text-sm">
                 אין קטגוריות. צור קטגוריה חדשה להתחלה.
@@ -120,6 +203,36 @@ export default function CategoryManager() {
         setSelectedId(id);
         setNewCatOpen(false);
       }} />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>מחיקת קטגוריה</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget && deleteTarget.assetCount > 0 ? (
+                <>
+                  הקטגוריה <strong>{deleteTarget.name}</strong> מכילה {deleteTarget.assetCount} פריטים.
+                  <br />
+                  יש להעביר או למחוק את הפריטים תחילה.
+                </>
+              ) : (
+                <>האם למחוק את הקטגוריה <strong>{deleteTarget?.name}</strong>? פעולה זו תמחק גם את השדות המותאמים שלה ואינה הפיכה.</>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ביטול</AlertDialogCancel>
+            {deleteTarget && deleteTarget.assetCount === 0 && (
+              <AlertDialogAction
+                onClick={confirmDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                מחק
+              </AlertDialogAction>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

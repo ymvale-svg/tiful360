@@ -191,6 +191,7 @@ export type Database = {
           id: string
           is_assignable: boolean
           prefix: string
+          sort_order: number
         }
         Insert: {
           category_name: string
@@ -201,6 +202,7 @@ export type Database = {
           id?: string
           is_assignable?: boolean
           prefix: string
+          sort_order?: number
         }
         Update: {
           category_name?: string
@@ -211,6 +213,7 @@ export type Database = {
           id?: string
           is_assignable?: boolean
           prefix?: string
+          sort_order?: number
         }
         Relationships: [
           {
