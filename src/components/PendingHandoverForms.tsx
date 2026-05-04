@@ -39,8 +39,27 @@ export function PendingHandoverForms({ employeeId }: Props) {
     enabled: !!employeeId,
   });
 
+  // Live preview as user signs
+  useEffect(() => {
+    if (!active) { setPreviewUrl(null); return; }
+    let cancelled = false;
+    let createdUrl: string | null = null;
+    (async () => {
+      try {
+        const blob = await buildHandoverPdf({
+          ...(active.form_snapshot as HandoverFormData),
+          receiver_signature: sigUrl,
+        });
+        if (cancelled) return;
+        createdUrl = URL.createObjectURL(blob);
+        setPreviewUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return createdUrl; });
+      } catch (e) { console.error("preview pdf failed", e); }
+    })();
+    return () => { cancelled = true; if (createdUrl) URL.revokeObjectURL(createdUrl); };
+  }, [active, sigUrl]);
+
   const handleSign = async () => {
-    if (!active || !formRef.current) return;
+    if (!active) return;
     const sig = sigRef.current?.getDataUrl();
     if (!sig) {
       toast({ title: "נא לחתום בקנבס", variant: "destructive" });
@@ -49,10 +68,18 @@ export function PendingHandoverForms({ employeeId }: Props) {
     setBusy(true);
     try {
       setSigUrl(sig);
-      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
+      const blob = await buildHandoverPdf({
+        ...(active.form_snapshot as HandoverFormData),
+        receiver_signature: sig,
+      });
       const pdfPath = `${active.company_id}/${active.employee_id}/${active.asset_id}-${Date.now()}.pdf`;
-      const pdfUrl = await generateAndUploadHandoverPdf(formRef.current, pdfPath);
+      const { error: upErr } = await supabase.storage
+        .from("handover-forms")
+        .upload(pdfPath, blob, { contentType: "application/pdf", upsert: true });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("handover-forms").getPublicUrl(pdfPath);
+      const pdfUrl = pub.publicUrl;
 
       const { error } = await supabase
         .from("asset_handover_forms")
@@ -110,10 +137,12 @@ export function PendingHandoverForms({ employeeId }: Props) {
 
           {active && (
             <div className="space-y-4">
-              <div className="border rounded-lg overflow-auto bg-muted/30 p-4">
-                <div style={{ transform: "scale(0.75)", transformOrigin: "top center" }}>
-                  <HandoverFormView ref={formRef} data={{ ...active.form_snapshot, receiver_signature: sigUrl } as HandoverFormData} />
-                </div>
+              <div className="border rounded-lg overflow-hidden bg-white">
+                {previewUrl ? (
+                  <iframe src={previewUrl} title="תצוגת הטופס" className="w-full" style={{ height: "65vh", border: 0 }} />
+                ) : (
+                  <div className="p-12 text-center text-sm text-muted-foreground">טוען תצוגת טופס...</div>
+                )}
               </div>
               <SignaturePad ref={sigRef} label="חתימתי" height={180} />
               <Button className="w-full gap-2" disabled={busy} onClick={handleSign}>
