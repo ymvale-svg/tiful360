@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import {
   Plus, GripVertical, Trash2, Save, ChevronLeft, Pencil,
-  Type, Hash, Calendar, List, Package, Settings2, Check, X,
+  Type, Hash, Calendar, List, ListChecks, Package, Settings2, Check, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -16,7 +16,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type FieldType = "text" | "number" | "date" | "list";
+type FieldType = "text" | "number" | "date" | "list" | "list_multi";
 
 interface LocalField {
   id?: string;
@@ -33,13 +33,15 @@ const fieldTypeIcons: Record<FieldType, typeof Type> = {
   number: Hash,
   date: Calendar,
   list: List,
+  list_multi: ListChecks,
 };
 
 const fieldTypeLabels: Record<FieldType, string> = {
   text: "טקסט",
   number: "מספר",
   date: "תאריך",
-  list: "רשימה",
+  list: "רשימה (בחירה אחת)",
+  list_multi: "רשימה (בחירה מרובה)",
 };
 
 export default function CategoryManager() {
@@ -399,7 +401,7 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
                     onClick={() => {
                       updateField(field.tempId, {
                         field_type: type,
-                        field_options: type === "list" ? [""] : null,
+                        field_options: (type === "list" || type === "list_multi") ? [""] : null,
                       });
                     }}
                     title={fieldTypeLabels[type]}
@@ -441,10 +443,10 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
         ))}
 
         {/* List options editor for selected list fields */}
-        {fields.filter(f => f.field_type === "list").map((field) => (
+        {fields.filter(f => f.field_type === "list" || f.field_type === "list_multi").map((field) => (
           <div key={`opts-${field.tempId}`} className="mr-7 p-3 rounded-lg border border-dashed border-border bg-muted/30 space-y-2">
             <p className="text-xs font-medium text-muted-foreground">
-              אפשרויות רשימה עבור "{field.field_name || "ללא שם"}"
+              אפשרויות {field.field_type === "list_multi" ? "(בחירה מרובה) " : ""}עבור "{field.field_name || "ללא שם"}"
             </p>
             {(field.field_options ?? [""]).map((opt, oi) => (
               <div key={oi} className="flex items-center gap-2">
@@ -508,6 +510,15 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
                       <option key={i}>{o}</option>
                     ))}
                   </select>
+                ) : field.field_type === "list_multi" ? (
+                  <div className="w-full bg-muted rounded-md px-3 py-2 text-sm flex flex-wrap gap-1 min-h-[38px] opacity-70">
+                    {(field.field_options ?? []).filter(Boolean).slice(0, 3).map((o, i) => (
+                      <span key={i} className="px-2 py-0.5 rounded bg-background text-xs border border-border/50">☐ {o}</span>
+                    ))}
+                    {(!field.field_options || field.field_options.filter(Boolean).length === 0) && (
+                      <span className="text-muted-foreground text-xs">בחר אפשרויות (אחת או יותר)...</span>
+                    )}
+                  </div>
                 ) : (
                   <input
                     type={field.field_type === "number" ? "number" : field.field_type === "date" ? "date" : "text"}
