@@ -401,7 +401,7 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
                     onClick={() => {
                       updateField(field.tempId, {
                         field_type: type,
-                        field_options: type === "list" ? [""] : null,
+                        field_options: (type === "list" || type === "list_multi") ? [""] : null,
                       });
                     }}
                     title={fieldTypeLabels[type]}
