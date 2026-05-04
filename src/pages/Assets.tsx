@@ -234,38 +234,6 @@ export default function Assets() {
         </div>
       </div>
 
-      {/* Category pills */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1">
-        <button
-          onClick={() => setSelectedCategory("all")}
-          className={cn(
-            "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors border",
-            selectedCategory === "all"
-              ? "bg-secondary text-secondary-foreground border-secondary"
-              : "bg-card text-muted-foreground border-border hover:bg-muted"
-          )}
-        >
-          כל הקטגוריות
-        </button>
-        {visibleCategories.map((cat: any) => (
-          <button
-            key={cat.id}
-            onClick={() => setSelectedCategory(cat.id)}
-            className={cn(
-              "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors border",
-              selectedCategory === cat.id
-                ? "bg-secondary text-secondary-foreground border-secondary"
-                : "bg-card text-muted-foreground border-border hover:bg-muted"
-            )}
-          >
-            {cat.category_name}
-            <span className={cn("text-xs px-1.5 py-0.5 rounded-md", selectedCategory === cat.id ? "bg-secondary-foreground/20" : "bg-muted")}>
-              {(cat as any).assets?.[0]?.count ?? 0}
-            </span>
-          </button>
-        ))}
-      </div>
-
       {/* Search & filters */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2 w-80">
