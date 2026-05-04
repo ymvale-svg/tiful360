@@ -321,15 +321,56 @@ export default function Assets() {
             />
           </div>
         )}
-        {(selectedEmployee !== "all" || selectedCategory !== "all" || search) && (
+        <select
+          value={selectedStatus}
+          onChange={(e) => setSelectedStatus(e.target.value)}
+          className="bg-card border border-border rounded-lg px-3 py-2 text-sm outline-none"
+        >
+          <option value="all">כל הסטטוסים</option>
+          <option value="in_use">בשימוש</option>
+          <option value="in_stock">במלאי</option>
+          <option value="in_repair">בתיקון</option>
+          <option value="lost">אבד</option>
+        </select>
+
+        {/* Group-by toggle */}
+        <div className="flex items-center gap-1 bg-card border border-border rounded-lg p-1">
+          <span className="text-xs text-muted-foreground px-2">קיבוץ:</span>
+          {([
+            { v: "category", l: "קטגוריה" },
+            { v: "employee", l: "עובד" },
+            { v: "none", l: "ללא" },
+          ] as Array<{ v: GroupBy; l: string }>).map((g) => (
+            <button
+              key={g.v}
+              onClick={() => setGroupBy(g.v)}
+              className={cn(
+                "px-3 py-1 rounded-md text-xs font-medium transition-colors",
+                groupBy === g.v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+              )}
+            >
+              {g.l}
+            </button>
+          ))}
+        </div>
+
+        {(selectedEmployee !== "all" || selectedCategory !== "all" || selectedStatus !== "all" || search) && (
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => { setSelectedEmployee("all"); setSelectedCategory("all"); setSearch(""); }}
+            onClick={() => { setSelectedEmployee("all"); setSelectedCategory("all"); setSelectedStatus("all"); setSearch(""); }}
           >
             נקה סינון
           </Button>
         )}
+      </div>
+
+      {/* Summary bar */}
+      <div className="text-xs text-muted-foreground flex items-center gap-3 flex-wrap">
+        <span>מציג <strong className="text-foreground">{filtered.length}</strong> מתוך {assets?.length ?? 0} פריטים</span>
+        {Object.entries(statusCounts).map(([k, v]) => (
+          <span key={k}>· {assetStatusLabels[k] ?? k}: <strong className="text-foreground">{v}</strong></span>
+        ))}
       </div>
 
       {/* Table */}
