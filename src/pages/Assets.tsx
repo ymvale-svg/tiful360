@@ -395,7 +395,7 @@ export default function Assets() {
                 const isCollapsed = !!collapsed[grp.key];
                 const showHeader = effectiveGroupBy !== "none";
                 return (
-                  <>
+                  <React.Fragment key={grp.key}>
                     {showHeader && (
                       <tr
                         key={`hdr-${grp.key}`}
