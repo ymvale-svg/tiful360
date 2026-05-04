@@ -200,20 +200,30 @@ function OrphansPanel({ punches, employees }: { punches: AttendancePunch[]; empl
                       onChange={async (v) => {
                         if (!v) return;
                         try {
-                          await assign.mutateAsync({ punchId: p.id, employeeId: v });
-                          toast({ title: "הפעימה שויכה" });
+                          const res: any = await assign.mutateAsync({ punchId: p.id, employeeId: v });
+                          const count = res?.count ?? 1;
+                          toast({
+                            title: count > 1 ? `שויכו ${count} פעימות` : "הפעימה שויכה",
+                            description: count > 1 && res?.code
+                              ? `כל הפעימות עם קוד ${res.code} שויכו אוטומטית, והקוד נשמר על העובד להמשך.`
+                              : undefined,
+                          });
                         } catch (e: any) {
                           toast({ title: "שגיאה", description: e.message, variant: "destructive" });
                         }
                       }}
                       placeholder="בחר/י עובד…"
-
-
                     />
                   </td>
                   <td className="p-2">
-                    <Button size="sm" variant="ghost" onClick={() => update.mutate({ ids: [p.id], status: "rejected" })}>
-                      <X className="w-4 h-4" /> דחה
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-destructive border-destructive/40 hover:bg-destructive hover:text-destructive-foreground"
+                      disabled={update.isPending}
+                      onClick={() => update.mutate({ ids: [p.id], status: "rejected" })}
+                    >
+                      <X className="w-4 h-4 ml-1" /> דחה
                     </Button>
                   </td>
                 </tr>

@@ -108,16 +108,60 @@ export function useUpdatePunchStatus() {
   });
 }
 
-/** שיוך פאנץ' יתום לעובד */
+/** שיוך פאנץ' יתום לעובד + שיוך אוטומטי של כל היתומים עם אותו קוד + שמירת הקוד על העובד */
 export function useAssignPunchEmployee() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ punchId, employeeId }: { punchId: string; employeeId: string }) => {
-      const { error } = await supabase
+      // 1. Read the punch to get its raw employee code + company
+      const { data: punch, error: readErr } = await supabase
         .from("attendance_punches")
-        .update({ employee_id: employeeId })
-        .eq("id", punchId);
-      if (error) throw error;
+        .select("id, company_id, employee_code_raw")
+        .eq("id", punchId)
+        .maybeSingle();
+      if (readErr) throw readErr;
+      if (!punch) throw new Error("הפעימה לא נמצאה");
+
+      const code = (punch.employee_code_raw ?? "").trim();
+
+      // 2. Update the employee record with this code (so future ingests auto-link)
+      if (code) {
+        const { data: emp } = await supabase
+          .from("employees")
+          .select("employee_code")
+          .eq("id", employeeId)
+          .maybeSingle();
+        if (!emp?.employee_code || emp.employee_code !== code) {
+          const { error: empErr } = await supabase
+            .from("employees")
+            .update({ employee_code: code })
+            .eq("id", employeeId);
+          if (empErr) throw empErr;
+        }
+      }
+
+      // 3. Bulk-assign ALL orphan punches in the same company with the same raw code
+      let updatedCount = 1;
+      if (code) {
+        const { data: bulkUpdated, error: bulkErr } = await supabase
+          .from("attendance_punches")
+          .update({ employee_id: employeeId })
+          .eq("company_id", punch.company_id)
+          .eq("employee_code_raw", code)
+          .is("employee_id", null)
+          .select("id");
+        if (bulkErr) throw bulkErr;
+        updatedCount = bulkUpdated?.length ?? 1;
+      } else {
+        // No code on the punch — assign just this one
+        const { error: singleErr } = await supabase
+          .from("attendance_punches")
+          .update({ employee_id: employeeId })
+          .eq("id", punchId);
+        if (singleErr) throw singleErr;
+      }
+
+      return { count: updatedCount, code };
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["attendance_punches"] }),
   });
