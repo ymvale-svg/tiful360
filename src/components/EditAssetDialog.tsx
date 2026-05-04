@@ -344,6 +344,16 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
             )}
           </div>
 
+          {(catFields ?? []).length > 0 && (
+            <CustomFieldsRenderer
+              fields={catFields as any}
+              values={customFields}
+              onChange={(name, value) => setCustomFields((prev) => ({ ...prev, [name]: value }))}
+              categoryPrefix={selectedCategory?.prefix}
+              title="פרטי קטגוריה"
+            />
+          )}
+
           <AssetDocumentsSection assetId={asset.id} />
 
           <div>
