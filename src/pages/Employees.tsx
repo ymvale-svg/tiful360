@@ -12,6 +12,7 @@ import { useUpdateEmployee } from "@/hooks/useMutations";
 import { AddEmployeeDialog } from "@/components/AddEmployeeDialog";
 import { ImportExcelDialog } from "@/components/ImportExcelDialog";
 import { UsersAndRolesTab } from "@/components/UsersAndRolesTab";
+import { useAuth } from "@/hooks/useAuth";
 import { exportToExcel } from "@/lib/exportExcel";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
@@ -68,8 +69,10 @@ export default function Employees() {
   const queryClient = useQueryClient();
   const updateEmployee = useUpdateEmployee();
   const navigate = useNavigate();
+  const { isAdmin, isSuperAdmin } = useAuth();
+  const canManageUsers = isAdmin || isSuperAdmin;
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = searchParams.get("tab") === "users" ? "users" : "employees";
+  const initialTab = searchParams.get("tab") === "users" && canManageUsers ? "users" : "employees";
   const [tab, setTab] = useState<"employees" | "users">(initialTab);
 
   useEffect(() => {
@@ -219,7 +222,7 @@ export default function Employees() {
         <Tabs value={tab} onValueChange={switchTab} dir="rtl">
           <TabsList>
             <TabsTrigger value="employees">עובדים</TabsTrigger>
-            <TabsTrigger value="users">משתמשים ותפקידים</TabsTrigger>
+            {canManageUsers && <TabsTrigger value="users">משתמשים ותפקידים</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="employees" className="space-y-4 mt-4">
@@ -283,7 +286,7 @@ export default function Employees() {
                 ))}
               </div>
 
-              {selected.size > 0 && (
+              {canManageUsers && selected.size > 0 && (
                 <div className="flex items-center gap-2 mr-auto">
                   <span className="text-sm text-muted-foreground">{selected.size} נבחרו</span>
                   <Button
@@ -307,20 +310,22 @@ export default function Employees() {
                 <table className="data-table">
                   <thead>
                     <tr>
-                      <th className="w-10">
-                        <Checkbox
-                          checked={allSelected}
-                          onCheckedChange={toggleAll}
-                          disabled={selectableInPage.length === 0}
-                          aria-label="בחר הכל"
-                        />
-                      </th>
+                      {canManageUsers && (
+                        <th className="w-10">
+                          <Checkbox
+                            checked={allSelected}
+                            onCheckedChange={toggleAll}
+                            disabled={selectableInPage.length === 0}
+                            aria-label="בחר הכל"
+                          />
+                        </th>
+                      )}
                       <th>מזהה</th>
                       <th>שם מלא</th>
                       <th>תפקיד</th>
                       <th>מחלקה</th>
                       <th className="min-w-[200px]">מנהל ישיר</th>
-                      <th>גישה למערכת</th>
+                      {canManageUsers && <th>גישה למערכת</th>}
                       <th>בקשר</th>
                       <th>סטטוס</th>
                     </tr>
@@ -338,14 +343,16 @@ export default function Employees() {
                           onClick={() => navigate(`/employees/${emp.id}`)}
                           className="cursor-pointer hover:bg-muted/50"
                         >
-                          <td onClick={(e) => e.stopPropagation()}>
-                            <Checkbox
-                              checked={selected.has(emp.id)}
-                              onCheckedChange={() => toggleOne(emp.id)}
-                              disabled={!hasEmail}
-                              aria-label={`בחר ${emp.full_name}`}
-                            />
-                          </td>
+                          {canManageUsers && (
+                            <td onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={selected.has(emp.id)}
+                                onCheckedChange={() => toggleOne(emp.id)}
+                                disabled={!hasEmail}
+                                aria-label={`בחר ${emp.full_name}`}
+                              />
+                            </td>
+                          )}
                           <td className="font-mono text-xs text-muted-foreground">{emp.employee_code}</td>
                           <td className="font-medium">{emp.full_name}</td>
                           <td>{emp.role}</td>
@@ -361,35 +368,37 @@ export default function Employees() {
                               className="h-8 text-xs"
                             />
                           </td>
-                          <td onClick={(e) => e.stopPropagation()}>
-                            {hasAccount ? (
-                              <Badge variant="outline" className="gap-1 text-[11px] bg-success/10 text-success border-success/20">
-                                <ShieldCheck className="w-3 h-3" />
-                                פעיל
-                              </Badge>
-                            ) : hasEmail ? (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 text-[11px] gap-1"
-                                disabled={inviteMutation.isPending}
-                                onClick={() => handleSingleInvite(emp.id, emp.full_name)}
-                              >
-                                <Mail className="w-3 h-3" />
-                                צור חשבון
-                              </Button>
-                            ) : (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                                    <ShieldAlert className="w-3 h-3" />
-                                    אין מייל
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent>הוסף כתובת מייל לעובד כדי ליצור חשבון</TooltipContent>
-                              </Tooltip>
-                            )}
-                          </td>
+                          {canManageUsers && (
+                            <td onClick={(e) => e.stopPropagation()}>
+                              {hasAccount ? (
+                                <Badge variant="outline" className="gap-1 text-[11px] bg-success/10 text-success border-success/20">
+                                  <ShieldCheck className="w-3 h-3" />
+                                  פעיל
+                                </Badge>
+                              ) : hasEmail ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-[11px] gap-1"
+                                  disabled={inviteMutation.isPending}
+                                  onClick={() => handleSingleInvite(emp.id, emp.full_name)}
+                                >
+                                  <Mail className="w-3 h-3" />
+                                  צור חשבון
+                                </Button>
+                              ) : (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                                      <ShieldAlert className="w-3 h-3" />
+                                      אין מייל
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>הוסף כתובת מייל לעובד כדי ליצור חשבון</TooltipContent>
+                                </Tooltip>
+                              )}
+                            </td>
+                          )}
                           <td>
                             {inContacts ? (
                               <UserCheck className="w-4 h-4 text-success" />
@@ -407,7 +416,7 @@ export default function Employees() {
                       );
                     })}
                     {filtered.length === 0 && (
-                      <tr><td colSpan={9} className="text-center py-8 text-muted-foreground">לא נמצאו עובדים</td></tr>
+                      <tr><td colSpan={canManageUsers ? 9 : 7} className="text-center py-8 text-muted-foreground">לא נמצאו עובדים</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -415,9 +424,11 @@ export default function Employees() {
             </div>
           </TabsContent>
 
-          <TabsContent value="users" className="mt-4">
-            <UsersAndRolesTab />
-          </TabsContent>
+          {canManageUsers && (
+            <TabsContent value="users" className="mt-4">
+              <UsersAndRolesTab />
+            </TabsContent>
+          )}
         </Tabs>
 
         <AddEmployeeDialog open={addOpen} onOpenChange={setAddOpen} />

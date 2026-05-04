@@ -15,6 +15,7 @@ import { ShieldCheck, ShieldAlert, Mail } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSubEmployers } from "@/hooks/useSubEmployers";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Props {
   open: boolean;
@@ -29,6 +30,8 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
   const { activeCompanyId, activeCompany } = useCompany();
   const { data: subEmployers = [] } = useSubEmployers(true);
   const queryClient = useQueryClient();
+  const { isAdmin, isSuperAdmin } = useAuth();
+  const canManageAccess = isAdmin || isSuperAdmin;
   const [form, setForm] = useState<any>({});
 
   useEffect(() => {
@@ -203,6 +206,7 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
           </div>
         </div>
 
+        {canManageAccess && (
         <div className="mt-4 p-3 rounded-lg border border-border bg-muted/30 flex items-start justify-between gap-3">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
@@ -237,6 +241,7 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
             </Button>
           )}
         </div>
+        )}
 
         <div className="mt-3 flex items-center gap-2">
           <Checkbox
