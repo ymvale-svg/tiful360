@@ -652,35 +652,40 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
           </div>
 
           {/* ============ BULK MODE TOGGLE ============ */}
-          <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-muted/40 border border-border/50 mt-4">
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-primary" />
-              <div>
-                <p className="text-sm font-medium">שייך פריט לקבוצת עובדים</p>
-                <p className="text-xs text-muted-foreground">צור עותק של הפריט לכל עובד נבחר עם פרטים אישיים</p>
+          {/* Hidden for institutional categories — they cannot be assigned to employees */}
+          {(selectedCategory as any)?.is_assignable !== false && (
+            <>
+              <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-muted/40 border border-border/50 mt-4">
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-primary" />
+                  <div>
+                    <p className="text-sm font-medium">שייך פריט לקבוצת עובדים</p>
+                    <p className="text-xs text-muted-foreground">צור עותק של הפריט לכל עובד נבחר עם פרטים אישיים</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={bulkMode}
+                  onCheckedChange={(v) => {
+                    if (!v && selectedEmployeeIds.length > 1) {
+                      if (!confirm("ביטול השיוך הקבוצתי ימחק את הפרטים שמולאו לעובדים. להמשיך?")) return;
+                    }
+                    setBulkMode(v);
+                    if (!v) {
+                      // Keep first employee as single owner
+                      if (selectedEmployeeIds[0]) {
+                        setForm(prev => ({ ...prev, current_owner_id: selectedEmployeeIds[0] }));
+                      }
+                      setSelectedEmployeeIds([]);
+                      setPerEmpRows({});
+                    }
+                  }}
+                  disabled={!form.category_id}
+                />
               </div>
-            </div>
-            <Switch
-              checked={bulkMode}
-              onCheckedChange={(v) => {
-                if (!v && selectedEmployeeIds.length > 1) {
-                  if (!confirm("ביטול השיוך הקבוצתי ימחק את הפרטים שמולאו לעובדים. להמשיך?")) return;
-                }
-                setBulkMode(v);
-                if (!v) {
-                  // Keep first employee as single owner
-                  if (selectedEmployeeIds[0]) {
-                    setForm(prev => ({ ...prev, current_owner_id: selectedEmployeeIds[0] }));
-                  }
-                  setSelectedEmployeeIds([]);
-                  setPerEmpRows({});
-                }
-              }}
-              disabled={!form.category_id}
-            />
-          </div>
-          {!form.category_id && bulkMode === false && (
-            <p className="text-xs text-muted-foreground">בחר קטגוריה לפני הפעלת השיוך הקבוצתי</p>
+              {!form.category_id && bulkMode === false && (
+                <p className="text-xs text-muted-foreground">בחר קטגוריה לפני הפעלת השיוך הקבוצתי</p>
+              )}
+            </>
           )}
 
           {/* ============ BULK MODE UI ============ */}
