@@ -91,7 +91,7 @@ export function useSaveCategoryFields() {
       fields: Array<{
         id?: string;
         field_name: string;
-        field_type: "text" | "number" | "date" | "list";
+        field_type: "text" | "number" | "date" | "list" | "list_multi";
         is_required: boolean;
         field_options: any;
         sort_order: number;
