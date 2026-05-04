@@ -117,7 +117,7 @@ export function AttendanceFlowIndicator() {
     }
   }
 
-  const showAlert = status === "down";
+  const showAlert = !state.loading && status === "down" && state.lastPunchAt !== null;
 
   return (
     <Card className={`border ${status === "live" ? "border-green-500/40" : status === "down" ? "border-amber-500/40" : ""}`} dir="rtl">
