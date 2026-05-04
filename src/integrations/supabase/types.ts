@@ -189,6 +189,7 @@ export type Database = {
           description: string | null
           icon: string | null
           id: string
+          is_assignable: boolean
           prefix: string
         }
         Insert: {
@@ -198,6 +199,7 @@ export type Database = {
           description?: string | null
           icon?: string | null
           id?: string
+          is_assignable?: boolean
           prefix: string
         }
         Update: {
@@ -207,6 +209,7 @@ export type Database = {
           description?: string | null
           icon?: string | null
           id?: string
+          is_assignable?: boolean
           prefix?: string
         }
         Relationships: [
@@ -218,6 +221,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      asset_documents: {
+        Row: {
+          asset_id: string
+          company_id: string
+          document_label: string | null
+          document_type: string
+          expiry_date: string | null
+          file_name: string
+          file_size_bytes: number | null
+          file_url: string
+          id: string
+          notes: string | null
+          uploaded_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          asset_id: string
+          company_id: string
+          document_label?: string | null
+          document_type?: string
+          expiry_date?: string | null
+          file_name: string
+          file_size_bytes?: number | null
+          file_url: string
+          id?: string
+          notes?: string | null
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          asset_id?: string
+          company_id?: string
+          document_label?: string | null
+          document_type?: string
+          expiry_date?: string | null
+          file_name?: string
+          file_size_bytes?: number | null
+          file_url?: string
+          id?: string
+          notes?: string | null
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
       }
       asset_handover_forms: {
         Row: {
@@ -584,6 +632,7 @@ export type Database = {
           it_emails: string | null
           logo_url: string | null
           name: string
+          operations_emails: string | null
           payroll_emails: string | null
           updated_at: string
         }
@@ -594,6 +643,7 @@ export type Database = {
           it_emails?: string | null
           logo_url?: string | null
           name: string
+          operations_emails?: string | null
           payroll_emails?: string | null
           updated_at?: string
         }
@@ -604,6 +654,7 @@ export type Database = {
           it_emails?: string | null
           logo_url?: string | null
           name?: string
+          operations_emails?: string | null
           payroll_emails?: string | null
           updated_at?: string
         }
@@ -1816,6 +1867,27 @@ export type Database = {
           id: string
           phone: string
           role: string
+        }[]
+      }
+      get_expiring_assets: {
+        Args: { _company_id: string; _days_ahead?: number }
+        Returns: {
+          asset_code: string
+          asset_id: string
+          asset_name: string
+          category_id: string
+          category_name: string
+          category_prefix: string
+          current_owner_id: string
+          custom_fields: Json
+          days_left: number
+          expiry_date: string
+          field_key: string
+          field_label: string
+          is_assignable: boolean
+          owner_name: string
+          source_id: string
+          source_type: string
         }[]
       }
       get_live_employee_locations: {
