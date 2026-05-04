@@ -271,7 +271,7 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
       return;
     }
     try {
-      await mutation.mutateAsync({
+      const created = await mutation.mutateAsync({
         asset_code: form.asset_code,
         asset_name: form.asset_name,
         category_id: form.category_id,
@@ -282,6 +282,17 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
         expiry_date: form.expiry_date || undefined,
         notes: form.notes || undefined,
       });
+      // Upload pending documents (if any)
+      if (pendingDocs.length > 0 && (created as any)?.id) {
+        const assetId = (created as any).id;
+        for (const file of pendingDocs) {
+          try {
+            await uploadDoc.mutateAsync({ asset_id: assetId, file, document_type: "other" });
+          } catch (uerr: any) {
+            toast({ title: `שגיאה בהעלאת ${file.name}`, description: uerr.message, variant: "destructive" });
+          }
+        }
+      }
       toast({ title: "פריט ציוד נוסף בהצלחה" });
       onOpenChange(false);
     } catch (err: any) {
