@@ -474,28 +474,36 @@ export default function EmployeePortal() {
 
             {myEmployee?.can_remote_punch && (
               <div className="bg-card rounded-xl border border-border/50 p-3">
-                <p className="text-xs font-semibold text-muted-foreground mb-2">דיווח נוכחות מרחוק</p>
+                <p className="text-xs font-semibold text-muted-foreground mb-2">
+                  דיווח נוכחות מרחוק (GPS)
+                </p>
                 <div className="flex gap-2">
                   <Button
                     size="sm"
                     className="flex-1 gap-1"
-                    onClick={() => setRemotePunchDir("in")}
+                    disabled={punchingDir !== null}
+                    onClick={() => handlePunch("in")}
                   >
                     <Clock className="w-3 h-3" />
-                    כניסה
+                    {punchingDir === "in" ? "מאתר מיקום..." : "כניסה"}
                   </Button>
                   <Button
                     size="sm"
                     variant="outline"
                     className="flex-1 gap-1"
-                    onClick={() => setRemotePunchDir("out")}
+                    disabled={punchingDir !== null}
+                    onClick={() => handlePunch("out")}
                   >
                     <Clock className="w-3 h-3" />
-                    יציאה
+                    {punchingDir === "out" ? "מאתר מיקום..." : "יציאה"}
                   </Button>
                 </div>
+                <p className="text-[10px] text-muted-foreground mt-2">
+                  בלחיצה ראשונה הדפדפן יבקש אישור גישה למיקום. לאחר אישור, ההחתמה תתבצע מיידית.
+                </p>
               </div>
             )}
+
 
             {myEmployee && myPunches.length > 0 ? (
               <div className="space-y-2">
@@ -695,19 +703,6 @@ export default function EmployeePortal() {
             managerId={myEmployee.direct_manager_id ?? null}
             initiatedBy="employee"
           />
-          {myEmployee.can_remote_punch && remotePunchDir && (
-            <RemotePunchDialog
-              open={!!remotePunchDir}
-              onOpenChange={(v) => !v && setRemotePunchDir(null)}
-              direction={remotePunchDir}
-              employee={{
-                id: myEmployee.id,
-                company_id: myEmployee.company_id,
-                employee_code: myEmployee.employee_code,
-                full_name: myEmployee.full_name,
-              }}
-            />
-          )}
         </>
       )}
     </div>
