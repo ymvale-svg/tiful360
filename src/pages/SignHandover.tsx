@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, FileSignature, Upload } from "lucide-react";
-import { HandoverFormView, HandoverFormData } from "@/components/HandoverFormView";
+import type { HandoverFormData } from "@/components/HandoverFormView";
 import { SignaturePad, SignaturePadHandle } from "@/components/SignaturePad";
 import { buildHandoverPdf } from "@/lib/pdf/buildHandoverPdf";
 import { uploadViaSignedToken } from "@/lib/signedFormUpload";
@@ -18,9 +18,9 @@ export default function SignHandover() {
   const [attachment, setAttachment] = useState<File | null>(null);
   const [done, setDone] = useState(false);
 
-  const formRef = useRef<HTMLDivElement>(null);
   const sigRef = useRef<SignaturePadHandle>(null);
   const [sigUrl, setSigUrl] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -35,8 +35,36 @@ export default function SignHandover() {
     })();
   }, [token]);
 
+  // Live PDF preview with logo
+  useEffect(() => {
+    if (!record) return;
+    let cancelled = false;
+    let createdUrl: string | null = null;
+    (async () => {
+      try {
+        const data: HandoverFormData = {
+          ...(record.form_snapshot as HandoverFormData),
+          receiver_signature: sigUrl,
+        };
+        const blob = await buildHandoverPdf(data);
+        if (cancelled) return;
+        createdUrl = URL.createObjectURL(blob);
+        setPreviewUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return createdUrl;
+        });
+      } catch (e) {
+        console.error("preview pdf failed", e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (createdUrl) URL.revokeObjectURL(createdUrl);
+    };
+  }, [record, sigUrl]);
+
   const handleSign = async () => {
-    if (!record || !formRef.current) return;
+    if (!record) return;
     const sig = sigRef.current?.getDataUrl();
     if (!sig) {
       toast({ title: "נא לחתום בקנבס", variant: "destructive" });
@@ -45,7 +73,6 @@ export default function SignHandover() {
     setBusy(true);
     try {
       setSigUrl(sig);
-      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
       let attachedUrl = record.attached_document_url;
       if (attachment) {
@@ -106,11 +133,6 @@ export default function SignHandover() {
     );
   }
 
-  const data: HandoverFormData = {
-    ...record.form_snapshot,
-    receiver_signature: sigUrl,
-  };
-
   return (
     <div className="min-h-screen bg-muted/30 p-6" dir="rtl">
       <div className="max-w-4xl mx-auto space-y-4">
@@ -122,10 +144,17 @@ export default function SignHandover() {
           <p className="text-sm text-muted-foreground">אנא קרא את הטופס וחתום למטה.</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-card overflow-auto">
-          <div className="origin-top-right mx-auto" style={{ transform: "scale(0.85)", transformOrigin: "top center" }}>
-            <HandoverFormView ref={formRef} data={data} />
-          </div>
+        <div className="bg-white rounded-xl shadow-card overflow-hidden">
+          {previewUrl ? (
+            <iframe
+              src={previewUrl}
+              title="תצוגת הטופס"
+              className="w-full"
+              style={{ height: "85vh", border: 0 }}
+            />
+          ) : (
+            <div className="p-12 text-center text-sm text-muted-foreground">טוען תצוגת טופס...</div>
+          )}
         </div>
 
         <div className="bg-card border rounded-xl p-6 space-y-4">
