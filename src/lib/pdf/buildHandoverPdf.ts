@@ -158,5 +158,5 @@ export async function buildHandoverPdf(data: HandoverFormData): Promise<Blob> {
   drawCenteredRtlText({ page, text: data.employee_name, font: regular, size: 9, centerX: receiverCx, y: sigY - 12 });
 
   const bytes = await pdf.save();
-  return new Blob([bytes], { type: "application/pdf" });
+  return new Blob([bytes as BlobPart], { type: "application/pdf" });
 }
