@@ -166,13 +166,19 @@ export default function SignOffboarding() {
           </p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-card overflow-auto">
-          <div
-            className="origin-top-right mx-auto"
-            style={{ transform: "scale(0.85)", transformOrigin: "top center" }}
-          >
-            <OffboardingFormView ref={formRef} data={data} />
-          </div>
+        <div className="bg-white rounded-xl shadow-card overflow-hidden">
+          {previewUrl ? (
+            <iframe
+              src={previewUrl}
+              title="תצוגת הטופס"
+              className="w-full"
+              style={{ height: "85vh", border: 0 }}
+            />
+          ) : (
+            <div className="p-12 text-center text-sm text-muted-foreground">
+              טוען תצוגת טופס...
+            </div>
+          )}
         </div>
 
         <div className="bg-card border rounded-xl p-6 space-y-4">
