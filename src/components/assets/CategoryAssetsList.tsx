@@ -120,86 +120,49 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
         <div className="bg-card border border-border rounded-xl p-12 text-center text-muted-foreground">
           לא נמצאו פריטים בקטגוריה זו
         </div>
-      ) : view === "grid" ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-4">
           {items.map((a: any) => {
             const expiry = a.expiry_date ? new Date(a.expiry_date) : null;
             const expired = expiry && expiry < new Date();
+            const ownerName = a.employees?.full_name;
             return (
               <button
                 key={a.id}
                 onClick={() => onSelectAsset(a.id)}
                 className={cn(
-                  "group relative bg-card border border-border rounded-xl p-3 text-center",
-                  "hover:shadow-md hover:-translate-y-0.5 hover:ring-2 transition-all",
+                  "group relative bg-card border border-border rounded-2xl p-5 text-center",
+                  "hover:shadow-lg hover:-translate-y-0.5 hover:ring-2 transition-all",
                   color.ring,
-                  "flex flex-col items-center gap-2"
+                  "flex flex-col items-center gap-3 aspect-square justify-center"
                 )}
               >
                 {expired && (
-                  <span className="absolute top-1.5 left-1.5 flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-destructive/15 text-destructive" title="פג תוקף">
-                    <AlertTriangle className="w-3 h-3" />
+                  <span className="absolute top-2 left-2 flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-destructive/15 text-destructive" title="פג תוקף">
+                    <AlertTriangle className="w-3 h-3" /> פג
+                  </span>
+                )}
+                {isAssignable && (
+                  <span className={cn("absolute top-2 right-2 status-badge text-[10px] px-1.5 py-0.5", assetStatusClasses[a.status])}>
+                    {assetStatusLabels[a.status] ?? a.status}
                   </span>
                 )}
                 <div className={cn(
-                  "w-14 h-14 rounded-xl flex items-center justify-center transition-transform group-hover:scale-105",
+                  "w-20 h-20 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105",
                   color.bg, color.text
                 )}>
                   {!isAssignable
-                    ? <Building2 className="w-7 h-7" strokeWidth={1.75} />
-                    : <Icon className="w-7 h-7" strokeWidth={1.75} />
+                    ? <Building2 className="w-10 h-10" strokeWidth={1.75} />
+                    : <Icon className="w-10 h-10" strokeWidth={1.75} />
                   }
                 </div>
                 <div className="w-full">
-                  <div className="text-sm font-medium line-clamp-2 leading-tight">{a.asset_name}</div>
-                  <div className="font-mono text-[10px] text-muted-foreground mt-0.5 truncate">{a.asset_code}</div>
+                  <div className="text-base font-semibold line-clamp-2 leading-tight">{a.asset_name}</div>
+                  <div className="font-mono text-[11px] text-muted-foreground mt-1 truncate">{a.asset_code}</div>
                 </div>
-                <div className="text-[11px] text-muted-foreground truncate w-full">
-                  {isAssignable ? (a.employees?.full_name ?? "במלאי") : "נכס חברה"}
+                <div className="text-xs text-muted-foreground truncate w-full">
+                  {isAssignable ? (ownerName ?? "במלאי") : "נכס חברה"}
                 </div>
-                {isAssignable && (
-                  <span className={cn("status-badge text-[10px] px-1.5 py-0.5", assetStatusClasses[a.status])}>
-                    {assetStatusLabels[a.status] ?? a.status}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="bg-card border border-border rounded-xl overflow-hidden divide-y divide-border">
-          {items.map((a: any) => {
-            const expiry = a.expiry_date ? new Date(a.expiry_date) : null;
-            const expired = expiry && expiry < new Date();
-            return (
-              <button
-                key={a.id}
-                onClick={() => onSelectAsset(a.id)}
-                className="w-full text-right px-4 py-3 hover:bg-muted/50 transition-colors flex items-center gap-4"
-              >
-                <div className="font-mono text-xs text-muted-foreground w-24 shrink-0">{a.asset_code}</div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium flex items-center gap-2">
-                    {!isAssignable && <Building2 className="w-3.5 h-3.5 text-primary/70 shrink-0" />}
-                    <span className="truncate">{a.asset_name}</span>
-                  </div>
-                  {a.serial_number && (
-                    <div className="text-xs text-muted-foreground truncate">סידורי: {a.serial_number}</div>
-                  )}
-                </div>
-                <div className="text-sm text-muted-foreground hidden md:block min-w-[140px]">
-                  {isAssignable ? (a.employees?.full_name ?? "במלאי") : "נכס חברה"}
-                </div>
-                {isAssignable && (
-                  <span className={cn("status-badge", assetStatusClasses[a.status])}>
-                    {assetStatusLabels[a.status] ?? a.status}
-                  </span>
-                )}
-                {expiry && (
-                  <span className={cn("text-xs", expired ? "text-destructive" : "text-muted-foreground")}>
-                    {expiry.toLocaleDateString("he-IL")}
-                  </span>
-                )}
               </button>
             );
           })}
