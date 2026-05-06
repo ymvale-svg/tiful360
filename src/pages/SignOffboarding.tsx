@@ -25,12 +25,8 @@ export default function SignOffboarding() {
   useEffect(() => {
     (async () => {
       if (!token) return;
-      const { data } = await supabase
-        .from("offboarding_forms")
-        .select("*")
-        .eq("sign_token", token)
-        .maybeSingle();
-      setRecord(data);
+      const { data } = await supabase.rpc("get_offboarding_form_by_token", { _token: token });
+      setRecord(Array.isArray(data) ? data[0] ?? null : data ?? null);
       setLoading(false);
     })();
   }, [token]);
@@ -101,32 +97,14 @@ export default function SignOffboarding() {
         contentType: "application/pdf",
       });
 
-      const { error } = await supabase
-        .from("offboarding_forms")
-        .update({
-          status: "signed",
-          signature_data: sig,
-          attached_document_url: attachedUrl,
-          pdf_url: pdfUrl,
-          signed_at: new Date().toISOString(),
-          form_snapshot: {
-            ...record.form_snapshot,
-            receiver_signature: sig,
-          },
-        })
-        .eq("sign_token", token);
+      const { error } = await supabase.rpc("sign_offboarding_form_by_token", {
+        _token: token!,
+        _signature: sig,
+        _attached_url: attachedUrl,
+        _pdf_url: pdfUrl,
+        _form_snapshot: { ...record.form_snapshot, receiver_signature: sig },
+      });
       if (error) throw error;
-
-      // Mark the assets returned (best-effort — RLS may block from anon, that's ok)
-      const assetIds: string[] = (record.form_snapshot?.assets ?? [])
-        .map((a: any) => a.asset_id)
-        .filter(Boolean);
-      if (assetIds.length) {
-        await supabase
-          .from("assets")
-          .update({ status: "in_stock", current_owner_id: null })
-          .in("id", assetIds);
-      }
 
       setDone(true);
     } catch (err: any) {

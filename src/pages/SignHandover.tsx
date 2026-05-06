@@ -25,12 +25,8 @@ export default function SignHandover() {
   useEffect(() => {
     (async () => {
       if (!token) return;
-      const { data } = await supabase
-        .from("asset_handover_forms")
-        .select("*")
-        .eq("sign_token", token)
-        .maybeSingle();
-      setRecord(data);
+      const { data } = await supabase.rpc("get_handover_form_by_token", { _token: token });
+      setRecord(Array.isArray(data) ? data[0] ?? null : data ?? null);
       setLoading(false);
     })();
   }, [token]);
@@ -94,17 +90,13 @@ export default function SignHandover() {
         contentType: "application/pdf",
       });
 
-      const { error } = await supabase
-        .from("asset_handover_forms")
-        .update({
-          status: "signed",
-          signature_data: sig,
-          attached_document_url: attachedUrl,
-          pdf_url: pdfUrl,
-          signed_at: new Date().toISOString(),
-          form_snapshot: { ...record.form_snapshot, receiver_signature: sig },
-        })
-        .eq("sign_token", token);
+      const { error } = await supabase.rpc("sign_handover_form_by_token", {
+        _token: token!,
+        _signature: sig,
+        _attached_url: attachedUrl,
+        _pdf_url: pdfUrl,
+        _form_snapshot: { ...record.form_snapshot, receiver_signature: sig },
+      });
       if (error) throw error;
 
       setDone(true);

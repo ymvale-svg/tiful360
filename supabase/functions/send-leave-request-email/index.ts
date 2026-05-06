@@ -114,6 +114,15 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
   try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const authClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader } } });
+    const { data: claims } = await authClient.auth.getClaims(authHeader.replace("Bearer ", ""));
+    if (!claims?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     const { request_id, event } = await req.json();
     if (!request_id || !event) {
       return new Response(JSON.stringify({ error: "request_id and event required" }), {
@@ -123,6 +132,11 @@ Deno.serve(async (req) => {
     }
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
+
+    const { data: visible } = await authClient.from("leave_requests").select("id").eq("id", request_id).maybeSingle();
+    if (!visible) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     // Load request + employee + manager + company
     const { data: request, error: reqErr } = await supabase

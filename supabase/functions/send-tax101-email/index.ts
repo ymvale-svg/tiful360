@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { form_id } = await req.json();
+    const { form_id, access_token } = await req.json();
     if (!form_id) {
       return new Response(JSON.stringify({ error: "form_id required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -22,6 +22,25 @@ Deno.serve(async (req) => {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
+
+    // AuthZ: either authenticated caller with RLS-visible form, OR valid access_token for the form
+    const authHeader = req.headers.get("Authorization");
+    let authorized = false;
+    if (authHeader?.startsWith("Bearer ")) {
+      const authClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader } } });
+      const { data: claims } = await authClient.auth.getClaims(authHeader.replace("Bearer ", ""));
+      if (claims?.claims) {
+        const { data: visible } = await authClient.from("tax_form_101").select("id").eq("id", form_id).maybeSingle();
+        if (visible) authorized = true;
+      }
+    }
+    if (!authorized && access_token) {
+      const { data: tokenMatch } = await supabase.from("tax_form_101").select("id").eq("id", form_id).eq("access_token", access_token).maybeSingle();
+      if (tokenMatch) authorized = true;
+    }
+    if (!authorized) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     // Load form + employee + company
     const { data: form, error: fErr } = await supabase
