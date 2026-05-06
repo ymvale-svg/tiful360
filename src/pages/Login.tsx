@@ -67,6 +67,26 @@ export default function Login() {
       const { error } = result;
       if (error) throw error;
 
+      // Safety net: verify the signed-in user is linked to an active employee
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: emp } = await supabase
+          .from("employees")
+          .select("id")
+          .ilike("email", user.email ?? "")
+          .eq("status", "active")
+          .maybeSingle();
+        if (!emp) {
+          await supabase.auth.signOut();
+          toast({
+            title: "אין הרשאת גישה",
+            description: "אימייל זה אינו רשום כעובד פעיל בארגון. פנה למנהל המערכת.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
       navigate("/select-company");
     } catch (error: any) {
       toast({ title: "שגיאה בהתחברות עם Google", description: translateAuthError(error), variant: "destructive" });
