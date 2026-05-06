@@ -414,7 +414,7 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
           _pdf_url: pdfUrl,
         });
         if (error) throw error;
-        try { await supabase.functions.invoke("send-tax101-email", { body: { form_id: formId, log_activity: true } }); } catch {}
+        try { await supabase.functions.invoke("send-tax101-email", { body: { form_id: formId, access_token: tokenFromUrl, log_activity: true } }); } catch {}
       } else {
         await submit.mutateAsync({ formId, formData: data, signatureData: sig, pdfUrl });
       }
