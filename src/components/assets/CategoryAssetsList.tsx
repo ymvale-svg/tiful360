@@ -19,14 +19,18 @@ interface Props {
   onAddAsset: (categoryId: string) => void;
 }
 
-type ViewMode = "grid" | "list";
+interface Props {
+  categoryId: string;
+  onBack: () => void;
+  onSelectAsset: (assetId: string) => void;
+  onAddAsset: (categoryId: string) => void;
+}
 
 export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAsset }: Props) {
   const { data: assets, isLoading } = useAssets();
   const { data: categories } = useAssetCategories();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
-  const [view, setView] = useState<ViewMode>("grid");
 
   const category = (categories ?? []).find((c: any) => c.id === categoryId) as any;
   const Icon = getCategoryIcon(category?.category_name);
