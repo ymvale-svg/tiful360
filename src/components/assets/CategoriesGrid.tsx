@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useAssets, useAssetCategories } from "@/hooks/useData";
-import { getCategoryIcon } from "@/lib/categoryIcons";
+import { getCategoryIcon, getCategoryColor } from "@/lib/categoryIcons";
 import { cn } from "@/lib/utils";
 import { AlertTriangle } from "lucide-react";
 
@@ -44,18 +44,20 @@ export function CategoriesGrid({ onSelectCategory }: Props) {
     return (
       <div className="space-y-3">
         <h2 className="text-sm font-semibold text-muted-foreground">{title}</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-4">
           {items.map((cat: any) => {
             const Icon = getCategoryIcon(cat.category_name);
+            const color = getCategoryColor(cat.category_name);
             const s = stats.get(cat.id) ?? { count: 0, expiringSoon: 0, expired: 0 };
             return (
               <button
                 key={cat.id}
                 onClick={() => onSelectCategory(cat.id)}
                 className={cn(
-                  "group relative bg-card border border-border rounded-xl p-4 text-right",
-                  "hover:border-primary/50 hover:shadow-md transition-all",
-                  "flex flex-col items-center gap-2 aspect-square justify-center"
+                  "group relative bg-card border border-border rounded-2xl p-5 text-right",
+                  "hover:shadow-lg hover:-translate-y-0.5 hover:ring-2 transition-all",
+                  color.ring,
+                  "flex flex-col items-center gap-3 aspect-square justify-center"
                 )}
               >
                 {(s.expired > 0 || s.expiringSoon > 0) && (
@@ -72,10 +74,13 @@ export function CategoriesGrid({ onSelectCategory }: Props) {
                     {s.expired > 0 ? s.expired : s.expiringSoon}
                   </span>
                 )}
-                <div className="w-12 h-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary/15 transition-colors">
-                  <Icon className="w-6 h-6" />
+                <div className={cn(
+                  "w-20 h-20 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105",
+                  color.bg, color.text
+                )}>
+                  <Icon className="w-10 h-10" strokeWidth={1.75} />
                 </div>
-                <div className="text-sm font-medium text-center line-clamp-2">{cat.category_name}</div>
+                <div className="text-base font-semibold text-center line-clamp-2">{cat.category_name}</div>
                 <div className="text-xs text-muted-foreground">{s.count} פריטים</div>
               </button>
             );
