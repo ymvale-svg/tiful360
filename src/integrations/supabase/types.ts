@@ -1899,6 +1899,31 @@ export type Database = {
           source_type: string
         }[]
       }
+      get_handover_form_by_token: {
+        Args: { _token: string }
+        Returns: {
+          asset_id: string
+          attached_document_url: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          delivery_method: string
+          employee_id: string
+          form_snapshot: Json
+          id: string
+          pdf_url: string | null
+          sign_token: string
+          signature_data: string | null
+          signed_at: string | null
+          status: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "asset_handover_forms"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_live_employee_locations: {
         Args: { _company_id: string }
         Returns: {
@@ -1914,11 +1939,65 @@ export type Database = {
           role: string
         }[]
       }
+      get_offboarding_form_by_token: {
+        Args: { _token: string }
+        Returns: {
+          attached_document_url: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          end_date: string | null
+          form_index: number
+          form_snapshot: Json
+          id: string
+          it_ticket_id: string | null
+          pdf_url: string | null
+          sign_token: string
+          signature_data: string | null
+          signed_at: string | null
+          status: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "offboarding_forms"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_subordinate_employee_ids: {
         Args: { _manager_user_id: string }
         Returns: {
           employee_id: string
         }[]
+      }
+      get_tax_form_101_by_token: {
+        Args: { _token: string }
+        Returns: {
+          access_token: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          form_data: Json
+          id: string
+          pdf_url: string | null
+          sent_at: string | null
+          sent_to: string[] | null
+          signature_data: string | null
+          signed_at: string | null
+          status: string
+          sub_employer_id: string | null
+          tax_year: number
+          token_expires_at: string | null
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "tax_form_101"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       has_role: {
         Args: {
@@ -1958,6 +2037,102 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      sign_handover_form_by_token: {
+        Args: {
+          _attached_url: string
+          _form_snapshot: Json
+          _pdf_url: string
+          _signature: string
+          _token: string
+        }
+        Returns: {
+          asset_id: string
+          attached_document_url: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          delivery_method: string
+          employee_id: string
+          form_snapshot: Json
+          id: string
+          pdf_url: string | null
+          sign_token: string
+          signature_data: string | null
+          signed_at: string | null
+          status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "asset_handover_forms"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      sign_offboarding_form_by_token: {
+        Args: {
+          _attached_url: string
+          _form_snapshot: Json
+          _pdf_url: string
+          _signature: string
+          _token: string
+        }
+        Returns: {
+          attached_document_url: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          end_date: string | null
+          form_index: number
+          form_snapshot: Json
+          id: string
+          it_ticket_id: string | null
+          pdf_url: string | null
+          sign_token: string
+          signature_data: string | null
+          signed_at: string | null
+          status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "offboarding_forms"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      submit_tax_form_101_by_token: {
+        Args: {
+          _form_data: Json
+          _pdf_url: string
+          _signature: string
+          _token: string
+        }
+        Returns: {
+          access_token: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          form_data: Json
+          id: string
+          pdf_url: string | null
+          sent_at: string | null
+          sent_to: string[] | null
+          signature_data: string | null
+          signed_at: string | null
+          status: string
+          sub_employer_id: string | null
+          tax_year: number
+          token_expires_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tax_form_101"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       user_company_ids: { Args: { _user_id: string }; Returns: string[] }
     }
