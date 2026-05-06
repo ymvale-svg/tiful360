@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useAssets, useAssetCategories } from "@/hooks/useData";
-import { getCategoryIcon } from "@/lib/categoryIcons";
-import { Search, Plus, Building2, ChevronLeft } from "lucide-react";
+import { getCategoryIcon, getCategoryColor } from "@/lib/categoryIcons";
+import { Search, Plus, Building2, ChevronLeft, LayoutGrid, List, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -19,14 +19,18 @@ interface Props {
   onAddAsset: (categoryId: string) => void;
 }
 
+type ViewMode = "grid" | "list";
+
 export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAsset }: Props) {
   const { data: assets, isLoading } = useAssets();
   const { data: categories } = useAssetCategories();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
+  const [view, setView] = useState<ViewMode>("grid");
 
   const category = (categories ?? []).find((c: any) => c.id === categoryId) as any;
   const Icon = getCategoryIcon(category?.category_name);
+  const color = getCategoryColor(category?.category_name);
   const isAssignable = category?.is_assignable !== false;
 
   const items = useMemo(() => {
@@ -59,10 +63,10 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
       </div>
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-            <Icon className="w-6 h-6" />
+          <div className={cn("w-14 h-14 rounded-xl flex items-center justify-center", color.bg, color.text)}>
+            <Icon className="w-8 h-8" strokeWidth={1.75} />
           </div>
           <div>
             <h1 className="text-xl font-bold">{category?.category_name}</h1>
@@ -71,10 +75,34 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
             </p>
           </div>
         </div>
-        <Button onClick={() => onAddAsset(categoryId)} className="gap-2">
-          <Plus className="w-4 h-4" />
-          פריט חדש
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="inline-flex bg-card border border-border rounded-lg p-0.5">
+            <button
+              onClick={() => setView("grid")}
+              className={cn(
+                "px-2.5 py-1.5 rounded-md text-xs flex items-center gap-1.5 transition-colors",
+                view === "grid" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
+              )}
+              title="תצוגת אייקונים"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" /> אייקונים
+            </button>
+            <button
+              onClick={() => setView("list")}
+              className={cn(
+                "px-2.5 py-1.5 rounded-md text-xs flex items-center gap-1.5 transition-colors",
+                view === "list" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
+              )}
+              title="תצוגת רשימה"
+            >
+              <List className="w-3.5 h-3.5" /> רשימה
+            </button>
+          </div>
+          <Button onClick={() => onAddAsset(categoryId)} className="gap-2">
+            <Plus className="w-4 h-4" />
+            פריט חדש
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -103,12 +131,58 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
         )}
       </div>
 
-      {/* List */}
+      {/* Items */}
       {isLoading ? (
         <div className="p-8 text-center text-muted-foreground">טוען...</div>
       ) : items.length === 0 ? (
         <div className="bg-card border border-border rounded-xl p-12 text-center text-muted-foreground">
           לא נמצאו פריטים בקטגוריה זו
+        </div>
+      ) : view === "grid" ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+          {items.map((a: any) => {
+            const expiry = a.expiry_date ? new Date(a.expiry_date) : null;
+            const expired = expiry && expiry < new Date();
+            return (
+              <button
+                key={a.id}
+                onClick={() => onSelectAsset(a.id)}
+                className={cn(
+                  "group relative bg-card border border-border rounded-xl p-3 text-center",
+                  "hover:shadow-md hover:-translate-y-0.5 hover:ring-2 transition-all",
+                  color.ring,
+                  "flex flex-col items-center gap-2"
+                )}
+              >
+                {expired && (
+                  <span className="absolute top-1.5 left-1.5 flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-destructive/15 text-destructive" title="פג תוקף">
+                    <AlertTriangle className="w-3 h-3" />
+                  </span>
+                )}
+                <div className={cn(
+                  "w-14 h-14 rounded-xl flex items-center justify-center transition-transform group-hover:scale-105",
+                  color.bg, color.text
+                )}>
+                  {!isAssignable
+                    ? <Building2 className="w-7 h-7" strokeWidth={1.75} />
+                    : <Icon className="w-7 h-7" strokeWidth={1.75} />
+                  }
+                </div>
+                <div className="w-full">
+                  <div className="text-sm font-medium line-clamp-2 leading-tight">{a.asset_name}</div>
+                  <div className="font-mono text-[10px] text-muted-foreground mt-0.5 truncate">{a.asset_code}</div>
+                </div>
+                <div className="text-[11px] text-muted-foreground truncate w-full">
+                  {isAssignable ? (a.employees?.full_name ?? "במלאי") : "נכס חברה"}
+                </div>
+                {isAssignable && (
+                  <span className={cn("status-badge text-[10px] px-1.5 py-0.5", assetStatusClasses[a.status])}>
+                    {assetStatusLabels[a.status] ?? a.status}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       ) : (
         <div className="bg-card border border-border rounded-xl overflow-hidden divide-y divide-border">
