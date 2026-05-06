@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAssets, useAssetCategories, useEmployees } from "@/hooks/useData";
-import { getCategoryIcon } from "@/lib/categoryIcons";
+import { getCategoryIcon, getCategoryColor } from "@/lib/categoryIcons";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Pencil, FileSignature, UserMinus, Trash2, User, Building2, History } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -79,6 +79,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
 
   const isAssignable = category?.is_assignable !== false;
   const Icon = getCategoryIcon(category?.category_name);
+  const color = getCategoryColor(category?.category_name);
   const expiry = asset.expiry_date ? new Date(asset.expiry_date) : null;
   const expired = expiry && expiry < new Date();
 
@@ -127,8 +128,8 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-            <Icon className="w-6 h-6" />
+          <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center", color.bg, color.text)}>
+            <Icon className="w-9 h-9" strokeWidth={1.75} />
           </div>
           <div>
             <h1 className="text-xl font-bold flex items-center gap-2">
