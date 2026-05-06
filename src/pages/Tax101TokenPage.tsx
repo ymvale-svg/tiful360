@@ -23,23 +23,16 @@ export default function Tax101TokenPage() {
     }
     (async () => {
       try {
-        const { data: f, error: e1 } = await supabase
-          .from("tax_form_101" as any)
-          .select("*")
-          .eq("access_token", token)
-          .maybeSingle();
+        const { data: rows, error: e1 } = await supabase.rpc("get_tax_form_101_by_token", { _token: token });
         if (e1) throw e1;
+        const f = Array.isArray(rows) ? rows[0] : rows;
         if (!f) {
-          setError("לא נמצא טופס לקישור הזה");
+          setError("לא נמצא טופס או שהקישור פג תוקף");
           return;
         }
         if ((f as any).status !== "pending") {
           setError("הטופס כבר נחתם");
           setForm(f);
-          return;
-        }
-        if ((f as any).token_expires_at && new Date((f as any).token_expires_at) < new Date()) {
-          setError("הקישור פג תוקף");
           return;
         }
         setForm(f);
