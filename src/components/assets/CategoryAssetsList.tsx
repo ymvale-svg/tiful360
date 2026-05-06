@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useAssets, useAssetCategories } from "@/hooks/useData";
 import { getCategoryIcon, getCategoryColor } from "@/lib/categoryIcons";
-import { Search, Plus, Building2, ChevronLeft, LayoutGrid, List, AlertTriangle } from "lucide-react";
+import { Search, Plus, Building2, ChevronLeft, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
