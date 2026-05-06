@@ -80,28 +80,6 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <div className="inline-flex bg-card border border-border rounded-lg p-0.5">
-            <button
-              onClick={() => setView("grid")}
-              className={cn(
-                "px-2.5 py-1.5 rounded-md text-xs flex items-center gap-1.5 transition-colors",
-                view === "grid" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
-              )}
-              title="תצוגת אייקונים"
-            >
-              <LayoutGrid className="w-3.5 h-3.5" /> אייקונים
-            </button>
-            <button
-              onClick={() => setView("list")}
-              className={cn(
-                "px-2.5 py-1.5 rounded-md text-xs flex items-center gap-1.5 transition-colors",
-                view === "list" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
-              )}
-              title="תצוגת רשימה"
-            >
-              <List className="w-3.5 h-3.5" /> רשימה
-            </button>
-          </div>
           <Button onClick={() => onAddAsset(categoryId)} className="gap-2">
             <Plus className="w-4 h-4" />
             פריט חדש
