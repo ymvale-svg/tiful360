@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useAssets, useAssetCategories } from "@/hooks/useData";
 import { getCategoryIcon, getCategoryColor } from "@/lib/categoryIcons";
-import { Search, Plus, Building2, ChevronLeft, AlertTriangle } from "lucide-react";
+import { Search, Plus, Building2, ChevronLeft, AlertTriangle, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -19,40 +19,56 @@ interface Props {
   onAddAsset: (categoryId: string) => void;
 }
 
-interface Props {
-  categoryId: string;
-  onBack: () => void;
-  onSelectAsset: (assetId: string) => void;
-  onAddAsset: (categoryId: string) => void;
-}
-
 export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAsset }: Props) {
   const { data: assets, isLoading } = useAssets();
   const { data: categories } = useAssetCategories();
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("all");
+  const [selectedSub, setSelectedSub] = useState<string | null>(null);
 
   const category = (categories ?? []).find((c: any) => c.id === categoryId) as any;
   const Icon = getCategoryIcon(category?.category_name);
   const color = getCategoryColor(category?.category_name);
   const isAssignable = category?.is_assignable !== false;
 
-  const items = useMemo(() => {
-    return (assets ?? []).filter((a: any) => {
-      if (a.category_id !== categoryId) return false;
-      if (status !== "all" && a.status !== status) return false;
-      if (search) {
-        const q = search.toLowerCase();
-        return (
-          a.asset_name?.toLowerCase().includes(q) ||
-          a.asset_code?.toLowerCase().includes(q) ||
-          a.serial_number?.toLowerCase().includes(q) ||
-          a.employees?.full_name?.toLowerCase().includes(q)
-        );
-      }
-      return true;
+  // All assets in this category
+  const categoryAssets = useMemo(
+    () => (assets ?? []).filter((a: any) => a.category_id === categoryId),
+    [assets, categoryId]
+  );
+
+  // Group by asset_name (the "sub-category")
+  const subCategories = useMemo(() => {
+    const map = new Map<string, any[]>();
+    for (const a of categoryAssets) {
+      const key = (a.asset_name ?? "ללא שם").trim();
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(a);
+    }
+    let arr = Array.from(map.entries()).map(([name, list]) => {
+      const assigned = list.filter((x) => x.status === "in_use").length;
+      return { name, items: list, total: list.length, assigned };
     });
-  }, [assets, categoryId, search, status]);
+    if (search) {
+      const q = search.toLowerCase();
+      arr = arr.filter((s) => s.name.toLowerCase().includes(q));
+    }
+    return arr.sort((a, b) => a.name.localeCompare(b.name, "he"));
+  }, [categoryAssets, search]);
+
+  // Items inside the selected sub-category (= assignments / instances)
+  const subItems = useMemo(() => {
+    if (!selectedSub) return [];
+    let list = categoryAssets.filter((a: any) => (a.asset_name ?? "ללא שם").trim() === selectedSub);
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter((a: any) =>
+        a.asset_code?.toLowerCase().includes(q) ||
+        a.serial_number?.toLowerCase().includes(q) ||
+        a.employees?.full_name?.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [categoryAssets, selectedSub, search]);
 
   return (
     <div className="space-y-4">
@@ -63,7 +79,20 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
           נכסים
         </button>
         <span className="text-muted-foreground">/</span>
-        <span className="font-medium">{category?.category_name ?? "—"}</span>
+        {selectedSub ? (
+          <>
+            <button
+              onClick={() => setSelectedSub(null)}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {category?.category_name ?? "—"}
+            </button>
+            <span className="text-muted-foreground">/</span>
+            <span className="font-medium">{selectedSub}</span>
+          </>
+        ) : (
+          <span className="font-medium">{category?.category_name ?? "—"}</span>
+        )}
       </div>
 
       {/* Header */}
@@ -73,9 +102,14 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
             <Icon className="w-8 h-8" strokeWidth={1.75} />
           </div>
           <div>
-            <h1 className="text-xl font-bold">{category?.category_name}</h1>
+            <h1 className="text-xl font-bold">
+              {selectedSub ?? category?.category_name}
+            </h1>
             <p className="text-xs text-muted-foreground">
-              {items.length} פריטים {!isAssignable && "· נכס מוסדי"}
+              {selectedSub
+                ? `${subItems.length} שיוכים`
+                : `${subCategories.length} תתי־קטגוריה · ${categoryAssets.length} פריטים`}
+              {!isAssignable && " · נכס מוסדי"}
             </p>
           </div>
         </div>
@@ -94,42 +128,27 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="חיפוש בקטגוריה..."
+            placeholder={selectedSub ? "חיפוש בשיוכים..." : "חיפוש בתתי־קטגוריה..."}
             className="bg-transparent text-sm outline-none w-full"
           />
         </div>
-        {isAssignable && (
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="bg-card border border-border rounded-lg px-3 py-2 text-sm outline-none"
-          >
-            <option value="all">כל הסטטוסים</option>
-            <option value="in_use">בשימוש</option>
-            <option value="in_stock">במלאי</option>
-            <option value="in_repair">בתיקון</option>
-            <option value="lost">אבד</option>
-          </select>
-        )}
       </div>
 
-      {/* Items */}
+      {/* Content */}
       {isLoading ? (
         <div className="p-8 text-center text-muted-foreground">טוען...</div>
-      ) : items.length === 0 ? (
-        <div className="bg-card border border-border rounded-xl p-12 text-center text-muted-foreground">
-          לא נמצאו פריטים בקטגוריה זו
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-4">
-          {items.map((a: any) => {
-            const expiry = a.expiry_date ? new Date(a.expiry_date) : null;
-            const expired = expiry && expiry < new Date();
-            const ownerName = a.employees?.full_name;
-            return (
+      ) : !selectedSub ? (
+        // ---------- Sub-category icons grid ----------
+        subCategories.length === 0 ? (
+          <div className="bg-card border border-border rounded-xl p-12 text-center text-muted-foreground">
+            לא נמצאו פריטים בקטגוריה זו
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {subCategories.map((sc) => (
               <button
-                key={a.id}
-                onClick={() => onSelectAsset(a.id)}
+                key={sc.name}
+                onClick={() => setSelectedSub(sc.name)}
                 className={cn(
                   "group relative bg-card border border-border rounded-2xl p-5 text-center",
                   "hover:shadow-lg hover:-translate-y-0.5 hover:ring-2 transition-all",
@@ -137,16 +156,9 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
                   "flex flex-col items-center gap-3 aspect-square justify-center"
                 )}
               >
-                {expired && (
-                  <span className="absolute top-2 left-2 flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-destructive/15 text-destructive" title="פג תוקף">
-                    <AlertTriangle className="w-3 h-3" /> פג
-                  </span>
-                )}
-                {isAssignable && (
-                  <span className={cn("absolute top-2 right-2 status-badge text-[10px] px-1.5 py-0.5", assetStatusClasses[a.status])}>
-                    {assetStatusLabels[a.status] ?? a.status}
-                  </span>
-                )}
+                <span className="absolute top-2 right-2 text-[10px] font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                  {sc.total}
+                </span>
                 <div className={cn(
                   "w-20 h-20 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105",
                   color.bg, color.text
@@ -157,16 +169,71 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
                   }
                 </div>
                 <div className="w-full">
-                  <div className="text-base font-semibold line-clamp-2 leading-tight">{a.asset_name}</div>
-                  <div className="font-mono text-[11px] text-muted-foreground mt-1 truncate">{a.asset_code}</div>
-                </div>
-                <div className="text-xs text-muted-foreground truncate w-full">
-                  {isAssignable ? (ownerName ?? "במלאי") : "נכס חברה"}
+                  <div className="text-base font-semibold line-clamp-2 leading-tight">{sc.name}</div>
+                  {isAssignable && (
+                    <div className="text-xs text-muted-foreground mt-1 flex items-center justify-center gap-1">
+                      <Users className="w-3 h-3" />
+                      {sc.assigned} משויכים / {sc.total}
+                    </div>
+                  )}
                 </div>
               </button>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        )
+      ) : (
+        // ---------- Assignments list (instances of the chosen sub-category) ----------
+        subItems.length === 0 ? (
+          <div className="bg-card border border-border rounded-xl p-12 text-center text-muted-foreground">
+            לא נמצאו שיוכים
+          </div>
+        ) : (
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40 text-muted-foreground text-xs">
+                <tr>
+                  <th className="text-right px-4 py-2 font-medium">מזהה</th>
+                  <th className="text-right px-4 py-2 font-medium">מס׳ סידורי</th>
+                  <th className="text-right px-4 py-2 font-medium">משויך ל</th>
+                  <th className="text-right px-4 py-2 font-medium">סטטוס</th>
+                  <th className="text-right px-4 py-2 font-medium">תפוגה</th>
+                </tr>
+              </thead>
+              <tbody>
+                {subItems.map((a: any) => {
+                  const expiry = a.expiry_date ? new Date(a.expiry_date) : null;
+                  const expired = expiry && expiry < new Date();
+                  return (
+                    <tr
+                      key={a.id}
+                      onClick={() => onSelectAsset(a.id)}
+                      className="border-t border-border hover:bg-muted/30 cursor-pointer"
+                    >
+                      <td className="px-4 py-2 font-mono text-xs">{a.asset_code}</td>
+                      <td className="px-4 py-2 text-xs text-muted-foreground">{a.serial_number ?? "—"}</td>
+                      <td className="px-4 py-2">{a.employees?.full_name ?? <span className="text-muted-foreground">במלאי</span>}</td>
+                      <td className="px-4 py-2">
+                        {isAssignable && (
+                          <span className={cn("status-badge text-[10px] px-1.5 py-0.5", assetStatusClasses[a.status])}>
+                            {assetStatusLabels[a.status] ?? a.status}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2 text-xs">
+                        {expiry ? (
+                          <span className={cn("flex items-center gap-1", expired && "text-destructive")}>
+                            {expired && <AlertTriangle className="w-3 h-3" />}
+                            {expiry.toLocaleDateString("he-IL")}
+                          </span>
+                        ) : "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )
       )}
     </div>
   );
