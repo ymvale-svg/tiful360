@@ -406,23 +406,15 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
       const pdfUrl = await generateAndUploadTax101Pdf(el, path);
 
       if (isTokenFlow) {
-        const { error } = await supabase
-          .from("tax_form_101" as any)
-          .update({
-            form_data: data,
-            signature_data: sig,
-            pdf_url: pdfUrl,
-            status: "signed",
-            signed_at: new Date().toISOString(),
-          })
-          .eq("id", formId);
+        const tokenFromUrl = window.location.pathname.split("/").pop();
+        const { error } = await supabase.rpc("submit_tax_form_101_by_token", {
+          _token: tokenFromUrl,
+          _form_data: data,
+          _signature: sig,
+          _pdf_url: pdfUrl,
+        });
         if (error) throw error;
-        // Best-effort activity log via the edge function path (anon can't insert into activity_log)
-        try {
-          await supabase.functions.invoke("send-tax101-email", { body: { form_id: formId, log_activity: true } });
-        } catch {
-          await supabase.functions.invoke("send-tax101-email", { body: { form_id: formId } });
-        }
+        try { await supabase.functions.invoke("send-tax101-email", { body: { form_id: formId, log_activity: true } }); } catch {}
       } else {
         await submit.mutateAsync({ formId, formData: data, signatureData: sig, pdfUrl });
       }
