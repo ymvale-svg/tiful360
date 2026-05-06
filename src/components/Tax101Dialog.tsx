@@ -409,7 +409,7 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
         const tokenFromUrl = window.location.pathname.split("/").pop();
         const { error } = await supabase.rpc("submit_tax_form_101_by_token", {
           _token: tokenFromUrl,
-          _form_data: data,
+          _form_data: data as any,
           _signature: sig,
           _pdf_url: pdfUrl,
         });
