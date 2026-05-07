@@ -59,7 +59,7 @@ export default function Assets() {
     <div className="space-y-6 animate-fade-in" dir="rtl">
       <Tabs value={activeTab} onValueChange={(v) => setSearchParams(v === "assets" ? {} : { tab: v })} dir="rtl">
         <TabsList>
-          <TabsTrigger value="assets">נכסים</TabsTrigger>
+          <TabsTrigger value="assets">משאבים</TabsTrigger>
           <TabsTrigger value="categories">קטגוריות</TabsTrigger>
         </TabsList>
 
@@ -69,8 +69,8 @@ export default function Assets() {
             <>
               <div className="flex items-start justify-between flex-wrap gap-3">
                 <div className="page-header">
-                  <h1 className="page-title">נכסים וציוד</h1>
-                  <p className="page-subtitle">ניהול מלאי ומעקב אחר כלל ציוד החברה</p>
+                  <h1 className="page-title">משאבים</h1>
+                  <p className="page-subtitle">ניהול מלאי ומעקב אחר כלל משאבי החברה</p>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" className="gap-2" onClick={() => {
@@ -113,7 +113,7 @@ export default function Assets() {
                   <input
                     value={globalSearch}
                     onChange={(e) => setGlobalSearch(e.target.value)}
-                    placeholder="חיפוש מהיר בכל הנכסים (שם / מזהה / מס׳ סידורי)..."
+                    placeholder="חיפוש מהיר בכל המשאבים (שם / מזהה / מס׳ סידורי)..."
                     className="bg-transparent text-sm outline-none w-full"
                   />
                 </div>
