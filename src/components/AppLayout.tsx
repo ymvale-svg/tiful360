@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { CompanySelector } from "./CompanySelector";
@@ -78,7 +79,13 @@ export function AppLayout() {
         </header>
 
         <main className="p-6">
-          <Outlet />
+          <Suspense fallback={
+            <div className="flex items-center justify-center py-20">
+              <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
+          }>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </div>
