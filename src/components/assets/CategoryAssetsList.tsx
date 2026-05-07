@@ -98,8 +98,16 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <div className={cn("w-14 h-14 rounded-xl flex items-center justify-center", color.bg, color.text)}>
-            <Icon className="w-8 h-8" strokeWidth={1.75} />
+          <div
+            key={selectedSub ?? "root"}
+            className={cn(
+              "w-16 h-16 rounded-2xl flex items-center justify-center shadow-md ring-1 ring-border/50 animate-in fade-in zoom-in-95 duration-300",
+              color.bg, color.text
+            )}
+          >
+            {selectedSub
+              ? (isAssignable ? <Icon className="w-9 h-9" strokeWidth={1.75} /> : <Building2 className="w-9 h-9" strokeWidth={1.75} />)
+              : <Icon className="w-9 h-9" strokeWidth={1.75} />}
           </div>
           <div>
             <h1 className="text-xl font-bold">
