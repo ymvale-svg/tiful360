@@ -199,7 +199,7 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
             לא נמצאו שיוכים
           </div>
         ) : (
-          <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <div key="items" className="bg-card border border-border rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
             <table className="w-full text-sm">
               <thead className="bg-muted/40 text-muted-foreground text-xs">
                 <tr>
