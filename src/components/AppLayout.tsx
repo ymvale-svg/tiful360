@@ -11,6 +11,29 @@ export function AppLayout() {
   const { user, signOut, isSuperAdmin, roles } = useAuth();
   const { data: profile } = useProfile();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [headerSearch, setHeaderSearch] = useState(searchParams.get("q") ?? "");
+
+  // Keep header input in sync when route/url changes
+  useEffect(() => {
+    setHeaderSearch(searchParams.get("q") ?? "");
+  }, [location.pathname, searchParams]);
+
+  const supportsSearch = ["/assets", "/employees"].some((p) => location.pathname.startsWith(p));
+
+  const onHeaderSearchChange = (val: string) => {
+    setHeaderSearch(val);
+    if (!supportsSearch) {
+      // Jump to assets search when typing from elsewhere
+      if (val.trim().length >= 2) navigate(`/assets?q=${encodeURIComponent(val)}`);
+      return;
+    }
+    const next = new URLSearchParams(searchParams);
+    if (val) next.set("q", val);
+    else next.delete("q");
+    setSearchParams(next, { replace: true });
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -34,6 +57,8 @@ export function AppLayout() {
               <Search className="w-4 h-4 text-muted-foreground" />
               <input
                 type="text"
+                value={headerSearch}
+                onChange={(e) => onHeaderSearchChange(e.target.value)}
                 placeholder="חיפוש עובדים, ציוד, משימות..."
                 className="bg-transparent text-sm outline-none w-full placeholder:text-muted-foreground"
               />
