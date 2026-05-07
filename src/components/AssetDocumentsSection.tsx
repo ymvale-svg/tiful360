@@ -38,13 +38,23 @@ export function AssetDocumentsSection({ assetId }: Props) {
     setFile(null); setDocType("other"); setLabel(""); setExpiryDate(""); setNotes(""); setShowForm(false);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    const f = e.dataTransfer.files?.[0];
-    if (f) {
-      setFile(f);
-      setShowForm(true);
+    const files = Array.from(e.dataTransfer.files ?? []);
+    if (files.length === 0) return;
+    // Auto-upload all dropped files immediately with default type
+    for (const f of files) {
+      try {
+        await upload.mutateAsync({
+          asset_id: assetId,
+          file: f,
+          document_type: "other",
+        });
+        toast({ title: `הועלה: ${f.name}` });
+      } catch (err: any) {
+        toast({ title: `שגיאה בהעלאת ${f.name}`, description: err.message, variant: "destructive" });
+      }
     }
   };
 
@@ -191,7 +201,7 @@ export function AssetDocumentsSection({ assetId }: Props) {
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium text-foreground truncate">
+                    <span className="font-medium text-foreground break-words break-all">
                       {doc.document_label || doc.file_name}
                     </span>
                     <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground text-[10px]">
