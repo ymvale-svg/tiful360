@@ -25,6 +25,7 @@ export default function Assets() {
   const assetId = searchParams.get("asset");
 
   const [addOpen, setAddOpen] = useState(false);
+  const [addCategoryId, setAddCategoryId] = useState<string | undefined>(undefined);
   const [importOpen, setImportOpen] = useState(false);
   const globalSearch = searchParams.get("q") ?? "";
   const setGlobalSearch = (val: string) => {
@@ -105,7 +106,7 @@ export default function Assets() {
                     <Upload className="w-4 h-4" />
                     יבוא מאקסל
                   </Button>
-                  <Button className="gap-2" onClick={() => setAddOpen(true)}>
+                  <Button className="gap-2" onClick={() => { setAddCategoryId(undefined); setAddOpen(true); }}>
                     <Plus className="w-4 h-4" />
                     פריט חדש
                   </Button>
@@ -152,7 +153,7 @@ export default function Assets() {
               categoryId={cat}
               onBack={goToCategories}
               onSelectAsset={(id) => goToAsset(id)}
-              onAddAsset={() => setAddOpen(true)}
+              onAddAsset={() => { setAddCategoryId(cat); setAddOpen(true); }}
             />
           )}
 
@@ -171,7 +172,7 @@ export default function Assets() {
         </TabsContent>
       </Tabs>
 
-      <AddAssetDialog open={addOpen} onOpenChange={setAddOpen} />
+      <AddAssetDialog open={addOpen} onOpenChange={(v) => { setAddOpen(v); if (!v) setAddCategoryId(undefined); }} defaultCategoryId={addCategoryId} />
       <ImportAssetsExcelDialog open={importOpen} onOpenChange={setImportOpen} />
     </div>
   );
