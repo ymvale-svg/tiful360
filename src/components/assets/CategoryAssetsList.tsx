@@ -98,8 +98,16 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <div className={cn("w-14 h-14 rounded-xl flex items-center justify-center", color.bg, color.text)}>
-            <Icon className="w-8 h-8" strokeWidth={1.75} />
+          <div
+            key={selectedSub ?? "root"}
+            className={cn(
+              "w-16 h-16 rounded-2xl flex items-center justify-center shadow-md ring-1 ring-border/50 animate-in fade-in zoom-in-95 duration-300",
+              color.bg, color.text
+            )}
+          >
+            {selectedSub
+              ? (isAssignable ? <Icon className="w-9 h-9" strokeWidth={1.75} /> : <Building2 className="w-9 h-9" strokeWidth={1.75} />)
+              : <Icon className="w-9 h-9" strokeWidth={1.75} />}
           </div>
           <div>
             <h1 className="text-xl font-bold">
@@ -144,28 +152,31 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
             לא נמצאו פריטים בקטגוריה זו
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {subCategories.map((sc) => (
+          <div key="subs" className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {subCategories.map((sc, idx) => (
               <button
                 key={sc.name}
                 onClick={() => setSelectedSub(sc.name)}
+                style={{ animationDelay: `${Math.min(idx * 30, 300)}ms`, animationFillMode: "both" }}
                 className={cn(
                   "group relative bg-card border border-border rounded-2xl p-5 text-center",
-                  "hover:shadow-lg hover:-translate-y-0.5 hover:ring-2 transition-all",
+                  "hover:shadow-xl hover:-translate-y-1 hover:ring-2 active:scale-[0.98] transition-all duration-200",
                   color.ring,
-                  "flex flex-col items-center gap-3 aspect-square justify-center"
+                  "flex flex-col items-center gap-3 aspect-square justify-center",
+                  "animate-in fade-in zoom-in-95"
                 )}
               >
-                <span className="absolute top-2 right-2 text-[10px] font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                <span className="absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
                   {sc.total}
                 </span>
                 <div className={cn(
-                  "w-20 h-20 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105",
-                  color.bg, color.text
+                  "w-24 h-24 rounded-2xl flex items-center justify-center shadow-md ring-1 ring-border/40",
+                  "transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:ring-2",
+                  color.bg, color.text, color.ring
                 )}>
                   {!isAssignable
-                    ? <Building2 className="w-10 h-10" strokeWidth={1.75} />
-                    : <Icon className="w-10 h-10" strokeWidth={1.75} />
+                    ? <Building2 className="w-12 h-12" strokeWidth={1.75} />
+                    : <Icon className="w-12 h-12" strokeWidth={1.75} />
                   }
                 </div>
                 <div className="w-full">
@@ -188,7 +199,7 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
             לא נמצאו שיוכים
           </div>
         ) : (
-          <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <div key="items" className="bg-card border border-border rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
             <table className="w-full text-sm">
               <thead className="bg-muted/40 text-muted-foreground text-xs">
                 <tr>
