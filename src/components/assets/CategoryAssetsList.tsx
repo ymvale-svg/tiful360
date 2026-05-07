@@ -152,7 +152,7 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
             לא נמצאו פריטים בקטגוריה זו
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <div key="subs" className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
             {subCategories.map((sc) => (
               <button
                 key={sc.name}
