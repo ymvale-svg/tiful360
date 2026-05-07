@@ -26,7 +26,13 @@ export default function Assets() {
 
   const [addOpen, setAddOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
-  const [globalSearch, setGlobalSearch] = useState("");
+  const globalSearch = searchParams.get("q") ?? "";
+  const setGlobalSearch = (val: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (val) next.set("q", val);
+    else next.delete("q");
+    setSearchParams(next, { replace: true });
+  };
 
   // Global search results — show as quick navigation
   const searchResults = useMemo(() => {
