@@ -1,5 +1,5 @@
-import { Suspense } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Suspense, useEffect, useState } from "react";
+import { Outlet, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { CompanySelector } from "./CompanySelector";
 import { Bell, Search, LogOut, UserRound } from "lucide-react";
