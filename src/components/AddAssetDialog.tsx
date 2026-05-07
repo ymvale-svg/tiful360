@@ -104,8 +104,10 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props)
       setErrors({});
       setPendingDocs([]);
       setDocDragging(false);
+    } else if (defaultCategoryId) {
+      setForm(prev => ({ ...prev, category_id: defaultCategoryId }));
     }
-  }, [open]);
+  }, [open, defaultCategoryId]);
 
   // Compute per-employee field keys defaults when category or fields change
   useEffect(() => {
