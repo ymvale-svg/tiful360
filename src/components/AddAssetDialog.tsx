@@ -24,7 +24,11 @@ import { cn } from "@/lib/utils";
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  defaultCategoryId?: string;
 }
+
+const INSURANCE_TYPES = ["רכב", "דירקטורים", "צד ג׳", "קבלני"];
+const INSURANCE_FIELD = "סוג ביטוח";
 
 // Field keys used internally
 const SYSTEM_FIELD_KEYS = {
@@ -46,7 +50,7 @@ function isPerEmployeeByName(name: string): boolean {
 // Categories where expiry_date is per-employee by default
 const PER_EMP_EXPIRY_PREFIXES = ["VHC", "EQP"];
 
-export function AddAssetDialog({ open, onOpenChange }: Props) {
+export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props) {
   const { activeCompanyId } = useCompany();
   const { data: categories } = useAssetCategories();
   const { data: employees } = useEmployees();
