@@ -1878,6 +1878,14 @@ export type Database = {
           role: string
         }[]
       }
+      get_company_routing_emails: {
+        Args: { _company_id: string }
+        Returns: {
+          it_emails: string
+          operations_emails: string
+          payroll_emails: string
+        }[]
+      }
       get_expiring_assets: {
         Args: { _company_id: string; _days_ahead?: number }
         Returns: {
