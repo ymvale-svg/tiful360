@@ -631,10 +631,10 @@ export default function EmployeePortal() {
                           </span>
                         </div>
                         <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                          <span>כניסה: <span className="font-mono text-foreground">
+                          <span>כניסה: <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">
                             {firstIn ? new Date(firstIn).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" }) : "—"}
                           </span></span>
-                          <span>יציאה: <span className="font-mono text-foreground">
+                          <span>יציאה: <span className="font-mono font-semibold text-rose-600 dark:text-rose-400">
                             {lastOut ? new Date(lastOut).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" }) : "—"}
                           </span></span>
                           <span className="font-semibold text-foreground">{hours} שעות</span>
