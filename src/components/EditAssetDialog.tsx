@@ -218,22 +218,24 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                 />
               )}
             </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">מצב הציוד</label>
-              {isView ? (
-                <div className={readCls}>{display(conditionLabels[form.condition] ?? form.condition)}</div>
-              ) : (
-                <SearchableSelect
-                  value={form.condition}
-                  onChange={(v) => setForm({ ...form, condition: v })}
-                  options={[
-                    { value: "new", label: "חדש" },
-                    { value: "good", label: "תקין" },
-                    { value: "fair", label: "בינוני" },
-                  ]}
-                />
-              )}
-            </div>
+            {(selectedCategory as any)?.is_assignable !== false && (
+              <div>
+                <label className="text-sm font-medium mb-1 block">מצב הציוד</label>
+                {isView ? (
+                  <div className={readCls}>{display(conditionLabels[form.condition] ?? form.condition)}</div>
+                ) : (
+                  <SearchableSelect
+                    value={form.condition}
+                    onChange={(v) => setForm({ ...form, condition: v })}
+                    options={[
+                      { value: "new", label: "חדש" },
+                      { value: "good", label: "תקין" },
+                      { value: "fair", label: "בינוני" },
+                    ]}
+                  />
+                )}
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">

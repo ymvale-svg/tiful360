@@ -24,7 +24,11 @@ import { cn } from "@/lib/utils";
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  defaultCategoryId?: string;
 }
+
+const INSURANCE_TYPES = ["רכב", "דירקטורים", "צד ג׳", "קבלני"];
+const INSURANCE_FIELD = "סוג ביטוח";
 
 // Field keys used internally
 const SYSTEM_FIELD_KEYS = {
@@ -46,7 +50,7 @@ function isPerEmployeeByName(name: string): boolean {
 // Categories where expiry_date is per-employee by default
 const PER_EMP_EXPIRY_PREFIXES = ["VHC", "EQP"];
 
-export function AddAssetDialog({ open, onOpenChange }: Props) {
+export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props) {
   const { activeCompanyId } = useCompany();
   const { data: categories } = useAssetCategories();
   const { data: employees } = useEmployees();
@@ -100,8 +104,10 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
       setErrors({});
       setPendingDocs([]);
       setDocDragging(false);
+    } else if (defaultCategoryId) {
+      setForm(prev => ({ ...prev, category_id: defaultCategoryId }));
     }
-  }, [open]);
+  }, [open, defaultCategoryId]);
 
   // Compute per-employee field keys defaults when category or fields change
   useEffect(() => {
@@ -293,7 +299,8 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
           }
         }
       }
-      toast({ title: "פריט ציוד נוסף בהצלחה" });
+      const catName = selectedCategory?.category_name ?? "פריט";
+      toast({ title: `${catName} נוסף בהצלחה`, description: form.asset_name });
       onOpenChange(false);
     } catch (err: any) {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
@@ -484,11 +491,24 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
             <input
               value={form.asset_name}
               onChange={(e) => set("asset_name", e.target.value)}
-              placeholder="למשל: MacBook Pro 16"
+              placeholder={selectedCategory?.prefix === "CINS" ? "למשל: ביטוח רכב 2026" : "למשל: MacBook Pro 16"}
               className={`w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 ${errors.asset_name ? "ring-2 ring-destructive/50" : "focus:ring-primary/30"}`}
             />
             {errors.asset_name && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.asset_name}</p>}
           </div>
+
+          {/* Insurance sub-type */}
+          {selectedCategory?.prefix === "CINS" && (
+            <div>
+              <label className="text-sm font-medium mb-1 block">סוג ביטוח<span className="text-destructive mr-1">*</span></label>
+              <SearchableSelect
+                value={customFields[INSURANCE_FIELD] ?? ""}
+                onChange={(v) => setCustomFields(prev => ({ ...prev, [INSURANCE_FIELD]: v }))}
+                options={INSURANCE_TYPES.map(t => ({ value: t, label: t }))}
+                placeholder="בחר סוג ביטוח..."
+              />
+            </div>
+          )}
 
           {/* Single mode: owner + expiry */}
           {!bulkMode && (
