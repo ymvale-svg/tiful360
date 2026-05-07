@@ -293,7 +293,8 @@ export function AddAssetDialog({ open, onOpenChange }: Props) {
           }
         }
       }
-      toast({ title: "פריט ציוד נוסף בהצלחה" });
+      const catName = selectedCategory?.category_name ?? "פריט";
+      toast({ title: `${catName} נוסף בהצלחה`, description: form.asset_name });
       onOpenChange(false);
     } catch (err: any) {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
