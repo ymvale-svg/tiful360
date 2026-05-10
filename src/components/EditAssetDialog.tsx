@@ -54,7 +54,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
   const [form, setForm] = useState({
     asset_name: "", category_id: "", serial_number: "", current_owner_id: "",
     status: "in_stock", manufacturer_model: "", condition: "good",
-    expiry_date: "", notes: "",
+    expiry_date: "", notes: "", notification_days_before: "" as string,
   });
   const [customFields, setCustomFields] = useState<Record<string, string>>({});
 
