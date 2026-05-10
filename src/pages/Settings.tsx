@@ -15,20 +15,22 @@ import { SubEmployersTab } from "@/components/SubEmployersTab";
 import { Mail } from "lucide-react";
 
 // ============================
-// IT Emails Settings
+// Generic Emails Settings (per column)
 // ============================
-function ITEmailsSettings() {
+function EmailsSettings({
+  columnKey, title, description, placeholder,
+}: { columnKey: "it_emails" | "expiry_notification_emails" | "operations_emails" | "payroll_emails"; title: string; description: string; placeholder: string }) {
   const { activeCompanyId, activeCompany } = useCompany();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [emails, setEmails] = useState((activeCompany as any)?.it_emails ?? "");
+  const [emails, setEmails] = useState((activeCompany as any)?.[columnKey] ?? "");
 
   const updateMutation = useMutation({
     mutationFn: async () => {
       if (!activeCompanyId) throw new Error("לא נבחרה חברה");
       const { error } = await supabase
         .from("companies")
-        .update({ it_emails: emails || null } as any)
+        .update({ [columnKey]: emails || null } as any)
         .eq("id", activeCompanyId);
       if (error) throw error;
     },
@@ -47,17 +49,15 @@ function ITEmailsSettings() {
     <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 space-y-4 max-w-xl">
       <div className="flex items-center gap-3 mb-2">
         <Mail className="w-5 h-5 text-primary" />
-        <h3 className="font-semibold">נמענים להתראות IT</h3>
+        <h3 className="font-semibold">{title}</h3>
       </div>
-      <p className="text-xs text-muted-foreground">
-        כתובות דוא"ל שיקבלו התראה בעת פתיחת קריאת IT חדשה (מופרדות בפסיק)
-      </p>
+      <p className="text-xs text-muted-foreground">{description}</p>
       <div>
         <label className="text-sm font-medium mb-1.5 block">כתובות דוא"ל</label>
         <input
           value={emails}
           onChange={(e) => setEmails(e.target.value)}
-          placeholder="it@company.com, ops@company.com"
+          placeholder={placeholder}
           className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 font-mono"
           dir="ltr"
         />
