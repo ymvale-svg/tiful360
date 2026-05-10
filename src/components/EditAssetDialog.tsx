@@ -318,22 +318,24 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                     </div>
                   </div>
                 )}
-                <div>
-                  <label className="text-sm font-medium mb-1 block">
-                    {isInsurance ? "תוקף עד" : "תאריך תפוגה"}
-                  </label>
-                  {isView ? (
-                    <div className={readCls} dir="ltr">{form.expiry_date ? new Date(form.expiry_date).toLocaleDateString("he-IL") : display(null)}</div>
-                  ) : (
-                    <input
-                      type="date"
-                      value={form.expiry_date}
-                      onChange={(e) => setForm({ ...form, expiry_date: e.target.value })}
-                      className={inputCls}
-                      dir="ltr"
-                    />
-                  )}
-                </div>
+                {selectedCategory?.prefix !== "CAR" && (
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">
+                      {isInsurance ? "תוקף עד" : "תאריך תפוגה"}
+                    </label>
+                    {isView ? (
+                      <div className={readCls} dir="ltr">{form.expiry_date ? new Date(form.expiry_date).toLocaleDateString("he-IL") : display(null)}</div>
+                    ) : (
+                      <input
+                        type="date"
+                        value={form.expiry_date}
+                        onChange={(e) => setForm({ ...form, expiry_date: e.target.value })}
+                        className={inputCls}
+                        dir="ltr"
+                      />
+                    )}
+                  </div>
+                )}
               </div>
             );
           })()}
