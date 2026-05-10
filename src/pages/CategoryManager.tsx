@@ -660,6 +660,23 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
         </label>
       </div>
 
+      <div className="pt-2 border-t border-border/50">
+        <label className="text-sm font-medium mb-1 block">ימי התראה ברירת מחדל לתפוגה</label>
+        <input
+          type="number"
+          min={0}
+          max={365}
+          value={notifDays}
+          onChange={(e) => setNotifDays(e.target.value)}
+          placeholder="14"
+          className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
+          dir="ltr"
+        />
+        <p className="text-[11px] text-muted-foreground mt-1">
+          מספר הימים לפני תאריך תפוגה שבו יישלח מייל התראה. השאר ריק = 14 ימים.
+        </p>
+      </div>
+
       <div className="flex gap-2 justify-end">
         <Button size="sm" variant="outline" onClick={() => setEditing(false)}>
           <X className="w-3.5 h-3.5 ml-1" />ביטול
