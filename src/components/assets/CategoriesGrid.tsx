@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAssets, useAssetCategories } from "@/hooks/useData";
 import { getCategoryIcon, getCategoryColor } from "@/lib/categoryIcons";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, LayoutGrid, UserRound, Building2 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Props {
   onSelectCategory: (categoryId: string) => void;
@@ -13,7 +14,12 @@ type Filter = "all" | "assigned" | "institutional";
 export function CategoriesGrid({ onSelectCategory }: Props) {
   const { data: categories, isLoading } = useAssetCategories();
   const { data: assets } = useAssets();
-  const [filter, setFilter] = useState<Filter>("all");
+  const { isLegal, isAdmin, isSuperAdmin, isOperations, isIT, isFinance } = useAuth();
+  const legalOnly = isLegal && !isAdmin && !isSuperAdmin && !isOperations && !isIT && !isFinance;
+  const [filter, setFilter] = useState<Filter>(legalOnly ? "institutional" : "all");
+  useEffect(() => {
+    if (legalOnly) setFilter("institutional");
+  }, [legalOnly]);
 
   const stats = useMemo(() => {
     const map = new Map<string, { count: number; expiringSoon: number; expired: number }>();
@@ -122,14 +128,16 @@ export function CategoriesGrid({ onSelectCategory }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-2">
-        {filterBtn("all", "הכל", LayoutGrid, (categories ?? []).length)}
-        {filterBtn("assigned", "מוקצים לעובדים", UserRound, assignable.length)}
-        {filterBtn("institutional", "מוסדיים", Building2, institutional.length)}
-      </div>
+      {!legalOnly && (
+        <div className="flex flex-wrap items-center gap-2">
+          {filterBtn("all", "הכל", LayoutGrid, (categories ?? []).length)}
+          {filterBtn("assigned", "מוקצים לעובדים", UserRound, assignable.length)}
+          {filterBtn("institutional", "מוסדיים", Building2, institutional.length)}
+        </div>
+      )}
 
-      {(filter === "all" || filter === "assigned") && renderGroup("משאבים מוקצים לעובדים", assignable)}
-      {(filter === "all" || filter === "institutional") && renderGroup("משאבים מוסדיים", institutional)}
+      {!legalOnly && (filter === "all" || filter === "assigned") && renderGroup("משאבים מוקצים לעובדים", assignable)}
+      {(filter === "all" || filter === "institutional" || legalOnly) && renderGroup("משאבים מוסדיים", institutional)}
     </div>
   );
 }
