@@ -7,11 +7,12 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Package, AlertCircle, Users, User, Search, Copy, CalendarIcon, X } from "lucide-react";
+import { Package, AlertCircle, Users, User, Search, Copy, CalendarIcon, X, Plus as PlusIcon } from "lucide-react";
 import { format } from "date-fns";
 import { useCreateAsset } from "@/hooks/useMutations";
 import { useAssetCategories, useEmployees, useAssets } from "@/hooks/useData";
-import { useCategoryFields } from "@/hooks/useCategories";
+import { useCategoryFields, useAddCategoryFieldOption } from "@/hooks/useCategories";
+import { useAuth } from "@/hooks/useAuth";
 import { useUploadAssetDocument } from "@/hooks/useAssetDocuments";
 import { FileText, Upload, Trash2 } from "lucide-react";
 import { useCompany } from "@/hooks/useCompany";
@@ -86,6 +87,8 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props)
 
   const { data: catFieldsRaw } = useCategoryFields(form.category_id);
   const selectedCategory = categories?.find(c => c.id === form.category_id);
+  const { isAdmin } = useAuth();
+  const addOption = useAddCategoryFieldOption();
   // Hide duplicate custom fields that overlap with system fields per category
   const catFields = (catFieldsRaw ?? []).filter((cf: any) => {
     if (selectedCategory?.prefix === "CINS" && cf.field_name === "תוקף פוליסה") return false;
@@ -594,21 +597,42 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props)
                   const errKey = `cf_${cf.field_name}`;
                   return (
                     <div key={cf.id}>
-                      <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center justify-between mb-1 gap-2">
                         <label className="text-sm font-medium">
                           {cf.field_name}
                           {cf.is_required && <span className="text-destructive mr-1">*</span>}
                         </label>
-                        {bulkMode && (
-                          <button
-                            type="button"
-                            onClick={() => togglePerEmpField(key)}
-                            className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
-                            title="הפוך לפר עובד"
-                          >
-                            <Users className="w-3 h-3" /> פר עובד
-                          </button>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {isAdmin && (cf.field_type === "list" || cf.field_type === "list_multi") && (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                const v = window.prompt(`הוסף ערך חדש לרשימה "${cf.field_name}":`);
+                                if (!v || !v.trim()) return;
+                                try {
+                                  await addOption.mutateAsync({ fieldId: cf.id, newOption: v.trim() });
+                                  toast({ title: "הערך נוסף לרשימה" });
+                                } catch (e: any) {
+                                  toast({ title: "שגיאה", description: e?.message, variant: "destructive" });
+                                }
+                              }}
+                              className="text-xs text-muted-foreground hover:text-primary flex items-center gap-0.5"
+                              title="הוסף ערך חדש לרשימה"
+                            >
+                              <PlusIcon className="w-3 h-3" /> ערך חדש
+                            </button>
+                          )}
+                          {bulkMode && (
+                            <button
+                              type="button"
+                              onClick={() => togglePerEmpField(key)}
+                              className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
+                              title="הפוך לפר עובד"
+                            >
+                              <Users className="w-3 h-3" /> פר עובד
+                            </button>
+                          )}
+                        </div>
                       </div>
                       {cf.field_type === "list" ? (
                         <SearchableSelect

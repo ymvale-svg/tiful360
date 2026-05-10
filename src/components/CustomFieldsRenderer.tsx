@@ -1,9 +1,12 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import { AlertCircle, Info, ChevronDown, X as XIcon } from "lucide-react";
+import { AlertCircle, Info, ChevronDown, X as XIcon, Plus } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useAddCategoryFieldOption } from "@/hooks/useCategories";
+import { toast } from "@/hooks/use-toast";
 
 export interface CustomField {
   id: string;
@@ -44,6 +47,21 @@ export function CustomFieldsRenderer({
     [fields],
   );
 
+  const { isAdmin } = useAuth();
+  const addOption = useAddCategoryFieldOption();
+  const canAddOptions = isAdmin && !readOnly;
+
+  const handleAddOption = async (cf: CustomField) => {
+    const v = window.prompt(`הוסף ערך חדש לרשימה "${cf.field_name}":`);
+    if (!v || !v.trim()) return;
+    try {
+      await addOption.mutateAsync({ fieldId: cf.id, newOption: v.trim() });
+      toast({ title: "הערך נוסף לרשימה" });
+    } catch (e: any) {
+      toast({ title: "שגיאה בהוספת ערך", description: e?.message, variant: "destructive" });
+    }
+  };
+
   // For LEASE category: derive contextual labels based on the "כיוון חוזה" value
   const leaseDirection = categoryPrefix === "LEASE" ? values["כיוון חוזה"] : undefined;
   const isCompanyRenting = leaseDirection === "החברה שוכרת";
@@ -80,10 +98,22 @@ export function CustomFieldsRenderer({
           const value = values[cf.field_name] ?? "";
           return (
             <div key={cf.id}>
-              <label className="text-sm font-medium mb-1 block">
-                {cf.field_name}
-                {cf.is_required && !readOnly && <span className="text-destructive mr-1">*</span>}
-              </label>
+              <div className="flex items-center justify-between mb-1 gap-2">
+                <label className="text-sm font-medium">
+                  {cf.field_name}
+                  {cf.is_required && !readOnly && <span className="text-destructive mr-1">*</span>}
+                </label>
+                {canAddOptions && (cf.field_type === "list" || cf.field_type === "list_multi") && (
+                  <button
+                    type="button"
+                    onClick={() => handleAddOption(cf)}
+                    className="text-xs text-muted-foreground hover:text-primary flex items-center gap-0.5"
+                    title="הוסף ערך חדש לרשימה"
+                  >
+                    <Plus className="w-3 h-3" /> ערך חדש
+                  </button>
+                )}
+              </div>
               {readOnly ? (
                 (() => {
                   const isDate = cf.field_type === "date";
