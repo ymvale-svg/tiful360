@@ -35,7 +35,7 @@ export function HandoverFormsList({ employeeId }: Props) {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{f.form_snapshot?.asset_name ?? "—"}</p>
               <p className="text-xs text-muted-foreground">
-                {new Date(f.created_at).toLocaleDateString("en-GB").replaceAll("/", "-")} •{" "}
+                {new Date(f.created_at).toLocaleDateString("en-GB").replace(/\//g, "-")} •{" "}
                 {f.status === "signed" ? "נחתם" : f.status === "pending" ? "ממתין לחתימה" : "בוטל"}
               </p>
             </div>

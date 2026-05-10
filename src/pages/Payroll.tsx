@@ -319,7 +319,7 @@ function OverviewTab() {
                 <div key={r.id} className="p-3 text-sm space-y-1.5">
                   <p className="font-medium">{r.employee?.full_name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {r.total_days} ימים • {new Date(r.start_date).toLocaleDateString("en-GB").replaceAll("/", "-")} – {new Date(r.end_date).toLocaleDateString("en-GB").replaceAll("/", "-")}
+                    {r.total_days} ימים • {new Date(r.start_date).toLocaleDateString("en-GB").replace(/\//g, "-")} – {new Date(r.end_date).toLocaleDateString("en-GB").replace(/\//g, "-")}
                   </p>
                   {r.attachment_url && (
                     <a href={r.attachment_url} target="_blank" rel="noopener noreferrer" className="inline-block">
@@ -350,7 +350,7 @@ function OverviewTab() {
                 <div key={r.id} className="p-3 text-sm space-y-1.5">
                   <p className="font-medium">{r.employee?.full_name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {TYPE_LABELS_PAYROLL[r.request_type] ?? r.request_type} • {r.total_days} ימים • {new Date(r.start_date).toLocaleDateString("en-GB").replaceAll("/", "-")} – {new Date(r.end_date).toLocaleDateString("en-GB").replaceAll("/", "-")}
+                    {TYPE_LABELS_PAYROLL[r.request_type] ?? r.request_type} • {r.total_days} ימים • {new Date(r.start_date).toLocaleDateString("en-GB").replace(/\//g, "-")} – {new Date(r.end_date).toLocaleDateString("en-GB").replace(/\//g, "-")}
                   </p>
                   {r.attachment_url && (
                     <a href={r.attachment_url} target="_blank" rel="noopener noreferrer" className="inline-block">
@@ -383,7 +383,7 @@ function OverviewTab() {
               {corrections.map((c: any) => (
                 <tr key={c.id}>
                   <td>{c.employee?.full_name}</td>
-                  <td>{new Date(c.correction_date).toLocaleDateString("en-GB").replaceAll("/", "-")}</td>
+                  <td>{new Date(c.correction_date).toLocaleDateString("en-GB").replace(/\//g, "-")}</td>
                   <td className="font-mono text-xs">{c.original_check_in?.slice(0, 5) ?? "—"} – {c.original_check_out?.slice(0, 5) ?? "—"}</td>
                   <td className="font-mono text-xs">{c.requested_check_in?.slice(0, 5) ?? "—"} – {c.requested_check_out?.slice(0, 5) ?? "—"}</td>
                 </tr>
@@ -487,7 +487,7 @@ function BatchesManagementTab() {
                     <td className="font-mono text-warning">{b.unmatched_count}</td>
                     <td className="font-mono text-destructive">{b.failed_count}</td>
                     <td><span className="text-[11px] px-2 py-0.5 rounded-full bg-muted">{b.status}</span></td>
-                    <td className="text-xs text-muted-foreground">{new Date(b.created_at).toLocaleDateString("en-GB").replaceAll("/", "-")}</td>
+                    <td className="text-xs text-muted-foreground">{new Date(b.created_at).toLocaleDateString("en-GB").replace(/\//g, "-")}</td>
                     <td>
                       <div className="flex items-center gap-2 justify-end">
                         <button

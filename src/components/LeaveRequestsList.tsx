@@ -16,7 +16,7 @@ const STATUS_CLASS: Record<string, string> = {
   cancelled: "bg-muted text-muted-foreground",
 };
 
-const fmt = (d: string) => new Date(d).toLocaleDateString("en-GB").replaceAll("/", "-");
+const fmt = (d: string) => new Date(d).toLocaleDateString("en-GB").replace(/\//g, "-");
 
 interface Props {
   requests: any[];

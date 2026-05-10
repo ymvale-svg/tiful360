@@ -21,7 +21,7 @@ export function MyTax101FormsList({ employeeId }: { employeeId: string | undefin
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium">טופס 101 — שנת {f.tax_year}</p>
               <p className="text-[11px] text-muted-foreground">
-                {isSigned ? `נחתם ${f.signed_at ? new Date(f.signed_at).toLocaleDateString("en-GB").replaceAll("/", "-") : ""}` : "ממתין לחתימה"}
+                {isSigned ? `נחתם ${f.signed_at ? new Date(f.signed_at).toLocaleDateString("en-GB").replace(/\//g, "-") : ""}` : "ממתין לחתימה"}
               </p>
             </div>
             {f.pdf_url && (

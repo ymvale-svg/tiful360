@@ -415,7 +415,7 @@ export default function EmployeePortal() {
                     <div className="flex items-start justify-between gap-2 mb-1">
                       <p className="text-sm font-medium">{ann.title}</p>
                       <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                        {new Date(ann.published_at).toLocaleDateString("en-GB").replaceAll("/", "-")}
+                        {new Date(ann.published_at).toLocaleDateString("en-GB").replace(/\//g, "-")}
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground line-clamp-2">{ann.content}</p>
@@ -545,7 +545,7 @@ export default function EmployeePortal() {
                 <p className="text-xs font-semibold text-muted-foreground">בקשות תיקון אחרונות</p>
                 {myCorrections.slice(0, 3).map((c: any) => (
                   <div key={c.id} className="flex items-center justify-between text-xs">
-                    <span>{new Date(c.correction_date).toLocaleDateString("en-GB").replaceAll("/", "-")}</span>
+                    <span>{new Date(c.correction_date).toLocaleDateString("en-GB").replace(/\//g, "-")}</span>
                     <span className={cn("px-2 py-0.5 rounded-full",
                       c.status === "approved" ? "bg-success/15 text-success" :
                       c.status === "rejected" ? "bg-destructive/15 text-destructive" :
@@ -604,7 +604,7 @@ export default function EmployeePortal() {
                   // Group punches by day
                   const byDay = new Map<string, typeof myPunches>();
                   for (const p of myPunches) {
-                    const day = new Date(p.punch_at).toLocaleDateString("en-GB").replaceAll("/", "-");
+                    const day = new Date(p.punch_at).toLocaleDateString("en-GB").replace(/\//g, "-");
                     if (!byDay.has(day)) byDay.set(day, [] as any);
                     byDay.get(day)!.push(p);
                   }
@@ -685,7 +685,7 @@ export default function EmployeePortal() {
               <p className="text-[11px] text-muted-foreground mt-3">
                 {myEmployee?.balances_updated_at ? (
                   <>
-                    עודכן לאחרונה: {new Date(myEmployee.balances_updated_at).toLocaleDateString("en-GB").replaceAll("/", "-")}
+                    עודכן לאחרונה: {new Date(myEmployee.balances_updated_at).toLocaleDateString("en-GB").replace(/\//g, "-")}
                     {" · "}
                     מקור: {myEmployee?.balances_source === "payslip" ? "תלוש שכר" : "ידני"}
                   </>
@@ -739,7 +739,7 @@ export default function EmployeePortal() {
                 <div className="flex items-start justify-between gap-2 mb-1">
                   <h3 className="font-semibold text-sm">{item.title}</h3>
                   <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-                    {new Date(item.published_at).toLocaleDateString("en-GB").replaceAll("/", "-")}
+                    {new Date(item.published_at).toLocaleDateString("en-GB").replace(/\//g, "-")}
                   </span>
                 </div>
                 <p className="text-sm text-muted-foreground">{item.content}</p>

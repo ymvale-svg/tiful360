@@ -219,9 +219,9 @@ export function AssetDocumentsSection({ assetId }: Props) {
                     )}
                   </div>
                   <div className="text-muted-foreground mt-0.5 flex items-center gap-2">
-                    <span>{new Date(doc.uploaded_at).toLocaleDateString("en-GB").replaceAll("/", "-")}</span>
+                    <span>{new Date(doc.uploaded_at).toLocaleDateString("en-GB").replace(/\//g, "-")}</span>
                     {doc.file_size_bytes && <span>· {fmtSize(doc.file_size_bytes)}</span>}
-                    {doc.expiry_date && <span>· תפוגה: {new Date(doc.expiry_date).toLocaleDateString("en-GB").replaceAll("/", "-")}</span>}
+                    {doc.expiry_date && <span>· תפוגה: {new Date(doc.expiry_date).toLocaleDateString("en-GB").replace(/\//g, "-")}</span>}
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
