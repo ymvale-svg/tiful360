@@ -297,6 +297,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props)
         custom_fields: Object.keys(customFields).length > 0 ? customFields : undefined,
         expiry_date: form.expiry_date || undefined,
         notes: form.notes || undefined,
+        notification_days_before: form.notification_days_before.trim() === "" ? null : Number(form.notification_days_before),
       });
       // Close dialog + show toast immediately for snappy UX
       const catName = selectedCategory?.category_name ?? "פריט";
