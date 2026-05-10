@@ -2193,6 +2193,7 @@ export type Database = {
         | "payroll"
         | "operations"
         | "finance"
+        | "legal"
       asset_status: "in_use" | "in_stock" | "in_repair" | "lost"
       employee_status: "active" | "onboarding" | "leaving" | "inactive"
       field_type: "text" | "number" | "date" | "list" | "list_multi"
@@ -2341,6 +2342,7 @@ export const Constants = {
         "payroll",
         "operations",
         "finance",
+        "legal",
       ],
       asset_status: ["in_use", "in_stock", "in_repair", "lost"],
       employee_status: ["active", "onboarding", "leaving", "inactive"],
