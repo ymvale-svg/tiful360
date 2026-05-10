@@ -246,6 +246,24 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
             )}
           </div>
 
+          {selectedCategory?.prefix === "CINS" && (
+            <div>
+              <label className="text-sm font-medium mb-1 block">
+                סוג ביטוח<span className="text-destructive mr-1">*</span>
+              </label>
+              {isView ? (
+                <div className={readCls}>{display(customFields[INSURANCE_FIELD])}</div>
+              ) : (
+                <SearchableSelect
+                  value={customFields[INSURANCE_FIELD] ?? ""}
+                  onChange={(v) => setCustomFields((prev) => ({ ...prev, [INSURANCE_FIELD]: v }))}
+                  options={INSURANCE_TYPES.map((t) => ({ value: t, label: t }))}
+                  placeholder="בחר סוג ביטוח..."
+                />
+              )}
+            </div>
+          )}
+
           {selectedCategory?.prefix !== "CINS" && (
             <div className="grid grid-cols-2 gap-3">
               <div>
