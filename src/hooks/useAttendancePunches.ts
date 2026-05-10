@@ -69,7 +69,7 @@ export function useMonthlyPunchStats(year: number, month: number) {
   return useQuery({
     queryKey: ["attendance_punches", "stats", activeCompanyId, year, month],
     queryFn: async () => {
-      if (!activeCompanyId) return { total: 0, pending: 0, approved: 0, paid: 0, lastAt: null as string | null };
+      if (!activeCompanyId) return { total: 0, pending: 0, approved: 0, lastAt: null as string | null };
       const start = new Date(year, month - 1, 1).toISOString();
       const end = new Date(year, month, 1).toISOString();
       const { data, error } = await supabase
@@ -85,7 +85,6 @@ export function useMonthlyPunchStats(year: number, month: number) {
         total: arr.length,
         pending: arr.filter((r: any) => r.status === "pending").length,
         approved: arr.filter((r: any) => r.status === "approved").length,
-        paid: arr.filter((r: any) => r.status === "paid").length,
         lastAt,
       };
     },
