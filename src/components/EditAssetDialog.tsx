@@ -242,41 +242,44 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-sm font-medium mb-1 block">יצרן ומודל</label>
-              {isView ? (
-                <div className={readCls}>{display(form.manufacturer_model)}</div>
-              ) : (
-                <input
-                  value={form.manufacturer_model}
-                  onChange={(e) => setForm({ ...form, manufacturer_model: e.target.value })}
-                  placeholder="למשל: Apple MacBook Pro 16"
-                  className={inputCls}
-                />
-              )}
+          {selectedCategory?.prefix !== "CINS" && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium mb-1 block">יצרן ומודל</label>
+                {isView ? (
+                  <div className={readCls}>{display(form.manufacturer_model)}</div>
+                ) : (
+                  <input
+                    value={form.manufacturer_model}
+                    onChange={(e) => setForm({ ...form, manufacturer_model: e.target.value })}
+                    placeholder="למשל: Apple MacBook Pro 16"
+                    className={inputCls}
+                  />
+                )}
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">מספר סידורי</label>
+                {isView ? (
+                  <div className={`${readCls} font-mono`} dir="ltr">{display(form.serial_number)}</div>
+                ) : (
+                  <input
+                    value={form.serial_number}
+                    onChange={(e) => setForm({ ...form, serial_number: e.target.value })}
+                    className={`${inputCls} font-mono`}
+                    dir="ltr"
+                  />
+                )}
+              </div>
             </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">מספר סידורי</label>
-              {isView ? (
-                <div className={`${readCls} font-mono`} dir="ltr">{display(form.serial_number)}</div>
-              ) : (
-                <input
-                  value={form.serial_number}
-                  onChange={(e) => setForm({ ...form, serial_number: e.target.value })}
-                  className={`${inputCls} font-mono`}
-                  dir="ltr"
-                />
-              )}
-            </div>
-          </div>
+          )}
 
           {(() => {
             const cat = (categories ?? []).find(c => c.id === form.category_id) as any;
             const isAssignable = cat?.is_assignable !== false; // default true
+            const isInsurance = cat?.prefix === "CINS";
             return (
-              <div className="grid grid-cols-2 gap-3">
-                {isAssignable ? (
+              <div className={cn("grid gap-3", isInsurance ? "grid-cols-1" : "grid-cols-2")}>
+                {isInsurance ? null : isAssignable ? (
                   <div>
                     <label className="text-sm font-medium mb-1 block">שיוך לעובד</label>
                     {isView ? (
@@ -303,7 +306,9 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                   </div>
                 )}
                 <div>
-                  <label className="text-sm font-medium mb-1 block">תאריך תפוגה</label>
+                  <label className="text-sm font-medium mb-1 block">
+                    {isInsurance ? "תוקף עד" : "תאריך תפוגה"}
+                  </label>
                   {isView ? (
                     <div className={readCls} dir="ltr">{form.expiry_date ? new Date(form.expiry_date).toLocaleDateString("he-IL") : display(null)}</div>
                   ) : (
