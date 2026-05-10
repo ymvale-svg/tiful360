@@ -2059,6 +2059,7 @@ export type Database = {
         Args: { _employee_id: string; _user_id: string }
         Returns: boolean
       }
+      is_legal: { Args: { _user_id: string }; Returns: boolean }
       is_my_employee_record: {
         Args: { _employee_id: string; _user_id: string }
         Returns: boolean
