@@ -14,6 +14,7 @@ import { AssetDocumentsSection } from "./AssetDocumentsSection";
 import { CustomFieldsRenderer } from "./CustomFieldsRenderer";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 interface Asset {
   id: string;
