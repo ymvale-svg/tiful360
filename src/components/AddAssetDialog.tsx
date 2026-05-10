@@ -589,7 +589,11 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props)
           {universalCustomFields.length > 0 && (
             <div className="border-t border-border/50 pt-3 mt-3">
               <p className="text-xs font-medium text-muted-foreground mb-2">
-                {bulkMode ? "שדות אוניברסליים (זהים לכולם)" : "שדות מותאמים לקטגוריה"}
+                {bulkMode
+                  ? "שדות אוניברסליים (זהים לכולם)"
+                  : selectedCategory?.prefix === "CINS"
+                    ? "פרטי הפוליסה"
+                    : "שדות מותאמים לקטגוריה"}
               </p>
               <div className="grid grid-cols-2 gap-3">
                 {universalCustomFields.map(cf => {
