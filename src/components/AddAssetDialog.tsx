@@ -567,7 +567,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props)
           )}
 
           {/* Bulk mode: universal expiry (only if not per-emp) */}
-          {bulkMode && !expiryIsPerEmp && (
+          {bulkMode && !expiryIsPerEmp && selectedCategory?.prefix !== "CAR" && (
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <div className="flex items-center justify-between mb-1">
