@@ -160,7 +160,8 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
         expiry_date: form.expiry_date || null,
         notes: form.notes || null,
         custom_fields: cleanCustom,
-      });
+        notification_days_before: form.notification_days_before.trim() === "" ? null : Number(form.notification_days_before),
+      } as any);
       toast({ title: "פריט עודכן בהצלחה" });
       setMode("view");
     } catch (err: any) {
