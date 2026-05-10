@@ -194,7 +194,9 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
 
         <div className="space-y-3 mt-4">
           <div>
-            <label className="text-sm font-medium mb-1 block">שם פריט</label>
+            <label className="text-sm font-medium mb-1 block">
+              {selectedCategory?.prefix === "CINS" ? "שם הפוליסה" : "שם פריט"}
+            </label>
             {isView ? (
               <div className={readCls}>{display(form.asset_name)}</div>
             ) : (
