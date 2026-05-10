@@ -208,9 +208,12 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
               <div className="pt-3 border-t border-border">
                 <h3 className="text-xs font-semibold text-muted-foreground mb-2">שדות נוספים</h3>
                 <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                  {Object.entries(asset.custom_fields).map(([k, v]) => (
-                    <Field key={k} label={k} value={String(v ?? "—")} />
-                  ))}
+                  {Object.entries(asset.custom_fields).map(([k, v]) => {
+                    const s = String(v ?? "");
+                    const isIsoDate = /^\d{4}-\d{2}-\d{2}/.test(s);
+                    const display = isIsoDate ? `${s.slice(8,10)}-${s.slice(5,7)}-${s.slice(0,4)}` : (s || "—");
+                    return <Field key={k} label={k} value={display} />;
+                  })}
                 </dl>
               </div>
             )}
