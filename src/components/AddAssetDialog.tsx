@@ -435,8 +435,12 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props)
   const handleSubmit = () => (bulkMode ? handleSubmitBulk() : handleSubmitSingle());
 
   // Universal custom fields list (those NOT per-employee)
-  const universalCustomFields = (catFields ?? []).filter(cf => !perEmpFieldKeys.has(`cf:${cf.field_name}`));
-  const perEmployeeCustomFields = (catFields ?? []).filter(cf => perEmpFieldKeys.has(`cf:${cf.field_name}`));
+  const universalCustomFields = bulkMode
+    ? (catFields ?? []).filter(cf => !perEmpFieldKeys.has(`cf:${cf.field_name}`))
+    : (catFields ?? []);
+  const perEmployeeCustomFields = bulkMode
+    ? (catFields ?? []).filter(cf => perEmpFieldKeys.has(`cf:${cf.field_name}`))
+    : [];
   const expiryIsPerEmp = perEmpFieldKeys.has(SYSTEM_FIELD_KEYS.expiry_date);
 
   return (
