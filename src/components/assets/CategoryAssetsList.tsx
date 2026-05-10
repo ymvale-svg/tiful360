@@ -32,12 +32,12 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
   const isInsurance = category?.prefix === "CINS";
 
   // Determine the grouping key per asset:
-  // - Insurance categories: group by custom_fields["סוג ביטוח"] (sub-category)
+  // - Insurance categories: group by custom_fields["סוג כיסוי"] (sub-category)
   // - Other categories: group by asset_name
   const groupKeyOf = (a: any): string => {
     if (isInsurance) {
-      const t = (a.custom_fields?.["סוג ביטוח"] ?? "").toString().trim();
-      return t || "ללא סוג ביטוח";
+      const t = (a.custom_fields?.["סוג כיסוי"] ?? "").toString().trim();
+      return t || "ללא סוג כיסוי";
     }
     return (a.asset_name ?? "ללא שם").trim();
   };

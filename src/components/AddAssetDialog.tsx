@@ -507,18 +507,6 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props)
             {errors.asset_name && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.asset_name}</p>}
           </div>
 
-          {/* Insurance sub-type */}
-          {selectedCategory?.prefix === "CINS" && (
-            <div>
-              <label className="text-sm font-medium mb-1 block">סוג ביטוח<span className="text-destructive mr-1">*</span></label>
-              <SearchableSelect
-                value={customFields[INSURANCE_FIELD] ?? ""}
-                onChange={(v) => setCustomFields(prev => ({ ...prev, [INSURANCE_FIELD]: v }))}
-                options={INSURANCE_TYPES.map(t => ({ value: t, label: t }))}
-                placeholder="בחר סוג ביטוח..."
-              />
-            </div>
-          )}
 
           {/* Single mode: owner + expiry */}
           {!bulkMode && (
