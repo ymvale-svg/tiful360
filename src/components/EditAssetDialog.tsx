@@ -58,8 +58,12 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
   });
   const [customFields, setCustomFields] = useState<Record<string, string>>({});
 
-  const { data: catFields } = useCategoryFields(form.category_id);
+  const { data: catFieldsRaw } = useCategoryFields(form.category_id);
   const selectedCategory = (categories ?? []).find((c: any) => c.id === form.category_id) as any;
+  const catFields = (catFieldsRaw ?? []).filter((cf: any) => {
+    if (selectedCategory?.prefix === "CINS" && cf.field_name === "תוקף פוליסה") return false;
+    return true;
+  });
 
   useEffect(() => {
     if (asset) {
