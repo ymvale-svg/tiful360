@@ -71,8 +71,8 @@ const App = () => (
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/employees" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations", "payroll", "finance"]}><Employees /></ProtectedRoute>} />
                   <Route path="/employees/:id" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations", "direct_manager", "payroll", "finance"]}><EmployeeDetail /></ProtectedRoute>} />
-                  <Route path="/assets" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin", "operations", "finance"]}><Assets /></ProtectedRoute>} />
-                  <Route path="/categories" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations"]}><CategoryManager /></ProtectedRoute>} />
+                  <Route path="/assets" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin", "operations", "finance", "legal"]}><Assets /></ProtectedRoute>} />
+                  <Route path="/categories" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations", "legal"]}><CategoryManager /></ProtectedRoute>} />
                   <Route path="/it-tickets" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin", "operations"]}><ITTickets /></ProtectedRoute>} />
                   <Route path="/alerts" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin"]}><Alerts /></ProtectedRoute>} />
                   <Route path="/user-management" element={<Navigate to="/employees?tab=users" replace />} />

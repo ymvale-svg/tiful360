@@ -23,6 +23,7 @@ const ROLE_OPTIONS = [
   { value: "operations", label: "עובד תפעול" },
   { value: "direct_manager", label: "מנהל ישיר" },
   { value: "finance", label: "כספים" },
+  { value: "legal", label: "מחלקה משפטית" },
 ];
 
 export function InviteExternalUserDialog({ open, onOpenChange }: Props) {
