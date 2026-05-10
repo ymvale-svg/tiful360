@@ -494,11 +494,14 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props)
           )}
 
           <div>
-            <label className="text-sm font-medium mb-1 block">שם פריט<span className="text-destructive mr-1">*</span></label>
+            <label className="text-sm font-medium mb-1 block">
+              {selectedCategory?.prefix === "CINS" ? "שם הפוליסה" : "שם פריט"}
+              <span className="text-destructive mr-1">*</span>
+            </label>
             <input
               value={form.asset_name}
               onChange={(e) => set("asset_name", e.target.value)}
-              placeholder={selectedCategory?.prefix === "CINS" ? "למשל: ביטוח רכב 2026" : "למשל: MacBook Pro 16"}
+              placeholder={selectedCategory?.prefix === "CINS" ? "למשל: ביטוח קבלני - חיפה" : "למשל: MacBook Pro 16"}
               className={`w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 ${errors.asset_name ? "ring-2 ring-destructive/50" : "focus:ring-primary/30"}`}
             />
             {errors.asset_name && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.asset_name}</p>}
