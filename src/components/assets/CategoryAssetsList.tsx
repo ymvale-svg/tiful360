@@ -29,6 +29,18 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
   const Icon = getCategoryIcon(category?.category_name);
   const color = getCategoryColor(category?.category_name);
   const isAssignable = category?.is_assignable !== false;
+  const isInsurance = category?.prefix === "CINS";
+
+  // Determine the grouping key per asset:
+  // - Insurance categories: group by custom_fields["סוג ביטוח"] (sub-category)
+  // - Other categories: group by asset_name
+  const groupKeyOf = (a: any): string => {
+    if (isInsurance) {
+      const t = (a.custom_fields?.["סוג ביטוח"] ?? "").toString().trim();
+      return t || "ללא סוג ביטוח";
+    }
+    return (a.asset_name ?? "ללא שם").trim();
+  };
 
   // All assets in this category
   const categoryAssets = useMemo(
@@ -36,11 +48,11 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
     [assets, categoryId]
   );
 
-  // Group by asset_name (the "sub-category")
+  // Group into sub-categories
   const subCategories = useMemo(() => {
     const map = new Map<string, any[]>();
     for (const a of categoryAssets) {
-      const key = (a.asset_name ?? "ללא שם").trim();
+      const key = groupKeyOf(a);
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(a);
     }
@@ -53,22 +65,33 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
       arr = arr.filter((s) => s.name.toLowerCase().includes(q));
     }
     return arr.sort((a, b) => a.name.localeCompare(b.name, "he"));
-  }, [categoryAssets, search]);
+  }, [categoryAssets, search, isInsurance]);
 
-  // Items inside the selected sub-category (= assignments / instances)
+  // Items inside the selected sub-category
   const subItems = useMemo(() => {
     if (!selectedSub) return [];
-    let list = categoryAssets.filter((a: any) => (a.asset_name ?? "ללא שם").trim() === selectedSub);
+    let list = categoryAssets.filter((a: any) => groupKeyOf(a) === selectedSub);
     if (search) {
       const q = search.toLowerCase();
-      list = list.filter((a: any) =>
-        a.asset_code?.toLowerCase().includes(q) ||
-        a.serial_number?.toLowerCase().includes(q) ||
-        a.employees?.full_name?.toLowerCase().includes(q)
-      );
+      list = list.filter((a: any) => {
+        if (isInsurance) {
+          return (
+            a.asset_name?.toLowerCase().includes(q) ||
+            a.asset_code?.toLowerCase().includes(q) ||
+            a.custom_fields?.["מספר פוליסה"]?.toString().toLowerCase().includes(q) ||
+            a.custom_fields?.["חברת ביטוח"]?.toString().toLowerCase().includes(q) ||
+            a.custom_fields?.["שם סוכן ביטוח"]?.toString().toLowerCase().includes(q)
+          );
+        }
+        return (
+          a.asset_code?.toLowerCase().includes(q) ||
+          a.serial_number?.toLowerCase().includes(q) ||
+          a.employees?.full_name?.toLowerCase().includes(q)
+        );
+      });
     }
     return list;
-  }, [categoryAssets, selectedSub, search]);
+  }, [categoryAssets, selectedSub, search, isInsurance]);
 
   return (
     <div className="space-y-4">
