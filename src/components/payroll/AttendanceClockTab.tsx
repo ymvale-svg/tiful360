@@ -282,7 +282,6 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
     );
   }
 
-  const allIds = punches.map(p => p.id);
   const pendingIds = punches.filter(p => p.status === "pending").map(p => p.id);
 
   const bulkApprove = async () => {
