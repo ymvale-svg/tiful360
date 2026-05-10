@@ -74,6 +74,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props)
     status: "in_stock" as "in_use" | "in_stock" | "in_repair",
     expiry_date: "",
     notes: "",
+    notification_days_before: "" as string,
   });
   const [customFields, setCustomFields] = useState<Record<string, string>>({});
 
