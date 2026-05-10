@@ -77,6 +77,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
         condition: asset.condition ?? "good",
         expiry_date: asset.expiry_date ?? "",
         notes: asset.notes ?? "",
+        notification_days_before: (asset as any).notification_days_before == null ? "" : String((asset as any).notification_days_before),
       });
       // Load existing custom_fields as strings
       const cf: Record<string, string> = {};
