@@ -266,19 +266,21 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                   />
                 )}
               </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">מספר סידורי</label>
-                {isView ? (
-                  <div className={`${readCls} font-mono`} dir="ltr">{display(form.serial_number)}</div>
-                ) : (
-                  <input
-                    value={form.serial_number}
-                    onChange={(e) => setForm({ ...form, serial_number: e.target.value })}
-                    className={`${inputCls} font-mono`}
-                    dir="ltr"
-                  />
-                )}
-              </div>
+              {selectedCategory?.prefix !== "CAR" && (
+                <div>
+                  <label className="text-sm font-medium mb-1 block">מספר סידורי</label>
+                  {isView ? (
+                    <div className={`${readCls} font-mono`} dir="ltr">{display(form.serial_number)}</div>
+                  ) : (
+                    <input
+                      value={form.serial_number}
+                      onChange={(e) => setForm({ ...form, serial_number: e.target.value })}
+                      className={`${inputCls} font-mono`}
+                      dir="ltr"
+                    />
+                  )}
+                </div>
+              )}
             </div>
           )}
 
