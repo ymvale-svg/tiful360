@@ -138,9 +138,11 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
             </h1>
             <p className="text-xs text-muted-foreground">
               {selectedSub
-                ? `${subItems.length} שיוכים`
-                : `${subCategories.length} תתי־קטגוריה · ${categoryAssets.length} פריטים`}
-              {!isAssignable && " · נכס מוסדי"}
+                ? (isInsurance ? `${subItems.length} פוליסות` : `${subItems.length} שיוכים`)
+                : (isInsurance
+                    ? `${subCategories.length} סוגי ביטוח · ${categoryAssets.length} פוליסות`
+                    : `${subCategories.length} תתי־קטגוריה · ${categoryAssets.length} פריטים`)}
+              {!isAssignable && !isInsurance && " · נכס מוסדי"}
             </p>
           </div>
         </div>
