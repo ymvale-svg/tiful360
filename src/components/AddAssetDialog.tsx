@@ -296,20 +296,23 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props)
         expiry_date: form.expiry_date || undefined,
         notes: form.notes || undefined,
       });
-      // Upload pending documents (if any)
-      if (pendingDocs.length > 0 && (created as any)?.id) {
-        const assetId = (created as any).id;
-        for (const file of pendingDocs) {
-          try {
-            await uploadDoc.mutateAsync({ asset_id: assetId, file, document_type: "other" });
-          } catch (uerr: any) {
-            toast({ title: `שגיאה בהעלאת ${file.name}`, description: uerr.message, variant: "destructive" });
-          }
-        }
-      }
+      // Close dialog + show toast immediately for snappy UX
       const catName = selectedCategory?.category_name ?? "פריט";
       toast({ title: `${catName} נוסף בהצלחה`, description: form.asset_name });
       onOpenChange(false);
+      // Upload pending documents in background (don't block UI)
+      if (pendingDocs.length > 0 && (created as any)?.id) {
+        const assetId = (created as any).id;
+        (async () => {
+          for (const file of pendingDocs) {
+            try {
+              await uploadDoc.mutateAsync({ asset_id: assetId, file, document_type: "other" });
+            } catch (uerr: any) {
+              toast({ title: `שגיאה בהעלאת ${file.name}`, description: uerr.message, variant: "destructive" });
+            }
+          }
+        })();
+      }
     } catch (err: any) {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
     }
