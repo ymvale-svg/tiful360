@@ -229,24 +229,60 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
         // ---------- Assignments list (instances of the chosen sub-category) ----------
         subItems.length === 0 ? (
           <div className="bg-card border border-border rounded-xl p-12 text-center text-muted-foreground">
-            לא נמצאו שיוכים
+            {isInsurance ? "לא נמצאו פוליסות" : "לא נמצאו שיוכים"}
           </div>
         ) : (
           <div key="items" className="bg-card border border-border rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
             <table className="w-full text-sm">
               <thead className="bg-muted/40 text-muted-foreground text-xs">
-                <tr>
-                  <th className="text-right px-4 py-2 font-medium">מזהה</th>
-                  <th className="text-right px-4 py-2 font-medium">מס׳ סידורי</th>
-                  <th className="text-right px-4 py-2 font-medium">משויך ל</th>
-                  <th className="text-right px-4 py-2 font-medium">סטטוס</th>
-                  <th className="text-right px-4 py-2 font-medium">תפוגה</th>
-                </tr>
+                {isInsurance ? (
+                  <tr>
+                    <th className="text-right px-4 py-2 font-medium">מזהה</th>
+                    <th className="text-right px-4 py-2 font-medium">שם פוליסה</th>
+                    <th className="text-right px-4 py-2 font-medium">מספר פוליסה</th>
+                    <th className="text-right px-4 py-2 font-medium">חברת ביטוח</th>
+                    <th className="text-right px-4 py-2 font-medium">תוקף עד</th>
+                  </tr>
+                ) : (
+                  <tr>
+                    <th className="text-right px-4 py-2 font-medium">מזהה</th>
+                    <th className="text-right px-4 py-2 font-medium">מס׳ סידורי</th>
+                    <th className="text-right px-4 py-2 font-medium">משויך ל</th>
+                    <th className="text-right px-4 py-2 font-medium">סטטוס</th>
+                    <th className="text-right px-4 py-2 font-medium">תפוגה</th>
+                  </tr>
+                )}
               </thead>
               <tbody>
                 {subItems.map((a: any) => {
                   const expiry = a.expiry_date ? new Date(a.expiry_date) : null;
                   const expired = expiry && expiry < new Date();
+                  if (isInsurance) {
+                    return (
+                      <tr
+                        key={a.id}
+                        onClick={() => onSelectAsset(a.id)}
+                        className="border-t border-border hover:bg-muted/30 cursor-pointer"
+                      >
+                        <td className="px-4 py-2 font-mono text-xs">{a.asset_code}</td>
+                        <td className="px-4 py-2">{a.asset_name}</td>
+                        <td className="px-4 py-2 text-xs text-muted-foreground">
+                          {a.custom_fields?.["מספר פוליסה"] ?? "—"}
+                        </td>
+                        <td className="px-4 py-2 text-xs">
+                          {a.custom_fields?.["חברת ביטוח"] ?? <span className="text-muted-foreground">—</span>}
+                        </td>
+                        <td className="px-4 py-2 text-xs">
+                          {expiry ? (
+                            <span className={cn("flex items-center gap-1", expired && "text-destructive")}>
+                              {expired && <AlertTriangle className="w-3 h-3" />}
+                              {expiry.toLocaleDateString("he-IL")}
+                            </span>
+                          ) : "—"}
+                        </td>
+                      </tr>
+                    );
+                  }
                   return (
                     <tr
                       key={a.id}
