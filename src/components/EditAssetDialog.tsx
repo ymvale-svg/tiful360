@@ -14,6 +14,7 @@ import { AssetDocumentsSection } from "./AssetDocumentsSection";
 import { CustomFieldsRenderer } from "./CustomFieldsRenderer";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 interface Asset {
   id: string;
@@ -178,7 +179,9 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
           <DialogTitle className="flex items-center justify-between gap-2">
             <span className="flex items-center gap-2">
               <Package className="w-5 h-5 text-primary" />
-              {isView ? "פרטי פריט ציוד" : "עריכת פריט ציוד"}
+              {selectedCategory?.prefix === "CINS"
+                ? (isView ? "פרטי פוליסת ביטוח" : "עריכת פוליסת ביטוח")
+                : (isView ? "פרטי פריט ציוד" : "עריכת פריט ציוד")}
             </span>
             {isView && (
               <Button size="sm" variant="outline" className="gap-1.5 h-8" onClick={() => setMode("edit")}>
@@ -192,7 +195,9 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
 
         <div className="space-y-3 mt-4">
           <div>
-            <label className="text-sm font-medium mb-1 block">שם פריט</label>
+            <label className="text-sm font-medium mb-1 block">
+              {selectedCategory?.prefix === "CINS" ? "שם הפוליסה" : "שם פריט"}
+            </label>
             {isView ? (
               <div className={readCls}>{display(form.asset_name)}</div>
             ) : (
@@ -238,41 +243,44 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-sm font-medium mb-1 block">יצרן ומודל</label>
-              {isView ? (
-                <div className={readCls}>{display(form.manufacturer_model)}</div>
-              ) : (
-                <input
-                  value={form.manufacturer_model}
-                  onChange={(e) => setForm({ ...form, manufacturer_model: e.target.value })}
-                  placeholder="למשל: Apple MacBook Pro 16"
-                  className={inputCls}
-                />
-              )}
+          {selectedCategory?.prefix !== "CINS" && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium mb-1 block">יצרן ומודל</label>
+                {isView ? (
+                  <div className={readCls}>{display(form.manufacturer_model)}</div>
+                ) : (
+                  <input
+                    value={form.manufacturer_model}
+                    onChange={(e) => setForm({ ...form, manufacturer_model: e.target.value })}
+                    placeholder="למשל: Apple MacBook Pro 16"
+                    className={inputCls}
+                  />
+                )}
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">מספר סידורי</label>
+                {isView ? (
+                  <div className={`${readCls} font-mono`} dir="ltr">{display(form.serial_number)}</div>
+                ) : (
+                  <input
+                    value={form.serial_number}
+                    onChange={(e) => setForm({ ...form, serial_number: e.target.value })}
+                    className={`${inputCls} font-mono`}
+                    dir="ltr"
+                  />
+                )}
+              </div>
             </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">מספר סידורי</label>
-              {isView ? (
-                <div className={`${readCls} font-mono`} dir="ltr">{display(form.serial_number)}</div>
-              ) : (
-                <input
-                  value={form.serial_number}
-                  onChange={(e) => setForm({ ...form, serial_number: e.target.value })}
-                  className={`${inputCls} font-mono`}
-                  dir="ltr"
-                />
-              )}
-            </div>
-          </div>
+          )}
 
           {(() => {
             const cat = (categories ?? []).find(c => c.id === form.category_id) as any;
             const isAssignable = cat?.is_assignable !== false; // default true
+            const isInsurance = cat?.prefix === "CINS";
             return (
-              <div className="grid grid-cols-2 gap-3">
-                {isAssignable ? (
+              <div className={cn("grid gap-3", isInsurance ? "grid-cols-1" : "grid-cols-2")}>
+                {isInsurance ? null : isAssignable ? (
                   <div>
                     <label className="text-sm font-medium mb-1 block">שיוך לעובד</label>
                     {isView ? (
@@ -299,7 +307,9 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                   </div>
                 )}
                 <div>
-                  <label className="text-sm font-medium mb-1 block">תאריך תפוגה</label>
+                  <label className="text-sm font-medium mb-1 block">
+                    {isInsurance ? "תוקף עד" : "תאריך תפוגה"}
+                  </label>
                   {isView ? (
                     <div className={readCls} dir="ltr">{form.expiry_date ? new Date(form.expiry_date).toLocaleDateString("he-IL") : display(null)}</div>
                   ) : (
