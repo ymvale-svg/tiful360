@@ -549,18 +549,20 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props)
                   </div>
                 </div>
               )}
-              <div>
-                <label className="text-sm font-medium mb-1 block">
-                  {selectedCategory?.prefix === "CINS" ? "תוקף עד" : "תאריך תפוגה"}
-                </label>
-                <input
-                  type="date"
-                  value={form.expiry_date}
-                  onChange={(e) => set("expiry_date", e.target.value)}
-                  className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
-                  dir="ltr"
-                />
-              </div>
+              {selectedCategory?.prefix !== "CAR" && (
+                <div>
+                  <label className="text-sm font-medium mb-1 block">
+                    {selectedCategory?.prefix === "CINS" ? "תוקף עד" : "תאריך תפוגה"}
+                  </label>
+                  <input
+                    type="date"
+                    value={form.expiry_date}
+                    onChange={(e) => set("expiry_date", e.target.value)}
+                    className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
+                    dir="ltr"
+                  />
+                </div>
+              )}
             </div>
           )}
 
