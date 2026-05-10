@@ -291,12 +291,6 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
     await update.mutateAsync({ ids: pendingIds, status: "approved" });
     toast({ title: "הפעימות אושרו" });
   };
-  const bulkPaid = async () => {
-    if (allIds.length === 0) return;
-    if (!confirm(`לסמן ${allIds.length} פעימות כשולמו?`)) return;
-    await update.mutateAsync({ ids: allIds, status: "paid" });
-    toast({ title: "סומן כשולם" });
-  };
 
   return (
     <Card>
@@ -306,9 +300,6 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={bulkApprove} disabled={pendingIds.length === 0}>
               <Check className="w-4 h-4" /> אשר את כל הממתינות ({pendingIds.length})
-            </Button>
-            <Button size="sm" variant="outline" onClick={bulkPaid} disabled={allIds.length === 0}>
-              <DollarSign className="w-4 h-4" /> סמן הכל כשולם
             </Button>
           </div>
         </CardTitle>
