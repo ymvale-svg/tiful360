@@ -47,6 +47,21 @@ export function CustomFieldsRenderer({
     [fields],
   );
 
+  const { isAdmin } = useAuth();
+  const addOption = useAddCategoryFieldOption();
+  const canAddOptions = isAdmin && !readOnly;
+
+  const handleAddOption = async (cf: CustomField) => {
+    const v = window.prompt(`הוסף ערך חדש לרשימה "${cf.field_name}":`);
+    if (!v || !v.trim()) return;
+    try {
+      await addOption.mutateAsync({ fieldId: cf.id, newOption: v.trim() });
+      toast({ title: "הערך נוסף לרשימה" });
+    } catch (e: any) {
+      toast({ title: "שגיאה בהוספת ערך", description: e?.message, variant: "destructive" });
+    }
+  };
+
   // For LEASE category: derive contextual labels based on the "כיוון חוזה" value
   const leaseDirection = categoryPrefix === "LEASE" ? values["כיוון חוזה"] : undefined;
   const isCompanyRenting = leaseDirection === "החברה שוכרת";
