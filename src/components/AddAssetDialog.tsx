@@ -102,6 +102,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props)
       setForm({
         asset_code: "", asset_name: "", category_id: "", serial_number: "",
         current_owner_id: "", status: "in_stock", expiry_date: "", notes: "",
+        notification_days_before: "",
       });
       setCustomFields({});
       setBulkMode(false);
