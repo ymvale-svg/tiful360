@@ -98,10 +98,22 @@ export function CustomFieldsRenderer({
           const value = values[cf.field_name] ?? "";
           return (
             <div key={cf.id}>
-              <label className="text-sm font-medium mb-1 block">
-                {cf.field_name}
-                {cf.is_required && !readOnly && <span className="text-destructive mr-1">*</span>}
-              </label>
+              <div className="flex items-center justify-between mb-1 gap-2">
+                <label className="text-sm font-medium">
+                  {cf.field_name}
+                  {cf.is_required && !readOnly && <span className="text-destructive mr-1">*</span>}
+                </label>
+                {canAddOptions && (cf.field_type === "list" || cf.field_type === "list_multi") && (
+                  <button
+                    type="button"
+                    onClick={() => handleAddOption(cf)}
+                    className="text-xs text-muted-foreground hover:text-primary flex items-center gap-0.5"
+                    title="הוסף ערך חדש לרשימה"
+                  >
+                    <Plus className="w-3 h-3" /> ערך חדש
+                  </button>
+                )}
+              </div>
               {readOnly ? (
                 (() => {
                   const isDate = cf.field_type === "date";
