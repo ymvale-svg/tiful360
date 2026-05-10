@@ -178,7 +178,9 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
           <DialogTitle className="flex items-center justify-between gap-2">
             <span className="flex items-center gap-2">
               <Package className="w-5 h-5 text-primary" />
-              {isView ? "פרטי פריט ציוד" : "עריכת פריט ציוד"}
+              {selectedCategory?.prefix === "CINS"
+                ? (isView ? "פרטי פוליסת ביטוח" : "עריכת פוליסת ביטוח")
+                : (isView ? "פרטי פריט ציוד" : "עריכת פריט ציוד")}
             </span>
             {isView && (
               <Button size="sm" variant="outline" className="gap-1.5 h-8" onClick={() => setMode("edit")}>
