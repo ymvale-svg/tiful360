@@ -440,9 +440,11 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props)
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="w-5 h-5 text-primary" />
-            הוספת פריט ציוד
+            {selectedCategory?.prefix === "CINS" ? "הוספת ביטוח" : "הוספת פריט ציוד"}
           </DialogTitle>
-          <DialogDescription>הוסף פריט חדש למלאי הציוד</DialogDescription>
+          <DialogDescription>
+            {selectedCategory?.prefix === "CINS" ? "הוסף פוליסת ביטוח חדשה" : "הוסף פריט חדש למלאי הציוד"}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3 mt-4">
