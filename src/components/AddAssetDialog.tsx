@@ -566,6 +566,27 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props)
             </div>
           )}
 
+          {!bulkMode && (
+            <div>
+              <label className="text-sm font-medium mb-1 block">
+                התראת מייל מראש (ימים לפני תפוגה)
+              </label>
+              <input
+                type="number"
+                min={0}
+                max={365}
+                value={form.notification_days_before}
+                onChange={(e) => set("notification_days_before", e.target.value)}
+                placeholder={`ברירת מחדל: ${(selectedCategory as any)?.default_notification_days_before ?? 14} ימים`}
+                className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
+                dir="ltr"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                השאר ריק כדי להשתמש בברירת המחדל של הקטגוריה.
+              </p>
+            </div>
+          )}
+
           {/* Bulk mode: universal expiry (only if not per-emp) */}
           {bulkMode && !expiryIsPerEmp && selectedCategory?.prefix !== "CAR" && (
             <div className="grid grid-cols-2 gap-3">
