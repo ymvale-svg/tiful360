@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Search, Plus, Download, UserMinus, Upload, Mail, Send, ShieldCheck, ShieldAlert, UserCheck, UserX } from "lucide-react";
+import { Search, Plus, UserMinus, Mail, Send, ShieldCheck, ShieldAlert, UserCheck, UserX } from "lucide-react";
+import { ExportExcelButton, ImportExcelButton } from "@/components/ExcelActionButtons";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -229,28 +230,25 @@ export default function Employees() {
             <div className="flex items-start justify-between">
               <div />
               <div className="flex gap-2">
-                <Button variant="outline" className="gap-2" onClick={() => {
-                  if (!employees?.length) return;
-                  exportToExcel(employees.map(e => ({
-                    ...e,
-                    status_label: statusLabels[e.status as EmployeeStatus] ?? e.status,
-                    start_date_fmt: new Date(e.start_date).toLocaleDateString("en-GB").replace(/\//g, "-"),
-                  })), [
-                    { key: "employee_code", label: "מזהה עובד" },
-                    { key: "full_name", label: "שם מלא" },
-                    { key: "role", label: "תפקיד" },
-                    { key: "department", label: "מחלקה" },
-                    { key: "start_date_fmt", label: "תאריך התחלה" },
-                    { key: "status_label", label: "סטטוס" },
-                  ], "רשימת_עובדים");
-                }}>
-                  <Download className="w-4 h-4" />
-                  ייצוא לאקסל
-                </Button>
-                <Button variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
-                  <Upload className="w-4 h-4" />
-                  יבוא מאקסל
-                </Button>
+                <ExportExcelButton
+                  disabled={!employees?.length}
+                  onClick={() => {
+                    if (!employees?.length) return;
+                    exportToExcel(employees.map(e => ({
+                      ...e,
+                      status_label: statusLabels[e.status as EmployeeStatus] ?? e.status,
+                      start_date_fmt: new Date(e.start_date).toLocaleDateString("en-GB").replace(/\//g, "-"),
+                    })), [
+                      { key: "employee_code", label: "מזהה עובד" },
+                      { key: "full_name", label: "שם מלא" },
+                      { key: "role", label: "תפקיד" },
+                      { key: "department", label: "מחלקה" },
+                      { key: "start_date_fmt", label: "תאריך התחלה" },
+                      { key: "status_label", label: "סטטוס" },
+                    ], "רשימת_עובדים");
+                  }}
+                />
+                <ImportExcelButton onClick={() => setImportOpen(true)} />
                 <Button className="gap-2" onClick={() => setAddOpen(true)}>
                   <Plus className="w-4 h-4" />
                   עובד חדש
