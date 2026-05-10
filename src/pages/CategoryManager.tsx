@@ -1,4 +1,5 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Plus, GripVertical, Trash2, Save, ChevronLeft, Pencil,
   Type, Hash, Calendar, List, ListChecks, Package, Settings2, Check, X,
@@ -45,7 +46,13 @@ const fieldTypeLabels: Record<FieldType, string> = {
 };
 
 export default function CategoryManager() {
-  const { data: categories, isLoading } = useAssetCategories();
+  const { data: allCategories, isLoading } = useAssetCategories();
+  const { isLegal, isAdmin, isSuperAdmin, isOperations } = useAuth();
+  const legalOnly = isLegal && !isAdmin && !isSuperAdmin && !isOperations;
+  const categories = useMemo(() => {
+    if (!allCategories) return allCategories;
+    return legalOnly ? allCategories.filter((c: any) => c.is_assignable === false) : allCategories;
+  }, [allCategories, legalOnly]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newCatOpen, setNewCatOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; assetCount: number } | null>(null);
@@ -201,7 +208,7 @@ export default function CategoryManager() {
         </div>
       )}
 
-      <NewCategoryDialog open={newCatOpen} onOpenChange={setNewCatOpen} onCreated={(id) => {
+      <NewCategoryDialog open={newCatOpen} onOpenChange={setNewCatOpen} forceInstitutional={legalOnly} onCreated={(id) => {
         setSelectedId(id);
         setNewCatOpen(false);
       }} />
@@ -696,10 +703,12 @@ function NewCategoryDialog({
   open,
   onOpenChange,
   onCreated,
+  forceInstitutional = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated: (id: string) => void;
+  forceInstitutional?: boolean;
 }) {
   const [name, setName] = useState("");
   const [prefix, setPrefix] = useState("");
@@ -721,6 +730,7 @@ function NewCategoryDialog({
         description: description || undefined,
         skip_handover_form: skipHandover,
         skip_return_form: skipReturn,
+        ...(forceInstitutional ? { is_assignable: false } : {}),
       });
       toast({ title: "קטגוריה נוצרה בהצלחה" });
       onCreated(cat.id);
