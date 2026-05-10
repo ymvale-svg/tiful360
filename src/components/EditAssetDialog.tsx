@@ -16,6 +16,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
+const INSURANCE_TYPES = ["רכב", "דירקטורים", "צד ג׳", "קבלני"];
+const INSURANCE_FIELD = "סוג ביטוח";
+
 interface Asset {
   id: string;
   asset_code: string;
@@ -243,6 +246,24 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
             )}
           </div>
 
+          {selectedCategory?.prefix === "CINS" && (
+            <div>
+              <label className="text-sm font-medium mb-1 block">
+                סוג ביטוח<span className="text-destructive mr-1">*</span>
+              </label>
+              {isView ? (
+                <div className={readCls}>{display(customFields[INSURANCE_FIELD])}</div>
+              ) : (
+                <SearchableSelect
+                  value={customFields[INSURANCE_FIELD] ?? ""}
+                  onChange={(v) => setCustomFields((prev) => ({ ...prev, [INSURANCE_FIELD]: v }))}
+                  options={INSURANCE_TYPES.map((t) => ({ value: t, label: t }))}
+                  placeholder="בחר סוג ביטוח..."
+                />
+              )}
+            </div>
+          )}
+
           {selectedCategory?.prefix !== "CINS" && (
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -348,61 +369,63 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
             </div>
           )}
 
-          <div className="rounded-lg border bg-card p-3 space-y-2">
-            <div className="text-sm font-medium flex items-center gap-2">
-              <History className="w-4 h-4 text-primary" />
-              היסטוריית בעלות
-              {historyPeriods.length > 0 && (
-                <span className="text-xs text-muted-foreground font-normal">
-                  ({historyPeriods.length} רישומים)
-                </span>
+          {selectedCategory?.prefix !== "CINS" && (
+            <div className="rounded-lg border bg-card p-3 space-y-2">
+              <div className="text-sm font-medium flex items-center gap-2">
+                <History className="w-4 h-4 text-primary" />
+                היסטוריית בעלות
+                {historyPeriods.length > 0 && (
+                  <span className="text-xs text-muted-foreground font-normal">
+                    ({historyPeriods.length} רישומים)
+                  </span>
+                )}
+              </div>
+              {historyPeriods.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  אין היסטוריית מסירות חתומות לפריט זה.
+                </p>
+              ) : (
+                <ul className="space-y-1.5 max-h-48 overflow-y-auto">
+                  {historyPeriods.map((p) => (
+                    <li
+                      key={p.id}
+                      className="flex items-start justify-between gap-2 text-xs border-b border-border/50 last:border-0 pb-1.5 last:pb-0"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-foreground flex items-center gap-1.5 flex-wrap">
+                          {p.employee_name}
+                          {p.employee_code && (
+                            <span className="text-muted-foreground font-mono">({p.employee_code})</span>
+                          )}
+                          {p.isCurrent && (
+                            <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px]">
+                              נוכחי
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-muted-foreground mt-0.5">
+                          {new Date(p.startedAt).toLocaleDateString("he-IL")}
+                          {" — "}
+                          {p.endedAt ? new Date(p.endedAt).toLocaleDateString("he-IL") : "כיום"}
+                        </div>
+                      </div>
+                      {p.document_url && (
+                        <a
+                          href={p.document_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground shrink-0"
+                          title="צפה בטופס"
+                        >
+                          <FileText className="w-4 h-4" />
+                        </a>
+                      )}
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
-            {historyPeriods.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                אין היסטוריית מסירות חתומות לפריט זה.
-              </p>
-            ) : (
-              <ul className="space-y-1.5 max-h-48 overflow-y-auto">
-                {historyPeriods.map((p) => (
-                  <li
-                    key={p.id}
-                    className="flex items-start justify-between gap-2 text-xs border-b border-border/50 last:border-0 pb-1.5 last:pb-0"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-foreground flex items-center gap-1.5 flex-wrap">
-                        {p.employee_name}
-                        {p.employee_code && (
-                          <span className="text-muted-foreground font-mono">({p.employee_code})</span>
-                        )}
-                        {p.isCurrent && (
-                          <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px]">
-                            נוכחי
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-muted-foreground mt-0.5">
-                        {new Date(p.startedAt).toLocaleDateString("he-IL")}
-                        {" — "}
-                        {p.endedAt ? new Date(p.endedAt).toLocaleDateString("he-IL") : "כיום"}
-                      </div>
-                    </div>
-                    {p.document_url && (
-                      <a
-                        href={p.document_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground shrink-0"
-                        title="צפה בטופס"
-                      >
-                        <FileText className="w-4 h-4" />
-                      </a>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          )}
 
           {(catFields ?? []).length > 0 && (
             <CustomFieldsRenderer
