@@ -134,3 +134,38 @@ export function useSaveCategoryFields() {
     },
   });
 }
+
+export function useAddCategoryFieldOption() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ fieldId, newOption }: { fieldId: string; newOption: string }) => {
+      const trimmed = newOption.trim();
+      if (!trimmed) throw new Error("ערך ריק");
+      const { data: current, error: fetchErr } = await supabase
+        .from("category_fields")
+        .select("field_options, category_id")
+        .eq("id", fieldId)
+        .single();
+      if (fetchErr) throw fetchErr;
+      const existing: string[] = Array.isArray(current?.field_options)
+        ? (current!.field_options as any[]).map(String)
+        : [];
+      if (existing.some((o) => o.trim() === trimmed)) {
+        return { categoryId: current!.category_id };
+      }
+      const next = [...existing, trimmed];
+      const { error } = await supabase
+        .from("category_fields")
+        .update({ field_options: next })
+        .eq("id", fieldId);
+      if (error) throw error;
+      return { categoryId: current!.category_id };
+    },
+    onSuccess: (res) => {
+      if (res?.categoryId) {
+        queryClient.invalidateQueries({ queryKey: ["category-fields", res.categoryId] });
+      }
+    },
+  });
+}
+
