@@ -485,7 +485,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props)
                 />
                 {errors.asset_code && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.asset_code}</p>}
               </div>
-              {selectedCategory?.prefix !== "CINS" && (
+              {selectedCategory?.prefix !== "CINS" && selectedCategory?.prefix !== "CAR" && (
                 <div>
                   <label className="text-sm font-medium mb-1 block">מספר סידורי</label>
                   <input
