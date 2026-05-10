@@ -270,7 +270,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
                         {emp && <div className="text-muted-foreground">{emp.full_name}</div>}
                         {h.details && <div className="text-muted-foreground line-clamp-2">{h.details}</div>}
                         <div className="text-muted-foreground">
-                          {new Date(h.created_at).toLocaleString("he-IL")}
+                          {(() => { const d = new Date(h.created_at); const dd = String(d.getDate()).padStart(2,"0"); const mm = String(d.getMonth()+1).padStart(2,"0"); const hh = String(d.getHours()).padStart(2,"0"); const mi = String(d.getMinutes()).padStart(2,"0"); return `${dd}-${mm}-${d.getFullYear()} ${hh}:${mi}`; })()}
                         </div>
                       </li>
                     );
