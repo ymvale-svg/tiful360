@@ -161,7 +161,11 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={selectedSub ? "חיפוש בשיוכים..." : "חיפוש בתתי־קטגוריה..."}
+            placeholder={
+              selectedSub
+                ? (isInsurance ? "חיפוש בפוליסות..." : "חיפוש בשיוכים...")
+                : (isInsurance ? "חיפוש בסוגי ביטוח..." : "חיפוש בתתי־קטגוריה...")
+            }
             className="bg-transparent text-sm outline-none w-full"
           />
         </div>
