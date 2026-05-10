@@ -16,7 +16,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Check, X, DollarSign, Clock4, AlertTriangle, UserPlus2 } from "lucide-react";
+import { Check, X, Clock4, AlertTriangle, UserPlus2 } from "lucide-react";
 import { AttendanceFlowIndicator } from "./AttendanceFlowIndicator";
 import { useCompany } from "@/hooks/useCompany";
 import { supabase } from "@/integrations/supabase/client";
