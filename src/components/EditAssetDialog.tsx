@@ -16,6 +16,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
+const INSURANCE_TYPES = ["רכב", "דירקטורים", "צד ג׳", "קבלני"];
+const INSURANCE_FIELD = "סוג ביטוח";
+
 interface Asset {
   id: string;
   asset_code: string;
