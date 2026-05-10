@@ -941,7 +941,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props)
                               </button>
                             </div>
                           </th>
-                          {expiryIsPerEmp && (
+                          {expiryIsPerEmp && selectedCategory?.prefix !== "CAR" && (
                             <th className="text-right p-2 font-medium min-w-[160px]">
                               <div className="flex items-center justify-between gap-1">
                                 <span>תאריך תפוגה</span>
@@ -1014,7 +1014,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props)
                                   dir="ltr"
                                 />
                               </td>
-                              {expiryIsPerEmp && (
+                              {expiryIsPerEmp && selectedCategory?.prefix !== "CAR" && (
                                 <td className="p-2">
                                   <Popover>
                                     <PopoverTrigger asChild>
