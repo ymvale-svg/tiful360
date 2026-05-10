@@ -1,9 +1,12 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import { AlertCircle, Info, ChevronDown, X as XIcon } from "lucide-react";
+import { AlertCircle, Info, ChevronDown, X as XIcon, Plus } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useAddCategoryFieldOption } from "@/hooks/useCategories";
+import { toast } from "@/hooks/use-toast";
 
 export interface CustomField {
   id: string;
