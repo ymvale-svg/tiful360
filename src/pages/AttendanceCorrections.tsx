@@ -90,7 +90,7 @@ export default function AttendanceCorrections() {
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-sm">{r.employee?.full_name}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {r.employee?.department} • תאריך תיקון: {new Date(r.correction_date).toLocaleDateString("he-IL")}
+                    {r.employee?.department} • תאריך תיקון: {new Date(r.correction_date).toLocaleDateString("en-GB").replaceAll("/", "-")}
                   </p>
                   <div className="mt-2 grid grid-cols-2 gap-x-6 text-xs">
                     <div className="text-muted-foreground">
@@ -127,7 +127,7 @@ export default function AttendanceCorrections() {
           </DialogHeader>
           {reviewing && (
             <div className="space-y-3 text-sm">
-              <p><strong>{reviewing.employee?.full_name}</strong> — {new Date(reviewing.correction_date).toLocaleDateString("he-IL")}</p>
+              <p><strong>{reviewing.employee?.full_name}</strong> — {new Date(reviewing.correction_date).toLocaleDateString("en-GB").replaceAll("/", "-")}</p>
               <p className="text-muted-foreground">סיבה: {reviewing.reason || "—"}</p>
               <Textarea placeholder="הערה (אופציונלי)" value={note} onChange={(e) => setNote(e.target.value)} />
             </div>

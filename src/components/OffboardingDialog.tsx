@@ -280,8 +280,8 @@ function generateProtocolHtml(
   digitalAccess: OffboardingDialogProps["digitalAccess"],
   endDate: string
 ) {
-  const today = new Date().toLocaleDateString("he-IL");
-  const endDateFormatted = new Date(endDate).toLocaleDateString("he-IL");
+  const today = new Date().toLocaleDateString("en-GB").replaceAll("/", "-");
+  const endDateFormatted = new Date(endDate).toLocaleDateString("en-GB").replaceAll("/", "-");
 
   return `<!DOCTYPE html>
 <html dir="rtl" lang="he">
@@ -317,7 +317,7 @@ function generateProtocolHtml(
   <div class="info-item"><span class="info-label">ת.ז:</span>${esc(employee.id_number)}</div>
   <div class="info-item"><span class="info-label">תפקיד:</span>${esc(employee.role)}</div>
   <div class="info-item"><span class="info-label">מחלקה:</span>${esc(employee.department)}</div>
-  <div class="info-item"><span class="info-label">תחילת עבודה:</span>${new Date(employee.start_date).toLocaleDateString("he-IL")}</div>
+  <div class="info-item"><span class="info-label">תחילת עבודה:</span>${new Date(employee.start_date).toLocaleDateString("en-GB").replaceAll("/", "-")}</div>
   <div class="info-item"><span class="info-label">תאריך סיום:</span><strong style="color:#dc2626;">${endDateFormatted}</strong></div>
 </div>
 

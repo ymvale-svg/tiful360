@@ -24,7 +24,7 @@ interface BuildArgs {
   company: { name: string };
 }
 
-const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("he-IL") : "—");
+const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("en-GB").replaceAll("/", "-") : "—");
 
 /**
  * Builds a signed-approval PDF (Hebrew/RTL) and uploads it to leave-documents bucket.

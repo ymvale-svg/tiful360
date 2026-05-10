@@ -144,9 +144,9 @@ export function Tax101AdminTab() {
                     <td>
                       <span className={`text-[11px] px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
                     </td>
-                    <td className="text-xs text-muted-foreground">{new Date(f.created_at).toLocaleDateString("he-IL")}</td>
+                    <td className="text-xs text-muted-foreground">{new Date(f.created_at).toLocaleDateString("en-GB").replaceAll("/", "-")}</td>
                     <td className="text-xs text-muted-foreground">
-                      {f.signed_at ? new Date(f.signed_at).toLocaleDateString("he-IL") : "—"}
+                      {f.signed_at ? new Date(f.signed_at).toLocaleDateString("en-GB").replaceAll("/", "-") : "—"}
                     </td>
                     <td>
                       <div className="flex items-center gap-1 justify-end">

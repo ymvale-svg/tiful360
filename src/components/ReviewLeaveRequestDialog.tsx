@@ -10,7 +10,7 @@ import { Calendar, Paperclip, User } from "lucide-react";
 const TYPE_LABELS: Record<string, string> = {
   vacation: "חופשה", sick: "מחלה", personal: "יום אישי", other: "אחר",
 };
-const fmt = (d: string) => new Date(d).toLocaleDateString("he-IL");
+const fmt = (d: string) => new Date(d).toLocaleDateString("en-GB").replaceAll("/", "-");
 
 interface Props {
   request: any | null;

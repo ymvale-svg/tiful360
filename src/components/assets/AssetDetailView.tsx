@@ -195,7 +195,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
                   label="תפוגה"
                   value={
                     <span className={expired ? "text-destructive font-medium" : ""}>
-                      {expiry.toLocaleDateString("he-IL")}
+                      {expiry.toLocaleDateString("en-GB").replaceAll("/", "-")}
                       {expired && " (פג)"}
                     </span>
                   }

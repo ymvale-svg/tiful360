@@ -276,7 +276,7 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
                           {expiry ? (
                             <span className={cn("flex items-center gap-1", expired && "text-destructive")}>
                               {expired && <AlertTriangle className="w-3 h-3" />}
-                              {expiry.toLocaleDateString("he-IL")}
+                              {expiry.toLocaleDateString("en-GB").replaceAll("/", "-")}
                             </span>
                           ) : "—"}
                         </td>
@@ -303,7 +303,7 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
                         {expiry ? (
                           <span className={cn("flex items-center gap-1", expired && "text-destructive")}>
                             {expired && <AlertTriangle className="w-3 h-3" />}
-                            {expiry.toLocaleDateString("he-IL")}
+                            {expiry.toLocaleDateString("en-GB").replaceAll("/", "-")}
                           </span>
                         ) : "—"}
                       </td>

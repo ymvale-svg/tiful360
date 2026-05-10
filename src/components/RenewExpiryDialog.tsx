@@ -132,7 +132,7 @@ export function RenewExpiryDialog({ open, onOpenChange, item }: Props) {
             </div>
             <div className="text-xs">
               <span className="text-muted-foreground">תאריך נוכחי: </span>
-              <span className="font-medium">{new Date(item.expiry_date).toLocaleDateString("he-IL")}</span>
+              <span className="font-medium">{new Date(item.expiry_date).toLocaleDateString("en-GB").replaceAll("/", "-")}</span>
             </div>
             {item.is_assignable && item.owner_name && (
               <div className="text-xs">
