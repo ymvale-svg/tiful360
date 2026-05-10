@@ -84,8 +84,13 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props)
   const [perEmpFieldKeys, setPerEmpFieldKeys] = useState<Set<string>>(new Set());
   const [perEmpRows, setPerEmpRows] = useState<Record<string, Record<string, string>>>({});
 
-  const { data: catFields } = useCategoryFields(form.category_id);
+  const { data: catFieldsRaw } = useCategoryFields(form.category_id);
   const selectedCategory = categories?.find(c => c.id === form.category_id);
+  // Hide duplicate custom fields that overlap with system fields per category
+  const catFields = (catFieldsRaw ?? []).filter((cf: any) => {
+    if (selectedCategory?.prefix === "CINS" && cf.field_name === "תוקף פוליסה") return false;
+    return true;
+  });
 
   // Reset everything when dialog closes
   useEffect(() => {
