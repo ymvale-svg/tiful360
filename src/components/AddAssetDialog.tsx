@@ -594,21 +594,42 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props)
                   const errKey = `cf_${cf.field_name}`;
                   return (
                     <div key={cf.id}>
-                      <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center justify-between mb-1 gap-2">
                         <label className="text-sm font-medium">
                           {cf.field_name}
                           {cf.is_required && <span className="text-destructive mr-1">*</span>}
                         </label>
-                        {bulkMode && (
-                          <button
-                            type="button"
-                            onClick={() => togglePerEmpField(key)}
-                            className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
-                            title="הפוך לפר עובד"
-                          >
-                            <Users className="w-3 h-3" /> פר עובד
-                          </button>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {isAdmin && (cf.field_type === "list" || cf.field_type === "list_multi") && (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                const v = window.prompt(`הוסף ערך חדש לרשימה "${cf.field_name}":`);
+                                if (!v || !v.trim()) return;
+                                try {
+                                  await addOption.mutateAsync({ fieldId: cf.id, newOption: v.trim() });
+                                  toast({ title: "הערך נוסף לרשימה" });
+                                } catch (e: any) {
+                                  toast({ title: "שגיאה", description: e?.message, variant: "destructive" });
+                                }
+                              }}
+                              className="text-xs text-muted-foreground hover:text-primary flex items-center gap-0.5"
+                              title="הוסף ערך חדש לרשימה"
+                            >
+                              <PlusIcon className="w-3 h-3" /> ערך חדש
+                            </button>
+                          )}
+                          {bulkMode && (
+                            <button
+                              type="button"
+                              onClick={() => togglePerEmpField(key)}
+                              className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
+                              title="הפוך לפר עובד"
+                            >
+                              <Users className="w-3 h-3" /> פר עובד
+                            </button>
+                          )}
+                        </div>
                       </div>
                       {cf.field_type === "list" ? (
                         <SearchableSelect
