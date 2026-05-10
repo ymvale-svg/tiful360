@@ -431,7 +431,7 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
     }
   };
 
-  const today = new Date().toLocaleDateString("he-IL");
+  const today = new Date().toLocaleDateString("en-GB").replace(/\//g, "-");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -1278,7 +1278,7 @@ const Tax101Preview = forwardRef<
 >(({ data, taxYear, signatureRef, employerInfo }, ref) => {
   const tc = data.tax_credits;
   const co = data.tax_coordination;
-  const fmtDate = (s: string) => s ? new Date(s).toLocaleDateString("he-IL") : "";
+  const fmtDate = (s: string) => s ? new Date(s).toLocaleDateString("en-GB").replace(/\//g, "-") : "";
   const maritalText = ({
     single: "רווק/ה", married: "נשוי/אה", divorced: "גרוש/ה", widowed: "אלמן/ה", separated: "פרוד/ה",
   } as any)[data.marital_status] || "";
@@ -1577,7 +1577,7 @@ const Tax101Preview = forwardRef<
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: 16 }}>
           <div>
-            <div style={{ borderTop: "1px solid #000", paddingTop: 2, minWidth: 160 }}>תאריך: {new Date().toLocaleDateString("he-IL")}</div>
+            <div style={{ borderTop: "1px solid #000", paddingTop: 2, minWidth: 160 }}>תאריך: {new Date().toLocaleDateString("en-GB").replace(/\//g, "-")}</div>
           </div>
           <div style={{ textAlign: "center" }}>
             <SignatureImg signatureRef={signatureRef} />

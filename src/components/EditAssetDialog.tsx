@@ -322,7 +322,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                       {isInsurance ? "תוקף עד" : "תאריך תפוגה"}
                     </label>
                     {isView ? (
-                      <div className={readCls} dir="ltr">{form.expiry_date ? new Date(form.expiry_date).toLocaleDateString("he-IL") : display(null)}</div>
+                      <div className={readCls} dir="ltr">{form.expiry_date ? new Date(form.expiry_date).toLocaleDateString("en-GB").replace(/\//g, "-") : display(null)}</div>
                     ) : (
                       <input
                         type="date"
@@ -422,9 +422,9 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                           )}
                         </div>
                         <div className="text-muted-foreground mt-0.5">
-                          {new Date(p.startedAt).toLocaleDateString("he-IL")}
+                          {new Date(p.startedAt).toLocaleDateString("en-GB").replace(/\//g, "-")}
                           {" — "}
-                          {p.endedAt ? new Date(p.endedAt).toLocaleDateString("he-IL") : "כיום"}
+                          {p.endedAt ? new Date(p.endedAt).toLocaleDateString("en-GB").replace(/\//g, "-") : "כיום"}
                         </div>
                       </div>
                       {p.document_url && (

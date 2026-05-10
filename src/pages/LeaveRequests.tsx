@@ -95,7 +95,7 @@ export default function LeaveRequests() {
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {r.employee?.department} • {TYPE_LABELS[r.request_type as string]} •{" "}
                     {r.total_days} ימים •{" "}
-                    {new Date(r.start_date).toLocaleDateString("he-IL")} – {new Date(r.end_date).toLocaleDateString("he-IL")}
+                    {new Date(r.start_date).toLocaleDateString("en-GB").replace(/\//g, "-")} – {new Date(r.end_date).toLocaleDateString("en-GB").replace(/\//g, "-")}
                   </p>
                   {r.reason && <p className="text-xs text-muted-foreground mt-1">{r.reason}</p>}
                   {r.attachment_url && (

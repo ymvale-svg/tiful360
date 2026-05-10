@@ -46,7 +46,7 @@ export default function Alerts() {
                 </span>
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
                   <Clock className="w-3 h-3" />
-                  {alert.target_date ? new Date(alert.target_date).toLocaleDateString("he-IL") : "—"}
+                  {alert.target_date ? new Date(alert.target_date).toLocaleDateString("en-GB").replace(/\//g, "-") : "—"}
                 </span>
               </div>
             </div>

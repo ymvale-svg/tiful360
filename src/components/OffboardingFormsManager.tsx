@@ -226,7 +226,7 @@ export function OffboardingFormsManager({ employee, assets }: Props) {
                   </div>
                   <span className="text-xs text-muted-foreground">
                     {signed
-                      ? `נחתם ${new Date(f.signed_at).toLocaleDateString("he-IL")}`
+                      ? `נחתם ${new Date(f.signed_at).toLocaleDateString("en-GB").replace(/\//g, "-")}`
                       : "ממתין לחתימה"}
                   </span>
                   <div className="flex items-center gap-1 mr-auto">

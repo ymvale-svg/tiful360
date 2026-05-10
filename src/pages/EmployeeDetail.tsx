@@ -137,11 +137,11 @@ export default function EmployeeDetail() {
                 <span className="text-xs text-muted-foreground">{employee.employee_code}</span>
                 {employee.birth_date && (
                   <span className="text-xs text-muted-foreground">
-                    תאריך לידה: {new Date(employee.birth_date).toLocaleDateString("he-IL")}
+                    תאריך לידה: {new Date(employee.birth_date).toLocaleDateString("en-GB").replace(/\//g, "-")}
                   </span>
                 )}
                 <span className="text-xs text-muted-foreground">
-                  תחילת עבודה: {new Date(employee.start_date).toLocaleDateString("he-IL")}
+                  תחילת עבודה: {new Date(employee.start_date).toLocaleDateString("en-GB").replace(/\//g, "-")}
                 </span>
               </div>
             </div>
@@ -214,7 +214,7 @@ export default function EmployeeDetail() {
                 {asset.expiry_date && (
                   <div className="mt-3 pt-3 border-t border-border/50 flex items-center gap-2 text-xs text-muted-foreground">
                     <AlertTriangle className="w-3 h-3 text-warning" />
-                    <span>תפוגה: {new Date(asset.expiry_date).toLocaleDateString("he-IL")}</span>
+                    <span>תפוגה: {new Date(asset.expiry_date).toLocaleDateString("en-GB").replace(/\//g, "-")}</span>
                   </div>
                 )}
                 <div className="flex items-center gap-2 mt-3">
@@ -274,20 +274,20 @@ export default function EmployeeDetail() {
             <InfoRow
               icon={Calendar}
               label="תאריך התחלה"
-              value={new Date(employee.start_date).toLocaleDateString("he-IL")}
+              value={new Date(employee.start_date).toLocaleDateString("en-GB").replace(/\//g, "-")}
             />
             {employee.birth_date && (
               <InfoRow
                 icon={Calendar}
                 label="תאריך לידה"
-                value={new Date(employee.birth_date).toLocaleDateString("he-IL")}
+                value={new Date(employee.birth_date).toLocaleDateString("en-GB").replace(/\//g, "-")}
               />
             )}
             {employee.end_date && (
               <InfoRow
                 icon={Calendar}
                 label="תאריך סיום"
-                value={new Date(employee.end_date).toLocaleDateString("he-IL")}
+                value={new Date(employee.end_date).toLocaleDateString("en-GB").replace(/\//g, "-")}
               />
             )}
           </dl>
@@ -340,7 +340,7 @@ export default function EmployeeDetail() {
                       <p className="text-sm">{item.action}</p>
                       <div className="flex items-center gap-3 mt-1">
                         <span className="text-xs text-muted-foreground">
-                          {new Date(item.created_at).toLocaleDateString("he-IL")}
+                          {new Date(item.created_at).toLocaleDateString("en-GB").replace(/\//g, "-")}
                         </span>
                         {item.details && <span className="text-xs text-muted-foreground">{item.details}</span>}
                       </div>

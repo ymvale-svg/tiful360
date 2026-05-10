@@ -55,7 +55,7 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary, hideBa
   };
 
   const lastUpdate = emp?.balances_updated_at
-    ? new Date(emp.balances_updated_at).toLocaleDateString("he-IL")
+    ? new Date(emp.balances_updated_at).toLocaleDateString("en-GB").replace(/\//g, "-")
     : null;
 
   return (

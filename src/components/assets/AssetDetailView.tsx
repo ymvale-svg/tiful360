@@ -195,7 +195,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
                   label="תפוגה"
                   value={
                     <span className={expired ? "text-destructive font-medium" : ""}>
-                      {expiry.toLocaleDateString("he-IL")}
+                      {expiry.toLocaleDateString("en-GB").replace(/\//g, "-")}
                       {expired && " (פג)"}
                     </span>
                   }
@@ -208,9 +208,12 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
               <div className="pt-3 border-t border-border">
                 <h3 className="text-xs font-semibold text-muted-foreground mb-2">שדות נוספים</h3>
                 <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                  {Object.entries(asset.custom_fields).map(([k, v]) => (
-                    <Field key={k} label={k} value={String(v ?? "—")} />
-                  ))}
+                  {Object.entries(asset.custom_fields).map(([k, v]) => {
+                    const s = String(v ?? "");
+                    const isIsoDate = /^\d{4}-\d{2}-\d{2}/.test(s);
+                    const display = isIsoDate ? `${s.slice(8,10)}-${s.slice(5,7)}-${s.slice(0,4)}` : (s || "—");
+                    return <Field key={k} label={k} value={display} />;
+                  })}
                 </dl>
               </div>
             )}
@@ -270,7 +273,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
                         {emp && <div className="text-muted-foreground">{emp.full_name}</div>}
                         {h.details && <div className="text-muted-foreground line-clamp-2">{h.details}</div>}
                         <div className="text-muted-foreground">
-                          {new Date(h.created_at).toLocaleString("he-IL")}
+                          {(() => { const d = new Date(h.created_at); const dd = String(d.getDate()).padStart(2,"0"); const mm = String(d.getMonth()+1).padStart(2,"0"); const hh = String(d.getHours()).padStart(2,"0"); const mi = String(d.getMinutes()).padStart(2,"0"); return `${dd}-${mm}-${d.getFullYear()} ${hh}:${mi}`; })()}
                         </div>
                       </li>
                     );

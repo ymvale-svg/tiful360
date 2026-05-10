@@ -52,7 +52,7 @@ export function EmployeeTax101FormsList({ employeeId }: Props) {
                     {st.label}
                   </span>
                   {f.signed_at && (
-                    <span>נחתם {new Date(f.signed_at).toLocaleDateString("he-IL")}</span>
+                    <span>נחתם {new Date(f.signed_at).toLocaleDateString("en-GB").replace(/\//g, "-")}</span>
                   )}
                 </p>
               </div>

@@ -156,7 +156,7 @@ export function CustomFieldsRenderer({
                   }
                   return (
                     <div className={baseCls} dir={isDate || isNumber ? "ltr" : "rtl"}>
-                      {isDate ? new Date(value).toLocaleDateString("he-IL") : value}
+                      {isDate ? new Date(value).toLocaleDateString("en-GB").replace(/\//g, "-") : value}
                     </div>
                   );
                 })()
