@@ -10,7 +10,7 @@ export interface AttendancePunch {
   punch_at: string;
   direction: "in" | "out" | "unknown";
   source: string;
-  status: "pending" | "approved" | "rejected" | "paid";
+  status: "pending" | "approved" | "rejected";
   raw_payload: any;
   processed_at: string | null;
   processed_by: string | null;
