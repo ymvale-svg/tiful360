@@ -186,6 +186,7 @@ export type Database = {
           category_name: string
           company_id: string | null
           created_at: string
+          default_notification_days_before: number | null
           description: string | null
           icon: string | null
           id: string
@@ -199,6 +200,7 @@ export type Database = {
           category_name: string
           company_id?: string | null
           created_at?: string
+          default_notification_days_before?: number | null
           description?: string | null
           icon?: string | null
           id?: string
@@ -212,6 +214,7 @@ export type Database = {
           category_name?: string
           company_id?: string | null
           created_at?: string
+          default_notification_days_before?: number | null
           description?: string | null
           icon?: string | null
           id?: string
@@ -341,6 +344,7 @@ export type Database = {
           id: string
           manufacturer_model: string | null
           notes: string | null
+          notification_days_before: number | null
           serial_number: string | null
           status: Database["public"]["Enums"]["asset_status"]
           updated_at: string
@@ -358,6 +362,7 @@ export type Database = {
           id?: string
           manufacturer_model?: string | null
           notes?: string | null
+          notification_days_before?: number | null
           serial_number?: string | null
           status?: Database["public"]["Enums"]["asset_status"]
           updated_at?: string
@@ -375,6 +380,7 @@ export type Database = {
           id?: string
           manufacturer_model?: string | null
           notes?: string | null
+          notification_days_before?: number | null
           serial_number?: string | null
           status?: Database["public"]["Enums"]["asset_status"]
           updated_at?: string
@@ -637,6 +643,7 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string | null
+          expiry_notification_emails: string | null
           id: string
           it_emails: string | null
           logo_url: string | null
@@ -648,6 +655,7 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by?: string | null
+          expiry_notification_emails?: string | null
           id?: string
           it_emails?: string | null
           logo_url?: string | null
@@ -659,6 +667,7 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string | null
+          expiry_notification_emails?: string | null
           id?: string
           it_emails?: string | null
           logo_url?: string | null
@@ -1001,6 +1010,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      expiry_notifications_sent: {
+        Row: {
+          asset_id: string
+          company_id: string
+          expiry_date: string
+          field_key: string
+          id: string
+          sent_at: string
+        }
+        Insert: {
+          asset_id: string
+          company_id: string
+          expiry_date: string
+          field_key?: string
+          id?: string
+          sent_at?: string
+        }
+        Update: {
+          asset_id?: string
+          company_id?: string
+          expiry_date?: string
+          field_key?: string
+          id?: string
+          sent_at?: string
+        }
+        Relationships: []
       }
       it_tickets: {
         Row: {
@@ -1881,6 +1917,7 @@ export type Database = {
       get_company_routing_emails: {
         Args: { _company_id: string }
         Returns: {
+          expiry_notification_emails: string
           it_emails: string
           operations_emails: string
           payroll_emails: string
