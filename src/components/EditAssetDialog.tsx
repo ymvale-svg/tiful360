@@ -340,6 +340,33 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
             );
           })()}
 
+          <div>
+            <label className="text-sm font-medium mb-1 block">
+              התראת מייל מראש (ימים לפני תפוגה)
+            </label>
+            {isView ? (
+              <div className={readCls} dir="ltr">
+                {form.notification_days_before !== "" ? `${form.notification_days_before} ימים` : `ברירת מחדל (${(selectedCategory as any)?.default_notification_days_before ?? 14} ימים)`}
+              </div>
+            ) : (
+              <>
+                <input
+                  type="number"
+                  min={0}
+                  max={365}
+                  value={form.notification_days_before}
+                  onChange={(e) => setForm({ ...form, notification_days_before: e.target.value })}
+                  placeholder={`ברירת מחדל: ${(selectedCategory as any)?.default_notification_days_before ?? 14} ימים`}
+                  className={inputCls}
+                  dir="ltr"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  השאר ריק כדי להשתמש בברירת המחדל של הקטגוריה.
+                </p>
+              </>
+            )}
+          </div>
+
           {form.current_owner_id && (
             <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
               <div className="text-sm font-medium flex items-center gap-2">

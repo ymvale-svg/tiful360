@@ -542,7 +542,7 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
 // ============================
 // Category Editor (name, prefix, description)
 // ============================
-function CategoryEditor({ category }: { category: { id: string; category_name: string; prefix: string; description?: string | null; skip_handover_form?: boolean | null; skip_return_form?: boolean | null } }) {
+function CategoryEditor({ category }: { category: { id: string; category_name: string; prefix: string; description?: string | null; skip_handover_form?: boolean | null; skip_return_form?: boolean | null; default_notification_days_before?: number | null } }) {
   const updateMutation = useUpdateCategory();
   const { toast } = useToast();
   const [editing, setEditing] = useState(false);
@@ -551,6 +551,9 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
   const [description, setDescription] = useState(category.description ?? "");
   const [skipHandover, setSkipHandover] = useState(!!category.skip_handover_form);
   const [skipReturn, setSkipReturn] = useState(!!category.skip_return_form);
+  const [notifDays, setNotifDays] = useState<string>(
+    category.default_notification_days_before == null ? "" : String(category.default_notification_days_before)
+  );
 
   useEffect(() => {
     setName(category.category_name);
@@ -558,8 +561,9 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
     setDescription(category.description ?? "");
     setSkipHandover(!!category.skip_handover_form);
     setSkipReturn(!!category.skip_return_form);
+    setNotifDays(category.default_notification_days_before == null ? "" : String(category.default_notification_days_before));
     setEditing(false);
-  }, [category.id, category.category_name, category.prefix, category.description, category.skip_handover_form, category.skip_return_form]);
+  }, [category.id, category.category_name, category.prefix, category.description, category.skip_handover_form, category.skip_return_form, category.default_notification_days_before]);
 
   const handleSave = async () => {
     if (!name.trim() || !prefix.trim()) {
@@ -574,6 +578,7 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
         description: description || undefined,
         skip_handover_form: skipHandover,
         skip_return_form: skipReturn,
+        default_notification_days_before: notifDays.trim() === "" ? null : Number(notifDays),
       });
       toast({ title: "קטגוריה עודכנה בהצלחה" });
       setEditing(false);
@@ -653,6 +658,23 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
             <div className="text-[11px] text-muted-foreground">החזרת פריטים בקטגוריה זו למלאי תתבצע ללא טופס החזרה וחתימה.</div>
           </div>
         </label>
+      </div>
+
+      <div className="pt-2 border-t border-border/50">
+        <label className="text-sm font-medium mb-1 block">ימי התראה ברירת מחדל לתפוגה</label>
+        <input
+          type="number"
+          min={0}
+          max={365}
+          value={notifDays}
+          onChange={(e) => setNotifDays(e.target.value)}
+          placeholder="14"
+          className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
+          dir="ltr"
+        />
+        <p className="text-[11px] text-muted-foreground mt-1">
+          מספר הימים לפני תאריך תפוגה שבו יישלח מייל התראה. השאר ריק = 14 ימים.
+        </p>
       </div>
 
       <div className="flex gap-2 justify-end">
