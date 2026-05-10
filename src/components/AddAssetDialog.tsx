@@ -522,8 +522,8 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props)
 
           {/* Single mode: owner + expiry */}
           {!bulkMode && (
-            <div className="grid grid-cols-2 gap-3">
-              {(selectedCategory as any)?.is_assignable !== false ? (
+            <div className={cn("grid gap-3", selectedCategory?.prefix === "CINS" ? "grid-cols-1" : "grid-cols-2")}>
+              {selectedCategory?.prefix === "CINS" ? null : (selectedCategory as any)?.is_assignable !== false ? (
                 <div>
                   <label className="text-sm font-medium mb-1 block">שיוך לעובד</label>
                   <SearchableSelect
@@ -545,7 +545,9 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props)
                 </div>
               )}
               <div>
-                <label className="text-sm font-medium mb-1 block">תאריך תפוגה</label>
+                <label className="text-sm font-medium mb-1 block">
+                  {selectedCategory?.prefix === "CINS" ? "תוקף עד" : "תאריך תפוגה"}
+                </label>
                 <input
                   type="date"
                   value={form.expiry_date}
