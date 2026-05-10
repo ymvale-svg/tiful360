@@ -2059,6 +2059,7 @@ export type Database = {
         Args: { _employee_id: string; _user_id: string }
         Returns: boolean
       }
+      is_legal: { Args: { _user_id: string }; Returns: boolean }
       is_my_employee_record: {
         Args: { _employee_id: string; _user_id: string }
         Returns: boolean
@@ -2193,6 +2194,7 @@ export type Database = {
         | "payroll"
         | "operations"
         | "finance"
+        | "legal"
       asset_status: "in_use" | "in_stock" | "in_repair" | "lost"
       employee_status: "active" | "onboarding" | "leaving" | "inactive"
       field_type: "text" | "number" | "date" | "list" | "list_multi"
@@ -2341,6 +2343,7 @@ export const Constants = {
         "payroll",
         "operations",
         "finance",
+        "legal",
       ],
       asset_status: ["in_use", "in_stock", "in_repair", "lost"],
       employee_status: ["active", "onboarding", "leaving", "inactive"],
