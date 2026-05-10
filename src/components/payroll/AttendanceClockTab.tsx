@@ -27,7 +27,7 @@ const STATUS_LABEL: Record<string, string> = {
   pending: "ממתין", approved: "מאושר", rejected: "נדחה",
 };
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  pending: "outline", approved: "default", rejected: "destructive", paid: "secondary",
+  pending: "outline", approved: "default", rejected: "destructive",
 };
 const DIR_LABEL: Record<string, string> = { in: "כניסה", out: "יציאה", unknown: "—" };
 
