@@ -16,7 +16,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Check, X, DollarSign, Clock4, AlertTriangle, UserPlus2 } from "lucide-react";
+import { Check, X, Clock4, AlertTriangle, UserPlus2 } from "lucide-react";
 import { AttendanceFlowIndicator } from "./AttendanceFlowIndicator";
 import { useCompany } from "@/hooks/useCompany";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,10 +24,10 @@ import { supabase } from "@/integrations/supabase/client";
 const MONTHS = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
 
 const STATUS_LABEL: Record<string, string> = {
-  pending: "ממתין", approved: "מאושר", rejected: "נדחה", paid: "שולם",
+  pending: "ממתין", approved: "מאושר", rejected: "נדחה",
 };
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  pending: "outline", approved: "default", rejected: "destructive", paid: "secondary",
+  pending: "outline", approved: "default", rejected: "destructive",
 };
 const DIR_LABEL: Record<string, string> = { in: "כניסה", out: "יציאה", unknown: "—" };
 
@@ -282,7 +282,6 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
     );
   }
 
-  const allIds = punches.map(p => p.id);
   const pendingIds = punches.filter(p => p.status === "pending").map(p => p.id);
 
   const bulkApprove = async () => {
@@ -290,12 +289,6 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
     if (!confirm(`לאשר ${pendingIds.length} פעימות?`)) return;
     await update.mutateAsync({ ids: pendingIds, status: "approved" });
     toast({ title: "הפעימות אושרו" });
-  };
-  const bulkPaid = async () => {
-    if (allIds.length === 0) return;
-    if (!confirm(`לסמן ${allIds.length} פעימות כשולמו?`)) return;
-    await update.mutateAsync({ ids: allIds, status: "paid" });
-    toast({ title: "סומן כשולם" });
   };
 
   return (
@@ -306,9 +299,6 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={bulkApprove} disabled={pendingIds.length === 0}>
               <Check className="w-4 h-4" /> אשר את כל הממתינות ({pendingIds.length})
-            </Button>
-            <Button size="sm" variant="outline" onClick={bulkPaid} disabled={allIds.length === 0}>
-              <DollarSign className="w-4 h-4" /> סמן הכל כשולם
             </Button>
           </div>
         </CardTitle>
@@ -336,8 +326,7 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
                 const hours = firstIn && lastOut
                   ? ((new Date(lastOut).getTime() - new Date(firstIn).getTime()) / 3600000).toFixed(1)
                   : "—";
-                const dayStatus = items.every(p => p.status === "paid") ? "paid"
-                  : items.every(p => p.status === "approved" || p.status === "paid") ? "approved"
+                const dayStatus = items.every(p => p.status === "approved") ? "approved"
                   : items.some(p => p.status === "rejected") ? "rejected"
                   : "pending";
                 const dayIds = items.map(p => p.id);
@@ -372,13 +361,6 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
                             await update.mutateAsync({ ids: dayIds, status: "rejected" });
                           }}>
                           <X className="w-4 h-4" />
-                        </Button>
-                        <Button size="sm" variant="ghost"
-                          onClick={async () => {
-                            if (!confirm("לסמן יום זה כשולם?")) return;
-                            await update.mutateAsync({ ids: dayIds, status: "paid" });
-                          }}>
-                          <DollarSign className="w-4 h-4" />
                         </Button>
                       </div>
                     </td>
