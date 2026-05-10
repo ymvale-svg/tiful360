@@ -4,6 +4,8 @@ import { ReviewLeaveRequestDialog } from "@/components/ReviewLeaveRequestDialog"
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { CalendarDays, Stethoscope, Paperclip } from "lucide-react";
+import { ExportExcelButton } from "@/components/ExcelActionButtons";
+import { exportToExcel } from "@/lib/exportExcel";
 
 const TYPE_LABELS: Record<string, string> = { vacation: "חופשה", sick: "מחלה", personal: "יום אישי", other: "אחר" };
 const STATUS_LABELS: Record<string, string> = { approved: "מאושר", rejected: "נדחה", cancelled: "בוטל", pending: "ממתין" };
@@ -44,16 +46,47 @@ export default function LeaveRequests() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="page-header">
-        <h1 className="page-title flex items-center gap-2">
-          <CalendarDays className="w-5 h-5 text-primary" />
-          בקשות חופשה ומחלה
-        </h1>
-        <p className="page-subtitle">
-          {isPayroll && !canReview
-            ? "צפייה בבקשות מאושרות והצהרות מחלה לטיפול שכר"
-            : "ניהול ואישור בקשות של עובדים"}
-        </p>
+      <div className="page-header flex items-start justify-between gap-3">
+        <div>
+          <h1 className="page-title flex items-center gap-2">
+            <CalendarDays className="w-5 h-5 text-primary" />
+            בקשות חופשה ומחלה
+          </h1>
+          <p className="page-subtitle">
+            {isPayroll && !canReview
+              ? "צפייה בבקשות מאושרות והצהרות מחלה לטיפול שכר"
+              : "ניהול ואישור בקשות של עובדים"}
+          </p>
+        </div>
+        <ExportExcelButton
+          disabled={!filtered.length}
+          onClick={() => {
+            if (!filtered.length) return;
+            exportToExcel(
+              filtered.map((r: any) => ({
+                full_name: r.employee?.full_name ?? "",
+                department: r.employee?.department ?? "",
+                request_type: TYPE_LABELS[r.request_type] ?? r.request_type,
+                start_date: new Date(r.start_date).toLocaleDateString("en-GB").replace(/\//g, "-"),
+                end_date: new Date(r.end_date).toLocaleDateString("en-GB").replace(/\//g, "-"),
+                total_days: r.total_days,
+                status: STATUS_LABELS[r.status] ?? r.status,
+                reason: r.reason ?? "",
+              })),
+              [
+                { key: "full_name", label: "שם עובד" },
+                { key: "department", label: "מחלקה" },
+                { key: "request_type", label: "סוג" },
+                { key: "start_date", label: "מתאריך" },
+                { key: "end_date", label: "עד תאריך" },
+                { key: "total_days", label: "ימים" },
+                { key: "status", label: "סטטוס" },
+                { key: "reason", label: "סיבה" },
+              ],
+              "בקשות_חופשה"
+            );
+          }}
+        />
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">

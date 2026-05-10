@@ -7,6 +7,8 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useITTickets } from "@/hooks/useData";
 import { NewITTicketDialog } from "@/components/NewITTicketDialog";
+import { ExportExcelButton } from "@/components/ExcelActionButtons";
+import { exportToExcel } from "@/lib/exportExcel";
 
 const priorityColors: Record<string, string> = {
   critical: "bg-destructive text-destructive-foreground",
@@ -54,10 +56,39 @@ export default function ITTickets() {
           <h1 className="page-title">משימות IT</h1>
           <p className="page-subtitle">ניהול קריאות שירות, ניתוקים ואבטחת מידע</p>
         </div>
-        <Button onClick={() => setNewOpen(true)} className="gap-2">
-          <Plus className="w-4 h-4" />
-          קריאה חדשה
-        </Button>
+        <div className="flex items-center gap-2">
+          <ExportExcelButton
+            disabled={!tickets?.length}
+            onClick={() => {
+              if (!tickets?.length) return;
+              exportToExcel(
+                tickets.map((t: any) => ({
+                  ticket_code: t.ticket_code,
+                  title: t.title,
+                  priority: priorityLabels[t.priority] ?? t.priority,
+                  status: t.status,
+                  type: t.ticket_type,
+                  employee: t.employees?.full_name ?? "",
+                  sla: t.sla_deadline ? new Date(t.sla_deadline).toLocaleDateString("en-GB").replace(/\//g, "-") : "",
+                })),
+                [
+                  { key: "ticket_code", label: "מזהה" },
+                  { key: "title", label: "כותרת" },
+                  { key: "priority", label: "עדיפות" },
+                  { key: "status", label: "סטטוס" },
+                  { key: "type", label: "סוג" },
+                  { key: "employee", label: "עובד" },
+                  { key: "sla", label: "SLA" },
+                ],
+                "קריאות_IT"
+              );
+            }}
+          />
+          <Button onClick={() => setNewOpen(true)} className="gap-2">
+            <Plus className="w-4 h-4" />
+            קריאה חדשה
+          </Button>
+        </div>
       </div>
 
       <NewITTicketDialog open={newOpen} onOpenChange={setNewOpen} />

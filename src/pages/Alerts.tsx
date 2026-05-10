@@ -1,5 +1,7 @@
 import { Clock, AlertTriangle } from "lucide-react";
 import { useAlerts } from "@/hooks/useData";
+import { ExportExcelButton } from "@/components/ExcelActionButtons";
+import { exportToExcel } from "@/lib/exportExcel";
 
 const severityStyle: Record<string, string> = {
   critical: "border-destructive/30 bg-destructive/5",
@@ -20,11 +22,33 @@ export default function Alerts() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="page-header">
-        <h1 className="page-title">התראות</h1>
-        <p className="page-subtitle">
-          {alerts?.length ?? 0} התראות פעילות • {alerts?.filter(a => a.severity === "critical").length ?? 0} קריטיות
-        </p>
+      <div className="page-header flex items-start justify-between gap-3">
+        <div>
+          <h1 className="page-title">התראות</h1>
+          <p className="page-subtitle">
+            {alerts?.length ?? 0} התראות פעילות • {alerts?.filter(a => a.severity === "critical").length ?? 0} קריטיות
+          </p>
+        </div>
+        <ExportExcelButton
+          disabled={!alerts?.length}
+          onClick={() => {
+            if (!alerts?.length) return;
+            exportToExcel(
+              alerts.map((a: any) => ({
+                ...a,
+                severity_label: severityLabel[a.severity] ?? a.severity,
+                target_date_fmt: a.target_date ? new Date(a.target_date).toLocaleDateString("en-GB").replace(/\//g, "-") : "",
+              })),
+              [
+                { key: "title", label: "כותרת" },
+                { key: "category", label: "קטגוריה" },
+                { key: "severity_label", label: "חומרה" },
+                { key: "target_date_fmt", label: "תאריך יעד" },
+              ],
+              "התראות"
+            );
+          }}
+        />
       </div>
 
       {isLoading ? (
