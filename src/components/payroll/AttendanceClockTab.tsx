@@ -363,13 +363,6 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
                           }}>
                           <X className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="ghost"
-                          onClick={async () => {
-                            if (!confirm("לסמן יום זה כשולם?")) return;
-                            await update.mutateAsync({ ids: dayIds, status: "paid" });
-                          }}>
-                          <DollarSign className="w-4 h-4" />
-                        </Button>
                       </div>
                     </td>
                   </tr>
