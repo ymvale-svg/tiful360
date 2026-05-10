@@ -327,8 +327,7 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
                 const hours = firstIn && lastOut
                   ? ((new Date(lastOut).getTime() - new Date(firstIn).getTime()) / 3600000).toFixed(1)
                   : "—";
-                const dayStatus = items.every(p => p.status === "paid") ? "paid"
-                  : items.every(p => p.status === "approved" || p.status === "paid") ? "approved"
+                const dayStatus = items.every(p => p.status === "approved") ? "approved"
                   : items.some(p => p.status === "rejected") ? "rejected"
                   : "pending";
                 const dayIds = items.map(p => p.id);
