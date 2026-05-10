@@ -116,8 +116,19 @@ export default function Settings() {
 
         <TabsContent value="portal">
           <PortalSettingsTab />
-          <div className="mt-6">
-            <ITEmailsSettings />
+          <div className="mt-6 space-y-6">
+            <EmailsSettings
+              columnKey="it_emails"
+              title='נמענים להתראות IT'
+              description='כתובות דוא"ל שיקבלו התראה בעת פתיחת קריאת IT חדשה (מופרדות בפסיק)'
+              placeholder="it@company.com, ops@company.com"
+            />
+            <EmailsSettings
+              columnKey="expiry_notification_emails"
+              title="נמענים להתראות תפוגה"
+              description='כתובות דוא"ל שיקבלו סיכום יומי של ציוד שמתקרב לתפוגה (מופרדות בפסיק). אם ריק - לא יישלחו התראות.'
+              placeholder="ops@company.com, manager@company.com"
+            />
           </div>
         </TabsContent>
 
