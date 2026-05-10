@@ -6,6 +6,8 @@ import { Clock4, Check, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { ExportExcelButton } from "@/components/ExcelActionButtons";
+import { exportToExcel } from "@/lib/exportExcel";
 
 const FILTERS = [
   { id: "pending", label: "ממתינות" },
@@ -47,14 +49,45 @@ export default function AttendanceCorrections() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="page-header">
-        <h1 className="page-title flex items-center gap-2">
-          <Clock4 className="w-5 h-5 text-primary" />
-          תיקוני שעון נוכחות
-        </h1>
-        <p className="page-subtitle">
-          {isPayroll && !canReview ? "תיקונים מאושרים לעיון" : "אישור בקשות תיקון של עובדים"}
-        </p>
+      <div className="page-header flex items-start justify-between gap-3">
+        <div>
+          <h1 className="page-title flex items-center gap-2">
+            <Clock4 className="w-5 h-5 text-primary" />
+            תיקוני שעון נוכחות
+          </h1>
+          <p className="page-subtitle">
+            {isPayroll && !canReview ? "תיקונים מאושרים לעיון" : "אישור בקשות תיקון של עובדים"}
+          </p>
+        </div>
+        <ExportExcelButton
+          disabled={!filtered.length}
+          onClick={() => {
+            if (!filtered.length) return;
+            exportToExcel(
+              filtered.map((r: any) => ({
+                full_name: r.employee?.full_name ?? "",
+                department: r.employee?.department ?? "",
+                correction_date: new Date(r.correction_date).toLocaleDateString("en-GB").replace(/\//g, "-"),
+                original: `${r.original_check_in?.slice(0, 5) ?? "—"} – ${r.original_check_out?.slice(0, 5) ?? "—"}`,
+                requested: `${r.requested_check_in?.slice(0, 5) ?? "—"} – ${r.requested_check_out?.slice(0, 5) ?? "—"}`,
+                reason: r.reason ?? "",
+                status: STATUS_LABELS[r.status] ?? r.status,
+                manager_note: r.manager_note ?? "",
+              })),
+              [
+                { key: "full_name", label: "שם עובד" },
+                { key: "department", label: "מחלקה" },
+                { key: "correction_date", label: "תאריך" },
+                { key: "original", label: "מקורי" },
+                { key: "requested", label: "מבוקש" },
+                { key: "reason", label: "סיבה" },
+                { key: "status", label: "סטטוס" },
+                { key: "manager_note", label: "הערת מנהל" },
+              ],
+              "תיקוני_שעון"
+            );
+          }}
+        />
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">

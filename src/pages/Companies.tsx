@@ -13,6 +13,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Building2, Plus, Users, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { he } from "date-fns/locale";
+import { ExportExcelButton } from "@/components/ExcelActionButtons";
+import { exportToExcel } from "@/lib/exportExcel";
 
 export default function Companies() {
   const { toast } = useToast();
@@ -107,13 +109,33 @@ export default function Companies() {
           <h1 className="text-2xl font-bold text-foreground">ניהול חברות</h1>
           <p className="text-muted-foreground">יצירה וניהול של חברות במערכת</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={handleNew} className="gap-2">
-              <Plus className="w-4 h-4" />
-              חברה חדשה
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          <ExportExcelButton
+            disabled={!companies.length}
+            onClick={() => {
+              if (!companies.length) return;
+              exportToExcel(
+                companies.map((c: any) => ({
+                  name: c.name,
+                  users: countForCompany(c.id),
+                  created_at: format(new Date(c.created_at), "dd-MM-yyyy"),
+                })),
+                [
+                  { key: "name", label: "שם חברה" },
+                  { key: "users", label: "משתמשים" },
+                  { key: "created_at", label: "נוצרה בתאריך" },
+                ],
+                "חברות"
+              );
+            }}
+          />
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={handleNew} className="gap-2">
+                <Plus className="w-4 h-4" />
+                חברה חדשה
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>{editId ? "עריכת חברה" : "חברה חדשה"}</DialogTitle>
@@ -137,6 +159,7 @@ export default function Companies() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Plus, Download, Upload, Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
+import { ExportExcelButton, ImportExcelButton } from "@/components/ExcelActionButtons";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAssets } from "@/hooks/useData";
@@ -80,32 +81,29 @@ export default function Assets() {
                   <p className="page-subtitle">ניהול מלאי ומעקב אחר כלל משאבי החברה</p>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" className="gap-2" onClick={() => {
-                    if (!assets?.length) return;
-                    exportToExcel(assets.map((a: any) => ({
-                      ...a,
-                      category_name: a.asset_categories?.category_name ?? "",
-                      owner_name: a.employees?.full_name ?? "במלאי",
-                      status_label: assetStatusLabels[a.status] ?? a.status,
-                      expiry_fmt: a.expiry_date ? new Date(a.expiry_date).toLocaleDateString("en-GB").replace(/\//g, "-") : "",
-                    })), [
-                      { key: "asset_code", label: "מזהה" },
-                      { key: "asset_name", label: "שם פריט" },
-                      { key: "category_name", label: "קטגוריה" },
-                      { key: "serial_number", label: "מס׳ סידורי" },
-                      { key: "owner_name", label: "בעלות" },
-                      { key: "status_label", label: "סטטוס" },
-                      { key: "expiry_fmt", label: "תפוגה" },
-                      { key: "notes", label: "הערות" },
-                    ], "רשימת_ציוד");
-                  }}>
-                    <Download className="w-4 h-4" />
-                    ייצוא לאקסל
-                  </Button>
-                  <Button variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
-                    <Upload className="w-4 h-4" />
-                    יבוא מאקסל
-                  </Button>
+                  <ExportExcelButton
+                    disabled={!assets?.length}
+                    onClick={() => {
+                      if (!assets?.length) return;
+                      exportToExcel(assets.map((a: any) => ({
+                        ...a,
+                        category_name: a.asset_categories?.category_name ?? "",
+                        owner_name: a.employees?.full_name ?? "במלאי",
+                        status_label: assetStatusLabels[a.status] ?? a.status,
+                        expiry_fmt: a.expiry_date ? new Date(a.expiry_date).toLocaleDateString("en-GB").replace(/\//g, "-") : "",
+                      })), [
+                        { key: "asset_code", label: "מזהה" },
+                        { key: "asset_name", label: "שם פריט" },
+                        { key: "category_name", label: "קטגוריה" },
+                        { key: "serial_number", label: "מס׳ סידורי" },
+                        { key: "owner_name", label: "בעלות" },
+                        { key: "status_label", label: "סטטוס" },
+                        { key: "expiry_fmt", label: "תפוגה" },
+                        { key: "notes", label: "הערות" },
+                      ], "רשימת_ציוד");
+                    }}
+                  />
+                  <ImportExcelButton onClick={() => setImportOpen(true)} />
                   <Button className="gap-2" onClick={() => { setAddCategoryId(undefined); setAddOpen(true); }}>
                     <Plus className="w-4 h-4" />
                     פריט חדש
