@@ -54,7 +54,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
   const [form, setForm] = useState({
     asset_name: "", category_id: "", serial_number: "", current_owner_id: "",
     status: "in_stock", manufacturer_model: "", condition: "good",
-    expiry_date: "", notes: "",
+    expiry_date: "", notes: "", notification_days_before: "" as string,
   });
   const [customFields, setCustomFields] = useState<Record<string, string>>({});
 
@@ -77,6 +77,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
         condition: asset.condition ?? "good",
         expiry_date: asset.expiry_date ?? "",
         notes: asset.notes ?? "",
+        notification_days_before: (asset as any).notification_days_before == null ? "" : String((asset as any).notification_days_before),
       });
       // Load existing custom_fields as strings
       const cf: Record<string, string> = {};
@@ -159,7 +160,8 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
         expiry_date: form.expiry_date || null,
         notes: form.notes || null,
         custom_fields: cleanCustom,
-      });
+        notification_days_before: form.notification_days_before.trim() === "" ? null : Number(form.notification_days_before),
+      } as any);
       toast({ title: "פריט עודכן בהצלחה" });
       setMode("view");
     } catch (err: any) {
@@ -316,22 +318,24 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                     </div>
                   </div>
                 )}
-                <div>
-                  <label className="text-sm font-medium mb-1 block">
-                    {isInsurance ? "תוקף עד" : "תאריך תפוגה"}
-                  </label>
-                  {isView ? (
-                    <div className={readCls} dir="ltr">{form.expiry_date ? new Date(form.expiry_date).toLocaleDateString("he-IL") : display(null)}</div>
-                  ) : (
-                    <input
-                      type="date"
-                      value={form.expiry_date}
-                      onChange={(e) => setForm({ ...form, expiry_date: e.target.value })}
-                      className={inputCls}
-                      dir="ltr"
-                    />
-                  )}
-                </div>
+                {selectedCategory?.prefix !== "CAR" && (
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">
+                      {isInsurance ? "תוקף עד" : "תאריך תפוגה"}
+                    </label>
+                    {isView ? (
+                      <div className={readCls} dir="ltr">{form.expiry_date ? new Date(form.expiry_date).toLocaleDateString("he-IL") : display(null)}</div>
+                    ) : (
+                      <input
+                        type="date"
+                        value={form.expiry_date}
+                        onChange={(e) => setForm({ ...form, expiry_date: e.target.value })}
+                        className={inputCls}
+                        dir="ltr"
+                      />
+                    )}
+                  </div>
+                )}
               </div>
             );
           })()}

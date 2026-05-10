@@ -52,6 +52,7 @@ export function useCreateAsset() {
       notes?: string;
       manufacturer_model?: string;
       condition?: string;
+      notification_days_before?: number | null;
     }) => {
       const { data, error } = await supabase
         .from("assets")

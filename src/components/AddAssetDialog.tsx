@@ -74,6 +74,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props)
     status: "in_stock" as "in_use" | "in_stock" | "in_repair",
     expiry_date: "",
     notes: "",
+    notification_days_before: "" as string,
   });
   const [customFields, setCustomFields] = useState<Record<string, string>>({});
 
@@ -101,6 +102,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props)
       setForm({
         asset_code: "", asset_name: "", category_id: "", serial_number: "",
         current_owner_id: "", status: "in_stock", expiry_date: "", notes: "",
+        notification_days_before: "",
       });
       setCustomFields({});
       setBulkMode(false);
@@ -295,6 +297,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props)
         custom_fields: Object.keys(customFields).length > 0 ? customFields : undefined,
         expiry_date: form.expiry_date || undefined,
         notes: form.notes || undefined,
+        notification_days_before: form.notification_days_before.trim() === "" ? null : Number(form.notification_days_before),
       });
       // Close dialog + show toast immediately for snappy UX
       const catName = selectedCategory?.category_name ?? "פריט";
@@ -547,23 +550,46 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props)
                   </div>
                 </div>
               )}
-              <div>
-                <label className="text-sm font-medium mb-1 block">
-                  {selectedCategory?.prefix === "CINS" ? "תוקף עד" : "תאריך תפוגה"}
-                </label>
-                <input
-                  type="date"
-                  value={form.expiry_date}
-                  onChange={(e) => set("expiry_date", e.target.value)}
-                  className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
-                  dir="ltr"
-                />
-              </div>
+              {selectedCategory?.prefix !== "CAR" && (
+                <div>
+                  <label className="text-sm font-medium mb-1 block">
+                    {selectedCategory?.prefix === "CINS" ? "תוקף עד" : "תאריך תפוגה"}
+                  </label>
+                  <input
+                    type="date"
+                    value={form.expiry_date}
+                    onChange={(e) => set("expiry_date", e.target.value)}
+                    className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
+                    dir="ltr"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {!bulkMode && (
+            <div>
+              <label className="text-sm font-medium mb-1 block">
+                התראת מייל מראש (ימים לפני תפוגה)
+              </label>
+              <input
+                type="number"
+                min={0}
+                max={365}
+                value={form.notification_days_before}
+                onChange={(e) => set("notification_days_before", e.target.value)}
+                placeholder={`ברירת מחדל: ${(selectedCategory as any)?.default_notification_days_before ?? 14} ימים`}
+                className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
+                dir="ltr"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                השאר ריק כדי להשתמש בברירת המחדל של הקטגוריה.
+              </p>
             </div>
           )}
 
           {/* Bulk mode: universal expiry (only if not per-emp) */}
-          {bulkMode && !expiryIsPerEmp && (
+          {bulkMode && !expiryIsPerEmp && selectedCategory?.prefix !== "CAR" && (
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <div className="flex items-center justify-between mb-1">
@@ -915,7 +941,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props)
                               </button>
                             </div>
                           </th>
-                          {expiryIsPerEmp && (
+                          {expiryIsPerEmp && selectedCategory?.prefix !== "CAR" && (
                             <th className="text-right p-2 font-medium min-w-[160px]">
                               <div className="flex items-center justify-between gap-1">
                                 <span>תאריך תפוגה</span>
@@ -988,7 +1014,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props)
                                   dir="ltr"
                                 />
                               </td>
-                              {expiryIsPerEmp && (
+                              {expiryIsPerEmp && selectedCategory?.prefix !== "CAR" && (
                                 <td className="p-2">
                                   <Popover>
                                     <PopoverTrigger asChild>
