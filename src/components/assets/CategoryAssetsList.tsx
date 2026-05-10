@@ -210,7 +210,11 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
                 </div>
                 <div className="w-full">
                   <div className="text-base font-semibold line-clamp-2 leading-tight">{sc.name}</div>
-                  {isAssignable && (
+                  {isInsurance ? (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {sc.total} פוליסות
+                    </div>
+                  ) : isAssignable && (
                     <div className="text-xs text-muted-foreground mt-1 flex items-center justify-center gap-1">
                       <Users className="w-3 h-3" />
                       {sc.assigned} משויכים / {sc.total}
