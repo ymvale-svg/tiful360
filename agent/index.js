@@ -269,7 +269,8 @@ async function runCycle() {
 
 async function main() {
   if (!RAW_MODE && (!TOKEN || !FUNCTIONS_URL || !COMPANY_ID)) {
-    console.error("❌ חסרים: ATTENDANCE_INGEST_TOKEN / SUPABASE_FUNCTIONS_URL / COMPANY_ID");
+    console.error("❌ חסרה הגדרה ב-.env (ATTENDANCE_INGEST_TOKEN / SUPABASE_FUNCTIONS_URL / COMPANY_ID).");
+    console.error('   הרץ: npm run setup   — וזה ייצור .env תקין אוטומטית.');
     process.exit(1);
   }
 

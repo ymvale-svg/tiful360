@@ -4,6 +4,7 @@
   "description": "Agent מקומי לשעון ZKTeco U560 — מושך פאנצ'ים בפרוטוקול ZK ושולח ל-Lovable Cloud",
   "main": "index.js",
   "scripts": {
+    "setup": "node setup.js",
     "start": "node index.js",
     "raw": "node index.js --raw",
     "once": "node index.js --once",
