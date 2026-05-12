@@ -634,18 +634,21 @@ function BatchPayslipsList({ batch }: { batch: any }) {
       )}
       {savedPayslips.map((p: any) => {
         const isMatched = !!p.employee_id;
+        const isFailed = p.extraction_status === "failed";
         return (
-          <div key={p.id} className="flex items-center gap-3 bg-background p-2.5 rounded-lg border border-border/40">
+          <div key={p.id} className={`flex items-center gap-3 bg-background p-2.5 rounded-lg border ${isFailed ? "border-destructive/30" : "border-border/40"}`}>
             <div className="flex-1 text-sm">
               <p className="font-medium">
                 {isMatched ? p.employee?.full_name : (p.employee_name_detected ?? "לא זוהה שם")}
-                {isMatched && <span className="ms-2 text-[10px] px-2 py-0.5 rounded-full bg-success/10 text-success">משויך</span>}
-                {!isMatched && <span className="ms-2 text-[10px] px-2 py-0.5 rounded-full bg-warning/10 text-warning">לא משויך</span>}
+                {isFailed && <span className="ms-2 text-[10px] px-2 py-0.5 rounded-full bg-destructive/10 text-destructive">נכשל</span>}
+                {!isFailed && isMatched && <span className="ms-2 text-[10px] px-2 py-0.5 rounded-full bg-success/10 text-success">משויך</span>}
+                {!isFailed && !isMatched && <span className="ms-2 text-[10px] px-2 py-0.5 rounded-full bg-warning/10 text-warning">לא משויך</span>}
               </p>
               <p className="text-xs text-muted-foreground">
                 ת.ז.: <span className="font-mono">{p.id_number_detected ?? p.employee?.id_number ?? "—"}</span>
                 {p.page_indices?.length > 0 && <span className="ms-2">עמוד {Math.min(...p.page_indices) + 1}</span>}
               </p>
+              {isFailed && p.extraction_notes && <p className="mt-1 text-xs text-destructive/80">{p.extraction_notes}</p>}
             </div>
             {!isMatched && (
               <div className="w-72">
