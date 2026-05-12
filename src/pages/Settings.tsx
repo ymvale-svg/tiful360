@@ -178,13 +178,15 @@ function GeneralSettings() {
   const { activeCompanyId, activeCompany } = useCompany();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const fileRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(activeCompany?.name ?? "");
   const [logoUrl, setLogoUrl] = useState(activeCompany?.logo_url ?? "");
+  const [uploading, setUploading] = useState(false);
 
-  useState(() => {
+  useEffect(() => {
     setName(activeCompany?.name ?? "");
     setLogoUrl(activeCompany?.logo_url ?? "");
-  });
+  }, [activeCompany]);
 
   const updateMutation = useMutation({
     mutationFn: async () => {
@@ -207,6 +209,49 @@ function GeneralSettings() {
     },
   });
 
+  const handleUpload = async (file: File) => {
+    if (!activeCompanyId) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "הקובץ גדול מדי", description: "מקסימום 5MB", variant: "destructive" });
+      return;
+    }
+    try {
+      setUploading(true);
+      const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+      const path = `${activeCompanyId}/logo-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("company-logos").upload(path, file, {
+        cacheControl: "3600",
+        upsert: true,
+        contentType: file.type,
+      });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("company-logos").getPublicUrl(path);
+      const url = pub.publicUrl;
+      const { error: updErr } = await supabase.from("companies").update({ logo_url: url }).eq("id", activeCompanyId);
+      if (updErr) throw updErr;
+      setLogoUrl(url);
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      toast({ title: "הלוגו הועלה בהצלחה" });
+    } catch (e: any) {
+      toast({ title: "שגיאה בהעלאה", description: e.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  const removeLogo = async () => {
+    if (!activeCompanyId) return;
+    setLogoUrl("");
+    const { error } = await supabase.from("companies").update({ logo_url: null }).eq("id", activeCompanyId);
+    if (error) {
+      toast({ title: "שגיאה", description: error.message, variant: "destructive" });
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ["companies"] });
+    toast({ title: "הלוגו הוסר" });
+  };
+
   if (!activeCompanyId) {
     return <div className="text-center py-8 text-muted-foreground">לא נבחרה חברה</div>;
   }
@@ -225,8 +270,52 @@ function GeneralSettings() {
           className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
         />
       </div>
+
       <div>
-        <label className="text-sm font-medium mb-1.5 block">כתובת לוגו (URL)</label>
+        <label className="text-sm font-medium mb-1.5 block">לוגו החברה</label>
+        <div className="flex items-center gap-4">
+          <div className="w-24 h-24 rounded-lg border border-border/50 overflow-hidden bg-muted flex items-center justify-center shrink-0">
+            {logoUrl ? (
+              <img src={logoUrl} alt="לוגו" className="max-w-full max-h-full object-contain" />
+            ) : (
+              <Building2 className="w-8 h-8 text-muted-foreground" />
+            )}
+          </div>
+          <div className="flex flex-col gap-2">
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/png,image/jpeg,image/svg+xml,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleUpload(f);
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+            >
+              <Upload className="w-4 h-4" />
+              {uploading ? "מעלה..." : "העלאת לוגו"}
+            </Button>
+            {logoUrl && (
+              <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-destructive" onClick={removeLogo}>
+                <Trash2 className="w-4 h-4" />
+                הסר לוגו
+              </Button>
+            )}
+            <p className="text-xs text-muted-foreground">PNG / JPG / SVG עד 5MB. הלוגו יופיע ממורכז בתחילת מיילים שנשלחים לעובדים.</p>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <label className="text-sm font-medium mb-1.5 block">או הדבק כתובת לוגו (URL)</label>
         <input
           value={logoUrl}
           onChange={(e) => setLogoUrl(e.target.value)}
@@ -234,12 +323,8 @@ function GeneralSettings() {
           className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 font-mono"
           dir="ltr"
         />
-        {logoUrl && (
-          <div className="mt-2 w-16 h-16 rounded-lg border border-border/50 overflow-hidden bg-muted flex items-center justify-center">
-            <img src={logoUrl} alt="לוגו" className="max-w-full max-h-full object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
-          </div>
-        )}
       </div>
+
       <Button className="gap-1.5" onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>
         <Save className="w-4 h-4" />
         {updateMutation.isPending ? "שומר..." : "שמור שינויים"}
