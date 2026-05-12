@@ -2,8 +2,11 @@ import { useParams, Link } from "react-router-dom";
 import {
   ArrowRight, Shield, Key, Clock, AlertTriangle, UserMinus,
   FileText, RefreshCw, Package, User, Mail, Phone, Calendar, Building2, IdCard,
-  Pencil, Plus, Trash2, Upload, Unlink, CalendarDays,
+  Pencil, Plus, Trash2, Upload, Unlink, CalendarDays, MapPin,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -84,7 +87,28 @@ export default function EmployeeDetail() {
   const employeeAssets = assets ?? [];
   const physicalAssets = employeeAssets.filter((a: any) => (a.asset_categories?.prefix ?? "") !== "DACC");
   const digitalAccessAssets = employeeAssets.filter((a: any) => (a.asset_categories?.prefix ?? "") === "DACC");
-  const { isAdmin, isSuperAdmin, isPayroll, user } = useAuth();
+  const { isAdmin, isSuperAdmin, isPayroll, isOperations, isFinance, user } = useAuth();
+  const qc = useQueryClient();
+  const canEditRemotePunch = isSuperAdmin || isAdmin || isPayroll || isOperations || isFinance;
+  const [savingRemote, setSavingRemote] = useState(false);
+
+  const handleToggleRemotePunch = async (value: boolean) => {
+    if (!id) return;
+    setSavingRemote(true);
+    const { error } = await supabase.rpc("set_employee_remote_punch", {
+      _employee_id: id,
+      _value: value,
+    });
+    setSavingRemote(false);
+    if (error) {
+      toast({ title: "שגיאה בעדכון החתמה מרחוק", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: value ? "החתמה מרחוק הופעלה" : "החתמה מרחוק בוטלה" });
+    qc.invalidateQueries({ queryKey: ["employee", id] });
+    qc.invalidateQueries({ queryKey: ["employees"] });
+  };
+
 
   const canSeePayslips =
     isSuperAdmin || isAdmin || isPayroll ||
@@ -291,6 +315,27 @@ export default function EmployeeDetail() {
               />
             )}
           </dl>
+
+          {canEditRemotePunch && (
+            <div className="mt-6 pt-4 border-t border-border/50">
+              <div className="flex items-start justify-between gap-4 p-3 rounded-lg bg-muted/40">
+                <div className="flex items-start gap-3">
+                  <MapPin className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium">איפשור החתמה מרחוק</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      מאפשר לעובד להחתים נוכחות מהפורטל בלי שעון נוכחות פיזי.
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={!!(employee as any).can_remote_punch}
+                  disabled={savingRemote}
+                  onCheckedChange={handleToggleRemotePunch}
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
 
