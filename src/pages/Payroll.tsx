@@ -3,11 +3,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
-import { Wallet, FileText, Stethoscope, Calendar, Clock4, Upload, LayoutDashboard, FolderOpen, UserSearch, Settings as SettingsIcon, Save, Mail, Paperclip } from "lucide-react";
+import { Wallet, FileText, Stethoscope, Calendar, Clock4, Upload, LayoutDashboard, FolderOpen, UserSearch, Settings as SettingsIcon, Save, Mail, Paperclip, AlertCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { PayslipsUploadDialog } from "@/components/PayslipsUploadDialog";
-import { usePayslipBatches, useUnmatchedPayslips, useAssignPayslipToEmployee, useBatchPayslips, useDeletePayslip, useDeleteBatch } from "@/hooks/usePayslips";
+import { getPayslipSignedUrl, usePayslipBatches, useUnmatchedPayslips, useAssignPayslipToEmployee, useBatchPayslips, useDeletePayslip, useDeleteBatch } from "@/hooks/usePayslips";
 import { Trash2 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -511,7 +511,7 @@ function BatchesManagementTab() {
                   {expandedBatchId === b.id && (
                     <tr>
                       <td colSpan={9} className="bg-muted/30 p-0">
-                        <BatchPayslipsList batchId={b.id} />
+                        <BatchPayslipsList batch={b} />
                       </td>
                     </tr>
                   )}
