@@ -651,6 +651,9 @@ Deno.serve(async (req) => {
       failed: failedCount,
       unmatched_id_numbers: unmatchedIdNumbers,
       balance_changes: balanceChanges,
+      matched_payslips: matchedPayslips,
+      unmatched_payslips: unmatchedPayslips,
+      failed_payslips: failedPayslips,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
