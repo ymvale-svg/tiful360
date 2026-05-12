@@ -251,10 +251,17 @@ Deno.serve(async (req) => {
     // Group consecutive pages by idNumber
     const groups: { idNumber: string; pageIndices: number[]; primary: PageInfo }[] = [];
     let currentGroup: typeof groups[0] | null = null;
+    const orphanPages: number[] = []; // pages with no ID detected and no preceding group
+    const blankPages: number[] = []; // pages with no extracted text at all
     for (const p of pages) {
       const id = p.idNumber;
       if (!id) {
-        if (currentGroup) currentGroup.pageIndices.push(p.pageIndex);
+        if (currentGroup) {
+          currentGroup.pageIndices.push(p.pageIndex);
+        } else {
+          orphanPages.push(p.pageIndex);
+          if (!p.text || p.text.trim().length < 20) blankPages.push(p.pageIndex);
+        }
         continue;
       }
       if (currentGroup && currentGroup.idNumber === id) {
@@ -294,6 +301,22 @@ Deno.serve(async (req) => {
     console.log('split-payslips: groups=', groups.length,
       'employees loaded=', employees?.length ?? 0,
       'idMap size=', idMap.size);
+
+    // Overwrite: delete existing payslips for the same company+period
+    // (covers re-uploads of the same monthly file).
+    const { error: delPsErr } = await admin.from('payslips')
+      .delete()
+      .eq('company_id', company_id)
+      .eq('period_year', period_year)
+      .eq('period_month', period_month);
+    if (delPsErr) console.error('overwrite delete payslips failed:', delPsErr);
+    // Mark prior batches for the same period as superseded so reports stay clean.
+    await admin.from('payslip_batches')
+      .update({ status: 'superseded' })
+      .eq('company_id', company_id)
+      .eq('period_year', period_year)
+      .eq('period_month', period_month)
+      .neq('status', 'superseded');
 
     // Create batch
     const { data: batchRow, error: batchErr } = await admin.from('payslip_batches').insert({
@@ -642,6 +665,40 @@ Deno.serve(async (req) => {
       performed_by: user.id,
     });
 
+    // Build clear, user-actionable issues list
+    const issues: { type: string; title: string; instruction: string; pages?: number[]; ids?: string[] }[] = [];
+    if (groups.length === 0) {
+      issues.push({
+        type: 'no_ids',
+        title: 'לא זוהתה אף תעודת זהות בקובץ',
+        instruction: 'ייתכן שה-PDF סרוק (תמונה ולא טקסט). הפק את קובץ התלושים מתוכנת השכר כ-PDF טקסטואלי (לא סרוק/לא מודפס מתמונה) ונסה שוב.',
+      });
+    } else if (orphanPages.length > 0) {
+      issues.push({
+        type: 'orphan_pages',
+        title: `${orphanPages.length} עמודים בתחילת הקובץ ללא זיהוי ת.ז.`,
+        instruction: blankPages.length > 0
+          ? 'יש עמודים ריקים או שאינם טקסטואליים בתחילת הקובץ. הסר עמודי כריכה/הקדמה והעלה מחדש, או הפק את ה-PDF כקובץ טקסטואלי.'
+          : 'העמודים הראשונים אינם מתחילים בתלוש שזוהתה בו ת.ז. ודא שהקובץ מתחיל ישירות בתלוש הראשון, ושלא נוסף עמוד כריכה.',
+        pages: orphanPages.map((p) => p + 1),
+      });
+    }
+    if (unmatchedIdNumbers.length > 0) {
+      issues.push({
+        type: 'unmatched_ids',
+        title: `${unmatchedIdNumbers.length} תעודות זהות אינן רשומות במערכת`,
+        instruction: 'ת.ז. שזוהתה בתלוש לא קיימת באף תיק עובד פעיל. בדוק שמספר ת.ז. בכרטיס העובד תואם בדיוק (כולל ספרת ביקורת) לזה שבתלוש, או הוסף את העובד לפני העלאה חוזרת.',
+        ids: unmatchedIdNumbers,
+      });
+    }
+    if (failedCount > 0) {
+      issues.push({
+        type: 'failed',
+        title: `${failedCount} תלושים נכשלו בעיבוד`,
+        instruction: 'ראה פירוט שגיאה לכל תלוש בטבלה. נסה להעלות מחדש; אם הבעיה חוזרת, פנה לתמיכה עם מספר האצווה.',
+      });
+    }
+
     return new Response(JSON.stringify({
       batch_id: batchId,
       total_pages: effectivePages,
@@ -654,6 +711,9 @@ Deno.serve(async (req) => {
       matched_payslips: matchedPayslips,
       unmatched_payslips: unmatchedPayslips,
       failed_payslips: failedPayslips,
+      orphan_pages: orphanPages.map((p) => p + 1),
+      issues,
+      overwritten: true,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

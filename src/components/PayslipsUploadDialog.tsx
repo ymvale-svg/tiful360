@@ -108,6 +108,8 @@ export function PayslipsUploadDialog({ open, onOpenChange }: Props) {
           </DialogTitle>
           <DialogDescription>
             העלה את קובץ ה-PDF המאוחד של תלושי השכר. המערכת תפצל אותו אוטומטית לכל עובד לפי תעודת זהות ותעדכן יתרות חופשה ומחלה.
+            <br />
+            <span className="text-warning font-medium">שים לב: העלאה חוזרת לאותו חודש תדרוס את התלושים הקיימים לאותה תקופה.</span>
           </DialogDescription>
         </DialogHeader>
 
@@ -180,6 +182,32 @@ export function PayslipsUploadDialog({ open, onOpenChange }: Props) {
 
         {stage === "done" && result && (
           <div className="space-y-4 mt-4">
+            {result.issues?.length > 0 && (
+              <div className="space-y-2">
+                {result.issues.map((iss: any, i: number) => (
+                  <div key={i} className="border border-warning/40 bg-warning/5 rounded-lg p-3 space-y-1">
+                    <p className="text-sm font-bold flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-warning" />
+                      {iss.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{iss.instruction}</p>
+                    {iss.pages?.length > 0 && (
+                      <p className="text-xs">
+                        <span className="font-medium">עמודים:</span>{" "}
+                        <span className="font-mono">{iss.pages.join(", ")}</span>
+                      </p>
+                    )}
+                    {iss.ids?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {iss.ids.map((c: string) => (
+                          <span key={c} className="text-xs font-mono bg-muted px-2 py-1 rounded">{c}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="grid grid-cols-3 gap-3">
               <div className="p-3 rounded-lg bg-success/10 border border-success/20">
                 <div className="flex items-center gap-2">
