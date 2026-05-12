@@ -484,6 +484,9 @@ Deno.serve(async (req) => {
     let failedCount = 0;
     const unmatchedIdNumbers: string[] = [];
     const balanceChanges: any[] = [];
+    const matchedPayslips: any[] = [];
+    const unmatchedPayslips: any[] = [];
+    const failedPayslips: any[] = [];
 
     for (let gi = 0; gi < groups.length; gi++) {
       const group = groups[gi];
