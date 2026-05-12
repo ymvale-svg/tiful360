@@ -26,6 +26,7 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultCategoryId?: string;
+  defaultAssetName?: string;
 }
 
 const INSURANCE_TYPES = ["רכב", "דירקטורים", "צד ג׳", "קבלני"];
@@ -51,7 +52,7 @@ function isPerEmployeeByName(name: string): boolean {
 // Categories where expiry_date is per-employee by default
 const PER_EMP_EXPIRY_PREFIXES = ["VHC", "EQP"];
 
-export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props) {
+export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultAssetName }: Props) {
   const { activeCompanyId } = useCompany();
   const { data: categories } = useAssetCategories();
   const { data: employees } = useEmployees();
@@ -115,9 +116,36 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId }: Props)
       setPendingDocs([]);
       setDocDragging(false);
     } else if (defaultCategoryId) {
-      setForm(prev => ({ ...prev, category_id: defaultCategoryId }));
+      setForm(prev => ({
+        ...prev,
+        category_id: defaultCategoryId,
+        asset_name: defaultAssetName ?? prev.asset_name,
+      }));
     }
-  }, [open, defaultCategoryId]);
+  }, [open, defaultCategoryId, defaultAssetName]);
+
+  // Prefill technical specs (custom fields) from an existing asset of the same model.
+  // Only copies fields that are NOT per-employee (i.e. shared technical attributes).
+  useEffect(() => {
+    if (!open || !defaultAssetName || !form.category_id || !existingAssets) return;
+    const template = existingAssets.find(
+      (a: any) =>
+        a.category_id === form.category_id &&
+        (a.asset_name ?? "").trim() === defaultAssetName.trim() &&
+        a.custom_fields && typeof a.custom_fields === "object"
+    );
+    if (!template) return;
+    const cf = (template as any).custom_fields as Record<string, any>;
+    const prefilled: Record<string, string> = {};
+    Object.entries(cf).forEach(([k, v]) => {
+      if (v == null || v === "") return;
+      if (isPerEmployeeByName(k)) return; // skip per-employee fields (username, license, IMEI, etc.)
+      prefilled[k] = String(v);
+    });
+    if (Object.keys(prefilled).length > 0) {
+      setCustomFields(prev => ({ ...prefilled, ...prev }));
+    }
+  }, [open, defaultAssetName, form.category_id, existingAssets]);
 
   // Compute per-employee field keys defaults when category or fields change
   useEffect(() => {
