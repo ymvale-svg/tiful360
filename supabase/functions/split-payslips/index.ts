@@ -590,6 +590,15 @@ Deno.serve(async (req) => {
             pages: pageIndices,
             status,
           });
+          if (matched.email) {
+            payslipNotifications.push({
+              to: matched.email,
+              employee_name: prevEmp?.full_name ?? matched.full_name ?? '',
+              period_year: recordYear,
+              period_month: recordMonth,
+              employee_id: matched.id,
+            });
+          }
         } else {
           await admin.from('payslips').insert({
             company_id,
