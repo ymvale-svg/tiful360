@@ -617,6 +617,12 @@ Deno.serve(async (req) => {
           console.error('Failed to record failed payslip row:', group.idNumber, recordErr);
         }
         failedCount++;
+        failedPayslips.push({
+          id_number: group.idNumber ?? null,
+          employee_name: group.primary?.employeeName ?? null,
+          pages: group.pageIndices,
+          error: failureMessage.slice(0, 300),
+        });
       }
     }
 
