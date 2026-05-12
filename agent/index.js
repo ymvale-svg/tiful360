@@ -163,6 +163,58 @@ async function sendBatch(batch) {
   try { return JSON.parse(txt); } catch { return {}; }
 }
 
+// === Heartbeat ===
+const HEARTBEAT_STATE = {
+  lastError: null,
+  lastSuccessfulPoll: null,
+  clockReachable: null,
+};
+
+function checkClockReachable(host, port, timeoutMs = 3000) {
+  return new Promise((resolve) => {
+    const s = new net.Socket();
+    let done = false;
+    const finish = (ok) => { if (done) return; done = true; try { s.destroy(); } catch {} resolve(ok); };
+    s.setTimeout(timeoutMs);
+    s.once("connect", () => finish(true));
+    s.once("timeout", () => finish(false));
+    s.once("error", () => finish(false));
+    s.connect(port, host);
+  });
+}
+
+async function sendHeartbeat() {
+  if (!TOKEN || !FUNCTIONS_URL || !COMPANY_ID) return;
+  let reachable = false;
+  try { reachable = await checkClockReachable(CLOCK_HOST, CLOCK_PORT); } catch {}
+  HEARTBEAT_STATE.clockReachable = reachable;
+
+  const payload = {
+    company_id: COMPANY_ID,
+    device_key: os.hostname() || "main",
+    agent_version: AGENT_VERSION,
+    clock_ip: CLOCK_HOST,
+    clock_reachable: reachable,
+    last_error: HEARTBEAT_STATE.lastError,
+  };
+
+  try {
+    const res = await fetch(`${FUNCTIONS_URL}/ingest-attendance-heartbeat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${TOKEN}` },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const txt = await res.text();
+      console.warn(`💓 heartbeat נכשל: HTTP ${res.status}: ${txt}`);
+    } else {
+      console.log(`💓 heartbeat נשלח | clock_reachable=${reachable}`);
+    }
+  } catch (e) {
+    console.warn("💓 heartbeat נכשל:", e.message || e);
+  }
+}
+
 async function runCycle() {
   const zk = new ZKLib(CLOCK_HOST, CLOCK_PORT, CLOCK_TIMEOUT, CLOCK_INPORT);
   const ts = new Date().toISOString();
