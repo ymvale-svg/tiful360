@@ -583,15 +583,18 @@ function BatchPayslipsList({ batch }: { batch: any }) {
   };
 
   const savedPayslips = payslips ?? [];
+  const sourcePdfPath = savedPayslips.find((p: any) => p.source_pdf_url)?.source_pdf_url as string | undefined;
   const failedCount = Math.max(Number(batch.failed_count ?? 0), 0);
-  const missingPages = Math.max(Number(batch.total_pages ?? 0) - savedPayslips.length, 0);
-  const failedPages = Array.from({ length: Math.max(failedCount, missingPages) }, (_, i) => savedPayslips.length + i + 1);
+  const coveredPages = new Set<number>();
+  savedPayslips.forEach((p: any) => (p.page_indices ?? []).forEach((idx: number) => coveredPages.add(idx + 1)));
+  const missingPages = Array.from({ length: Number(batch.total_pages ?? 0) }, (_, i) => i + 1).filter((page) => !coveredPages.has(page));
+  const failedPages = missingPages.length ? missingPages : Array.from({ length: failedCount }, (_, i) => savedPayslips.length + i + 1);
 
   const openSourcePdf = async (page?: number) => {
-    if (!batch.source_pdf_url) return;
+    if (!sourcePdfPath) return;
     setOpeningSource(true);
     try {
-      const url = await getPayslipSignedUrl(batch.source_pdf_url);
+      const url = await getPayslipSignedUrl(sourcePdfPath);
       if (!url) throw new Error("לא ניתן לפתוח את קובץ המקור");
       window.open(page ? `${url}#page=${page}` : url, "_blank", "noopener,noreferrer");
     } catch (e: any) {
@@ -607,7 +610,7 @@ function BatchPayslipsList({ batch }: { batch: any }) {
     <div className="p-4 space-y-2">
       <div className="flex items-center justify-between gap-3 mb-2">
         <p className="text-sm font-medium">תלושי האצווה ({savedPayslips.length})</p>
-        {batch.source_pdf_url && (
+        {sourcePdfPath && (
           <Button size="sm" variant="outline" className="h-8 gap-1.5" disabled={openingSource} onClick={() => openSourcePdf()}>
             <FileText className="w-3.5 h-3.5" />
             פתח PDF מקור
