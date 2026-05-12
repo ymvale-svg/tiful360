@@ -576,6 +576,32 @@ Deno.serve(async (req) => {
         }
       } catch (e) {
         console.error('Group failed:', group.idNumber, e);
+        const failureMessage = e instanceof Error ? e.message : String(e);
+        try {
+          await admin.from('payslips').insert({
+            company_id,
+            employee_id: null,
+            id_number_detected: group.idNumber ?? null,
+            employee_name_detected: group.primary?.employeeName ?? null,
+            period_year: group.primary?.year ?? period_year,
+            period_month: group.primary?.month ?? period_month,
+            source_pdf_url: sourcePath,
+            page_indices: group.pageIndices,
+            pdf_url: groupPdfPaths.get(gi) ?? sourcePath,
+            vacation_balance: group.primary?.vacationBalance ?? null,
+            sick_balance: group.primary?.sickBalance ?? null,
+            gross_salary: group.primary?.grossSalary ?? null,
+            net_salary: group.primary?.netSalary ?? null,
+            work_days: group.primary?.workDays ?? null,
+            work_hours: group.primary?.workHours ?? null,
+            extraction_status: 'failed',
+            extraction_notes: failureMessage.slice(0, 500),
+            batch_id: batchId,
+            created_by: user.id,
+          });
+        } catch (recordErr) {
+          console.error('Failed to record failed payslip row:', group.idNumber, recordErr);
+        }
         failedCount++;
       }
     }
