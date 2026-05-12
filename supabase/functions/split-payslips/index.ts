@@ -298,10 +298,11 @@ Deno.serve(async (req) => {
       if (norm) idMap.set(norm, { id: e.id, full_name: e.full_name, email: e.email ?? null });
     }
 
-    // Fetch company name once for email subject/body
+    // Fetch company name + logo once for email subject/body
     const { data: companyRow } = await admin
-      .from('companies').select('name').eq('id', company_id).single();
+      .from('companies').select('name, logo_url').eq('id', company_id).single();
     const companyName = companyRow?.name ?? '';
+    const companyLogoUrl: string = companyRow?.logo_url ?? '';
 
     // Collect notifications to send after processing
     const payslipNotifications: { to: string; employee_name: string; period_year: number; period_month: number; employee_id: string }[] = [];
