@@ -416,6 +416,56 @@ export type Database = {
           },
         ]
       }
+      attendance_agent_heartbeats: {
+        Row: {
+          agent_version: string | null
+          clock_ip: string | null
+          clock_reachable: boolean | null
+          company_id: string
+          created_at: string
+          device_key: string
+          id: string
+          last_error: string | null
+          last_seen_at: string
+          last_success_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          agent_version?: string | null
+          clock_ip?: string | null
+          clock_reachable?: boolean | null
+          company_id: string
+          created_at?: string
+          device_key?: string
+          id?: string
+          last_error?: string | null
+          last_seen_at?: string
+          last_success_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          agent_version?: string | null
+          clock_ip?: string | null
+          clock_reachable?: boolean | null
+          company_id?: string
+          created_at?: string
+          device_key?: string
+          id?: string
+          last_error?: string | null
+          last_seen_at?: string
+          last_success_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_agent_heartbeats_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attendance_corrections: {
         Row: {
           attachment_url: string | null
@@ -1917,6 +1967,18 @@ export type Database = {
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
+      }
+      get_attendance_agent_status: {
+        Args: { _company_id: string }
+        Returns: {
+          agent_version: string
+          clock_ip: string
+          clock_reachable: boolean
+          device_key: string
+          last_error: string
+          last_seen_at: string
+          last_success_at: string
+        }[]
       }
       get_attendance_flow_stats: {
         Args: { _company_id: string }
