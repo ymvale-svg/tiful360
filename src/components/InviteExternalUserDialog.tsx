@@ -53,27 +53,31 @@ export function InviteExternalUserDialog({ open, onOpenChange }: Props) {
 
   const inviteMutation = useMutation({
     mutationFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-users?action=invite-external`,
+      const { data, error } = await supabase.functions.invoke(
+        "manage-users?action=invite-external",
         {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${session?.access_token}`,
-            "Content-Type": "application/json",
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-          body: JSON.stringify({
+          body: {
             email,
             full_name: fullName,
             role,
             company_ids: selectedCompanies,
-          }),
+          },
         }
       );
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed");
-      return json;
+      if (error) {
+        // Try to extract a friendlier message from the function response
+        let msg = error.message || "Failed";
+        try {
+          const ctx: any = (error as any).context;
+          if (ctx?.json) msg = ctx.json.error || msg;
+          else if (ctx?.body) {
+            const parsed = JSON.parse(await ctx.body.text());
+            msg = parsed.error || msg;
+          }
+        } catch {}
+        throw new Error(msg);
+      }
+      return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["managed-users"] });
