@@ -582,6 +582,11 @@ Deno.serve(async (req) => {
           });
           unmatchedCount++;
           if (!unmatchedIdNumbers.includes(normalizedId)) unmatchedIdNumbers.push(normalizedId);
+          unmatchedPayslips.push({
+            id_number: normalizedId,
+            employee_name: group.primary.employeeName,
+            pages: pageIndices,
+          });
         }
       } catch (e) {
         console.error('Group failed:', group.idNumber, e);
