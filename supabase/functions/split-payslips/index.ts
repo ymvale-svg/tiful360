@@ -665,6 +665,40 @@ Deno.serve(async (req) => {
       performed_by: user.id,
     });
 
+    // Build clear, user-actionable issues list
+    const issues: { type: string; title: string; instruction: string; pages?: number[]; ids?: string[] }[] = [];
+    if (groups.length === 0) {
+      issues.push({
+        type: 'no_ids',
+        title: 'לא זוהתה אף תעודת זהות בקובץ',
+        instruction: 'ייתכן שה-PDF סרוק (תמונה ולא טקסט). הפק את קובץ התלושים מתוכנת השכר כ-PDF טקסטואלי (לא סרוק/לא מודפס מתמונה) ונסה שוב.',
+      });
+    } else if (orphanPages.length > 0) {
+      issues.push({
+        type: 'orphan_pages',
+        title: `${orphanPages.length} עמודים בתחילת הקובץ ללא זיהוי ת.ז.`,
+        instruction: blankPages.length > 0
+          ? 'יש עמודים ריקים או שאינם טקסטואליים בתחילת הקובץ. הסר עמודי כריכה/הקדמה והעלה מחדש, או הפק את ה-PDF כקובץ טקסטואלי.'
+          : 'העמודים הראשונים אינם מתחילים בתלוש שזוהתה בו ת.ז. ודא שהקובץ מתחיל ישירות בתלוש הראשון, ושלא נוסף עמוד כריכה.',
+        pages: orphanPages.map((p) => p + 1),
+      });
+    }
+    if (unmatchedIdNumbers.length > 0) {
+      issues.push({
+        type: 'unmatched_ids',
+        title: `${unmatchedIdNumbers.length} תעודות זהות אינן רשומות במערכת`,
+        instruction: 'ת.ז. שזוהתה בתלוש לא קיימת באף תיק עובד פעיל. בדוק שמספר ת.ז. בכרטיס העובד תואם בדיוק (כולל ספרת ביקורת) לזה שבתלוש, או הוסף את העובד לפני העלאה חוזרת.',
+        ids: unmatchedIdNumbers,
+      });
+    }
+    if (failedCount > 0) {
+      issues.push({
+        type: 'failed',
+        title: `${failedCount} תלושים נכשלו בעיבוד`,
+        instruction: 'ראה פירוט שגיאה לכל תלוש בטבלה. נסה להעלות מחדש; אם הבעיה חוזרת, פנה לתמיכה עם מספר האצווה.',
+      });
+    }
+
     return new Response(JSON.stringify({
       batch_id: batchId,
       total_pages: effectivePages,
@@ -677,6 +711,9 @@ Deno.serve(async (req) => {
       matched_payslips: matchedPayslips,
       unmatched_payslips: unmatchedPayslips,
       failed_payslips: failedPayslips,
+      orphan_pages: orphanPages.map((p) => p + 1),
+      issues,
+      overwritten: true,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
