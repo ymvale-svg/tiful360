@@ -137,6 +137,10 @@ export default function Settings() {
           </div>
         </TabsContent>
 
+        <TabsContent value="email_templates">
+          <EmailTemplatesTab />
+        </TabsContent>
+
         <TabsContent value="alerts">
           <AlertRulesSettings />
         </TabsContent>
