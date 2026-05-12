@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { PortalSettingsTab } from "@/components/PortalSettingsTab";
 import { SubEmployersTab } from "@/components/SubEmployersTab";
+import { EmailTemplatesTab } from "@/components/EmailTemplatesTab";
 import { Mail } from "lucide-react";
 
 // ============================
