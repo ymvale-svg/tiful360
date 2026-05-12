@@ -221,6 +221,95 @@ export function PayslipsUploadDialog({ open, onOpenChange }: Props) {
               </div>
             )}
 
+            {result.matched_payslips?.length > 0 && (
+              <div className="border border-success/30 rounded-lg">
+                <div className="px-3 py-2 bg-success/5 border-b border-success/20 flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-success" />
+                  <p className="text-sm font-medium">תלושים שעלו בהצלחה ({result.matched_payslips.length})</p>
+                </div>
+                <div className="max-h-48 overflow-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted sticky top-0">
+                      <tr>
+                        <th className="p-2 text-start">עובד</th>
+                        <th className="p-2 text-start">ת.ז.</th>
+                        <th className="p-2 text-start">עמודים</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {result.matched_payslips.map((p: any, i: number) => (
+                        <tr key={i} className="border-t border-border">
+                          <td className="p-2">{p.employee_name ?? "—"}</td>
+                          <td className="p-2 font-mono">{p.id_number}</td>
+                          <td className="p-2 font-mono">{(p.pages ?? []).join(", ")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {result.failed_payslips?.length > 0 && (
+              <div className="border border-destructive/30 rounded-lg">
+                <div className="px-3 py-2 bg-destructive/5 border-b border-destructive/20 flex items-center gap-2">
+                  <XCircle className="w-4 h-4 text-destructive" />
+                  <p className="text-sm font-medium">תלושים שנכשלו ({result.failed_payslips.length})</p>
+                </div>
+                <div className="max-h-48 overflow-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted sticky top-0">
+                      <tr>
+                        <th className="p-2 text-start">עובד</th>
+                        <th className="p-2 text-start">ת.ז.</th>
+                        <th className="p-2 text-start">עמודים</th>
+                        <th className="p-2 text-start">שגיאה</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {result.failed_payslips.map((p: any, i: number) => (
+                        <tr key={i} className="border-t border-border">
+                          <td className="p-2">{p.employee_name ?? "—"}</td>
+                          <td className="p-2 font-mono">{p.id_number ?? "—"}</td>
+                          <td className="p-2 font-mono">{(p.pages ?? []).join(", ")}</td>
+                          <td className="p-2 text-destructive">{p.error}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {result.unmatched_payslips?.length > 0 && (
+              <div className="border border-warning/30 rounded-lg">
+                <div className="px-3 py-2 bg-warning/5 border-b border-warning/20 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-warning" />
+                  <p className="text-sm font-medium">תלושים לא משויכים ({result.unmatched_payslips.length})</p>
+                </div>
+                <div className="max-h-48 overflow-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted sticky top-0">
+                      <tr>
+                        <th className="p-2 text-start">שם בתלוש</th>
+                        <th className="p-2 text-start">ת.ז.</th>
+                        <th className="p-2 text-start">עמודים</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {result.unmatched_payslips.map((p: any, i: number) => (
+                        <tr key={i} className="border-t border-border">
+                          <td className="p-2">{p.employee_name ?? "—"}</td>
+                          <td className="p-2 font-mono">{p.id_number}</td>
+                          <td className="p-2 font-mono">{(p.pages ?? []).join(", ")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
             {result.balance_changes?.length > 0 && (
               <div className="border border-border rounded-lg max-h-48 overflow-auto">
                 <table className="w-full text-xs">
