@@ -553,6 +553,12 @@ Deno.serve(async (req) => {
             });
           }
           matchedCount++;
+          matchedPayslips.push({
+            employee_name: prevEmp?.full_name ?? matched.full_name ?? group.primary.employeeName,
+            id_number: normalizedId,
+            pages: pageIndices,
+            status,
+          });
         } else {
           await admin.from('payslips').insert({
             company_id,
