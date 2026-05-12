@@ -682,7 +682,40 @@ Deno.serve(async (req) => {
       performed_by: user.id,
     });
 
-    // Build clear, user-actionable issues list
+    // Notify each matched employee via email that their payslip is available in the personal area
+    const portalBase = req.headers.get('origin') ?? 'https://tiful360.com';
+    const portalUrl = `${portalBase}/portal`;
+    const monthNames = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+    for (const n of payslipNotifications) {
+      const periodLabel = `${monthNames[n.period_month - 1] ?? n.period_month}/${n.period_year}`;
+      const subject = `תלוש השכר שלך לחודש ${periodLabel} זמין באזור האישי`;
+      const html = `
+        <div dir="rtl" style="font-family: Arial, sans-serif; padding: 24px; max-width: 600px; margin: auto;">
+          <h2 style="color: #1f2937;">שלום ${n.employee_name || ''},</h2>
+          <p style="color: #374151; font-size: 15px; line-height: 1.6;">
+            תלוש השכר שלך לחודש <strong>${periodLabel}</strong>${companyName ? ` מטעם <strong>${companyName}</strong>` : ''} עלה לאזור האישי שלך.
+          </p>
+          <p style="margin-top: 20px;">
+            <a href="${portalUrl}" target="_blank" style="background: #1d4ed8; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block;">צפייה בתלוש</a>
+          </p>
+          <p style="margin-top: 24px; font-size: 12px; color: #6b7280;">הודעה אוטומטית — אין צורך להשיב.</p>
+        </div>`;
+      try {
+        await admin.rpc('enqueue_email', {
+          queue_name: 'transactional_emails',
+          payload: {
+            to: n.to,
+            subject,
+            html,
+            template: 'payslip-available',
+            metadata: { employee_id: n.employee_id, period_year: n.period_year, period_month: n.period_month, batch_id: batchId },
+          },
+        });
+      } catch (e) {
+        console.error('enqueue payslip email failed for', n.to, e);
+      }
+    }
+
     const issues: { type: string; title: string; instruction: string; pages?: number[]; ids?: string[] }[] = [];
     if (groups.length === 0) {
       issues.push({
