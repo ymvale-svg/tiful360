@@ -57,7 +57,7 @@ export function EmailTemplatesTab() {
         .eq("template_key", TEMPLATE_KEY)
         .maybeSingle();
       if (error) throw error;
-      return data as { subject: string; body_html: string } | null;
+      return data as unknown as { subject: string; body_html: string } | null;
     },
   });
 
