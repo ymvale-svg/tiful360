@@ -298,10 +298,11 @@ Deno.serve(async (req) => {
       if (norm) idMap.set(norm, { id: e.id, full_name: e.full_name, email: e.email ?? null });
     }
 
-    // Fetch company name once for email subject/body
+    // Fetch company name + logo once for email subject/body
     const { data: companyRow } = await admin
-      .from('companies').select('name').eq('id', company_id).single();
+      .from('companies').select('name, logo_url').eq('id', company_id).single();
     const companyName = companyRow?.name ?? '';
+    const companyLogoUrl: string = companyRow?.logo_url ?? '';
 
     // Collect notifications to send after processing
     const payslipNotifications: { to: string; employee_name: string; period_year: number; period_month: number; employee_id: string }[] = [];
@@ -717,6 +718,10 @@ Deno.serve(async (req) => {
       return out;
     };
 
+    const logoHtml = companyLogoUrl
+      ? `<div style="text-align:center; padding:16px 0;"><img src="${companyLogoUrl}" alt="${companyName}" style="max-height:80px; max-width:240px; display:inline-block;" /></div>`
+      : '';
+
     for (const n of payslipNotifications) {
       const periodLabel = `${monthNames[n.period_month - 1] ?? n.period_month}/${n.period_year}`;
       const vars = {
@@ -725,10 +730,16 @@ Deno.serve(async (req) => {
         period_month: String(n.period_month),
         period_year: String(n.period_year),
         company_name: companyName,
+        company_logo: logoHtml,
+        company_logo_url: companyLogoUrl,
         portal_url: portalUrl,
       };
       const subject = renderTpl(tplSubject, vars);
-      const html = renderTpl(tplBody, vars);
+      let html = renderTpl(tplBody, vars);
+      // If template doesn't reference the logo explicitly, prepend it (centered) automatically
+      if (logoHtml && !tplBody.includes('{{company_logo}}') && !tplBody.includes('{{company_logo_url}}')) {
+        html = logoHtml + html;
+      }
       try {
         await admin.rpc('enqueue_email', {
           queue_name: 'transactional_emails',
