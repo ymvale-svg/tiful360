@@ -2076,6 +2076,7 @@ export type Database = {
         }
         Returns: number
       }
+      noop_payslip_failure_tracking_marker: { Args: never; Returns: undefined }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
