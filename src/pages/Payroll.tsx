@@ -605,8 +605,27 @@ function BatchPayslipsList({ batch }: { batch: any }) {
 
   return (
     <div className="p-4 space-y-2">
-      <p className="text-sm font-medium mb-2">תלושי האצווה ({payslips.length})</p>
-      {payslips.map((p: any) => {
+      <div className="flex items-center justify-between gap-3 mb-2">
+        <p className="text-sm font-medium">תלושי האצווה ({savedPayslips.length})</p>
+        {batch.source_pdf_url && (
+          <Button size="sm" variant="outline" className="h-8 gap-1.5" disabled={openingSource} onClick={() => openSourcePdf()}>
+            <FileText className="w-3.5 h-3.5" />
+            פתח PDF מקור
+          </Button>
+        )}
+      </div>
+      {failedCount > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+          <AlertCircle className="w-4 h-4" />
+          <span className="font-medium">{failedCount} תלושים נכשלו ולא נשמרו כשורות.</span>
+          <span className="text-destructive/80">בדוק בקובץ המקור את העמודים שלא מופיעים ברשימה:</span>
+          <span className="font-mono">{failedPages.join(", ")}</span>
+        </div>
+      )}
+      {savedPayslips.length === 0 && failedCount === 0 && (
+        <div className="p-4 text-center text-sm text-muted-foreground">אין תלושים באצווה זו</div>
+      )}
+      {savedPayslips.map((p: any) => {
         const isMatched = !!p.employee_id;
         return (
           <div key={p.id} className="flex items-center gap-3 bg-background p-2.5 rounded-lg border border-border/40">
@@ -618,6 +637,7 @@ function BatchPayslipsList({ batch }: { batch: any }) {
               </p>
               <p className="text-xs text-muted-foreground">
                 ת.ז.: <span className="font-mono">{p.id_number_detected ?? p.employee?.id_number ?? "—"}</span>
+                {p.page_indices?.length > 0 && <span className="ms-2">עמוד {Math.min(...p.page_indices) + 1}</span>}
               </p>
             </div>
             {!isMatched && (
