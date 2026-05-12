@@ -484,6 +484,9 @@ Deno.serve(async (req) => {
     let failedCount = 0;
     const unmatchedIdNumbers: string[] = [];
     const balanceChanges: any[] = [];
+    const matchedPayslips: any[] = [];
+    const unmatchedPayslips: any[] = [];
+    const failedPayslips: any[] = [];
 
     for (let gi = 0; gi < groups.length; gi++) {
       const group = groups[gi];
@@ -550,6 +553,12 @@ Deno.serve(async (req) => {
             });
           }
           matchedCount++;
+          matchedPayslips.push({
+            employee_name: prevEmp?.full_name ?? matched.full_name ?? group.primary.employeeName,
+            id_number: normalizedId,
+            pages: pageIndices,
+            status,
+          });
         } else {
           await admin.from('payslips').insert({
             company_id,
@@ -573,6 +582,11 @@ Deno.serve(async (req) => {
           });
           unmatchedCount++;
           if (!unmatchedIdNumbers.includes(normalizedId)) unmatchedIdNumbers.push(normalizedId);
+          unmatchedPayslips.push({
+            id_number: normalizedId,
+            employee_name: group.primary.employeeName,
+            pages: pageIndices,
+          });
         }
       } catch (e) {
         console.error('Group failed:', group.idNumber, e);
@@ -603,6 +617,12 @@ Deno.serve(async (req) => {
           console.error('Failed to record failed payslip row:', group.idNumber, recordErr);
         }
         failedCount++;
+        failedPayslips.push({
+          id_number: group.idNumber ?? null,
+          employee_name: group.primary?.employeeName ?? null,
+          pages: group.pageIndices,
+          error: failureMessage.slice(0, 300),
+        });
       }
     }
 
@@ -631,6 +651,9 @@ Deno.serve(async (req) => {
       failed: failedCount,
       unmatched_id_numbers: unmatchedIdNumbers,
       balance_changes: balanceChanges,
+      matched_payslips: matchedPayslips,
+      unmatched_payslips: unmatchedPayslips,
+      failed_payslips: failedPayslips,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
