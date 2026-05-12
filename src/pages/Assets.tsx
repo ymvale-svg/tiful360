@@ -27,6 +27,7 @@ export default function Assets() {
 
   const [addOpen, setAddOpen] = useState(false);
   const [addCategoryId, setAddCategoryId] = useState<string | undefined>(undefined);
+  const [addTemplateName, setAddTemplateName] = useState<string | undefined>(undefined);
   const [importOpen, setImportOpen] = useState(false);
   const globalSearch = searchParams.get("q") ?? "";
   const setGlobalSearch = (val: string) => {
@@ -151,7 +152,7 @@ export default function Assets() {
               categoryId={cat}
               onBack={goToCategories}
               onSelectAsset={(id) => goToAsset(id)}
-              onAddAsset={() => { setAddCategoryId(cat); setAddOpen(true); }}
+              onAddAsset={(categoryId, templateName) => { setAddCategoryId(categoryId); setAddTemplateName(templateName); setAddOpen(true); }}
             />
           )}
 
@@ -170,7 +171,7 @@ export default function Assets() {
         </TabsContent>
       </Tabs>
 
-      <AddAssetDialog open={addOpen} onOpenChange={(v) => { setAddOpen(v); if (!v) setAddCategoryId(undefined); }} defaultCategoryId={addCategoryId} />
+      <AddAssetDialog open={addOpen} onOpenChange={(v) => { setAddOpen(v); if (!v) { setAddCategoryId(undefined); setAddTemplateName(undefined); } }} defaultCategoryId={addCategoryId} defaultAssetName={addTemplateName} />
       <ImportAssetsExcelDialog open={importOpen} onOpenChange={setImportOpen} />
     </div>
   );

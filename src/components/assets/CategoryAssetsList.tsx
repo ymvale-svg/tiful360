@@ -16,7 +16,7 @@ interface Props {
   categoryId: string;
   onBack: () => void;
   onSelectAsset: (assetId: string) => void;
-  onAddAsset: (categoryId: string) => void;
+  onAddAsset: (categoryId: string, templateName?: string) => void;
 }
 
 export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAsset }: Props) {
@@ -147,7 +147,7 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={() => onAddAsset(categoryId)} className="gap-2">
+          <Button onClick={() => onAddAsset(categoryId, selectedSub && !isInsurance ? selectedSub : undefined)} className="gap-2">
             <Plus className="w-4 h-4" />
             פריט חדש
           </Button>
