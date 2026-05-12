@@ -251,10 +251,17 @@ Deno.serve(async (req) => {
     // Group consecutive pages by idNumber
     const groups: { idNumber: string; pageIndices: number[]; primary: PageInfo }[] = [];
     let currentGroup: typeof groups[0] | null = null;
+    const orphanPages: number[] = []; // pages with no ID detected and no preceding group
+    const blankPages: number[] = []; // pages with no extracted text at all
     for (const p of pages) {
       const id = p.idNumber;
       if (!id) {
-        if (currentGroup) currentGroup.pageIndices.push(p.pageIndex);
+        if (currentGroup) {
+          currentGroup.pageIndices.push(p.pageIndex);
+        } else {
+          orphanPages.push(p.pageIndex);
+          if (!p.text || p.text.trim().length < 20) blankPages.push(p.pageIndex);
+        }
         continue;
       }
       if (currentGroup && currentGroup.idNumber === id) {
