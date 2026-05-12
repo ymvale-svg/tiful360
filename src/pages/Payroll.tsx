@@ -621,8 +621,12 @@ function BatchPayslipsList({ batch }: { batch: any }) {
         <div className="flex flex-wrap items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
           <AlertCircle className="w-4 h-4" />
           <span className="font-medium">{failedCount} תלושים נכשלו ולא נשמרו כשורות.</span>
-          <span className="text-destructive/80">בדוק בקובץ המקור את העמודים שלא מופיעים ברשימה:</span>
-          <span className="font-mono">{failedPages.join(", ")}</span>
+          {failedPages.length > 0 && (
+            <>
+              <span className="text-destructive/80">בדוק בקובץ המקור את העמודים שלא מופיעים ברשימה:</span>
+              <span className="font-mono">{failedPages.join(", ")}</span>
+            </>
+          )}
         </div>
       )}
       {savedPayslips.length === 0 && failedCount === 0 && (
