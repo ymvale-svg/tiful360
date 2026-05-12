@@ -288,15 +288,23 @@ Deno.serve(async (req) => {
     // Lookup employees by id_number
     const { data: employees } = await admin
       .from('employees')
-      .select('id, full_name, id_number')
+      .select('id, full_name, id_number, email')
       .eq('company_id', company_id)
       .not('id_number', 'is', null);
 
-    const idMap = new Map<string, { id: string; full_name: string }>();
+    const idMap = new Map<string, { id: string; full_name: string; email: string | null }>();
     for (const e of employees ?? []) {
       const norm = normalizeIdNumber(e.id_number);
-      if (norm) idMap.set(norm, { id: e.id, full_name: e.full_name });
+      if (norm) idMap.set(norm, { id: e.id, full_name: e.full_name, email: e.email ?? null });
     }
+
+    // Fetch company name once for email subject/body
+    const { data: companyRow } = await admin
+      .from('companies').select('name').eq('id', company_id).single();
+    const companyName = companyRow?.name ?? '';
+
+    // Collect notifications to send after processing
+    const payslipNotifications: { to: string; employee_name: string; period_year: number; period_month: number; employee_id: string }[] = [];
 
     console.log('split-payslips: groups=', groups.length,
       'employees loaded=', employees?.length ?? 0,
