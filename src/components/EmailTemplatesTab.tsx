@@ -28,6 +28,8 @@ const VARIABLES: { key: string; desc: string; sample: string }[] = [
   { key: "{{period_month}}", desc: "מספר החודש (1-12)", sample: "5" },
   { key: "{{period_year}}", desc: "שנה (4 ספרות)", sample: "2026" },
   { key: "{{company_name}}", desc: "שם החברה / המעסיק", sample: "חברת דוגמה בע״מ" },
+  { key: "{{company_logo}}", desc: "לוגו החברה ממורכז (HTML מלא). אם לא תכלול אותו - הלוגו יוצמד אוטומטית בראש המייל", sample: '<div style="text-align:center;padding:16px 0;"><img src="https://via.placeholder.com/200x60?text=LOGO" style="max-height:80px"/></div>' },
+  { key: "{{company_logo_url}}", desc: "כתובת ה-URL של לוגו החברה בלבד (לשימוש מותאם)", sample: "https://via.placeholder.com/200x60?text=LOGO" },
   { key: "{{portal_url}}", desc: "קישור לאזור האישי", sample: "https://tiful360.com/portal" },
 ];
 
