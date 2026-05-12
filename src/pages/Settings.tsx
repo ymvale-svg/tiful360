@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { PortalSettingsTab } from "@/components/PortalSettingsTab";
 import { SubEmployersTab } from "@/components/SubEmployersTab";
+import { EmailTemplatesTab } from "@/components/EmailTemplatesTab";
 import { Mail } from "lucide-react";
 
 // ============================
@@ -100,6 +101,10 @@ export default function Settings() {
             <Smartphone className="w-4 h-4" />
             פורטל עובדים
           </TabsTrigger>
+          <TabsTrigger value="email_templates" className="gap-1.5">
+            <Mail className="w-4 h-4" />
+            תבניות מייל
+          </TabsTrigger>
           <TabsTrigger value="alerts" className="gap-1.5">
             <Bell className="w-4 h-4" />
             חוקי התראות
@@ -130,6 +135,10 @@ export default function Settings() {
               placeholder="ops@company.com, manager@company.com"
             />
           </div>
+        </TabsContent>
+
+        <TabsContent value="email_templates">
+          <EmailTemplatesTab />
         </TabsContent>
 
         <TabsContent value="alerts">

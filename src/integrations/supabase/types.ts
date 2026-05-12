@@ -678,6 +678,39 @@ export type Database = {
         }
         Relationships: []
       }
+      company_email_templates: {
+        Row: {
+          body_html: string
+          company_id: string
+          created_at: string
+          id: string
+          subject: string
+          template_key: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          body_html: string
+          company_id: string
+          created_at?: string
+          id?: string
+          subject: string
+          template_key: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          body_html?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          subject?: string
+          template_key?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       digital_access: {
         Row: {
           access_type: string
