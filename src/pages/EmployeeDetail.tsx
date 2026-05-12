@@ -87,7 +87,28 @@ export default function EmployeeDetail() {
   const employeeAssets = assets ?? [];
   const physicalAssets = employeeAssets.filter((a: any) => (a.asset_categories?.prefix ?? "") !== "DACC");
   const digitalAccessAssets = employeeAssets.filter((a: any) => (a.asset_categories?.prefix ?? "") === "DACC");
-  const { isAdmin, isSuperAdmin, isPayroll, user } = useAuth();
+  const { isAdmin, isSuperAdmin, isPayroll, isOperations, isFinance, user } = useAuth();
+  const qc = useQueryClient();
+  const canEditRemotePunch = isSuperAdmin || isAdmin || isPayroll || isOperations || isFinance;
+  const [savingRemote, setSavingRemote] = useState(false);
+
+  const handleToggleRemotePunch = async (value: boolean) => {
+    if (!id) return;
+    setSavingRemote(true);
+    const { error } = await supabase.rpc("set_employee_remote_punch", {
+      _employee_id: id,
+      _value: value,
+    });
+    setSavingRemote(false);
+    if (error) {
+      toast({ title: "שגיאה בעדכון החתמה מרחוק", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: value ? "החתמה מרחוק הופעלה" : "החתמה מרחוק בוטלה" });
+    qc.invalidateQueries({ queryKey: ["employee", id] });
+    qc.invalidateQueries({ queryKey: ["employees"] });
+  };
+
 
   const canSeePayslips =
     isSuperAdmin || isAdmin || isPayroll ||
