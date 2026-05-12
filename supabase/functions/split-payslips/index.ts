@@ -686,20 +686,49 @@ Deno.serve(async (req) => {
     const portalBase = req.headers.get('origin') ?? 'https://tiful360.com';
     const portalUrl = `${portalBase}/portal`;
     const monthNames = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+
+    // Load custom template (per company) if defined; otherwise fall back to default
+    const DEFAULT_SUBJECT = 'תלוש השכר שלך לחודש {{period_label}} זמין באזור האישי';
+    const DEFAULT_BODY = `<div dir="rtl" style="font-family: Arial, sans-serif; padding: 24px; max-width: 600px; margin: auto;">
+  <h2 style="color: #1f2937;">שלום {{employee_name}},</h2>
+  <p style="color: #374151; font-size: 15px; line-height: 1.6;">
+    תלוש השכר שלך לחודש <strong>{{period_label}}</strong> מטעם <strong>{{company_name}}</strong> עלה לאזור האישי שלך.
+  </p>
+  <p style="margin-top: 20px;">
+    <a href="{{portal_url}}" target="_blank" style="background: #1d4ed8; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block;">צפייה בתלוש</a>
+  </p>
+  <p style="margin-top: 24px; font-size: 12px; color: #6b7280;">הודעה אוטומטית — אין צורך להשיב.</p>
+</div>`;
+
+    const { data: tplRow } = await admin
+      .from('company_email_templates')
+      .select('subject, body_html')
+      .eq('company_id', company_id)
+      .eq('template_key', 'payslip-available')
+      .maybeSingle();
+    const tplSubject: string = tplRow?.subject || DEFAULT_SUBJECT;
+    const tplBody: string = tplRow?.body_html || DEFAULT_BODY;
+
+    const renderTpl = (tpl: string, vars: Record<string, string>) => {
+      let out = tpl;
+      for (const [k, v] of Object.entries(vars)) {
+        out = out.split(`{{${k}}}`).join(v);
+      }
+      return out;
+    };
+
     for (const n of payslipNotifications) {
       const periodLabel = `${monthNames[n.period_month - 1] ?? n.period_month}/${n.period_year}`;
-      const subject = `תלוש השכר שלך לחודש ${periodLabel} זמין באזור האישי`;
-      const html = `
-        <div dir="rtl" style="font-family: Arial, sans-serif; padding: 24px; max-width: 600px; margin: auto;">
-          <h2 style="color: #1f2937;">שלום ${n.employee_name || ''},</h2>
-          <p style="color: #374151; font-size: 15px; line-height: 1.6;">
-            תלוש השכר שלך לחודש <strong>${periodLabel}</strong>${companyName ? ` מטעם <strong>${companyName}</strong>` : ''} עלה לאזור האישי שלך.
-          </p>
-          <p style="margin-top: 20px;">
-            <a href="${portalUrl}" target="_blank" style="background: #1d4ed8; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block;">צפייה בתלוש</a>
-          </p>
-          <p style="margin-top: 24px; font-size: 12px; color: #6b7280;">הודעה אוטומטית — אין צורך להשיב.</p>
-        </div>`;
+      const vars = {
+        employee_name: n.employee_name || '',
+        period_label: periodLabel,
+        period_month: String(n.period_month),
+        period_year: String(n.period_year),
+        company_name: companyName,
+        portal_url: portalUrl,
+      };
+      const subject = renderTpl(tplSubject, vars);
+      const html = renderTpl(tplBody, vars);
       try {
         await admin.rpc('enqueue_email', {
           queue_name: 'transactional_emails',
