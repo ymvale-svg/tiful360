@@ -313,6 +313,7 @@ async function runCycle() {
     }
   }
   console.log(`\nסיכום: נשלחו ${ok} | נכשלו ${fail} | זוהו ${matched} | לא זוהו ${unmatched}`);
+  if (fail === 0) { HEARTBEAT_STATE.lastError = null; HEARTBEAT_STATE.lastSuccessfulPoll = new Date().toISOString(); }
 
   if (CLEAR_AFTER_SEND && fail === 0 && ok > 0) {
     try {
