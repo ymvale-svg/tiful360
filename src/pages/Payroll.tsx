@@ -558,13 +558,15 @@ function BatchesManagementTab() {
 // ============================
 // All payslips in a batch (matched + unmatched) with delete + assign
 // ============================
-function BatchPayslipsList({ batchId }: { batchId: string }) {
+function BatchPayslipsList({ batch }: { batch: any }) {
+  const batchId = batch.id as string;
   const { data: payslips, isLoading } = useBatchPayslips(batchId);
   const { data: employees = [] } = useEmployees();
   const assign = useAssignPayslipToEmployee();
   const deletePayslip = useDeletePayslip();
   const { toast } = useToast();
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+  const [openingSource, setOpeningSource] = useState(false);
 
   const employeeOptions = (employees ?? []).map((e: any) => ({
     value: e.id,
@@ -580,10 +582,26 @@ function BatchPayslipsList({ batchId }: { batchId: string }) {
     }
   };
 
+  const savedPayslips = payslips ?? [];
+  const failedCount = Math.max(Number(batch.failed_count ?? 0), 0);
+  const missingPages = Math.max(Number(batch.total_pages ?? 0) - savedPayslips.length, 0);
+  const failedPages = Array.from({ length: Math.max(failedCount, missingPages) }, (_, i) => savedPayslips.length + i + 1);
+
+  const openSourcePdf = async (page?: number) => {
+    if (!batch.source_pdf_url) return;
+    setOpeningSource(true);
+    try {
+      const url = await getPayslipSignedUrl(batch.source_pdf_url);
+      if (!url) throw new Error("לא ניתן לפתוח את קובץ המקור");
+      window.open(page ? `${url}#page=${page}` : url, "_blank", "noopener,noreferrer");
+    } catch (e: any) {
+      toast({ title: "שגיאה בפתיחת הקובץ", description: e.message, variant: "destructive" });
+    } finally {
+      setOpeningSource(false);
+    }
+  };
+
   if (isLoading) return <div className="p-4 text-center text-sm text-muted-foreground">טוען...</div>;
-  if (!payslips || payslips.length === 0) {
-    return <div className="p-4 text-center text-sm text-muted-foreground">אין תלושים באצווה זו</div>;
-  }
 
   return (
     <div className="p-4 space-y-2">
