@@ -2084,6 +2084,53 @@ export type Database = {
           read_ct: number
         }[]
       }
+      set_employee_remote_punch: {
+        Args: { _employee_id: string; _value: boolean }
+        Returns: {
+          aliyah_date: string | null
+          balances_source: string | null
+          balances_updated_at: string | null
+          birth_date: string | null
+          can_remote_punch: boolean
+          city: string | null
+          company_id: string | null
+          contact_sort_order: number | null
+          country_of_birth: string | null
+          created_at: string
+          department: string
+          direct_manager_id: string | null
+          email: string | null
+          employee_code: string
+          end_date: string | null
+          exclude_from_contacts: boolean
+          full_name: string
+          gender: string | null
+          health_fund_member: boolean | null
+          house_number: string | null
+          id: string
+          id_number: string
+          is_israeli_resident: boolean | null
+          linked_user_id: string | null
+          marital_status: string | null
+          phone: string | null
+          po_box: string | null
+          postal_code: string | null
+          role: string
+          sick_balance: number
+          start_date: string
+          status: Database["public"]["Enums"]["employee_status"]
+          street: string | null
+          sub_employer_id: string | null
+          updated_at: string
+          vacation_balance: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "employees"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       sign_handover_form_by_token: {
         Args: {
           _attached_url: string
