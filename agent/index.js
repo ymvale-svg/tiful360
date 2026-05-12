@@ -337,10 +337,12 @@ async function main() {
   console.log(`HARD_MIN_DATE: ${HARD_MIN_DATE.toISOString()} | Effective SINCE: ${SINCE.toISOString()}${LIMIT ? ` | limit=${LIMIT}` : ""}`);
   console.log(`Mode: ${RAW_MODE ? "RAW" : ONCE_MODE ? "ONCE" : `POLL ${POLL_INTERVAL_MS}ms`}`);
 
-  await runCycle();
+  await sendHeartbeat();
+  await runCycle().catch((e) => { HEARTBEAT_STATE.lastError = String(e?.message || e); console.error("מחזור נכשל:", e); });
   if (RAW_MODE || ONCE_MODE) return;
 
-  setInterval(() => runCycle().catch((e) => console.error("מחזור נכשל:", e)), POLL_INTERVAL_MS);
+  setInterval(() => runCycle().catch((e) => { HEARTBEAT_STATE.lastError = String(e?.message || e); console.error("מחזור נכשל:", e); }), POLL_INTERVAL_MS);
+  setInterval(() => sendHeartbeat().catch((e) => console.warn("heartbeat err:", e?.message || e)), HEARTBEAT_INTERVAL_MS);
 }
 
 main().catch((e) => { console.error("שגיאה קריטית:", e); process.exit(1); });
