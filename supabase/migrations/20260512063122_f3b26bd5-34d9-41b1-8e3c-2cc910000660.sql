@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.noop_payslip_failure_tracking_marker();
