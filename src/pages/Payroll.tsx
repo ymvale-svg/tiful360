@@ -3,11 +3,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
-import { Wallet, FileText, Stethoscope, Calendar, Clock4, Upload, LayoutDashboard, FolderOpen, UserSearch, Settings as SettingsIcon, Save, Mail, Paperclip } from "lucide-react";
+import { Wallet, FileText, Stethoscope, Calendar, Clock4, Upload, LayoutDashboard, FolderOpen, UserSearch, Settings as SettingsIcon, Save, Mail, Paperclip, AlertCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { PayslipsUploadDialog } from "@/components/PayslipsUploadDialog";
-import { usePayslipBatches, useUnmatchedPayslips, useAssignPayslipToEmployee, useBatchPayslips, useDeletePayslip, useDeleteBatch } from "@/hooks/usePayslips";
+import { getPayslipSignedUrl, usePayslipBatches, useUnmatchedPayslips, useAssignPayslipToEmployee, useBatchPayslips, useDeletePayslip, useDeleteBatch } from "@/hooks/usePayslips";
 import { Trash2 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -511,7 +511,7 @@ function BatchesManagementTab() {
                   {expandedBatchId === b.id && (
                     <tr>
                       <td colSpan={9} className="bg-muted/30 p-0">
-                        <BatchPayslipsList batchId={b.id} />
+                        <BatchPayslipsList batch={b} />
                       </td>
                     </tr>
                   )}
@@ -558,13 +558,15 @@ function BatchesManagementTab() {
 // ============================
 // All payslips in a batch (matched + unmatched) with delete + assign
 // ============================
-function BatchPayslipsList({ batchId }: { batchId: string }) {
+function BatchPayslipsList({ batch }: { batch: any }) {
+  const batchId = batch.id as string;
   const { data: payslips, isLoading } = useBatchPayslips(batchId);
   const { data: employees = [] } = useEmployees();
   const assign = useAssignPayslipToEmployee();
   const deletePayslip = useDeletePayslip();
   const { toast } = useToast();
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+  const [openingSource, setOpeningSource] = useState(false);
 
   const employeeOptions = (employees ?? []).map((e: any) => ({
     value: e.id,
@@ -580,27 +582,73 @@ function BatchPayslipsList({ batchId }: { batchId: string }) {
     }
   };
 
+  const savedPayslips = payslips ?? [];
+  const sourcePdfPath = savedPayslips.find((p: any) => p.source_pdf_url)?.source_pdf_url as string | undefined;
+  const failedCount = Math.max(Number(batch.failed_count ?? 0), 0);
+  const coveredPages = new Set<number>();
+  savedPayslips.forEach((p: any) => (p.page_indices ?? []).forEach((idx: number) => coveredPages.add(idx + 1)));
+  const missingPages = Array.from({ length: Number(batch.total_pages ?? 0) }, (_, i) => i + 1).filter((page) => !coveredPages.has(page));
+  const failedPages = missingPages.length ? missingPages : Array.from({ length: failedCount }, (_, i) => savedPayslips.length + i + 1);
+
+  const openSourcePdf = async (page?: number) => {
+    if (!sourcePdfPath) return;
+    setOpeningSource(true);
+    try {
+      const url = await getPayslipSignedUrl(sourcePdfPath);
+      if (!url) throw new Error("לא ניתן לפתוח את קובץ המקור");
+      window.open(page ? `${url}#page=${page}` : url, "_blank", "noopener,noreferrer");
+    } catch (e: any) {
+      toast({ title: "שגיאה בפתיחת הקובץ", description: e.message, variant: "destructive" });
+    } finally {
+      setOpeningSource(false);
+    }
+  };
+
   if (isLoading) return <div className="p-4 text-center text-sm text-muted-foreground">טוען...</div>;
-  if (!payslips || payslips.length === 0) {
-    return <div className="p-4 text-center text-sm text-muted-foreground">אין תלושים באצווה זו</div>;
-  }
 
   return (
     <div className="p-4 space-y-2">
-      <p className="text-sm font-medium mb-2">תלושי האצווה ({payslips.length})</p>
-      {payslips.map((p: any) => {
+      <div className="flex items-center justify-between gap-3 mb-2">
+        <p className="text-sm font-medium">תלושי האצווה ({savedPayslips.length})</p>
+        {sourcePdfPath && (
+          <Button size="sm" variant="outline" className="h-8 gap-1.5" disabled={openingSource} onClick={() => openSourcePdf()}>
+            <FileText className="w-3.5 h-3.5" />
+            פתח PDF מקור
+          </Button>
+        )}
+      </div>
+      {failedCount > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+          <AlertCircle className="w-4 h-4" />
+          <span className="font-medium">{failedCount} תלושים נכשלו ולא נשמרו כשורות.</span>
+          {failedPages.length > 0 && (
+            <>
+              <span className="text-destructive/80">בדוק בקובץ המקור את העמודים שלא מופיעים ברשימה:</span>
+              <span className="font-mono">{failedPages.join(", ")}</span>
+            </>
+          )}
+        </div>
+      )}
+      {savedPayslips.length === 0 && failedCount === 0 && (
+        <div className="p-4 text-center text-sm text-muted-foreground">אין תלושים באצווה זו</div>
+      )}
+      {savedPayslips.map((p: any) => {
         const isMatched = !!p.employee_id;
+        const isFailed = p.extraction_status === "failed";
         return (
-          <div key={p.id} className="flex items-center gap-3 bg-background p-2.5 rounded-lg border border-border/40">
+          <div key={p.id} className={`flex items-center gap-3 bg-background p-2.5 rounded-lg border ${isFailed ? "border-destructive/30" : "border-border/40"}`}>
             <div className="flex-1 text-sm">
               <p className="font-medium">
                 {isMatched ? p.employee?.full_name : (p.employee_name_detected ?? "לא זוהה שם")}
-                {isMatched && <span className="ms-2 text-[10px] px-2 py-0.5 rounded-full bg-success/10 text-success">משויך</span>}
-                {!isMatched && <span className="ms-2 text-[10px] px-2 py-0.5 rounded-full bg-warning/10 text-warning">לא משויך</span>}
+                {isFailed && <span className="ms-2 text-[10px] px-2 py-0.5 rounded-full bg-destructive/10 text-destructive">נכשל</span>}
+                {!isFailed && isMatched && <span className="ms-2 text-[10px] px-2 py-0.5 rounded-full bg-success/10 text-success">משויך</span>}
+                {!isFailed && !isMatched && <span className="ms-2 text-[10px] px-2 py-0.5 rounded-full bg-warning/10 text-warning">לא משויך</span>}
               </p>
               <p className="text-xs text-muted-foreground">
                 ת.ז.: <span className="font-mono">{p.id_number_detected ?? p.employee?.id_number ?? "—"}</span>
+                {p.page_indices?.length > 0 && <span className="ms-2">עמוד {Math.min(...p.page_indices) + 1}</span>}
               </p>
+              {isFailed && p.extraction_notes && <p className="mt-1 text-xs text-destructive/80">{p.extraction_notes}</p>}
             </div>
             {!isMatched && (
               <div className="w-72">
