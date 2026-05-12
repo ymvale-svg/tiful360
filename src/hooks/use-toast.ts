@@ -157,6 +157,8 @@ function toast({ ...props }: Toast) {
     },
   });
 
+  setTimeout(() => dismiss(), TOAST_AUTO_DISMISS_MS);
+
   return {
     id: id,
     dismiss,
