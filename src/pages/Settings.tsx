@@ -101,6 +101,10 @@ export default function Settings() {
             <Smartphone className="w-4 h-4" />
             פורטל עובדים
           </TabsTrigger>
+          <TabsTrigger value="email_templates" className="gap-1.5">
+            <Mail className="w-4 h-4" />
+            תבניות מייל
+          </TabsTrigger>
           <TabsTrigger value="alerts" className="gap-1.5">
             <Bell className="w-4 h-4" />
             חוקי התראות
