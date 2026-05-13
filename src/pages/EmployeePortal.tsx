@@ -332,14 +332,14 @@ export default function EmployeePortal() {
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
-      {/* Mobile-friendly top bar */}
-      <header className="sticky top-0 z-30 bg-card/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
+      {/* Mobile/tablet-friendly top bar */}
+      <header role="banner" className="sticky top-0 z-30 bg-card/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center shrink-0">
+          <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center shrink-0" aria-hidden="true">
             <span className="text-xs font-bold text-primary-foreground">{initials}</span>
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold leading-tight truncate">שלום, {employeeName.split(" ")[0]} 👋</p>
+            <h1 className="text-sm font-semibold leading-tight truncate">שלום, {employeeName.split(" ")[0]} <span aria-hidden="true">👋</span></h1>
             <p className="text-[11px] text-muted-foreground">
               {myEmployee ? `${myEmployee.role} • ${myEmployee.department}` : "פורטל עובדים"}
             </p>
@@ -348,23 +348,27 @@ export default function EmployeePortal() {
         <div className="flex items-center gap-1 shrink-0">
           {hasDualAccess(roles) && (
             <button
+              type="button"
               onClick={() => {
                 sessionStorage.setItem("activeExperience", "ops");
                 navigate("/");
               }}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-muted hover:bg-muted/70 transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-muted hover:bg-muted/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="מעבר לתפעול 360"
               title="מעבר לתפעול 360"
             >
-              <LayoutDashboard className="w-3.5 h-3.5" />
+              <LayoutDashboard className="w-3.5 h-3.5" aria-hidden="true" />
               <span className="hidden sm:inline">תפעול 360</span>
             </button>
           )}
           <button
+            type="button"
             onClick={handleSignOut}
-            className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground"
+            className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="יציאה מהמערכת"
             title="יציאה"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
       </header>
