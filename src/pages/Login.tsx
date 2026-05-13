@@ -65,16 +65,16 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <main className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <img src={logoImg} alt="תפעול 360" className="w-16 h-16 rounded-2xl mx-auto mb-0 object-contain" />
+          <img src={logoImg} alt="לוגו תפעול 360" className="w-16 h-16 rounded-2xl mx-auto mb-0 object-contain" />
           <h1 className="text-2xl font-bold">תפעול 360</h1>
           <p className="text-sm text-muted-foreground mt-1">מערכת ניהול משאבים מרכזית</p>
         </div>
 
-        <div className="bg-card rounded-2xl border border-border shadow-card p-8">
-          <h2 className="text-lg font-semibold mb-2 text-center">כניסה למערכת</h2>
+        <section aria-labelledby="login-heading" className="bg-card rounded-2xl border border-border shadow-card p-8">
+          <h2 id="login-heading" className="text-lg font-semibold mb-2 text-center">כניסה למערכת</h2>
           <p className="text-xs text-muted-foreground text-center mb-6">
             הכניסה מתבצעת דרך חשבון Google בלבד, ועבור משתמשים שהוקמו מראש על ידי מנהל המערכת.
           </p>
@@ -85,8 +85,9 @@ export default function Login() {
             className="w-full gap-3 py-5"
             onClick={handleGoogleLogin}
             disabled={googleLoading}
+            aria-busy={googleLoading}
           >
-            <svg className="w-5 h-5" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
               <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
               <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
@@ -94,8 +95,8 @@ export default function Login() {
             </svg>
             {googleLoading ? "מתחבר..." : "התחבר באמצעות חשבון Google"}
           </Button>
-        </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }
