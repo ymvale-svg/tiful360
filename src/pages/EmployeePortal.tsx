@@ -373,7 +373,7 @@ export default function EmployeePortal() {
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 py-4 space-y-4 overflow-x-hidden">
+      <main id="main-content" tabIndex={-1} className="max-w-2xl md:max-w-3xl mx-auto px-4 py-4 space-y-4 overflow-x-hidden focus:outline-none">
         {/* Welcome banner */}
         <div className="bg-gradient-to-l from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 rounded-xl border border-primary/20 p-5">
           <h2 className="text-lg font-bold text-foreground">ברוכים הבאים, {employeeName} 👋</h2>
@@ -449,22 +449,31 @@ export default function EmployeePortal() {
         )}
 
         {/* Tabs */}
-        <div className="grid grid-cols-3 gap-1.5">
-          {portalTabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                "flex flex-col items-center gap-1 px-2 py-2.5 rounded-xl text-[11px] font-medium transition-colors",
-                activeTab === tab.id
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
-              )}
-            >
-              <tab.icon className="w-4 h-4" />
-              {tab.label}
-            </button>
-          ))}
+        <div role="tablist" aria-label="ניווט פורטל" className="grid grid-cols-3 md:grid-cols-6 gap-1.5">
+          {portalTabs.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                aria-controls={`portal-tabpanel-${tab.id}`}
+                id={`portal-tab-${tab.id}`}
+                tabIndex={isActive ? 0 : -1}
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "flex flex-col items-center gap-1 px-2 py-2.5 rounded-xl text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                )}
+              >
+                <tab.icon className="w-4 h-4" aria-hidden="true" />
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
 
         {/* ===== ASSETS TAB ===== */}
