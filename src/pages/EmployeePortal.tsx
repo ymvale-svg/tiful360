@@ -810,7 +810,7 @@ export default function EmployeePortal() {
         )}
 
         <div className="h-6" />
-      </div>
+      </main>
 
       {myEmployee && (
         <>
