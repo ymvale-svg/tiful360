@@ -87,20 +87,22 @@ export function NewLeaveRequestDialog({ open, onOpenChange, employeeId, managerI
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent dir="rtl" className="max-w-md">
+        <DialogContent dir="rtl" className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>בקשה חדשה</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-3">
-            <div>
-              <Label>סוג בקשה</Label>
-              <div className="grid grid-cols-4 gap-2 mt-1">
+            <fieldset>
+              <legend className="text-sm font-medium mb-1">סוג בקשה</legend>
+              <div role="radiogroup" aria-label="סוג בקשה" className="grid grid-cols-4 gap-2 mt-1">
                 {TYPES.map((t) => (
                   <button
                     key={t.value}
                     type="button"
+                    role="radio"
+                    aria-checked={type === t.value}
                     onClick={() => setType(t.value)}
-                    className={`text-xs py-2 rounded-lg border transition-colors ${
+                    className={`text-xs py-2 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                       type === t.value
                         ? "bg-primary text-primary-foreground border-primary"
                         : "bg-card text-foreground border-border hover:bg-muted"
@@ -110,36 +112,37 @@ export function NewLeaveRequestDialog({ open, onOpenChange, employeeId, managerI
                   </button>
                 ))}
               </div>
-            </div>
+            </fieldset>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>מתאריך</Label>
-                <Input type="date" value={start} onChange={(e) => setStart(e.target.value)} required />
+                <Label htmlFor="leave-start">מתאריך</Label>
+                <Input id="leave-start" type="date" value={start} onChange={(e) => setStart(e.target.value)} required aria-required="true" />
               </div>
               <div>
-                <Label>עד תאריך</Label>
-                <Input type="date" value={end} onChange={(e) => setEnd(e.target.value)} required />
+                <Label htmlFor="leave-end">עד תאריך</Label>
+                <Input id="leave-end" type="date" value={end} onChange={(e) => setEnd(e.target.value)} required aria-required="true" />
               </div>
             </div>
 
             {days > 0 && (
-              <p className="text-xs text-muted-foreground">סה"כ ימים: <strong className="text-foreground">{days}</strong></p>
+              <p className="text-xs text-muted-foreground" aria-live="polite">סה"כ ימים: <strong className="text-foreground">{days}</strong></p>
             )}
 
             <div>
-              <Label>סיבה / הערות</Label>
-              <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} />
+              <Label htmlFor="leave-reason">סיבה / הערות</Label>
+              <Textarea id="leave-reason" value={reason} onChange={(e) => setReason(e.target.value)} rows={2} />
             </div>
 
             <div>
-              <Label>{type === "sick" ? "אישור מחלה (מומלץ)" : "קובץ מצורף (אופציונלי)"}</Label>
-              <label className="mt-1 flex items-center gap-2 px-3 py-2 border border-dashed border-border rounded-lg cursor-pointer hover:bg-muted text-sm text-muted-foreground">
-                <Upload className="w-4 h-4" />
+              <Label htmlFor="leave-file">{type === "sick" ? "אישור מחלה (מומלץ)" : "קובץ מצורף (אופציונלי)"}</Label>
+              <label htmlFor="leave-file" className="mt-1 flex items-center gap-2 px-3 py-2 border border-dashed border-border rounded-lg cursor-pointer hover:bg-muted text-sm text-muted-foreground focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+                <Upload className="w-4 h-4" aria-hidden="true" />
                 {file ? file.name : "בחר קובץ..."}
                 <input
+                  id="leave-file"
                   type="file"
-                  className="hidden"
+                  className="sr-only"
                   accept="image/*,.pdf"
                   onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                 />
@@ -148,7 +151,7 @@ export function NewLeaveRequestDialog({ open, onOpenChange, employeeId, managerI
 
             <DialogFooter className="gap-2">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>ביטול</Button>
-              <Button type="submit" disabled={create.isPending}>
+              <Button type="submit" disabled={create.isPending} aria-busy={create.isPending}>
                 {create.isPending ? "שולח..." : "שליחה"}
               </Button>
             </DialogFooter>
