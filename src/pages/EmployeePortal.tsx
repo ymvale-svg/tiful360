@@ -798,8 +798,8 @@ export default function EmployeePortal() {
                   )}
                 </div>
                 {contact.phone && (
-                  <a href={`tel:${contact.phone}`} className="flex items-center gap-1 text-xs text-primary hover:underline shrink-0" title={contact.phone}>
-                    <Phone className="w-3.5 h-3.5" />
+                  <a href={`tel:${contact.phone}`} className="flex items-center gap-1 text-xs text-primary hover:underline shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded p-1" aria-label={`התקשר אל ${contact.name}: ${contact.phone}`} title={contact.phone}>
+                    <Phone className="w-3.5 h-3.5" aria-hidden="true" />
                   </a>
                 )}
               </div>
