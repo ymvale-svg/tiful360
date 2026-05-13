@@ -478,7 +478,7 @@ export default function EmployeePortal() {
 
         {/* ===== ASSETS TAB ===== */}
         {activeTab === "assets" && (
-          <div className="space-y-4 animate-fade-in">
+          <div role="tabpanel" id="portal-tabpanel-assets" aria-labelledby="portal-tab-assets" className="space-y-4 animate-fade-in">
             {!myEmployee && (
               <p className="text-center text-sm text-muted-foreground py-4">
                 המשתמש שלך לא מקושר לעובד. פנה למנהל המערכת.
@@ -538,7 +538,7 @@ export default function EmployeePortal() {
 
         {/* ===== ATTENDANCE TAB ===== */}
         {activeTab === "attendance" && (
-          <div className="animate-fade-in space-y-3">
+          <div role="tabpanel" id="portal-tabpanel-attendance" aria-labelledby="portal-tab-attendance" className="animate-fade-in space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="font-semibold text-sm">נוכחות</h2>
               <Button
@@ -671,7 +671,7 @@ export default function EmployeePortal() {
 
         {/* ===== HR TAB ===== */}
         {activeTab === "hr" && (
-          <div className="space-y-4 animate-fade-in">
+          <div role="tabpanel" id="portal-tabpanel-hr" aria-labelledby="portal-tab-hr" className="space-y-4 animate-fade-in">
             <div className="bg-card rounded-xl border border-border/50 p-4">
               <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
                 <CalendarDays className="w-4 h-4 text-primary" />
@@ -746,7 +746,7 @@ export default function EmployeePortal() {
 
         {/* ===== NEWS TAB ===== */}
         {activeTab === "news" && (
-          <div className="space-y-3 animate-fade-in">
+          <div role="tabpanel" id="portal-tabpanel-news" aria-labelledby="portal-tab-news" className="space-y-3 animate-fade-in">
             {announcements.length > 0 ? announcements.map((item) => (
               <div key={item.id} className="bg-card rounded-xl border border-border/50 p-4">
                 <div className="flex items-start justify-between gap-2 mb-1">
@@ -765,7 +765,7 @@ export default function EmployeePortal() {
 
         {/* ===== KB TAB ===== */}
         {activeTab === "kb" && (
-          <div className="space-y-2 animate-fade-in">
+          <div role="tabpanel" id="portal-tabpanel-kb" aria-labelledby="portal-tab-kb" className="space-y-2 animate-fade-in">
             {knowledgeBase.length > 0 ? knowledgeBase.map((doc) => (
               <div key={doc.id} className="bg-card rounded-xl border border-border/50 p-3 flex items-center gap-3 hover:bg-muted/30 cursor-pointer transition-colors active:scale-[0.98]">
                 <BookOpen className="w-5 h-5 text-primary shrink-0" />
@@ -782,7 +782,7 @@ export default function EmployeePortal() {
 
         {/* ===== CONTACTS TAB ===== */}
         {activeTab === "contacts" && (
-          <div className="space-y-2 animate-fade-in">
+          <div role="tabpanel" id="portal-tabpanel-contacts" aria-labelledby="portal-tab-contacts" className="space-y-2 animate-fade-in">
             {portalContacts.length > 0 ? portalContacts.map((contact) => (
               <div key={contact.id} className="bg-card rounded-xl border border-border/50 p-3 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
