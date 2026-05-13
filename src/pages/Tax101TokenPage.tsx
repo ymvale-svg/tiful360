@@ -53,26 +53,27 @@ export default function Tax101TokenPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      <div className="min-h-screen flex items-center justify-center" role="status" aria-live="polite">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" aria-hidden="true" />
+        <span className="sr-only">טוען...</span>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-muted/30 to-background flex items-center justify-center p-4" dir="rtl">
+    <main className="min-h-screen bg-gradient-to-b from-muted/30 to-background flex items-center justify-center p-4" dir="rtl">
       <div className="max-w-md w-full bg-card rounded-2xl border border-border/50 shadow-lg p-6 space-y-4 text-center">
         {company?.logo_url && (
-          <img src={company.logo_url} alt={company.name} className="h-12 mx-auto" />
+          <img src={company.logo_url} alt={`לוגו ${company.name ?? "החברה"}`} className="h-12 mx-auto" />
         )}
-        <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
-          <FileText className="w-7 h-7 text-primary" />
+        <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto" aria-hidden="true">
+          <FileText className="w-7 h-7 text-primary" aria-hidden="true" />
         </div>
 
         {error ? (
           <>
-            <h1 className="text-lg font-bold flex items-center gap-2 justify-center">
-              <AlertCircle className="w-5 h-5 text-destructive" />
+            <h1 className="text-lg font-bold flex items-center gap-2 justify-center" role="alert">
+              <AlertCircle className="w-5 h-5 text-destructive" aria-hidden="true" />
               {error}
             </h1>
             {form?.pdf_url && (
@@ -83,7 +84,7 @@ export default function Tax101TokenPage() {
           </>
         ) : done ? (
           <>
-            <CheckCircle2 className="w-12 h-12 text-success mx-auto" />
+            <CheckCircle2 className="w-12 h-12 text-success mx-auto" aria-hidden="true" />
             <h1 className="text-lg font-bold">תודה!</h1>
             <p className="text-sm text-muted-foreground">הטופס נחתם ונשלח למחלקת השכר. ניתן לסגור את החלון.</p>
           </>
@@ -92,7 +93,7 @@ export default function Tax101TokenPage() {
             <h1 className="text-lg font-bold">טופס 101 לשנת {form?.tax_year}</h1>
             {employee && (
               <p className="text-sm text-muted-foreground">
-                שלום <span className="font-medium text-foreground">{employee.full_name}</span> 👋<br />
+                שלום <span className="font-medium text-foreground">{employee.full_name}</span> <span aria-hidden="true">👋</span><br />
                 לחץ למטה כדי למלא ולחתום על טופס 101 שלך {company?.name ? `עבור ${company.name}` : ""}.
               </p>
             )}
@@ -114,6 +115,6 @@ export default function Tax101TokenPage() {
           onSuccess={() => setDone(true)}
         />
       )}
-    </div>
+    </main>
   );
 }

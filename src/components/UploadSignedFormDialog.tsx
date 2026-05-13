@@ -74,7 +74,7 @@ export function UploadSignedFormDialog({ open, onOpenChange, employeeId }: Props
         </DialogHeader>
         <div className="space-y-4 mt-2">
           <div>
-            <Label>פריט ציוד</Label>
+            <Label htmlFor="upload-asset-select">פריט ציוד</Label>
             <SearchableSelect
               value={assetId}
               onChange={setAssetId}
@@ -86,14 +86,15 @@ export function UploadSignedFormDialog({ open, onOpenChange, employeeId }: Props
             />
           </div>
           <div>
-            <Label>מסמך חתום</Label>
-            <label className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg text-sm cursor-pointer hover:bg-muted/70">
-              <Upload className="w-4 h-4" />
+            <Label htmlFor="upload-signed-file">מסמך חתום</Label>
+            <label htmlFor="upload-signed-file" className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg text-sm cursor-pointer hover:bg-muted/70 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+              <Upload className="w-4 h-4" aria-hidden="true" />
               <span className="truncate">{file ? file.name : "בחר קובץ PDF/תמונה..."}</span>
               <input
+                id="upload-signed-file"
                 type="file"
                 accept="application/pdf,image/*"
-                className="hidden"
+                className="sr-only"
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               />
             </label>

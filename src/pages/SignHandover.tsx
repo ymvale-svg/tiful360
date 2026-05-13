@@ -107,30 +107,30 @@ export default function SignHandover() {
     }
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">טוען...</div>;
-  if (!record) return <div className="min-h-screen flex items-center justify-center text-destructive">קישור לא תקף</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center" role="status" aria-live="polite">טוען...</div>;
+  if (!record) return <div className="min-h-screen flex items-center justify-center text-destructive" role="alert">קישור לא תקף</div>;
 
   if (done || record.status === "signed") {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center" dir="rtl">
-        <CheckCircle2 className="w-16 h-16 text-green-500 mb-4" />
+      <main className="min-h-screen flex flex-col items-center justify-center p-6 text-center" dir="rtl">
+        <CheckCircle2 className="w-16 h-16 text-green-500 mb-4" aria-hidden="true" />
         <h1 className="text-2xl font-bold mb-2">הטופס נחתם בהצלחה</h1>
         <p className="text-muted-foreground">תודה. עותק נשמר בתיק שלך.</p>
         {record.pdf_url && (
-          <a href={record.pdf_url} target="_blank" rel="noreferrer" className="mt-4 text-primary underline">
+          <a href={record.pdf_url} target="_blank" rel="noreferrer" className="mt-4 text-primary underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded">
             הורד PDF
           </a>
         )}
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="min-h-screen bg-muted/30 p-6" dir="rtl">
+    <main className="min-h-screen bg-muted/30 p-6" dir="rtl">
       <div className="max-w-4xl mx-auto space-y-4">
         <div className="bg-card border rounded-xl p-6">
           <h1 className="text-xl font-bold flex items-center gap-2 mb-1">
-            <FileSignature className="w-6 h-6 text-primary" />
+            <FileSignature className="w-6 h-6 text-primary" aria-hidden="true" />
             חתימה על טופס קבלת ציוד
           </h1>
           <p className="text-sm text-muted-foreground">אנא קרא את הטופס וחתום למטה.</p>
@@ -140,12 +140,12 @@ export default function SignHandover() {
           {previewUrl ? (
             <iframe
               src={previewUrl}
-              title="תצוגת הטופס"
+              title="תצוגת טופס קבלת הציוד"
               className="w-full"
               style={{ height: "85vh", border: 0 }}
             />
           ) : (
-            <div className="p-12 text-center text-sm text-muted-foreground">טוען תצוגת טופס...</div>
+            <div className="p-12 text-center text-sm text-muted-foreground" role="status" aria-live="polite">טוען תצוגת טופס...</div>
           )}
         </div>
 
@@ -153,23 +153,24 @@ export default function SignHandover() {
           <SignaturePad ref={sigRef} label="חתימתי על קבלת הציוד" height={180} />
 
           <div>
-            <label className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg text-sm cursor-pointer hover:bg-muted/70">
-              <Upload className="w-4 h-4" />
+            <label htmlFor="handover-attachment" className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg text-sm cursor-pointer hover:bg-muted/70 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+              <Upload className="w-4 h-4" aria-hidden="true" />
               <span className="truncate">{attachment ? attachment.name : "צרף מסמך נוסף (אופציונלי)..."}</span>
               <input
+                id="handover-attachment"
                 type="file"
                 accept="application/pdf,image/*"
-                className="hidden"
+                className="sr-only"
                 onChange={(e) => setAttachment(e.target.files?.[0] ?? null)}
               />
             </label>
           </div>
 
-          <Button className="w-full" disabled={busy} onClick={handleSign}>
+          <Button className="w-full" disabled={busy} onClick={handleSign} aria-busy={busy}>
             {busy ? "שומר..." : "אישור וחתימה"}
           </Button>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

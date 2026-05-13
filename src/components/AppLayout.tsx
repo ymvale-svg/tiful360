@@ -6,6 +6,7 @@ import { Bell, Search, LogOut, UserRound } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useData";
 import { hasDualAccess } from "@/lib/dualAccess";
+import { SkipLink } from "./SkipLink";
 
 export function AppLayout() {
   const { user, signOut, isSuperAdmin, roles } = useAuth();
@@ -48,15 +49,18 @@ export function AppLayout() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SkipLink />
       <AppSidebar />
       
       <div className="mr-[240px] min-h-screen">
-        <header className="sticky top-0 z-30 h-16 bg-card/80 backdrop-blur-md border-b border-border flex items-center justify-between px-6">
+        <header role="banner" className="sticky top-0 z-30 h-16 bg-card/80 backdrop-blur-md border-b border-border flex items-center justify-between px-6">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3 bg-muted rounded-lg px-3 py-2 w-80">
-              <Search className="w-4 h-4 text-muted-foreground" />
+              <Search className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+              <label htmlFor="global-search" className="sr-only">חיפוש כללי</label>
               <input
-                type="text"
+                id="global-search"
+                type="search"
                 value={headerSearch}
                 onChange={(e) => onHeaderSearchChange(e.target.value)}
                 placeholder="חיפוש עובדים, ציוד, משימות..."
@@ -69,23 +73,29 @@ export function AppLayout() {
           <div className="flex items-center gap-4">
             {hasDualAccess(roles) && (
               <button
+                type="button"
                 onClick={() => {
                   sessionStorage.setItem("activeExperience", "portal");
                   navigate("/portal");
                 }}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-muted hover:bg-muted/70 transition-colors"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-muted hover:bg-muted/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                aria-label="מעבר לפורטל עובדים"
                 title="מעבר לפורטל עובדים"
               >
-                <UserRound className="w-4 h-4" />
+                <UserRound className="w-4 h-4" aria-hidden="true" />
                 <span className="hidden sm:inline">פורטל עובדים</span>
               </button>
             )}
-            <button className="relative p-2 rounded-lg hover:bg-muted transition-colors">
-              <Bell className="w-5 h-5 text-muted-foreground" />
-              <span className="absolute top-1.5 left-1.5 w-2 h-2 bg-destructive rounded-full animate-pulse-dot" />
+            <button
+              type="button"
+              className="relative p-2 rounded-lg hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              aria-label="התראות"
+            >
+              <Bell className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
+              <span className="absolute top-1.5 left-1.5 w-2 h-2 bg-destructive rounded-full animate-pulse-dot" aria-hidden="true" />
             </button>
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center" aria-hidden="true">
                 <span className="text-xs font-bold text-primary-foreground">{initials}</span>
               </div>
               <div className="text-right">
@@ -94,19 +104,22 @@ export function AppLayout() {
               </div>
             </div>
             <button
+              type="button"
               onClick={handleSignOut}
-              className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              aria-label="יציאה מהמערכת"
               title="יציאה"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
         </header>
 
-        <main className="p-6">
+        <main id="main-content" tabIndex={-1} className="p-6 focus:outline-none">
           <Suspense fallback={
-            <div className="flex items-center justify-center py-20">
-              <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+            <div className="flex items-center justify-center py-20" role="status" aria-live="polite">
+              <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+              <span className="sr-only">טוען...</span>
             </div>
           }>
             <Outlet />

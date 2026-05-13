@@ -193,11 +193,11 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
           {/* Site + location */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="flex items-center gap-1 justify-end text-sm">
-                <span className="text-destructive">*</span> אתר <MapPin className="w-3.5 h-3.5 text-warning" />
+              <Label htmlFor="ticket-site" className="flex items-center gap-1 justify-end text-sm">
+                <span className="text-destructive" aria-hidden="true">*</span> אתר <MapPin className="w-3.5 h-3.5 text-warning" aria-hidden="true" />
               </Label>
               <Select value={siteId} onValueChange={setSiteId}>
-                <SelectTrigger><SelectValue placeholder="בחר אתר" /></SelectTrigger>
+                <SelectTrigger id="ticket-site" aria-required="true"><SelectValue placeholder="בחר אתר" /></SelectTrigger>
                 <SelectContent>
                   {(sites ?? []).map(s => (
                     <SelectItem key={s.id} value={s.id}>{s.legal_name}</SelectItem>
@@ -206,48 +206,48 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="flex items-center gap-1 justify-end text-sm">
-                מיקום באתר <MapPin className="w-3.5 h-3.5 text-warning" />
+              <Label htmlFor="ticket-site-location" className="flex items-center gap-1 justify-end text-sm">
+                מיקום באתר <MapPin className="w-3.5 h-3.5 text-warning" aria-hidden="true" />
               </Label>
-              <Input value={siteLocation} onChange={e => setSiteLocation(e.target.value)} placeholder="לדוגמה: קומה 3, חדר 201" />
+              <Input id="ticket-site-location" value={siteLocation} onChange={e => setSiteLocation(e.target.value)} placeholder="לדוגמה: קומה 3, חדר 201" />
             </div>
           </div>
 
           {/* Contact phone */}
           <div className="space-y-1.5">
-            <Label className="flex items-center gap-1 justify-end text-sm">
-              <span className="text-destructive">*</span> טלפון איש קשר לתקלה <Phone className="w-3.5 h-3.5 text-warning" />
+            <Label htmlFor="ticket-phone" className="flex items-center gap-1 justify-end text-sm">
+              <span className="text-destructive" aria-hidden="true">*</span> טלפון איש קשר לתקלה <Phone className="w-3.5 h-3.5 text-warning" aria-hidden="true" />
             </Label>
-            <p className="text-xs text-muted-foreground text-right">
+            <p id="ticket-phone-hint" className="text-xs text-muted-foreground text-right">
               (אם המס׳ המופיע שונה, יש לעדכן למס׳ איש הקשר לתקלה בגינה נפתחת הקריאה)
             </p>
-            <Input value={contactPhone} onChange={e => setContactPhone(e.target.value)} dir="ltr" />
+            <Input id="ticket-phone" value={contactPhone} onChange={e => setContactPhone(e.target.value)} dir="ltr" inputMode="tel" autoComplete="tel" aria-describedby="ticket-phone-hint" aria-required="true" />
           </div>
 
           {/* Title */}
           <div className="space-y-1.5">
-            <Label className="flex items-center gap-1 justify-end text-sm">
-              <span className="text-destructive">*</span> תיאור הקריאה <Tag className="w-3.5 h-3.5 text-warning" />
+            <Label htmlFor="ticket-title" className="flex items-center gap-1 justify-end text-sm">
+              <span className="text-destructive" aria-hidden="true">*</span> תיאור הקריאה <Tag className="w-3.5 h-3.5 text-warning" aria-hidden="true" />
             </Label>
-            <Input value={title} onChange={e => setTitle(e.target.value.slice(0, 120))} placeholder="תאר בקצרה את הבעיה" />
-            <div className="text-xs text-muted-foreground text-left">{title.length} / 120</div>
+            <Input id="ticket-title" value={title} onChange={e => setTitle(e.target.value.slice(0, 120))} placeholder="תאר בקצרה את הבעיה" aria-required="true" maxLength={120} aria-describedby="ticket-title-counter" />
+            <div id="ticket-title-counter" className="text-xs text-muted-foreground text-left" aria-live="polite">{title.length} / 120</div>
           </div>
 
           {/* Description */}
           <div className="space-y-1.5">
-            <Label className="flex items-center gap-1 justify-end text-sm">
-              תיאור נוסף <MessageSquare className="w-3.5 h-3.5 text-warning" />
+            <Label htmlFor="ticket-description" className="flex items-center gap-1 justify-end text-sm">
+              תיאור נוסף <MessageSquare className="w-3.5 h-3.5 text-warning" aria-hidden="true" />
             </Label>
-            <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="ספרו לנו עוד פרטים על הבעיה..." rows={4} />
+            <Textarea id="ticket-description" value={description} onChange={e => setDescription(e.target.value)} placeholder="ספרו לנו עוד פרטים על הבעיה..." rows={4} />
           </div>
 
           {/* Ticket type */}
           <div className="space-y-1.5">
-            <Label className="flex items-center gap-1 justify-end text-sm">
-              סוג קריאת שירות <ListChecks className="w-3.5 h-3.5 text-warning" />
+            <Label htmlFor="ticket-type" className="flex items-center gap-1 justify-end text-sm">
+              סוג קריאת שירות <ListChecks className="w-3.5 h-3.5 text-warning" aria-hidden="true" />
             </Label>
             <Select value={ticketType} onValueChange={setTicketType}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger id="ticket-type"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {TICKET_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
               </SelectContent>
@@ -257,22 +257,22 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
           {/* Status + Priority */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="flex items-center gap-1 justify-end text-sm">
-                סטטוס <Info className="w-3.5 h-3.5 text-warning" />
+              <Label htmlFor="ticket-status" className="flex items-center gap-1 justify-end text-sm">
+                סטטוס <Info className="w-3.5 h-3.5 text-warning" aria-hidden="true" />
               </Label>
               <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger className="bg-muted"><SelectValue /></SelectTrigger>
+                <SelectTrigger id="ticket-status" className="bg-muted"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="flex items-center gap-1 justify-end text-sm">
-                דחיפות <Zap className="w-3.5 h-3.5 text-warning" />
+              <Label htmlFor="ticket-priority" className="flex items-center gap-1 justify-end text-sm">
+                דחיפות <Zap className="w-3.5 h-3.5 text-warning" aria-hidden="true" />
               </Label>
               <Select value={priority} onValueChange={setPriority}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id="ticket-priority"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {PRIORITIES.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
                 </SelectContent>
@@ -282,27 +282,27 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
 
           {/* Attachments */}
           <div className="space-y-1.5">
-            <Label className="flex items-center gap-1 justify-end text-sm">
-              קבצים מצורפים <Paperclip className="w-3.5 h-3.5 text-warning" />
-            </Label>
+            <span className="flex items-center gap-1 justify-end text-sm font-medium">
+              קבצים מצורפים <Paperclip className="w-3.5 h-3.5 text-warning" aria-hidden="true" />
+            </span>
             {files.length > 0 && (
-              <ul className="space-y-1">
+              <ul className="space-y-1" aria-label="רשימת קבצים מצורפים">
                 {files.map((f, i) => (
                   <li key={i} className="flex items-center justify-between text-xs bg-muted/50 rounded px-2 py-1">
-                    <button onClick={() => removeFile(i)} className="text-destructive">הסר</button>
+                    <button type="button" onClick={() => removeFile(i)} className="text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1" aria-label={`הסר את הקובץ ${f.name}`}>הסר</button>
                     <span className="truncate">{f.name}</span>
                   </li>
                 ))}
               </ul>
             )}
-            <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFilesChange} />
+            <input ref={fileInputRef} id="ticket-attachments" type="file" multiple className="sr-only" onChange={handleFilesChange} aria-label="בחר קבצים מצורפים" />
             <div className="grid grid-cols-2 gap-3">
               <Button variant="outline" type="button" onClick={() => fileInputRef.current?.click()} className="gap-2">
-                <Camera className="w-4 h-4" />
+                <Camera className="w-4 h-4" aria-hidden="true" />
                 הדבק צילום מסך
               </Button>
               <Button type="button" onClick={() => fileInputRef.current?.click()} className="gap-2 bg-primary">
-                <Plus className="w-4 h-4" />
+                <Plus className="w-4 h-4" aria-hidden="true" />
                 הוסף קובץ
               </Button>
             </div>
@@ -310,8 +310,8 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
 
           <div className="flex gap-2 pt-2">
             <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">ביטול</Button>
-            <Button onClick={handleSubmit} disabled={submitting} className="flex-1 gap-2">
-              {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+            <Button onClick={handleSubmit} disabled={submitting} className="flex-1 gap-2" aria-busy={submitting}>
+              {submitting && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />}
               פתח קריאה
             </Button>
           </div>

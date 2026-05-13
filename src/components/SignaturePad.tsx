@@ -19,6 +19,7 @@ export const SignaturePad = forwardRef<SignaturePadHandle, Props>(
     const sigRef = useRef<SignatureCanvas>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [size, setSize] = useState<{ w: number; h: number } | null>(null);
+    const labelId = useRef(`sig-label-${Math.random().toString(36).slice(2, 9)}`).current;
 
     useEffect(() => {
       if (!containerRef.current) return;
@@ -45,21 +46,25 @@ export const SignaturePad = forwardRef<SignaturePadHandle, Props>(
     return (
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className="text-sm font-medium">{label}</label>
+          <span id={labelId} className="text-sm font-medium">{label}</span>
           <Button
             type="button"
             variant="ghost"
             size="sm"
             className="h-7 gap-1 text-xs"
             onClick={() => sigRef.current?.clear()}
+            aria-label={`נקה ${label}`}
           >
-            <Eraser className="w-3 h-3" />
+            <Eraser className="w-3 h-3" aria-hidden="true" />
             נקה
           </Button>
         </div>
         <div
           ref={containerRef}
-          className="bg-background border-2 border-dashed border-border rounded-lg overflow-hidden"
+          role="img"
+          aria-labelledby={labelId}
+          aria-describedby={`${labelId}-hint`}
+          className="bg-background border-2 border-dashed border-border rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
           style={{ height }}
         >
           {size && (
@@ -70,12 +75,14 @@ export const SignaturePad = forwardRef<SignaturePadHandle, Props>(
               canvasProps={{
                 width: size.w,
                 height: size.h,
+                "aria-label": label,
                 className: "cursor-crosshair touch-none",
                 style: { width: "100%", height: "100%", display: "block" },
-              }}
+              } as any}
             />
           )}
         </div>
+        <span id={`${labelId}-hint`} className="sr-only">השתמש בעכבר או באצבע על מסך מגע כדי לחתום בתוך המסגרת</span>
       </div>
     );
   },

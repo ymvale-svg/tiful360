@@ -332,14 +332,14 @@ export default function EmployeePortal() {
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
-      {/* Mobile-friendly top bar */}
-      <header className="sticky top-0 z-30 bg-card/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
+      {/* Mobile/tablet-friendly top bar */}
+      <header role="banner" className="sticky top-0 z-30 bg-card/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center shrink-0">
+          <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center shrink-0" aria-hidden="true">
             <span className="text-xs font-bold text-primary-foreground">{initials}</span>
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold leading-tight truncate">שלום, {employeeName.split(" ")[0]} 👋</p>
+            <h1 className="text-sm font-semibold leading-tight truncate">שלום, {employeeName.split(" ")[0]} <span aria-hidden="true">👋</span></h1>
             <p className="text-[11px] text-muted-foreground">
               {myEmployee ? `${myEmployee.role} • ${myEmployee.department}` : "פורטל עובדים"}
             </p>
@@ -348,28 +348,32 @@ export default function EmployeePortal() {
         <div className="flex items-center gap-1 shrink-0">
           {hasDualAccess(roles) && (
             <button
+              type="button"
               onClick={() => {
                 sessionStorage.setItem("activeExperience", "ops");
                 navigate("/");
               }}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-muted hover:bg-muted/70 transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-muted hover:bg-muted/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="מעבר לתפעול 360"
               title="מעבר לתפעול 360"
             >
-              <LayoutDashboard className="w-3.5 h-3.5" />
+              <LayoutDashboard className="w-3.5 h-3.5" aria-hidden="true" />
               <span className="hidden sm:inline">תפעול 360</span>
             </button>
           )}
           <button
+            type="button"
             onClick={handleSignOut}
-            className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground"
+            className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="יציאה מהמערכת"
             title="יציאה"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 py-4 space-y-4 overflow-x-hidden">
+      <main id="main-content" tabIndex={-1} className="max-w-2xl md:max-w-3xl mx-auto px-4 py-4 space-y-4 overflow-x-hidden focus:outline-none">
         {/* Welcome banner */}
         <div className="bg-gradient-to-l from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 rounded-xl border border-primary/20 p-5">
           <h2 className="text-lg font-bold text-foreground">ברוכים הבאים, {employeeName} 👋</h2>
@@ -445,27 +449,36 @@ export default function EmployeePortal() {
         )}
 
         {/* Tabs */}
-        <div className="grid grid-cols-3 gap-1.5">
-          {portalTabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                "flex flex-col items-center gap-1 px-2 py-2.5 rounded-xl text-[11px] font-medium transition-colors",
-                activeTab === tab.id
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
-              )}
-            >
-              <tab.icon className="w-4 h-4" />
-              {tab.label}
-            </button>
-          ))}
+        <div role="tablist" aria-label="ניווט פורטל" className="grid grid-cols-3 md:grid-cols-6 gap-1.5">
+          {portalTabs.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                aria-controls={`portal-tabpanel-${tab.id}`}
+                id={`portal-tab-${tab.id}`}
+                tabIndex={isActive ? 0 : -1}
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "flex flex-col items-center gap-1 px-2 py-2.5 rounded-xl text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                )}
+              >
+                <tab.icon className="w-4 h-4" aria-hidden="true" />
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
 
         {/* ===== ASSETS TAB ===== */}
         {activeTab === "assets" && (
-          <div className="space-y-4 animate-fade-in">
+          <div role="tabpanel" id="portal-tabpanel-assets" aria-labelledby="portal-tab-assets" className="space-y-4 animate-fade-in">
             {!myEmployee && (
               <p className="text-center text-sm text-muted-foreground py-4">
                 המשתמש שלך לא מקושר לעובד. פנה למנהל המערכת.
@@ -525,7 +538,7 @@ export default function EmployeePortal() {
 
         {/* ===== ATTENDANCE TAB ===== */}
         {activeTab === "attendance" && (
-          <div className="animate-fade-in space-y-3">
+          <div role="tabpanel" id="portal-tabpanel-attendance" aria-labelledby="portal-tab-attendance" className="animate-fade-in space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="font-semibold text-sm">נוכחות</h2>
               <Button
@@ -658,7 +671,7 @@ export default function EmployeePortal() {
 
         {/* ===== HR TAB ===== */}
         {activeTab === "hr" && (
-          <div className="space-y-4 animate-fade-in">
+          <div role="tabpanel" id="portal-tabpanel-hr" aria-labelledby="portal-tab-hr" className="space-y-4 animate-fade-in">
             <div className="bg-card rounded-xl border border-border/50 p-4">
               <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
                 <CalendarDays className="w-4 h-4 text-primary" />
@@ -733,7 +746,7 @@ export default function EmployeePortal() {
 
         {/* ===== NEWS TAB ===== */}
         {activeTab === "news" && (
-          <div className="space-y-3 animate-fade-in">
+          <div role="tabpanel" id="portal-tabpanel-news" aria-labelledby="portal-tab-news" className="space-y-3 animate-fade-in">
             {announcements.length > 0 ? announcements.map((item) => (
               <div key={item.id} className="bg-card rounded-xl border border-border/50 p-4">
                 <div className="flex items-start justify-between gap-2 mb-1">
@@ -752,7 +765,7 @@ export default function EmployeePortal() {
 
         {/* ===== KB TAB ===== */}
         {activeTab === "kb" && (
-          <div className="space-y-2 animate-fade-in">
+          <div role="tabpanel" id="portal-tabpanel-kb" aria-labelledby="portal-tab-kb" className="space-y-2 animate-fade-in">
             {knowledgeBase.length > 0 ? knowledgeBase.map((doc) => (
               <div key={doc.id} className="bg-card rounded-xl border border-border/50 p-3 flex items-center gap-3 hover:bg-muted/30 cursor-pointer transition-colors active:scale-[0.98]">
                 <BookOpen className="w-5 h-5 text-primary shrink-0" />
@@ -769,7 +782,7 @@ export default function EmployeePortal() {
 
         {/* ===== CONTACTS TAB ===== */}
         {activeTab === "contacts" && (
-          <div className="space-y-2 animate-fade-in">
+          <div role="tabpanel" id="portal-tabpanel-contacts" aria-labelledby="portal-tab-contacts" className="space-y-2 animate-fade-in">
             {portalContacts.length > 0 ? portalContacts.map((contact) => (
               <div key={contact.id} className="bg-card rounded-xl border border-border/50 p-3 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -785,8 +798,8 @@ export default function EmployeePortal() {
                   )}
                 </div>
                 {contact.phone && (
-                  <a href={`tel:${contact.phone}`} className="flex items-center gap-1 text-xs text-primary hover:underline shrink-0" title={contact.phone}>
-                    <Phone className="w-3.5 h-3.5" />
+                  <a href={`tel:${contact.phone}`} className="flex items-center gap-1 text-xs text-primary hover:underline shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded p-1" aria-label={`התקשר אל ${contact.name}: ${contact.phone}`} title={contact.phone}>
+                    <Phone className="w-3.5 h-3.5" aria-hidden="true" />
                   </a>
                 )}
               </div>
@@ -797,7 +810,7 @@ export default function EmployeePortal() {
         )}
 
         <div className="h-6" />
-      </div>
+      </main>
 
       {myEmployee && (
         <>
