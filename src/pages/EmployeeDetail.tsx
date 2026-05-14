@@ -335,6 +335,7 @@ export default function EmployeeDetail() {
                 </div>
               </div>
               <Switch
+                aria-label="איפשור החתמה מרחוק"
                 checked={!!(employee as any).can_remote_punch}
                 disabled={!canEditRemotePunch || savingRemote}
                 onCheckedChange={canEditRemotePunch ? handleToggleRemotePunch : undefined}

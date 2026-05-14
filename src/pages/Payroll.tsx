@@ -164,8 +164,10 @@ function PayrollSettingsTab() {
         <h3 className="font-semibold">כתובות אימייל מחלקת שכר</h3>
       </div>
       <div>
-        <label className="text-sm font-medium mb-1.5 block">כתובות אימייל</label>
+        <label htmlFor="payroll-emails" className="text-sm font-medium mb-1.5 block">כתובות אימייל</label>
         <input
+          id="payroll-emails"
+          type="text"
           value={payrollEmails}
           onChange={(e) => setPayrollEmails(e.target.value)}
           placeholder="payroll@company.com, hr@company.com"

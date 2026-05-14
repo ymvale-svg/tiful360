@@ -339,7 +339,7 @@ export default function EmployeePortal() {
             <span className="text-xs font-bold text-primary-foreground">{initials}</span>
           </div>
           <div className="min-w-0">
-            <h1 className="text-sm font-semibold leading-tight truncate">שלום, {employeeName.split(" ")[0]} <span aria-hidden="true">👋</span></h1>
+            <h1 className="text-sm font-semibold leading-tight truncate">פורטל עובדים — שלום, {employeeName.split(" ")[0]} <span aria-hidden="true">👋</span></h1>
             <p className="text-[11px] text-muted-foreground">
               {myEmployee ? `${myEmployee.role} • ${myEmployee.department}` : "פורטל עובדים"}
             </p>

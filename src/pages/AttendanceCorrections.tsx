@@ -162,7 +162,7 @@ export default function AttendanceCorrections() {
             <div className="space-y-3 text-sm">
               <p><strong>{reviewing.employee?.full_name}</strong> — {new Date(reviewing.correction_date).toLocaleDateString("en-GB").replace(/\//g, "-")}</p>
               <p className="text-muted-foreground">סיבה: {reviewing.reason || "—"}</p>
-              <Textarea placeholder="הערה (אופציונלי)" value={note} onChange={(e) => setNote(e.target.value)} />
+              <Textarea aria-label="הערת מנהל לבקשת התיקון" placeholder="הערה (אופציונלי)" value={note} onChange={(e) => setNote(e.target.value)} />
             </div>
           )}
           <DialogFooter className="gap-2">

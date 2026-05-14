@@ -69,8 +69,8 @@ export default function Login() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <img src={logoImg} alt="לוגו תפעול 360" className="w-16 h-16 rounded-2xl mx-auto mb-0 object-contain" />
-          <h1 className="text-2xl font-bold">תפעול 360</h1>
-          <p className="text-sm text-muted-foreground mt-1">מערכת ניהול משאבים מרכזית</p>
+          <h1 className="text-2xl font-bold">תפעול 360 — מערכת ניהול משאבים מרכזית</h1>
+          <p className="text-sm text-muted-foreground mt-1">ניהול עובדים, שכר, נוכחות וציוד</p>
         </div>
 
         <section aria-labelledby="login-heading" className="bg-card rounded-2xl border border-border shadow-card p-8">

@@ -142,8 +142,9 @@ export default function Companies() {
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <div>
-                <Label>שם החברה</Label>
+                <Label htmlFor="company-name">שם החברה</Label>
                 <Input
+                  id="company-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="הכנס שם חברה"
