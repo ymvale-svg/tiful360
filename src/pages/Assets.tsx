@@ -115,8 +115,10 @@ export default function Assets() {
               {/* Global search */}
               <div className="relative max-w-xl">
                 <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2">
-                  <Search className="w-4 h-4 text-muted-foreground" />
+                  <Search className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
                   <input
+                    type="search"
+                    aria-label="חיפוש משאבים"
                     value={globalSearch}
                     onChange={(e) => setGlobalSearch(e.target.value)}
                     placeholder="חיפוש מהיר בכל המשאבים (שם / מזהה / מס׳ סידורי)..."

@@ -51,8 +51,8 @@ export default function AttendanceMap() {
             <span className="w-2 h-2 rounded-full bg-gray-500 inline-block" />
             יצא: {outCount}
           </Badge>
-          <Button size="sm" variant="outline" onClick={() => refetch()} disabled={isFetching}>
-            <RefreshCw className={cn("w-4 h-4", isFetching && "animate-spin")} />
+          <Button size="sm" variant="outline" onClick={() => refetch()} disabled={isFetching} aria-label="רענן מיקומי עובדים">
+            <RefreshCw className={cn("w-4 h-4", isFetching && "animate-spin")} aria-hidden="true" />
           </Button>
         </div>
       </div>
@@ -61,8 +61,10 @@ export default function AttendanceMap() {
         {/* Sidebar list */}
         <Card className="p-3 flex flex-col gap-3 min-h-0">
           <div className="relative">
-            <Search className="absolute right-2 top-2.5 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute right-2 top-2.5 w-4 h-4 text-muted-foreground" aria-hidden="true" />
             <Input
+              type="search"
+              aria-label="חיפוש עובד במפה"
               placeholder="חיפוש עובד..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
