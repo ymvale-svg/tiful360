@@ -549,13 +549,14 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
 // ============================
 // Category Editor (name, prefix, description)
 // ============================
-function CategoryEditor({ category }: { category: { id: string; category_name: string; prefix: string; description?: string | null; skip_handover_form?: boolean | null; skip_return_form?: boolean | null; default_notification_days_before?: number | null } }) {
+function CategoryEditor({ category }: { category: { id: string; category_name: string; prefix: string; description?: string | null; skip_handover_form?: boolean | null; skip_return_form?: boolean | null; default_notification_days_before?: number | null; is_assignable?: boolean | null } }) {
   const updateMutation = useUpdateCategory();
   const { toast } = useToast();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(category.category_name);
   const [prefix, setPrefix] = useState(category.prefix);
   const [description, setDescription] = useState(category.description ?? "");
+  const [isAssignable, setIsAssignable] = useState(category.is_assignable !== false);
   const [skipHandover, setSkipHandover] = useState(!!category.skip_handover_form);
   const [skipReturn, setSkipReturn] = useState(!!category.skip_return_form);
   const [notifDays, setNotifDays] = useState<string>(
@@ -566,11 +567,12 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
     setName(category.category_name);
     setPrefix(category.prefix);
     setDescription(category.description ?? "");
+    setIsAssignable(category.is_assignable !== false);
     setSkipHandover(!!category.skip_handover_form);
     setSkipReturn(!!category.skip_return_form);
     setNotifDays(category.default_notification_days_before == null ? "" : String(category.default_notification_days_before));
     setEditing(false);
-  }, [category.id, category.category_name, category.prefix, category.description, category.skip_handover_form, category.skip_return_form, category.default_notification_days_before]);
+  }, [category.id, category.category_name, category.prefix, category.description, category.is_assignable, category.skip_handover_form, category.skip_return_form, category.default_notification_days_before]);
 
   const handleSave = async () => {
     if (!name.trim() || !prefix.trim()) {
@@ -583,8 +585,10 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
         category_name: name,
         prefix: prefix.toUpperCase(),
         description: description || undefined,
-        skip_handover_form: skipHandover,
-        skip_return_form: skipReturn,
+        is_assignable: isAssignable,
+        // Institutional categories never use handover/return forms
+        skip_handover_form: isAssignable ? skipHandover : true,
+        skip_return_form: isAssignable ? skipReturn : true,
         default_notification_days_before: notifDays.trim() === "" ? null : Number(notifDays),
       });
       toast({ title: "קטגוריה עודכנה בהצלחה" });
