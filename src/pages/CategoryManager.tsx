@@ -549,13 +549,14 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
 // ============================
 // Category Editor (name, prefix, description)
 // ============================
-function CategoryEditor({ category }: { category: { id: string; category_name: string; prefix: string; description?: string | null; skip_handover_form?: boolean | null; skip_return_form?: boolean | null; default_notification_days_before?: number | null } }) {
+function CategoryEditor({ category }: { category: { id: string; category_name: string; prefix: string; description?: string | null; skip_handover_form?: boolean | null; skip_return_form?: boolean | null; default_notification_days_before?: number | null; is_assignable?: boolean | null } }) {
   const updateMutation = useUpdateCategory();
   const { toast } = useToast();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(category.category_name);
   const [prefix, setPrefix] = useState(category.prefix);
   const [description, setDescription] = useState(category.description ?? "");
+  const [isAssignable, setIsAssignable] = useState(category.is_assignable !== false);
   const [skipHandover, setSkipHandover] = useState(!!category.skip_handover_form);
   const [skipReturn, setSkipReturn] = useState(!!category.skip_return_form);
   const [notifDays, setNotifDays] = useState<string>(
@@ -566,11 +567,12 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
     setName(category.category_name);
     setPrefix(category.prefix);
     setDescription(category.description ?? "");
+    setIsAssignable(category.is_assignable !== false);
     setSkipHandover(!!category.skip_handover_form);
     setSkipReturn(!!category.skip_return_form);
     setNotifDays(category.default_notification_days_before == null ? "" : String(category.default_notification_days_before));
     setEditing(false);
-  }, [category.id, category.category_name, category.prefix, category.description, category.skip_handover_form, category.skip_return_form, category.default_notification_days_before]);
+  }, [category.id, category.category_name, category.prefix, category.description, category.is_assignable, category.skip_handover_form, category.skip_return_form, category.default_notification_days_before]);
 
   const handleSave = async () => {
     if (!name.trim() || !prefix.trim()) {
@@ -583,8 +585,10 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
         category_name: name,
         prefix: prefix.toUpperCase(),
         description: description || undefined,
-        skip_handover_form: skipHandover,
-        skip_return_form: skipReturn,
+        is_assignable: isAssignable,
+        // Institutional categories never use handover/return forms
+        skip_handover_form: isAssignable ? skipHandover : true,
+        skip_return_form: isAssignable ? skipReturn : true,
         default_notification_days_before: notifDays.trim() === "" ? null : Number(notifDays),
       });
       toast({ title: "קטגוריה עודכנה בהצלחה" });
@@ -598,12 +602,22 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
     return (
       <div className="bg-card rounded-xl border border-border/50 shadow-card p-5 flex items-center justify-between">
         <div>
-          <h2 className="font-semibold">{category.category_name}</h2>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="font-semibold">{category.category_name}</h2>
+            <span className={cn(
+              "text-[11px] px-2 py-0.5 rounded-full font-medium",
+              category.is_assignable === false
+                ? "bg-primary/10 text-primary"
+                : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+            )}>
+              {category.is_assignable === false ? "נכס מוסדי" : "מוקצה לעובדים"}
+            </span>
+          </div>
           <p className="text-xs text-muted-foreground mt-0.5">
             קידומת: <span className="font-mono">{category.prefix}</span>
             {category.description && ` • ${category.description}`}
           </p>
-          {(category.skip_handover_form || category.skip_return_form) && (
+          {category.is_assignable !== false && (category.skip_handover_form || category.skip_return_form) && (
             <p className="text-[11px] text-muted-foreground mt-1">
               {category.skip_handover_form && "ללא אישור משיכה"}
               {category.skip_handover_form && category.skip_return_form && " • "}
@@ -640,32 +654,70 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
       </div>
 
       <div className="space-y-2 pt-2 border-t border-border/50">
-        <p className="text-xs font-medium text-muted-foreground">הגדרות טופסי מסירה/החזרה</p>
-        <label className="flex items-start gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={skipHandover}
-            onChange={(e) => setSkipHandover(e.target.checked)}
-            className="mt-0.5 w-4 h-4 rounded border-border accent-primary"
-          />
-          <div className="text-sm">
-            <div>דלג על אישור משיכה</div>
-            <div className="text-[11px] text-muted-foreground">פריטים בקטגוריה זו ישויכו לעובד ישירות, ללא טופס מסירה וחתימה.</div>
-          </div>
-        </label>
-        <label className="flex items-start gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={skipReturn}
-            onChange={(e) => setSkipReturn(e.target.checked)}
-            className="mt-0.5 w-4 h-4 rounded border-border accent-primary"
-          />
-          <div className="text-sm">
-            <div>דלג על אישור זיכוי</div>
-            <div className="text-[11px] text-muted-foreground">החזרת פריטים בקטגוריה זו למלאי תתבצע ללא טופס החזרה וחתימה.</div>
-          </div>
-        </label>
+        <p className="text-xs font-medium text-muted-foreground">סוג הקטגוריה</p>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setIsAssignable(true)}
+            className={cn(
+              "text-right p-3 rounded-lg border transition-all",
+              isAssignable
+                ? "border-primary bg-primary/5 ring-2 ring-primary/30"
+                : "border-border hover:border-primary/40"
+            )}
+          >
+            <div className="text-sm font-medium">מוקצה לעובדים</div>
+            <div className="text-[11px] text-muted-foreground mt-0.5">
+              פריטים ניתנים לשיוך לעובד, עם טופסי מסירה/החזרה.
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsAssignable(false)}
+            className={cn(
+              "text-right p-3 rounded-lg border transition-all",
+              !isAssignable
+                ? "border-primary bg-primary/5 ring-2 ring-primary/30"
+                : "border-border hover:border-primary/40"
+            )}
+          >
+            <div className="text-sm font-medium">נכסים מוסדיים</div>
+            <div className="text-[11px] text-muted-foreground mt-0.5">
+              פריטי החברה ללא שיוך לעובד (לדוגמה: ביטוחים, רישיונות).
+            </div>
+          </button>
+        </div>
       </div>
+
+      {isAssignable && (
+        <div className="space-y-2 pt-2 border-t border-border/50">
+          <p className="text-xs font-medium text-muted-foreground">הגדרות טופסי מסירה/החזרה</p>
+          <label className="flex items-start gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={skipHandover}
+              onChange={(e) => setSkipHandover(e.target.checked)}
+              className="mt-0.5 w-4 h-4 rounded border-border accent-primary"
+            />
+            <div className="text-sm">
+              <div>דלג על אישור משיכה</div>
+              <div className="text-[11px] text-muted-foreground">פריטים בקטגוריה זו ישויכו לעובד ישירות, ללא טופס מסירה וחתימה.</div>
+            </div>
+          </label>
+          <label className="flex items-start gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={skipReturn}
+              onChange={(e) => setSkipReturn(e.target.checked)}
+              className="mt-0.5 w-4 h-4 rounded border-border accent-primary"
+            />
+            <div className="text-sm">
+              <div>דלג על אישור זיכוי</div>
+              <div className="text-[11px] text-muted-foreground">החזרת פריטים בקטגוריה זו למלאי תתבצע ללא טופס החזרה וחתימה.</div>
+            </div>
+          </label>
+        </div>
+      )}
 
       <div className="pt-2 border-t border-border/50">
         <label className="text-sm font-medium mb-1 block">ימי התראה ברירת מחדל לתפוגה</label>
