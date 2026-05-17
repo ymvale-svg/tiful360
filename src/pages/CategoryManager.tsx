@@ -654,32 +654,70 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
       </div>
 
       <div className="space-y-2 pt-2 border-t border-border/50">
-        <p className="text-xs font-medium text-muted-foreground">הגדרות טופסי מסירה/החזרה</p>
-        <label className="flex items-start gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={skipHandover}
-            onChange={(e) => setSkipHandover(e.target.checked)}
-            className="mt-0.5 w-4 h-4 rounded border-border accent-primary"
-          />
-          <div className="text-sm">
-            <div>דלג על אישור משיכה</div>
-            <div className="text-[11px] text-muted-foreground">פריטים בקטגוריה זו ישויכו לעובד ישירות, ללא טופס מסירה וחתימה.</div>
-          </div>
-        </label>
-        <label className="flex items-start gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={skipReturn}
-            onChange={(e) => setSkipReturn(e.target.checked)}
-            className="mt-0.5 w-4 h-4 rounded border-border accent-primary"
-          />
-          <div className="text-sm">
-            <div>דלג על אישור זיכוי</div>
-            <div className="text-[11px] text-muted-foreground">החזרת פריטים בקטגוריה זו למלאי תתבצע ללא טופס החזרה וחתימה.</div>
-          </div>
-        </label>
+        <p className="text-xs font-medium text-muted-foreground">סוג הקטגוריה</p>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setIsAssignable(true)}
+            className={cn(
+              "text-right p-3 rounded-lg border transition-all",
+              isAssignable
+                ? "border-primary bg-primary/5 ring-2 ring-primary/30"
+                : "border-border hover:border-primary/40"
+            )}
+          >
+            <div className="text-sm font-medium">מוקצה לעובדים</div>
+            <div className="text-[11px] text-muted-foreground mt-0.5">
+              פריטים ניתנים לשיוך לעובד, עם טופסי מסירה/החזרה.
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsAssignable(false)}
+            className={cn(
+              "text-right p-3 rounded-lg border transition-all",
+              !isAssignable
+                ? "border-primary bg-primary/5 ring-2 ring-primary/30"
+                : "border-border hover:border-primary/40"
+            )}
+          >
+            <div className="text-sm font-medium">נכסים מוסדיים</div>
+            <div className="text-[11px] text-muted-foreground mt-0.5">
+              פריטי החברה ללא שיוך לעובד (לדוגמה: ביטוחים, רישיונות).
+            </div>
+          </button>
+        </div>
       </div>
+
+      {isAssignable && (
+        <div className="space-y-2 pt-2 border-t border-border/50">
+          <p className="text-xs font-medium text-muted-foreground">הגדרות טופסי מסירה/החזרה</p>
+          <label className="flex items-start gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={skipHandover}
+              onChange={(e) => setSkipHandover(e.target.checked)}
+              className="mt-0.5 w-4 h-4 rounded border-border accent-primary"
+            />
+            <div className="text-sm">
+              <div>דלג על אישור משיכה</div>
+              <div className="text-[11px] text-muted-foreground">פריטים בקטגוריה זו ישויכו לעובד ישירות, ללא טופס מסירה וחתימה.</div>
+            </div>
+          </label>
+          <label className="flex items-start gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={skipReturn}
+              onChange={(e) => setSkipReturn(e.target.checked)}
+              className="mt-0.5 w-4 h-4 rounded border-border accent-primary"
+            />
+            <div className="text-sm">
+              <div>דלג על אישור זיכוי</div>
+              <div className="text-[11px] text-muted-foreground">החזרת פריטים בקטגוריה זו למלאי תתבצע ללא טופס החזרה וחתימה.</div>
+            </div>
+          </label>
+        </div>
+      )}
 
       <div className="pt-2 border-t border-border/50">
         <label className="text-sm font-medium mb-1 block">ימי התראה ברירת מחדל לתפוגה</label>
