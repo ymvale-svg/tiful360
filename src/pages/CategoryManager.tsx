@@ -602,12 +602,22 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
     return (
       <div className="bg-card rounded-xl border border-border/50 shadow-card p-5 flex items-center justify-between">
         <div>
-          <h2 className="font-semibold">{category.category_name}</h2>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="font-semibold">{category.category_name}</h2>
+            <span className={cn(
+              "text-[11px] px-2 py-0.5 rounded-full font-medium",
+              category.is_assignable === false
+                ? "bg-primary/10 text-primary"
+                : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+            )}>
+              {category.is_assignable === false ? "נכס מוסדי" : "מוקצה לעובדים"}
+            </span>
+          </div>
           <p className="text-xs text-muted-foreground mt-0.5">
             קידומת: <span className="font-mono">{category.prefix}</span>
             {category.description && ` • ${category.description}`}
           </p>
-          {(category.skip_handover_form || category.skip_return_form) && (
+          {category.is_assignable !== false && (category.skip_handover_form || category.skip_return_form) && (
             <p className="text-[11px] text-muted-foreground mt-1">
               {category.skip_handover_form && "ללא אישור משיכה"}
               {category.skip_handover_form && category.skip_return_form && " • "}
