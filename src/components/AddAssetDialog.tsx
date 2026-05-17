@@ -91,9 +91,11 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
   const selectedCategory = categories?.find(c => c.id === form.category_id);
   const { isAdmin } = useAuth();
   const addOption = useAddCategoryFieldOption();
-  // Hide duplicate custom fields that overlap with system fields per category
+  // Hide custom fields that duplicate the system expiry_date field.
+  // Any custom field literally named like the system expiry is treated as a duplicate.
+  const EXPIRY_DUPLICATE_NAMES = new Set(["תוקף", "תוקף פוליסה", "תאריך תפוגה", "תאריך תוקף"]);
   const catFields = (catFieldsRaw ?? []).filter((cf: any) => {
-    if (selectedCategory?.prefix === "CINS" && cf.field_name === "תוקף פוליסה") return false;
+    if (EXPIRY_DUPLICATE_NAMES.has((cf.field_name ?? "").trim())) return false;
     return true;
   });
 
