@@ -1,107 +1,54 @@
-# נגישות ותאימות - פורטל העובד
+# אינטגרציות רוחביות + מודל תפוגות per-domain
 
-## מטרה
-להביא את פורטל העובד לעמידה בתקן WCAG 2.1 ברמה AA, לוודא תאימות ל-Chrome/Firefox/Edge (2 גרסאות אחרונות), ולשפר רספונסיביות לטאבלט (768-1024px).
+## עקרון מנחה חדש (לפי הבהרת המשתמש)
 
-## היקף
-מסכים ורכיבים בפורטל העובד בלבד:
-- `src/pages/EmployeePortal.tsx` (המסך הראשי - 821 שורות, 6+ טאבים)
-- `src/pages/Login.tsx`, `src/pages/ResetPassword.tsx`, `src/pages/Welcome.tsx`
-- `src/pages/SignHandover.tsx`, `src/pages/SignOffboarding.tsx`, `src/pages/Tax101TokenPage.tsx`
-- `src/components/portal/*` (Tax101Banner, MyTax101FormsList)
-- דיאלוגים שהעובד פוגש: `NewLeaveRequestDialog`, `NewITTicketDialog`, `Tax101Dialog`, `SignaturePad`, `UploadSignedFormDialog`
-- `AppLayout` ו-`AppSidebar` במצב עובד
+**אין שדה תפוגה גנרי אחד**. כל דומיין מגדיר את התפוגות הרלוונטיות שלו כשדות ראשונה (first-class), עם שמות, אייקונים, סף התראה ואחראי טיפול משלו. הסורק המרכזי (`get_expiring_assets`) מצרף את כולן לתצוגה אחידה בלוח הבקרה.
 
-## שלב 1 - ביקורת נגישות (Audit)
-מיפוי הליקויים בפועל וכתיבת דוח קצר ב-`docs/accessibility-audit.md`:
-- בדיקת ניגודיות צבעים מול הטוקנים ב-`index.css` (primary, muted-foreground, status badges)
-- מיפוי כפתורי icon-only ללא תווית נגישה
-- מיפוי שדות טופס ללא `<label htmlFor>` או `aria-label`
-- מיפוי תמונות/אייקונים דקורטיביים מול אינפורמטיביים
-- בדיקת ניווט מקלדת בכל הטאבים והדיאלוגים
-- בדיקת focus-visible על כל הרכיבים האינטראקטיביים
-- בדיקת מבנה כותרות (h1/h2/h3) ו-landmarks
-- בדיקת הכרזות לקוראי מסך עבור toasts ופעולות אסינכרוניות
+### מטריצת תפוגות לפי דומיין
 
-## שלב 2 - תיקוני WCAG AA
+| דומיין | שדות תפוגה | אחראי טיפול |
+|---|---|---|
+| נכסים פיזיים | אחריות יצרן, ביטוח רכוש (אופציונלי) | IT / תפעול |
+| רכב | טסט שנתי, רישוי, ביטוח חובה, ביטוח מקיף, רישיון נהיגה של הנהג | תפעול |
+| גישות דיגיטליות | תפוגת סיסמה, תפוגת רישיון/seat, MFA renewal | IT |
+| רשיונות תוכנה | תאריך חידוש, תאריך תפוגה, תאריך תשלום הבא | IT / כספים |
+| ביטוחים (מוסדי) | תאריך פקיעה, תאריך חידוש פרמיה | משפטי / כספים |
+| הדרכות | תוקף תעודה, תאריך רענון נדרש | משאבי אנוש |
+| נדל"ן (שכור/מניב) | סוף חוזה, תאריך אופציית הארכה, חידוש ביטוח מבנה | משפטי |
 
-### 2.1 מבנה סמנטי ו-landmarks
-- ודא `<main>`, `<nav>`, `<header>` בכל מסך
-- כותרת `h1` יחידה לכל מסך (כרגע יש מסכים ללא h1 ברור)
-- היררכיית כותרות נכונה ב-EmployeePortal לפי טאבים
-- `lang="he"` ו-`dir="rtl"` כבר קיימים ב-index.html ✓
-- skip link "דלג לתוכן הראשי" ב-AppLayout
+## 1. מבנה DB לתפוגות
 
-### 2.2 תוויות וטפסים
-- `<Label htmlFor>` לכל שדה קלט (Input, Textarea, Select, DatePicker)
-- `aria-required`, `aria-invalid`, `aria-describedby` להודעות שגיאה
-- קישור הודעות שגיאה לשדות באמצעות `id`
-- `aria-label` לכל כפתורי icon-only (סגירה, עריכה, מחיקה, הורדה, חתימה)
-- fieldset/legend לקבוצות רדיו (סוג חופשה, דחיפות תקלה)
+**אופציה מועדפת — עמודות מפורשות בכל טבלת דומיין:**
+- `vehicles.test_expiry`, `vehicles.license_expiry`, `vehicles.mandatory_insurance_expiry`, `vehicles.comprehensive_insurance_expiry`
+- `digital_access.password_expires_at`, `digital_access.license_expires_at`
+- `software_licenses.renewal_date`, `software_licenses.expiry_date`
+- `insurance_policies.expiry_date`, `insurance_policies.next_premium_date`
+- `trainings.certificate_expiry`, `trainings.refresh_due_date`
+- `real_estate_contracts.contract_end`, `real_estate_contracts.option_extension_date`
 
-### 2.3 תמונות ואייקונים
-- `alt=""` לאייקונים דקורטיביים מ-lucide-react
-- `aria-hidden="true"` על אייקונים בתוך כפתורים עם טקסט
-- `alt` תיאורי לתמונות פרופיל ולוגו
-- חתימה דיגיטלית: תיאור נגיש לקנבס + חלופה טקסטואלית
+**יתרון:** type-safe, ניתן להוסיף constraints, אינדקסים ייעודיים, ולא תלוי ב-heuristic על שמות שדות (תיקון לבעיה הקיימת ב-`get_expiring_assets` שמשתמשת ב-regex על שמות עבריים).
 
-### 2.4 ניווט מקלדת ו-focus
-- ודא `focus-visible` ring על כל interactive element (כבר ב-Button ✓, להרחיב ל-card clickable)
-- focus trap בדיאלוגים (Radix מספק ✓ - לאמת)
-- החזרת פוקוס לאלמנט הפותח בסגירת דיאלוג
-- סדר tab הגיוני (במיוחד ב-RTL)
-- אין tabIndex חיובי
-- ESC סוגר דיאלוגים ו-popovers
+**גיבוי:** `category_fields` נשאר זמין לתפוגות אד-הוק שהלקוח מגדיר בעצמו (לא יוצגו בלוח הבקרה ללא הגדרה מפורשת של `is_expiry_field=true` בעמודה חדשה ב-`category_fields`).
 
-### 2.5 ניגודיות וצבעים
-- בדיקת כל הטוקנים ב-`index.css` מול 4.5:1 (טקסט) ו-3:1 (UI):
-  - `muted-foreground` על `background` - לאמת
-  - status badges (status-active, status-leaving וכו') - לאמת
-  - sidebar muted על sidebar background
-- אין העברת מידע באמצעות צבע בלבד (להוסיף אייקון/טקסט לסטטוסים)
+## 2. הרחבת `get_expiring_assets`
 
-### 2.6 הכרזות דינמיות
-- `aria-live="polite"` ל-toaster (sonner) - לאמת קונפיגורציה
-- `role="status"` למצבי loading
-- `aria-busy` בזמן שליחת טפסים
-- הכרזה על ניווט בין טאבים
+הפונקציה תהפוך ל-UNION ALL מעל כל הדומיינים. כל ענף מחזיר את אותו schema אבל עם:
+- `domain` חדש (`'physical' | 'vehicle' | 'digital' | 'license' | 'insurance' | 'training' | 'real_estate'`)
+- `expiry_type` (`'vehicle_test'`, `'password'`, `'contract_end'`, וכו') — מחליף את `field_label` כמזהה יציב לסינון/קיבוץ
+- `assignee_role` (מי אמור לטפל) — מאפשר לסנן את ה-Card לפי תפקיד המשתמש
 
-### 2.7 Touch targets
-- מינימום 44x44px לכל יעד מגע (כפתורי icon בטבלאות לרוב 32px - להגדיל)
+## 3. לוח הבקרה — `ExpiringAssetsCard`
 
-## שלב 3 - תאימות דפדפנים
-- הוספת `browserslist` ל-`package.json`: `last 2 Chrome versions, last 2 Firefox versions, last 2 Edge versions`
-- אימות שאין שימוש ב-API לא נתמך (`:has()` נתמך ב-2 גרסאות אחרונות ✓)
-- בדיקת polyfills חסרים (Vite מטפל ב-targets אוטומטית)
-- בדיקה ידנית ב-Firefox של: חתימה דיגיטלית (canvas), העלאת קבצים, הורדת PDF, תאריכים
-- בדיקת date inputs ו-Intl.DateTimeFormat ב-he-IL
-- הוספת `<meta name="color-scheme" content="light dark">` ל-index.html
+- קיבוץ אופציונלי לפי `domain` (טאבים: הכל / רכב / רישיונות / חוזים...)
+- ניווט: לחיצה על שורה תוביל ל-`/assets/:domain/:id` (לא ל-`category` הישן)
+- צבע/אייקון לפי `domain` במקום badge "מוסדי" בלבד
 
-## שלב 4 - רספונסיביות לטאבלט (768-1024px)
-מיקוד בטאבלט לעיון בדיונים/טפסים:
-- EmployeePortal: רשת טאבים - לוודא שאינם נחתכים, גלילה אופקית במידת הצורך
-- טבלאות (תלושים, ימי חופשה, טפסי 101): מעבר לכרטיסים ב-`md:` או הוספת overflow-x נקי
-- דיאלוגים: `max-w` מתאים, גלילה פנימית ב-`max-h-[90vh] overflow-y-auto`
-- SignaturePad: רוחב הקנבס דינמי + תמיכה ב-touch events (כבר ✓ - לאמת)
-- AppSidebar: התנהגות במצב טאבלט (collapse אוטומטי?)
-- breakpoint audit: שימוש עקבי ב-`md:` (768) ו-`lg:` (1024)
+## 4. תיק עובד ↔ משאבים מוקצים
 
-## שלב 5 - אימות
-- הרצת `eslint-plugin-jsx-a11y` (להוסיף לקונפיג) ולתקן warnings
-- בדיקה ידנית עם NVDA/VoiceOver (תיעוד תוצאות)
-- בדיקה עם Lighthouse Accessibility - יעד ציון ≥95
-- בדיקת keyboard-only ניווט בכל זרימה: התחברות → צפייה בתלוש → בקשת חופשה → חתימה על טופס
-- בדיקה ויזואלית ב-3 רוחבים: 1280, 1024, 768
+ללא שינוי מהגרסה הקודמת של התוספת: `get_employee_holdings(_employee_id)` יחזיר view מאוחד מ-`assets`, `digital_access`, `vehicles.assigned_to_employee_id`, `trainings.employee_id`, `software_licenses.assigned_to_employee_id`. תשמש גם את טאב "ציוד וגישות" וגם את `create_offboarding_checklist`.
 
-## פרטים טכניים
-- הוספת dependency: `eslint-plugin-jsx-a11y`
-- יצירת `src/components/SkipLink.tsx`
-- יצירת `docs/accessibility-audit.md` עם ממצאים ולוג תיקונים
-- אין שינויים ב-DB, באוטנטיקציה, או בלוגיקה עסקית - רק UI/markup/styles
-- שינויים יבוצעו בפעימות לפי קבצים כדי לאפשר QA הדרגתי
+## 5. שאלות הכרעה לפני שלב 1
 
-## מחוץ להיקף
-- מסכי האדמין (Dashboard, Employees, Assets, Settings וכו')
-- WCAG AAA
-- תמיכה ב-Safari/Mobile Safari
-- בדיקות אוטומטיות (axe-core ב-CI) - ניתן בעתיד
+1. **תפוגות per-domain כעמודות מפורשות** — מאשר? (חלופה: JSONB אחיד `expiries: [{type, date, notify_days}]` בכל טבלה — פחות type-safe אבל גמיש).
+2. **הגדרות התראה (`notify_days_before`)** — לקבע ברמת הדומיין (קוד), ברמת הקטגוריה (DB), או ברמת הפריט הבודד?
+3. **מיגרציית תפוגות קיימות** מ-`assets.expiry_date` ו-`custom_fields` לעמודות הדומיין החדשות — אוטומטית במיגרציה, או ידנית בממשק?
