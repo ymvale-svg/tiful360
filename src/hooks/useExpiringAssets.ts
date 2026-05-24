@@ -2,15 +2,44 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 
+export type ProtocolDomain =
+  | "physical"
+  | "vehicle"
+  | "digital"
+  | "license"
+  | "insurance"
+  | "training"
+  | "real_estate";
+
+export const DOMAIN_LABELS: Record<ProtocolDomain, string> = {
+  physical: "ציוד",
+  vehicle: "רכב",
+  digital: "גישה דיגיטלית",
+  license: "רישיון",
+  insurance: "ביטוח",
+  training: "הדרכה",
+  real_estate: "נדל\"ן",
+};
+
+export const DOMAIN_STYLES: Record<ProtocolDomain, string> = {
+  physical: "bg-muted text-foreground",
+  vehicle: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+  digital: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
+  license: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  insurance: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  training: "bg-pink-500/10 text-pink-700 dark:text-pink-400",
+  real_estate: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400",
+};
+
 export interface ExpiringAsset {
   asset_id: string;
   asset_name: string;
   asset_code: string;
-  category_id: string;
+  category_id: string | null;
   category_name: string;
   category_prefix: string;
   is_assignable: boolean;
-  source_type: "asset" | "custom_field" | "document";
+  source_type: "asset" | "custom_field" | "document" | "digital_access";
   source_id: string;
   field_key: string | null;
   field_label: string;
@@ -19,6 +48,9 @@ export interface ExpiringAsset {
   current_owner_id: string | null;
   owner_name: string | null;
   custom_fields: Record<string, any> | null;
+  domain: ProtocolDomain;
+  expiry_type: string;
+  assignee_role: "it" | "operations" | "legal" | "hr";
 }
 
 export function useExpiringAssets(daysAhead = 14) {

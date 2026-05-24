@@ -192,6 +192,7 @@ export type Database = {
           id: string
           is_assignable: boolean
           prefix: string
+          protocol_type: Database["public"]["Enums"]["protocol_domain"]
           skip_handover_form: boolean
           skip_return_form: boolean
           sort_order: number
@@ -206,6 +207,7 @@ export type Database = {
           id?: string
           is_assignable?: boolean
           prefix: string
+          protocol_type?: Database["public"]["Enums"]["protocol_domain"]
           skip_handover_form?: boolean
           skip_return_form?: boolean
           sort_order?: number
@@ -220,6 +222,7 @@ export type Database = {
           id?: string
           is_assignable?: boolean
           prefix?: string
+          protocol_type?: Database["public"]["Enums"]["protocol_domain"]
           skip_handover_form?: boolean
           skip_return_form?: boolean
           sort_order?: number
@@ -647,6 +650,7 @@ export type Database = {
           field_options: Json | null
           field_type: Database["public"]["Enums"]["field_type"]
           id: string
+          is_expiry_field: boolean
           is_required: boolean
           sort_order: number
         }
@@ -658,6 +662,7 @@ export type Database = {
           field_options?: Json | null
           field_type?: Database["public"]["Enums"]["field_type"]
           id?: string
+          is_expiry_field?: boolean
           is_required?: boolean
           sort_order?: number
         }
@@ -669,6 +674,7 @@ export type Database = {
           field_options?: Json | null
           field_type?: Database["public"]["Enums"]["field_type"]
           id?: string
+          is_expiry_field?: boolean
           is_required?: boolean
           sort_order?: number
         }
@@ -768,7 +774,9 @@ export type Database = {
           created_at: string
           employee_id: string
           id: string
+          license_expires_at: string | null
           notes: string | null
+          password_expires_at: string | null
           permission_level: Database["public"]["Enums"]["permission_level"]
           resource_path: string
           status: Database["public"]["Enums"]["access_status"]
@@ -780,7 +788,9 @@ export type Database = {
           created_at?: string
           employee_id: string
           id?: string
+          license_expires_at?: string | null
           notes?: string | null
+          password_expires_at?: string | null
           permission_level?: Database["public"]["Enums"]["permission_level"]
           resource_path: string
           status?: Database["public"]["Enums"]["access_status"]
@@ -792,7 +802,9 @@ export type Database = {
           created_at?: string
           employee_id?: string
           id?: string
+          license_expires_at?: string | null
           notes?: string | null
+          password_expires_at?: string | null
           permission_level?: Database["public"]["Enums"]["permission_level"]
           resource_path?: string
           status?: Database["public"]["Enums"]["access_status"]
@@ -2018,19 +2030,37 @@ export type Database = {
           payroll_emails: string
         }[]
       }
+      get_employee_holdings: {
+        Args: { _employee_id: string }
+        Returns: {
+          assigned_at: string
+          category_name: string
+          display_code: string
+          display_name: string
+          domain: string
+          expiry_date: string
+          expiry_label: string
+          icon: string
+          item_id: string
+          status: string
+        }[]
+      }
       get_expiring_assets: {
         Args: { _company_id: string; _days_ahead?: number }
         Returns: {
           asset_code: string
           asset_id: string
           asset_name: string
+          assignee_role: string
           category_id: string
           category_name: string
           category_prefix: string
           current_owner_id: string
           custom_fields: Json
           days_left: number
+          domain: string
           expiry_date: string
+          expiry_type: string
           field_key: string
           field_label: string
           is_assignable: boolean
@@ -2343,6 +2373,14 @@ export type Database = {
       leave_request_status: "pending" | "approved" | "rejected" | "cancelled"
       leave_request_type: "vacation" | "sick" | "personal" | "other"
       permission_level: "read" | "write" | "admin"
+      protocol_domain:
+        | "physical"
+        | "vehicle"
+        | "digital"
+        | "license"
+        | "insurance"
+        | "training"
+        | "real_estate"
       system_role: "admin" | "it" | "employee"
       ticket_priority: "critical" | "high" | "medium" | "low"
       ticket_status: "open" | "in_progress" | "done"
@@ -2493,6 +2531,15 @@ export const Constants = {
       leave_request_status: ["pending", "approved", "rejected", "cancelled"],
       leave_request_type: ["vacation", "sick", "personal", "other"],
       permission_level: ["read", "write", "admin"],
+      protocol_domain: [
+        "physical",
+        "vehicle",
+        "digital",
+        "license",
+        "insurance",
+        "training",
+        "real_estate",
+      ],
       system_role: ["admin", "it", "employee"],
       ticket_priority: ["critical", "high", "medium", "low"],
       ticket_status: ["open", "in_progress", "done"],

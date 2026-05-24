@@ -88,31 +88,17 @@ export function OffboardingDialog({
   };
 
   const handleDownloadPdf = async () => {
-    const html2pdf = (await import("html2pdf.js")).default;
+    // PDF download via browser print dialog (html2pdf was removed for security)
     const htmlContent = generateProtocolHtml(employee, assets, digitalAccess, endDate);
-    const container = document.createElement("div");
-    container.innerHTML = htmlContent;
-    const bodyMatch = htmlContent.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-    const styleMatch = htmlContent.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
-    const wrapper = document.createElement("div");
-    wrapper.setAttribute("dir", "rtl");
-    if (styleMatch) {
-      const style = document.createElement("style");
-      style.textContent = styleMatch[1];
-      wrapper.appendChild(style);
+    const win = window.open("", "_blank");
+    if (!win) {
+      toast({ title: "שגיאה", description: "נא לאפשר חלונות קופצים", variant: "destructive" });
+      return;
     }
-    wrapper.innerHTML += bodyMatch ? bodyMatch[1] : htmlContent;
-    document.body.appendChild(wrapper);
-    
-    await html2pdf().set({
-      margin: [10, 10, 10, 10],
-      filename: `protocol_${employee.employee_code}_${endDate}.pdf`,
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-    }).from(wrapper).save();
-    
-    document.body.removeChild(wrapper);
+    win.document.write(htmlContent);
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 300);
   };
 
   const handleClose = () => {

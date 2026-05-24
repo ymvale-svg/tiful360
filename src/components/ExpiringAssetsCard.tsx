@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { CalendarClock, ChevronLeft } from "lucide-react";
-import { useExpiringAssets, expiryUrgency, type ExpiringAsset } from "@/hooks/useExpiringAssets";
+import { useExpiringAssets, expiryUrgency, DOMAIN_LABELS, DOMAIN_STYLES, type ExpiringAsset } from "@/hooks/useExpiringAssets";
 import { RenewExpiryDialog } from "@/components/RenewExpiryDialog";
 import { cn } from "@/lib/utils";
 
@@ -44,6 +44,9 @@ export function ExpiringAssetsCard() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-medium truncate">{item.asset_name}</span>
                     <span className="text-xs text-muted-foreground font-mono">{item.asset_code}</span>
+                    <span className={cn("px-1.5 py-0.5 rounded text-[10px]", DOMAIN_STYLES[item.domain] ?? DOMAIN_STYLES.physical)}>
+                      {DOMAIN_LABELS[item.domain] ?? item.domain}
+                    </span>
                     {!item.is_assignable && (
                       <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px]">מוסדי</span>
                     )}
