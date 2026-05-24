@@ -30,6 +30,21 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
   const color = getCategoryColor(category?.category_name);
   const isAssignable = category?.is_assignable !== false;
   const isInsurance = category?.prefix === "CINS";
+  const isVehicle = category?.protocol_type === "vehicle";
+
+  const daysTo = (d?: string | null) => {
+    if (!d) return null;
+    const ms = new Date(d).getTime() - Date.now();
+    return Math.ceil(ms / (1000 * 60 * 60 * 24));
+  };
+  const expiryCellClass = (d?: string | null) => {
+    const days = daysTo(d);
+    if (days === null) return "text-muted-foreground";
+    if (days < 0) return "text-destructive font-medium";
+    if (days <= 30) return "text-amber-600 dark:text-amber-400 font-medium";
+    return "";
+  };
+  const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString("en-GB").replace(/\//g, "-") : "—");
 
   // Determine the grouping key per asset:
   // - Insurance categories: group by custom_fields["סוג כיסוי"] (sub-category)
