@@ -121,16 +121,24 @@ export function DomainsGrid({ onSelectCategory, onQuickAssign }: Props) {
   const grouped = useMemo(() => {
     const cats = categories ?? [];
     const all = assets ?? [];
-    return DOMAINS.map((d) => {
-      const domainCats = cats.filter(d.match);
+    // Single-pass classification: each category goes to exactly one domain.
+    const catsByDomain = new Map<DomainKey, any[]>();
+    for (const k of DOMAIN_ORDER) catsByDomain.set(k, []);
+    for (const c of cats) catsByDomain.get(classifyCategory(c))!.push(c);
+
+    return DOMAIN_ORDER.map((key) => {
+      const def = DOMAINS[key];
+      const domainCats = catsByDomain.get(key) ?? [];
       const catIds = new Set(domainCats.map((c) => c.id));
       const domainAssets = all.filter((a: any) => catIds.has(a.category_id));
-      const domainExpiring = (expiring ?? []).filter((e) =>
-        domainCats.some((c) => c.id === e.category_id)
-      );
+      // Sort sub-categories by asset count desc (most useful first).
+      const sortedCats = [...domainCats]
+        .map((c) => ({ ...c, _count: domainAssets.filter((a: any) => a.category_id === c.id).length }))
+        .sort((a, b) => b._count - a._count);
+      const domainExpiring = (expiring ?? []).filter((e) => catIds.has(e.category_id));
       const expired = domainExpiring.filter((e) => e.days_left <= 0).length;
       const soon = domainExpiring.filter((e) => e.days_left > 0 && e.days_left <= 14).length;
-      return { def: d, cats: domainCats, assets: domainAssets, expired, soon };
+      return { def, cats: sortedCats, assets: domainAssets, expired, soon };
     });
   }, [categories, assets, expiring]);
 
