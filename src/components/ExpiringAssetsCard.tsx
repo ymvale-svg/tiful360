@@ -8,6 +8,15 @@ import { cn } from "@/lib/utils";
 export function ExpiringAssetsCard() {
   const { data, isLoading } = useExpiringAssets(14);
   const [selected, setSelected] = useState<ExpiringAsset | null>(null);
+  const navigate = useNavigate();
+
+  const navigateToSource = (item: ExpiringAsset) => {
+    if (item.source_type === "digital_access" && item.current_owner_id) {
+      navigate(`/employees/${item.current_owner_id}?tab=assets`);
+    } else if (item.category_id) {
+      navigate(`/assets?cat=${item.category_id}&asset=${item.asset_id}`);
+    }
+  };
 
   const items = data ?? [];
 
