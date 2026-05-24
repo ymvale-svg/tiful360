@@ -294,6 +294,8 @@ export type Database = {
           form_snapshot: Json
           id: string
           pdf_url: string | null
+          protocol_subtype: string | null
+          protocol_type: string
           sign_token: string
           signature_data: string | null
           signed_at: string | null
@@ -310,6 +312,8 @@ export type Database = {
           form_snapshot?: Json
           id?: string
           pdf_url?: string | null
+          protocol_subtype?: string | null
+          protocol_type?: string
           sign_token?: string
           signature_data?: string | null
           signed_at?: string | null
@@ -326,6 +330,8 @@ export type Database = {
           form_snapshot?: Json
           id?: string
           pdf_url?: string | null
+          protocol_subtype?: string | null
+          protocol_type?: string
           sign_token?: string
           signature_data?: string | null
           signed_at?: string | null
@@ -2127,6 +2133,8 @@ export type Database = {
           form_snapshot: Json
           id: string
           pdf_url: string | null
+          protocol_subtype: string | null
+          protocol_type: string
           sign_token: string
           signature_data: string | null
           signed_at: string | null
@@ -2320,6 +2328,8 @@ export type Database = {
           form_snapshot: Json
           id: string
           pdf_url: string | null
+          protocol_subtype: string | null
+          protocol_type: string
           sign_token: string
           signature_data: string | null
           signed_at: string | null
