@@ -34,47 +34,49 @@ interface DomainDef {
   subtitle: (cats: any[], assets: any[]) => string;
   icon: typeof AppWindow;
   color: { bg: string; text: string; ring: string; soft: string };
-  match: (cat: any) => boolean;
 }
 
-const DOMAINS: DomainDef[] = [
-  {
+// Priority order — first match wins, no category appears in two domains.
+function classifyCategory(c: any): DomainKey {
+  if (c.prefix === "VRT" || c.protocol_type === "digital" || c.prefix === "DACC") return "digital";
+  if (c.prefix === "SFT" || c.prefix === "MAN") return "licenses";
+  if (c.protocol_type === "real_estate" || c.prefix === "LEASE") return "real_estate";
+  if (c.protocol_type === "insurance" || c.prefix === "CERT" || c.prefix === "CINS") return "insurance";
+  if (c.protocol_type === "training" || c.prefix === "MAINT") return "trainings";
+  return "physical";
+}
+
+const DOMAINS: Record<DomainKey, DomainDef> = {
+  licenses: {
     key: "licenses",
     title: "רישיונות ותוכנות",
     subtitle: (cats, assets) => {
-      const swCat = cats.find((c) => c.prefix === "SFT");
-      const subCat = cats.find((c) => c.prefix === "MAN");
-      const sw = assets.filter((a) => a.category_id === swCat?.id).length;
-      const sub = assets.filter((a) => a.category_id === subCat?.id).length;
-      return `${sw} תוכנות · ${sub} מנויים · ${assets.filter(a => cats.some(c => c.id === a.category_id)).length} סה״כ`;
+      const sw = assets.filter((a) => cats.find((c) => c.id === a.category_id)?.prefix === "SFT").length;
+      const sub = assets.filter((a) => cats.find((c) => c.id === a.category_id)?.prefix === "MAN").length;
+      return `${assets.length} פריטים · ${sw} תוכנות · ${sub} מנויים`;
     },
     icon: AppWindow,
     color: { bg: "bg-violet-500/10", text: "text-violet-600 dark:text-violet-400", ring: "hover:ring-violet-500/30", soft: "bg-violet-500/5" },
-    match: (c) => ["SFT", "MAN"].includes(c.prefix),
   },
-  {
+  digital: {
     key: "digital",
     title: "גישות דיגיטליות",
     subtitle: (_cats, assets) => `${assets.length} גישות פעילות`,
     icon: KeySquare,
     color: { bg: "bg-purple-500/10", text: "text-purple-600 dark:text-purple-400", ring: "hover:ring-purple-500/30", soft: "bg-purple-500/5" },
-    match: (c) => c.protocol_type === "digital" || c.prefix === "DACC",
   },
-  {
+  physical: {
     key: "physical",
     title: "ציוד פיזי",
-    subtitle: (cats, assets) => {
+    subtitle: (_cats, assets) => {
       const inUse = assets.filter((a) => a.status === "in_use").length;
       const inStock = assets.filter((a) => a.status === "in_stock").length;
       return `${assets.length} פריטים · ${inUse} בשימוש · ${inStock} במלאי`;
     },
     icon: Monitor,
     color: { bg: "bg-sky-500/10", text: "text-sky-600 dark:text-sky-400", ring: "hover:ring-sky-500/30", soft: "bg-sky-500/5" },
-    match: (c) =>
-      (c.protocol_type === "physical" || c.protocol_type === "vehicle") &&
-      !["SFT", "MAN", "CERT", "MAINT"].includes(c.prefix),
   },
-  {
+  real_estate: {
     key: "real_estate",
     title: 'נדל"ן וחוזים',
     subtitle: (_cats, assets) => {
@@ -84,31 +86,31 @@ const DOMAINS: DomainDef[] = [
     },
     icon: Building,
     color: { bg: "bg-amber-500/10", text: "text-amber-600 dark:text-amber-400", ring: "hover:ring-amber-500/30", soft: "bg-amber-500/5" },
-    match: (c) => c.protocol_type === "real_estate" || c.prefix === "LEASE",
   },
-  {
+  trainings: {
     key: "trainings",
-    title: "הדרכות ואימות",
-    subtitle: (_cats, assets) => `${assets.length} הדרכות פעילות`,
+    title: "הדרכות ותחזוקה",
+    subtitle: (_cats, assets) => `${assets.length} פריטי הדרכה/תחזוקה`,
     icon: GraduationCap,
     color: { bg: "bg-pink-500/10", text: "text-pink-600 dark:text-pink-400", ring: "hover:ring-pink-500/30", soft: "bg-pink-500/5" },
-    match: (c) => c.protocol_type === "training" || c.prefix === "MAINT",
   },
-  {
+  insurance: {
     key: "insurance",
     title: "ביטוחים ורגולציה",
     subtitle: (cats, assets) => {
-      const ins = cats.find((c) => c.prefix === "CINS");
-      const cert = cats.find((c) => c.prefix === "CERT");
-      const insCount = assets.filter((a) => a.category_id === ins?.id).length;
-      const certCount = assets.filter((a) => a.category_id === cert?.id).length;
+      const insCount = assets.filter((a) => {
+        const c = cats.find((cc) => cc.id === a.category_id);
+        return c?.prefix === "CINS" || c?.protocol_type === "insurance";
+      }).length;
+      const certCount = assets.filter((a) => cats.find((c) => c.id === a.category_id)?.prefix === "CERT").length;
       return `${insCount} ביטוחים · ${certCount} אישורים`;
     },
     icon: ShieldCheck,
     color: { bg: "bg-emerald-500/10", text: "text-emerald-600 dark:text-emerald-400", ring: "hover:ring-emerald-500/30", soft: "bg-emerald-500/5" },
-    match: (c) => c.protocol_type === "insurance" || c.prefix === "CERT",
   },
-];
+};
+
+const DOMAIN_ORDER: DomainKey[] = ["physical", "digital", "licenses", "trainings", "insurance", "real_estate"];
 
 export function DomainsGrid({ onSelectCategory, onQuickAssign }: Props) {
   const { data: categories, isLoading } = useAssetCategories();
