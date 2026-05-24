@@ -38,7 +38,7 @@ export function useEmployeeAssets(employeeId: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("assets")
-        .select("*, asset_categories(category_name, prefix, icon)")
+        .select("*, asset_categories(category_name, prefix, icon, protocol_type)")
         .eq("current_owner_id", employeeId);
       if (error) throw error;
       return data;

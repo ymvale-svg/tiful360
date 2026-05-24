@@ -83,10 +83,12 @@ export default function EmployeeDetail() {
   const unassignAsset = useUnassignAsset();
   const { data: leaveRequests } = useEmployeeLeaveRequests(id!);
 
-  // Split employee assets into physical equipment and digital access (DACC category)
+  // Split employee assets by protocol_type (digital domain = digital access entries)
   const employeeAssets = assets ?? [];
-  const physicalAssets = employeeAssets.filter((a: any) => (a.asset_categories?.prefix ?? "") !== "DACC");
-  const digitalAccessAssets = employeeAssets.filter((a: any) => (a.asset_categories?.prefix ?? "") === "DACC");
+  const isDigital = (a: any) =>
+    a.asset_categories?.protocol_type === "digital" || (a.asset_categories?.prefix ?? "") === "DACC";
+  const physicalAssets = employeeAssets.filter((a: any) => !isDigital(a));
+  const digitalAccessAssets = employeeAssets.filter(isDigital);
   const { isAdmin, isSuperAdmin, isPayroll, isOperations, isFinance, user } = useAuth();
   const qc = useQueryClient();
   const canEditRemotePunch = isSuperAdmin || isAdmin || isPayroll || isOperations || isFinance;
