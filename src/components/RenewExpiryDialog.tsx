@@ -65,14 +65,14 @@ export function RenewExpiryDialog({ open, onOpenChange, item }: Props) {
               : "license_expiry";
         const { error } = await supabase
           .from("assets")
-          .update({ [col]: newDate })
+          .update({ [col]: newDate } as any)
           .eq("id", item.asset_id);
         if (error) throw error;
       } else if (item.source_type === "digital_access") {
         const col = item.field_key === "license" ? "license_expires_at" : "password_expires_at";
         const { error } = await supabase
           .from("digital_access")
-          .update({ [col]: newDate })
+          .update({ [col]: newDate } as any)
           .eq("id", item.source_id);
         if (error) throw error;
       } else if (item.source_type === "custom_field") {
