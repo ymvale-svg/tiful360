@@ -186,12 +186,15 @@ export function DomainsGrid({ onSelectCategory, onQuickAssign }: Props) {
               ? { text: `חידוש תוך 14 יום`, cls: "bg-warning/10 text-warning" }
               : null;
 
+            const isEmpty = cats.length === 0;
             return (
               <div
                 key={def.key}
                 className={cn(
-                  "group relative bg-card border border-border rounded-2xl p-5",
-                  "hover:shadow-lg hover:-translate-y-0.5 hover:ring-2 transition-all",
+                  "group relative bg-card border border-border rounded-2xl p-5 transition-all",
+                  isEmpty
+                    ? "opacity-60 hover:opacity-100 hover:shadow-md hover:ring-1"
+                    : "hover:shadow-lg hover:-translate-y-0.5 hover:ring-2",
                   def.color.ring
                 )}
               >
@@ -208,7 +211,9 @@ export function DomainsGrid({ onSelectCategory, onQuickAssign }: Props) {
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1 text-right pr-2">
                     <h3 className="text-base font-semibold leading-tight">{def.title}</h3>
-                    <p className="text-xs text-muted-foreground mt-1">{def.subtitle(cats, assets)}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {isEmpty ? "אין פריטים בדומיין זה" : def.subtitle(cats, assets)}
+                    </p>
                   </div>
                   <div className={cn(
                     "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105",
@@ -220,12 +225,16 @@ export function DomainsGrid({ onSelectCategory, onQuickAssign }: Props) {
 
                 {/* Sub-category chips */}
                 <div className="flex flex-wrap gap-1.5 justify-end">
-                  {cats.length === 0 ? (
-                    <span className="text-[11px] text-muted-foreground italic">אין קטגוריות עדיין</span>
+                  {isEmpty ? (
+                    <a
+                      href="/assets?tab=categories"
+                      className="text-[11px] px-2 py-1 rounded-md border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                    >
+                      + הוסף קטגוריה ראשונה
+                    </a>
                   ) : (
-                    cats.slice(0, 6).map((c) => {
-                      const count = assets.filter((a: any) => a.category_id === c.id).length;
-                      return (
+                    <>
+                      {cats.slice(0, 6).map((c) => (
                         <button
                           key={c.id}
                           onClick={() => onSelectCategory(c.id)}
@@ -235,15 +244,15 @@ export function DomainsGrid({ onSelectCategory, onQuickAssign }: Props) {
                           )}
                         >
                           <span>{c.category_name}</span>
-                          <span className="text-muted-foreground">{count}</span>
+                          <span className="text-muted-foreground">{c._count ?? 0}</span>
                         </button>
-                      );
-                    })
-                  )}
-                  {cats.length > 6 && (
-                    <span className="inline-flex items-center text-[11px] px-2 py-1 rounded-md border border-border text-muted-foreground">
-                      +{cats.length - 6}
-                    </span>
+                      ))}
+                      {cats.length > 6 && (
+                        <span className="inline-flex items-center text-[11px] px-2 py-1 rounded-md border border-border text-muted-foreground">
+                          +{cats.length - 6}
+                        </span>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
