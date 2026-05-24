@@ -294,6 +294,8 @@ export type Database = {
           form_snapshot: Json
           id: string
           pdf_url: string | null
+          protocol_subtype: string | null
+          protocol_type: string
           sign_token: string
           signature_data: string | null
           signed_at: string | null
@@ -310,6 +312,8 @@ export type Database = {
           form_snapshot?: Json
           id?: string
           pdf_url?: string | null
+          protocol_subtype?: string | null
+          protocol_type?: string
           sign_token?: string
           signature_data?: string | null
           signed_at?: string | null
@@ -326,6 +330,8 @@ export type Database = {
           form_snapshot?: Json
           id?: string
           pdf_url?: string | null
+          protocol_subtype?: string | null
+          protocol_type?: string
           sign_token?: string
           signature_data?: string | null
           signed_at?: string | null
@@ -335,6 +341,8 @@ export type Database = {
       }
       assets: {
         Row: {
+          account_url: string | null
+          account_username: string | null
           asset_code: string
           asset_name: string
           category_id: string
@@ -350,11 +358,14 @@ export type Database = {
           insurance_company: string | null
           insurance_expiry: string | null
           insurance_policy_number: string | null
+          license_expires_at: string | null
           license_expiry: string | null
           license_plate: string | null
           manufacturer_model: string | null
+          mfa_enabled: boolean | null
           notes: string | null
           notification_days_before: number | null
+          password_expires_at: string | null
           serial_number: string | null
           status: Database["public"]["Enums"]["asset_status"]
           test_expiry: string | null
@@ -363,6 +374,8 @@ export type Database = {
           year_of_manufacture: number | null
         }
         Insert: {
+          account_url?: string | null
+          account_username?: string | null
           asset_code: string
           asset_name: string
           category_id: string
@@ -378,11 +391,14 @@ export type Database = {
           insurance_company?: string | null
           insurance_expiry?: string | null
           insurance_policy_number?: string | null
+          license_expires_at?: string | null
           license_expiry?: string | null
           license_plate?: string | null
           manufacturer_model?: string | null
+          mfa_enabled?: boolean | null
           notes?: string | null
           notification_days_before?: number | null
+          password_expires_at?: string | null
           serial_number?: string | null
           status?: Database["public"]["Enums"]["asset_status"]
           test_expiry?: string | null
@@ -391,6 +407,8 @@ export type Database = {
           year_of_manufacture?: number | null
         }
         Update: {
+          account_url?: string | null
+          account_username?: string | null
           asset_code?: string
           asset_name?: string
           category_id?: string
@@ -406,11 +424,14 @@ export type Database = {
           insurance_company?: string | null
           insurance_expiry?: string | null
           insurance_policy_number?: string | null
+          license_expires_at?: string | null
           license_expiry?: string | null
           license_plate?: string | null
           manufacturer_model?: string | null
+          mfa_enabled?: boolean | null
           notes?: string | null
           notification_days_before?: number | null
+          password_expires_at?: string | null
           serial_number?: string | null
           status?: Database["public"]["Enums"]["asset_status"]
           test_expiry?: string | null
@@ -2112,6 +2133,8 @@ export type Database = {
           form_snapshot: Json
           id: string
           pdf_url: string | null
+          protocol_subtype: string | null
+          protocol_type: string
           sign_token: string
           signature_data: string | null
           signed_at: string | null
@@ -2305,6 +2328,8 @@ export type Database = {
           form_snapshot: Json
           id: string
           pdf_url: string | null
+          protocol_subtype: string | null
+          protocol_type: string
           sign_token: string
           signature_data: string | null
           signed_at: string | null

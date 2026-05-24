@@ -10,6 +10,7 @@ import { EditAssetDialog } from "@/components/EditAssetDialog";
 import { AssignAssetWithFormDialog } from "@/components/AssignAssetWithFormDialog";
 import { AssetDocumentsSection } from "@/components/AssetDocumentsSection";
 import { VehicleDetailsPanel } from "@/components/assets/VehicleDetailsPanel";
+import { DigitalAccessPanel } from "@/components/assets/DigitalAccessPanel";
 import { useDeleteAsset } from "@/hooks/useMutations";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -229,6 +230,9 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
 
           {/* Vehicle-specific panel */}
           {category?.protocol_type === "vehicle" && <VehicleDetailsPanel asset={asset} />}
+
+          {/* Digital access panel */}
+          {category?.protocol_type === "digital" && <DigitalAccessPanel asset={asset} />}
 
           {/* Documents */}
           <div className="bg-card border border-border rounded-xl p-5">
