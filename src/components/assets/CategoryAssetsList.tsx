@@ -30,6 +30,21 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
   const color = getCategoryColor(category?.category_name);
   const isAssignable = category?.is_assignable !== false;
   const isInsurance = category?.prefix === "CINS";
+  const isVehicle = category?.protocol_type === "vehicle";
+
+  const daysTo = (d?: string | null) => {
+    if (!d) return null;
+    const ms = new Date(d).getTime() - Date.now();
+    return Math.ceil(ms / (1000 * 60 * 60 * 24));
+  };
+  const expiryCellClass = (d?: string | null) => {
+    const days = daysTo(d);
+    if (days === null) return "text-muted-foreground";
+    if (days < 0) return "text-destructive font-medium";
+    if (days <= 30) return "text-amber-600 dark:text-amber-400 font-medium";
+    return "";
+  };
+  const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString("en-GB").replace(/\//g, "-") : "—");
 
   // Determine the grouping key per asset:
   // - Insurance categories: group by custom_fields["סוג כיסוי"] (sub-category)
@@ -86,6 +101,7 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
         return (
           a.asset_code?.toLowerCase().includes(q) ||
           a.serial_number?.toLowerCase().includes(q) ||
+          a.license_plate?.toLowerCase().includes(q) ||
           a.employees?.full_name?.toLowerCase().includes(q)
         );
       });
@@ -243,6 +259,17 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
                     <th className="text-right px-4 py-2 font-medium">חברת ביטוח</th>
                     <th className="text-right px-4 py-2 font-medium">תוקף עד</th>
                   </tr>
+                ) : isVehicle ? (
+                  <tr>
+                    <th className="text-right px-4 py-2 font-medium">מזהה</th>
+                    <th className="text-right px-4 py-2 font-medium">לוחית רישוי</th>
+                    <th className="text-right px-4 py-2 font-medium">דגם</th>
+                    <th className="text-right px-4 py-2 font-medium">נהג נוכחי</th>
+                    <th className="text-right px-4 py-2 font-medium">ק"מ</th>
+                    <th className="text-right px-4 py-2 font-medium">טסט</th>
+                    <th className="text-right px-4 py-2 font-medium">ביטוח</th>
+                    <th className="text-right px-4 py-2 font-medium">רישוי</th>
+                  </tr>
                 ) : (
                   <tr>
                     <th className="text-right px-4 py-2 font-medium">מזהה</th>
@@ -280,6 +307,24 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
                             </span>
                           ) : "—"}
                         </td>
+                      </tr>
+                    );
+                  }
+                  if (isVehicle) {
+                    return (
+                      <tr
+                        key={a.id}
+                        onClick={() => onSelectAsset(a.id)}
+                        className="border-t border-border hover:bg-muted/30 cursor-pointer"
+                      >
+                        <td className="px-4 py-2 font-mono text-xs">{a.asset_code}</td>
+                        <td className="px-4 py-2 font-mono text-xs font-medium">{a.license_plate ?? "—"}</td>
+                        <td className="px-4 py-2 text-xs">{a.manufacturer_model ?? <span className="text-muted-foreground">—</span>}</td>
+                        <td className="px-4 py-2">{a.employees?.full_name ?? <span className="text-muted-foreground">מאגר</span>}</td>
+                        <td className="px-4 py-2 text-xs">{a.current_km ? a.current_km.toLocaleString() : "—"}</td>
+                        <td className={cn("px-4 py-2 text-xs", expiryCellClass(a.test_expiry))}>{fmtDate(a.test_expiry)}</td>
+                        <td className={cn("px-4 py-2 text-xs", expiryCellClass(a.insurance_expiry))}>{fmtDate(a.insurance_expiry)}</td>
+                        <td className={cn("px-4 py-2 text-xs", expiryCellClass(a.license_expiry))}>{fmtDate(a.license_expiry)}</td>
                       </tr>
                     );
                   }

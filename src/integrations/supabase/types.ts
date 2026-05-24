@@ -341,16 +341,26 @@ export type Database = {
           company_id: string | null
           condition: string
           created_at: string
+          current_km: number | null
           current_owner_id: string | null
           custom_fields: Json | null
           expiry_date: string | null
+          fuel_type: string | null
           id: string
+          insurance_company: string | null
+          insurance_expiry: string | null
+          insurance_policy_number: string | null
+          license_expiry: string | null
+          license_plate: string | null
           manufacturer_model: string | null
           notes: string | null
           notification_days_before: number | null
           serial_number: string | null
           status: Database["public"]["Enums"]["asset_status"]
+          test_expiry: string | null
           updated_at: string
+          vehicle_type: string | null
+          year_of_manufacture: number | null
         }
         Insert: {
           asset_code: string
@@ -359,16 +369,26 @@ export type Database = {
           company_id?: string | null
           condition?: string
           created_at?: string
+          current_km?: number | null
           current_owner_id?: string | null
           custom_fields?: Json | null
           expiry_date?: string | null
+          fuel_type?: string | null
           id?: string
+          insurance_company?: string | null
+          insurance_expiry?: string | null
+          insurance_policy_number?: string | null
+          license_expiry?: string | null
+          license_plate?: string | null
           manufacturer_model?: string | null
           notes?: string | null
           notification_days_before?: number | null
           serial_number?: string | null
           status?: Database["public"]["Enums"]["asset_status"]
+          test_expiry?: string | null
           updated_at?: string
+          vehicle_type?: string | null
+          year_of_manufacture?: number | null
         }
         Update: {
           asset_code?: string
@@ -377,16 +397,26 @@ export type Database = {
           company_id?: string | null
           condition?: string
           created_at?: string
+          current_km?: number | null
           current_owner_id?: string | null
           custom_fields?: Json | null
           expiry_date?: string | null
+          fuel_type?: string | null
           id?: string
+          insurance_company?: string | null
+          insurance_expiry?: string | null
+          insurance_policy_number?: string | null
+          license_expiry?: string | null
+          license_plate?: string | null
           manufacturer_model?: string | null
           notes?: string | null
           notification_days_before?: number | null
           serial_number?: string | null
           status?: Database["public"]["Enums"]["asset_status"]
+          test_expiry?: string | null
           updated_at?: string
+          vehicle_type?: string | null
+          year_of_manufacture?: number | null
         }
         Relationships: [
           {

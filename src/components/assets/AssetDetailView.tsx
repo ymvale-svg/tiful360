@@ -9,6 +9,7 @@ import { useState } from "react";
 import { EditAssetDialog } from "@/components/EditAssetDialog";
 import { AssignAssetWithFormDialog } from "@/components/AssignAssetWithFormDialog";
 import { AssetDocumentsSection } from "@/components/AssetDocumentsSection";
+import { VehicleDetailsPanel } from "@/components/assets/VehicleDetailsPanel";
 import { useDeleteAsset } from "@/hooks/useMutations";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -225,6 +226,9 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
               </div>
             )}
           </div>
+
+          {/* Vehicle-specific panel */}
+          {category?.protocol_type === "vehicle" && <VehicleDetailsPanel asset={asset} />}
 
           {/* Documents */}
           <div className="bg-card border border-border rounded-xl p-5">
