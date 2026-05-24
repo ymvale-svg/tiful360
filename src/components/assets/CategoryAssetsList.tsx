@@ -101,6 +101,7 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
         return (
           a.asset_code?.toLowerCase().includes(q) ||
           a.serial_number?.toLowerCase().includes(q) ||
+          a.license_plate?.toLowerCase().includes(q) ||
           a.employees?.full_name?.toLowerCase().includes(q)
         );
       });
