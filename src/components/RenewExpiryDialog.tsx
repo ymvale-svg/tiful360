@@ -120,6 +120,8 @@ export function RenewExpiryDialog({ open, onOpenChange, item }: Props) {
       toast({ title: "התוקף עודכן בהצלחה" });
       qc.invalidateQueries({ queryKey: ["expiring-assets"] });
       qc.invalidateQueries({ queryKey: ["assets"] });
+      qc.invalidateQueries({ queryKey: ["employee-assets"] });
+      qc.invalidateQueries({ queryKey: ["my_digital_access"] });
       qc.invalidateQueries({ queryKey: ["asset-documents", item.asset_id] });
       onOpenChange(false);
     } catch (err: any) {
