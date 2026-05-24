@@ -10,6 +10,7 @@ import { EditAssetDialog } from "@/components/EditAssetDialog";
 import { AssignAssetWithFormDialog } from "@/components/AssignAssetWithFormDialog";
 import { AssetDocumentsSection } from "@/components/AssetDocumentsSection";
 import { VehicleDetailsPanel } from "@/components/assets/VehicleDetailsPanel";
+import { DigitalAccessPanel } from "@/components/assets/DigitalAccessPanel";
 import { useDeleteAsset } from "@/hooks/useMutations";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
