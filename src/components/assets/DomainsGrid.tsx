@@ -187,14 +187,25 @@ export function DomainsGrid({ onSelectCategory, onQuickAssign }: Props) {
               : null;
 
             const isEmpty = cats.length === 0;
+            const primaryCatId = cats[0]?.id;
+            const openDomain = () => primaryCatId && onSelectCategory(primaryCatId);
             return (
               <div
                 key={def.key}
+                role={isEmpty ? undefined : "button"}
+                tabIndex={isEmpty ? undefined : 0}
+                onClick={isEmpty ? undefined : openDomain}
+                onKeyDown={(e) => {
+                  if (!isEmpty && (e.key === "Enter" || e.key === " ")) {
+                    e.preventDefault();
+                    openDomain();
+                  }
+                }}
                 className={cn(
-                  "group relative bg-card border border-border rounded-2xl p-5 transition-all",
+                  "group relative bg-card border border-border rounded-2xl p-5 transition-all text-right",
                   isEmpty
                     ? "opacity-60 hover:opacity-100 hover:shadow-md hover:ring-1"
-                    : "hover:shadow-lg hover:-translate-y-0.5 hover:ring-2",
+                    : "cursor-pointer hover:shadow-lg hover:-translate-y-0.5 hover:ring-2 focus:outline-none focus:ring-2",
                   def.color.ring
                 )}
               >
@@ -228,6 +239,7 @@ export function DomainsGrid({ onSelectCategory, onQuickAssign }: Props) {
                   {isEmpty ? (
                     <a
                       href="/assets?tab=categories"
+                      onClick={(e) => e.stopPropagation()}
                       className="text-[11px] px-2 py-1 rounded-md border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
                     >
                       + הוסף קטגוריה ראשונה
@@ -237,7 +249,10 @@ export function DomainsGrid({ onSelectCategory, onQuickAssign }: Props) {
                       {cats.slice(0, 6).map((c) => (
                         <button
                           key={c.id}
-                          onClick={() => onSelectCategory(c.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSelectCategory(c.id);
+                          }}
                           className={cn(
                             "inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border border-border bg-background hover:bg-muted transition-colors",
                             def.color.text
