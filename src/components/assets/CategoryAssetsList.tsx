@@ -310,6 +310,24 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
                       </tr>
                     );
                   }
+                  if (isVehicle) {
+                    return (
+                      <tr
+                        key={a.id}
+                        onClick={() => onSelectAsset(a.id)}
+                        className="border-t border-border hover:bg-muted/30 cursor-pointer"
+                      >
+                        <td className="px-4 py-2 font-mono text-xs">{a.asset_code}</td>
+                        <td className="px-4 py-2 font-mono text-xs font-medium">{a.license_plate ?? "—"}</td>
+                        <td className="px-4 py-2 text-xs">{a.manufacturer_model ?? <span className="text-muted-foreground">—</span>}</td>
+                        <td className="px-4 py-2">{a.employees?.full_name ?? <span className="text-muted-foreground">מאגר</span>}</td>
+                        <td className="px-4 py-2 text-xs">{a.current_km ? a.current_km.toLocaleString() : "—"}</td>
+                        <td className={cn("px-4 py-2 text-xs", expiryCellClass(a.test_expiry))}>{fmtDate(a.test_expiry)}</td>
+                        <td className={cn("px-4 py-2 text-xs", expiryCellClass(a.insurance_expiry))}>{fmtDate(a.insurance_expiry)}</td>
+                        <td className={cn("px-4 py-2 text-xs", expiryCellClass(a.license_expiry))}>{fmtDate(a.license_expiry)}</td>
+                      </tr>
+                    );
+                  }
                   return (
                     <tr
                       key={a.id}
