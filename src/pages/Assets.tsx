@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { Plus, Search, Zap } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Plus, Search, Zap, MoreHorizontal, Package, UserRound, FolderTree } from "lucide-react";
 import { ExportExcelButton, ImportExcelButton } from "@/components/ExcelActionButtons";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { useAssets } from "@/hooks/useData";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { useAssets, useEmployees, useAssetCategories } from "@/hooks/useData";
 import { AddAssetDialog } from "@/components/AddAssetDialog";
 import { ImportAssetsExcelDialog } from "@/components/ImportAssetsExcelDialog";
 import CategoryManager from "@/pages/CategoryManager";
