@@ -21,7 +21,12 @@ const assetStatusLabels: Record<string, string> = {
 
 export default function Assets() {
   const { data: assets } = useAssets();
+  const { data: employees } = useEmployees();
+  const { data: categories } = useAssetCategories();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [searchFocused, setSearchFocused] = useState(false);
 
   const activeTab = searchParams.get("tab") === "categories" ? "categories" : "assets";
   const cat = searchParams.get("cat");
@@ -39,18 +44,50 @@ export default function Assets() {
     setSearchParams(next, { replace: true });
   };
 
-  // Global search results — show as quick navigation
+  // ⌘K / Ctrl+K focuses the global search
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+      if (e.key === "Escape" && document.activeElement === searchInputRef.current) {
+        searchInputRef.current?.blur();
+        setSearchFocused(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // Grouped global search results
   const searchResults = useMemo(() => {
-    if (!globalSearch.trim() || globalSearch.length < 2) return [];
+    const empty = { assets: [] as any[], employees: [] as any[], categories: [] as any[] };
+    if (!globalSearch.trim() || globalSearch.length < 2) return empty;
     const q = globalSearch.toLowerCase();
-    return (assets ?? [])
-      .filter((a: any) =>
-        a.asset_name?.toLowerCase().includes(q) ||
-        a.asset_code?.toLowerCase().includes(q) ||
-        a.serial_number?.toLowerCase().includes(q)
-      )
-      .slice(0, 8);
-  }, [assets, globalSearch]);
+    return {
+      assets: (assets ?? [])
+        .filter((a: any) =>
+          a.asset_name?.toLowerCase().includes(q) ||
+          a.asset_code?.toLowerCase().includes(q) ||
+          a.serial_number?.toLowerCase().includes(q) ||
+          (a.custom_fields && JSON.stringify(a.custom_fields).toLowerCase().includes(q))
+        )
+        .slice(0, 6),
+      employees: (employees ?? [])
+        .filter((e: any) =>
+          e.full_name?.toLowerCase().includes(q) ||
+          e.employee_code?.toLowerCase().includes(q)
+        )
+        .slice(0, 4),
+      categories: (categories ?? [])
+        .filter((c: any) => c.category_name?.toLowerCase().includes(q))
+        .slice(0, 4),
+    };
+  }, [assets, employees, categories, globalSearch]);
+
+  const hasResults =
+    searchResults.assets.length + searchResults.employees.length + searchResults.categories.length > 0;
 
   const updateParams = (next: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams);
