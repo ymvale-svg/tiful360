@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { CalendarClock, ChevronLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { CalendarClock, ChevronLeft, ExternalLink } from "lucide-react";
 import { useExpiringAssets, expiryUrgency, DOMAIN_LABELS, DOMAIN_STYLES, type ExpiringAsset } from "@/hooks/useExpiringAssets";
 import { RenewExpiryDialog } from "@/components/RenewExpiryDialog";
 import { cn } from "@/lib/utils";
