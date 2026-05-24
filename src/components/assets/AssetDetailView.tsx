@@ -227,6 +227,9 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
             )}
           </div>
 
+          {/* Vehicle-specific panel */}
+          {category?.protocol_type === "vehicle" && <VehicleDetailsPanel asset={asset} />}
+
           {/* Documents */}
           <div className="bg-card border border-border rounded-xl p-5">
             <h2 className="text-sm font-semibold text-muted-foreground mb-3">מסמכים מצורפים</h2>
