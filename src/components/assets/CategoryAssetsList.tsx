@@ -259,6 +259,17 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
                     <th className="text-right px-4 py-2 font-medium">חברת ביטוח</th>
                     <th className="text-right px-4 py-2 font-medium">תוקף עד</th>
                   </tr>
+                ) : isVehicle ? (
+                  <tr>
+                    <th className="text-right px-4 py-2 font-medium">מזהה</th>
+                    <th className="text-right px-4 py-2 font-medium">לוחית רישוי</th>
+                    <th className="text-right px-4 py-2 font-medium">דגם</th>
+                    <th className="text-right px-4 py-2 font-medium">נהג נוכחי</th>
+                    <th className="text-right px-4 py-2 font-medium">ק"מ</th>
+                    <th className="text-right px-4 py-2 font-medium">טסט</th>
+                    <th className="text-right px-4 py-2 font-medium">ביטוח</th>
+                    <th className="text-right px-4 py-2 font-medium">רישוי</th>
+                  </tr>
                 ) : (
                   <tr>
                     <th className="text-right px-4 py-2 font-medium">מזהה</th>
