@@ -75,6 +75,16 @@ export function ExpiringAssetsCard() {
                 <div className={cn("shrink-0 text-xs font-medium px-2 py-1 rounded-md border", urgency.color, urgency.bg, urgency.border)}>
                   {urgency.label}
                 </div>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => { e.stopPropagation(); navigateToSource(item); }}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); navigateToSource(item); } }}
+                  title="פתח פריט"
+                  className="shrink-0 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </span>
                 <ChevronLeft className="w-4 h-4 text-muted-foreground shrink-0" />
               </button>
             );
