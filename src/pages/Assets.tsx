@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Zap } from "lucide-react";
 import { ExportExcelButton, ImportExcelButton } from "@/components/ExcelActionButtons";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -9,9 +9,10 @@ import { AddAssetDialog } from "@/components/AddAssetDialog";
 import { ImportAssetsExcelDialog } from "@/components/ImportAssetsExcelDialog";
 import CategoryManager from "@/pages/CategoryManager";
 import { exportToExcel } from "@/lib/exportExcel";
-import { CategoriesGrid } from "@/components/assets/CategoriesGrid";
+import { DomainsGrid } from "@/components/assets/DomainsGrid";
 import { CategoryAssetsList } from "@/components/assets/CategoryAssetsList";
 import { AssetDetailView } from "@/components/assets/AssetDetailView";
+import { toast } from "@/hooks/use-toast";
 
 const assetStatusLabels: Record<string, string> = {
   in_use: "בשימוש", in_stock: "במלאי", in_repair: "בתיקון", lost: "אבד",
@@ -72,7 +73,7 @@ export default function Assets() {
           <TabsTrigger value="categories">קטגוריות</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="assets" className="space-y-6 mt-4">
+        <TabsContent value="assets" className="space-y-5 mt-4">
           {/* Show global header only on level 1 */}
           {!cat && !assetId && (
             <>
@@ -105,47 +106,74 @@ export default function Assets() {
                     }}
                   />
                   <ImportExcelButton onClick={() => setImportOpen(true)} />
-                  <Button className="gap-2" onClick={() => { setAddCategoryId(undefined); setAddOpen(true); }}>
-                    <Plus className="w-4 h-4" />
-                    פריט חדש
-                  </Button>
                 </div>
               </div>
 
-              {/* Global search */}
-              <div className="relative max-w-xl">
-                <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2">
-                  <Search className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-                  <input
-                    type="search"
-                    aria-label="חיפוש משאבים"
-                    value={globalSearch}
-                    onChange={(e) => setGlobalSearch(e.target.value)}
-                    placeholder="חיפוש מהיר בכל המשאבים (שם / מזהה / מס׳ סידורי)..."
-                    className="bg-transparent text-sm outline-none w-full"
-                  />
-                </div>
-                {searchResults.length > 0 && (
-                  <div className="absolute z-20 mt-1 w-full bg-card border border-border rounded-lg shadow-lg overflow-hidden">
-                    {searchResults.map((a: any) => (
-                      <button
-                        key={a.id}
-                        onClick={() => {
-                          setGlobalSearch("");
-                          goToAsset(a.id, a.category_id);
-                        }}
-                        className="w-full text-right px-3 py-2 hover:bg-muted/60 flex items-center gap-3 text-sm"
-                      >
-                        <span className="font-mono text-xs text-muted-foreground">{a.asset_code}</span>
-                        <span className="flex-1 truncate">{a.asset_name}</span>
-                        <span className="text-xs text-muted-foreground">{a.asset_categories?.category_name}</span>
-                      </button>
-                    ))}
+              {/* Action bar: new + quick-assign + global search */}
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  className="gap-2 rounded-full"
+                  onClick={() => { setAddCategoryId(undefined); setAddOpen(true); }}
+                >
+                  <Plus className="w-4 h-4" />
+                  פריט חדש
+                </Button>
+                <Button
+                  variant="outline"
+                  className="gap-2 rounded-full"
+                  onClick={() =>
+                    toast({
+                      title: "שיוך מהיר לעובד",
+                      description: "פתחו את כרטיס העובד ולחצו על 'הוסף משאב' לשיוך מרובה. אשף ייעודי בקרוב.",
+                    })
+                  }
+                >
+                  <Zap className="w-4 h-4" />
+                  שיוך מהיר לעובד
+                </Button>
+                <div className="relative flex-1 min-w-[260px] max-w-xl">
+                  <div className="flex items-center gap-2 bg-card border border-border rounded-full px-3 py-2">
+                    <Search className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                    <input
+                      type="search"
+                      aria-label="חיפוש משאבים"
+                      value={globalSearch}
+                      onChange={(e) => setGlobalSearch(e.target.value)}
+                      placeholder="חיפוש גלובלי בכל המשאבים (שם / קוד / עובד / מספר פוליסה...)"
+                      className="bg-transparent text-sm outline-none w-full"
+                    />
                   </div>
-                )}
+                  {searchResults.length > 0 && (
+                    <div className="absolute z-20 mt-1 w-full bg-card border border-border rounded-lg shadow-lg overflow-hidden">
+                      {searchResults.map((a: any) => (
+                        <button
+                          key={a.id}
+                          onClick={() => {
+                            setGlobalSearch("");
+                            goToAsset(a.id, a.category_id);
+                          }}
+                          className="w-full text-right px-3 py-2 hover:bg-muted/60 flex items-center gap-3 text-sm"
+                        >
+                          <span className="font-mono text-xs text-muted-foreground">{a.asset_code}</span>
+                          <span className="flex-1 truncate">{a.asset_name}</span>
+                          <span className="text-xs text-muted-foreground">{a.asset_categories?.category_name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <CategoriesGrid onSelectCategory={goToCategory} />
+              <DomainsGrid
+                onSelectCategory={goToCategory}
+                onQuickAssign={() =>
+                  toast({
+                    title: "שיוך מהיר לעובד",
+                    description: "פתחו את כרטיס העובד ולחצו על 'הוסף משאב' לשיוך מרובה. אשף ייעודי בקרוב.",
+                  })
+                }
+              />
             </>
           )}
 
