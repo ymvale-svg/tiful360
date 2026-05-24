@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { CalendarClock, ChevronLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { CalendarClock, ChevronLeft, ExternalLink } from "lucide-react";
 import { useExpiringAssets, expiryUrgency, DOMAIN_LABELS, DOMAIN_STYLES, type ExpiringAsset } from "@/hooks/useExpiringAssets";
 import { RenewExpiryDialog } from "@/components/RenewExpiryDialog";
 import { cn } from "@/lib/utils";
@@ -7,6 +8,15 @@ import { cn } from "@/lib/utils";
 export function ExpiringAssetsCard() {
   const { data, isLoading } = useExpiringAssets(14);
   const [selected, setSelected] = useState<ExpiringAsset | null>(null);
+  const navigate = useNavigate();
+
+  const navigateToSource = (item: ExpiringAsset) => {
+    if (item.source_type === "digital_access" && item.current_owner_id) {
+      navigate(`/employees/${item.current_owner_id}?tab=assets`);
+    } else if (item.category_id) {
+      navigate(`/assets?cat=${item.category_id}&asset=${item.asset_id}`);
+    }
+  };
 
   const items = data ?? [];
 
@@ -65,6 +75,16 @@ export function ExpiringAssetsCard() {
                 <div className={cn("shrink-0 text-xs font-medium px-2 py-1 rounded-md border", urgency.color, urgency.bg, urgency.border)}>
                   {urgency.label}
                 </div>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => { e.stopPropagation(); navigateToSource(item); }}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); navigateToSource(item); } }}
+                  title="פתח פריט"
+                  className="shrink-0 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </span>
                 <ChevronLeft className="w-4 h-4 text-muted-foreground shrink-0" />
               </button>
             );

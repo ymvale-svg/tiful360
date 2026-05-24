@@ -52,10 +52,31 @@ export function RenewExpiryDialog({ open, onOpenChange, item }: Props) {
           .update({ expiry_date: newDate })
           .eq("id", item.asset_id);
         if (error) throw error;
+      } else if (
+        item.source_type === "vehicle_test" ||
+        item.source_type === "vehicle_insurance" ||
+        item.source_type === "vehicle_license"
+      ) {
+        const col =
+          item.source_type === "vehicle_test"
+            ? "test_expiry"
+            : item.source_type === "vehicle_insurance"
+              ? "insurance_expiry"
+              : "license_expiry";
+        const { error } = await supabase
+          .from("assets")
+          .update({ [col]: newDate } as any)
+          .eq("id", item.asset_id);
+        if (error) throw error;
+      } else if (item.source_type === "digital_access") {
+        const col = item.field_key === "license" ? "license_expires_at" : "password_expires_at";
+        const { error } = await supabase
+          .from("digital_access")
+          .update({ [col]: newDate } as any)
+          .eq("id", item.source_id);
+        if (error) throw error;
       } else if (item.source_type === "custom_field") {
-        // field_key = "<id>:<field_name>"
         const fieldName = item.field_label;
-        // Read current custom_fields
         const { data: a, error: aErr } = await supabase
           .from("assets")
           .select("custom_fields")
@@ -99,6 +120,8 @@ export function RenewExpiryDialog({ open, onOpenChange, item }: Props) {
       toast({ title: "התוקף עודכן בהצלחה" });
       qc.invalidateQueries({ queryKey: ["expiring-assets"] });
       qc.invalidateQueries({ queryKey: ["assets"] });
+      qc.invalidateQueries({ queryKey: ["employee-assets"] });
+      qc.invalidateQueries({ queryKey: ["my_digital_access"] });
       qc.invalidateQueries({ queryKey: ["asset-documents", item.asset_id] });
       onOpenChange(false);
     } catch (err: any) {

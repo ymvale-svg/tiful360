@@ -39,7 +39,14 @@ export interface ExpiringAsset {
   category_name: string;
   category_prefix: string;
   is_assignable: boolean;
-  source_type: "asset" | "custom_field" | "document" | "digital_access";
+  source_type:
+    | "asset"
+    | "custom_field"
+    | "document"
+    | "digital_access"
+    | "vehicle_test"
+    | "vehicle_insurance"
+    | "vehicle_license";
   source_id: string;
   field_key: string | null;
   field_label: string;
