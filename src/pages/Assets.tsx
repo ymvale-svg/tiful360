@@ -14,6 +14,7 @@ import { DomainsGrid } from "@/components/assets/DomainsGrid";
 import { CategoryAssetsList } from "@/components/assets/CategoryAssetsList";
 import { AssetDetailView } from "@/components/assets/AssetDetailView";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 const assetStatusLabels: Record<string, string> = {
   in_use: "בשימוש", in_stock: "במלאי", in_repair: "בתיקון", lost: "אבד",
