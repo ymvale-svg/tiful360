@@ -34,47 +34,49 @@ interface DomainDef {
   subtitle: (cats: any[], assets: any[]) => string;
   icon: typeof AppWindow;
   color: { bg: string; text: string; ring: string; soft: string };
-  match: (cat: any) => boolean;
 }
 
-const DOMAINS: DomainDef[] = [
-  {
+// Priority order — first match wins, no category appears in two domains.
+function classifyCategory(c: any): DomainKey {
+  if (c.prefix === "VRT" || c.protocol_type === "digital" || c.prefix === "DACC") return "digital";
+  if (c.prefix === "SFT" || c.prefix === "MAN") return "licenses";
+  if (c.protocol_type === "real_estate" || c.prefix === "LEASE") return "real_estate";
+  if (c.protocol_type === "insurance" || c.prefix === "CERT" || c.prefix === "CINS") return "insurance";
+  if (c.protocol_type === "training" || c.prefix === "MAINT") return "trainings";
+  return "physical";
+}
+
+const DOMAINS: Record<DomainKey, DomainDef> = {
+  licenses: {
     key: "licenses",
     title: "רישיונות ותוכנות",
     subtitle: (cats, assets) => {
-      const swCat = cats.find((c) => c.prefix === "SFT");
-      const subCat = cats.find((c) => c.prefix === "MAN");
-      const sw = assets.filter((a) => a.category_id === swCat?.id).length;
-      const sub = assets.filter((a) => a.category_id === subCat?.id).length;
-      return `${sw} תוכנות · ${sub} מנויים · ${assets.filter(a => cats.some(c => c.id === a.category_id)).length} סה״כ`;
+      const sw = assets.filter((a) => cats.find((c) => c.id === a.category_id)?.prefix === "SFT").length;
+      const sub = assets.filter((a) => cats.find((c) => c.id === a.category_id)?.prefix === "MAN").length;
+      return `${assets.length} פריטים · ${sw} תוכנות · ${sub} מנויים`;
     },
     icon: AppWindow,
     color: { bg: "bg-violet-500/10", text: "text-violet-600 dark:text-violet-400", ring: "hover:ring-violet-500/30", soft: "bg-violet-500/5" },
-    match: (c) => ["SFT", "MAN"].includes(c.prefix),
   },
-  {
+  digital: {
     key: "digital",
     title: "גישות דיגיטליות",
     subtitle: (_cats, assets) => `${assets.length} גישות פעילות`,
     icon: KeySquare,
     color: { bg: "bg-purple-500/10", text: "text-purple-600 dark:text-purple-400", ring: "hover:ring-purple-500/30", soft: "bg-purple-500/5" },
-    match: (c) => c.protocol_type === "digital" || c.prefix === "DACC",
   },
-  {
+  physical: {
     key: "physical",
     title: "ציוד פיזי",
-    subtitle: (cats, assets) => {
+    subtitle: (_cats, assets) => {
       const inUse = assets.filter((a) => a.status === "in_use").length;
       const inStock = assets.filter((a) => a.status === "in_stock").length;
       return `${assets.length} פריטים · ${inUse} בשימוש · ${inStock} במלאי`;
     },
     icon: Monitor,
     color: { bg: "bg-sky-500/10", text: "text-sky-600 dark:text-sky-400", ring: "hover:ring-sky-500/30", soft: "bg-sky-500/5" },
-    match: (c) =>
-      (c.protocol_type === "physical" || c.protocol_type === "vehicle") &&
-      !["SFT", "MAN", "CERT", "MAINT"].includes(c.prefix),
   },
-  {
+  real_estate: {
     key: "real_estate",
     title: 'נדל"ן וחוזים',
     subtitle: (_cats, assets) => {
@@ -84,31 +86,31 @@ const DOMAINS: DomainDef[] = [
     },
     icon: Building,
     color: { bg: "bg-amber-500/10", text: "text-amber-600 dark:text-amber-400", ring: "hover:ring-amber-500/30", soft: "bg-amber-500/5" },
-    match: (c) => c.protocol_type === "real_estate" || c.prefix === "LEASE",
   },
-  {
+  trainings: {
     key: "trainings",
-    title: "הדרכות ואימות",
-    subtitle: (_cats, assets) => `${assets.length} הדרכות פעילות`,
+    title: "הדרכות ותחזוקה",
+    subtitle: (_cats, assets) => `${assets.length} פריטי הדרכה/תחזוקה`,
     icon: GraduationCap,
     color: { bg: "bg-pink-500/10", text: "text-pink-600 dark:text-pink-400", ring: "hover:ring-pink-500/30", soft: "bg-pink-500/5" },
-    match: (c) => c.protocol_type === "training" || c.prefix === "MAINT",
   },
-  {
+  insurance: {
     key: "insurance",
     title: "ביטוחים ורגולציה",
     subtitle: (cats, assets) => {
-      const ins = cats.find((c) => c.prefix === "CINS");
-      const cert = cats.find((c) => c.prefix === "CERT");
-      const insCount = assets.filter((a) => a.category_id === ins?.id).length;
-      const certCount = assets.filter((a) => a.category_id === cert?.id).length;
+      const insCount = assets.filter((a) => {
+        const c = cats.find((cc) => cc.id === a.category_id);
+        return c?.prefix === "CINS" || c?.protocol_type === "insurance";
+      }).length;
+      const certCount = assets.filter((a) => cats.find((c) => c.id === a.category_id)?.prefix === "CERT").length;
       return `${insCount} ביטוחים · ${certCount} אישורים`;
     },
     icon: ShieldCheck,
     color: { bg: "bg-emerald-500/10", text: "text-emerald-600 dark:text-emerald-400", ring: "hover:ring-emerald-500/30", soft: "bg-emerald-500/5" },
-    match: (c) => c.protocol_type === "insurance" || c.prefix === "CERT",
   },
-];
+};
+
+const DOMAIN_ORDER: DomainKey[] = ["physical", "digital", "licenses", "trainings", "insurance", "real_estate"];
 
 export function DomainsGrid({ onSelectCategory, onQuickAssign }: Props) {
   const { data: categories, isLoading } = useAssetCategories();
@@ -119,16 +121,24 @@ export function DomainsGrid({ onSelectCategory, onQuickAssign }: Props) {
   const grouped = useMemo(() => {
     const cats = categories ?? [];
     const all = assets ?? [];
-    return DOMAINS.map((d) => {
-      const domainCats = cats.filter(d.match);
+    // Single-pass classification: each category goes to exactly one domain.
+    const catsByDomain = new Map<DomainKey, any[]>();
+    for (const k of DOMAIN_ORDER) catsByDomain.set(k, []);
+    for (const c of cats) catsByDomain.get(classifyCategory(c))!.push(c);
+
+    return DOMAIN_ORDER.map((key) => {
+      const def = DOMAINS[key];
+      const domainCats = catsByDomain.get(key) ?? [];
       const catIds = new Set(domainCats.map((c) => c.id));
       const domainAssets = all.filter((a: any) => catIds.has(a.category_id));
-      const domainExpiring = (expiring ?? []).filter((e) =>
-        domainCats.some((c) => c.id === e.category_id)
-      );
+      // Sort sub-categories by asset count desc (most useful first).
+      const sortedCats = [...domainCats]
+        .map((c) => ({ ...c, _count: domainAssets.filter((a: any) => a.category_id === c.id).length }))
+        .sort((a, b) => b._count - a._count);
+      const domainExpiring = (expiring ?? []).filter((e) => catIds.has(e.category_id));
       const expired = domainExpiring.filter((e) => e.days_left <= 0).length;
       const soon = domainExpiring.filter((e) => e.days_left > 0 && e.days_left <= 14).length;
-      return { def: d, cats: domainCats, assets: domainAssets, expired, soon };
+      return { def, cats: sortedCats, assets: domainAssets, expired, soon };
     });
   }, [categories, assets, expiring]);
 
@@ -176,12 +186,15 @@ export function DomainsGrid({ onSelectCategory, onQuickAssign }: Props) {
               ? { text: `חידוש תוך 14 יום`, cls: "bg-warning/10 text-warning" }
               : null;
 
+            const isEmpty = cats.length === 0;
             return (
               <div
                 key={def.key}
                 className={cn(
-                  "group relative bg-card border border-border rounded-2xl p-5",
-                  "hover:shadow-lg hover:-translate-y-0.5 hover:ring-2 transition-all",
+                  "group relative bg-card border border-border rounded-2xl p-5 transition-all",
+                  isEmpty
+                    ? "opacity-60 hover:opacity-100 hover:shadow-md hover:ring-1"
+                    : "hover:shadow-lg hover:-translate-y-0.5 hover:ring-2",
                   def.color.ring
                 )}
               >
@@ -198,7 +211,9 @@ export function DomainsGrid({ onSelectCategory, onQuickAssign }: Props) {
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1 text-right pr-2">
                     <h3 className="text-base font-semibold leading-tight">{def.title}</h3>
-                    <p className="text-xs text-muted-foreground mt-1">{def.subtitle(cats, assets)}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {isEmpty ? "אין פריטים בדומיין זה" : def.subtitle(cats, assets)}
+                    </p>
                   </div>
                   <div className={cn(
                     "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105",
@@ -210,12 +225,16 @@ export function DomainsGrid({ onSelectCategory, onQuickAssign }: Props) {
 
                 {/* Sub-category chips */}
                 <div className="flex flex-wrap gap-1.5 justify-end">
-                  {cats.length === 0 ? (
-                    <span className="text-[11px] text-muted-foreground italic">אין קטגוריות עדיין</span>
+                  {isEmpty ? (
+                    <a
+                      href="/assets?tab=categories"
+                      className="text-[11px] px-2 py-1 rounded-md border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                    >
+                      + הוסף קטגוריה ראשונה
+                    </a>
                   ) : (
-                    cats.slice(0, 6).map((c) => {
-                      const count = assets.filter((a: any) => a.category_id === c.id).length;
-                      return (
+                    <>
+                      {cats.slice(0, 6).map((c) => (
                         <button
                           key={c.id}
                           onClick={() => onSelectCategory(c.id)}
@@ -225,15 +244,15 @@ export function DomainsGrid({ onSelectCategory, onQuickAssign }: Props) {
                           )}
                         >
                           <span>{c.category_name}</span>
-                          <span className="text-muted-foreground">{count}</span>
+                          <span className="text-muted-foreground">{c._count ?? 0}</span>
                         </button>
-                      );
-                    })
-                  )}
-                  {cats.length > 6 && (
-                    <span className="inline-flex items-center text-[11px] px-2 py-1 rounded-md border border-border text-muted-foreground">
-                      +{cats.length - 6}
-                    </span>
+                      ))}
+                      {cats.length > 6 && (
+                        <span className="inline-flex items-center text-[11px] px-2 py-1 rounded-md border border-border text-muted-foreground">
+                          +{cats.length - 6}
+                        </span>
+                      )}
+                    </>
                   )}
                 </div>
               </div>

@@ -1,10 +1,10 @@
-import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { Plus, Search, Zap } from "lucide-react";
-import { ExportExcelButton, ImportExcelButton } from "@/components/ExcelActionButtons";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Plus, Search, Zap, MoreHorizontal, Package, UserRound, FolderTree } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { useAssets } from "@/hooks/useData";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { useAssets, useEmployees, useAssetCategories } from "@/hooks/useData";
 import { AddAssetDialog } from "@/components/AddAssetDialog";
 import { ImportAssetsExcelDialog } from "@/components/ImportAssetsExcelDialog";
 import CategoryManager from "@/pages/CategoryManager";
@@ -13,6 +13,7 @@ import { DomainsGrid } from "@/components/assets/DomainsGrid";
 import { CategoryAssetsList } from "@/components/assets/CategoryAssetsList";
 import { AssetDetailView } from "@/components/assets/AssetDetailView";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 const assetStatusLabels: Record<string, string> = {
   in_use: "בשימוש", in_stock: "במלאי", in_repair: "בתיקון", lost: "אבד",
@@ -20,7 +21,12 @@ const assetStatusLabels: Record<string, string> = {
 
 export default function Assets() {
   const { data: assets } = useAssets();
+  const { data: employees } = useEmployees();
+  const { data: categories } = useAssetCategories();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [searchFocused, setSearchFocused] = useState(false);
 
   const activeTab = searchParams.get("tab") === "categories" ? "categories" : "assets";
   const cat = searchParams.get("cat");
@@ -38,18 +44,50 @@ export default function Assets() {
     setSearchParams(next, { replace: true });
   };
 
-  // Global search results — show as quick navigation
+  // ⌘K / Ctrl+K focuses the global search
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+      if (e.key === "Escape" && document.activeElement === searchInputRef.current) {
+        searchInputRef.current?.blur();
+        setSearchFocused(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // Grouped global search results
   const searchResults = useMemo(() => {
-    if (!globalSearch.trim() || globalSearch.length < 2) return [];
+    const empty = { assets: [] as any[], employees: [] as any[], categories: [] as any[] };
+    if (!globalSearch.trim() || globalSearch.length < 2) return empty;
     const q = globalSearch.toLowerCase();
-    return (assets ?? [])
-      .filter((a: any) =>
-        a.asset_name?.toLowerCase().includes(q) ||
-        a.asset_code?.toLowerCase().includes(q) ||
-        a.serial_number?.toLowerCase().includes(q)
-      )
-      .slice(0, 8);
-  }, [assets, globalSearch]);
+    return {
+      assets: (assets ?? [])
+        .filter((a: any) =>
+          a.asset_name?.toLowerCase().includes(q) ||
+          a.asset_code?.toLowerCase().includes(q) ||
+          a.serial_number?.toLowerCase().includes(q) ||
+          (a.custom_fields && JSON.stringify(a.custom_fields).toLowerCase().includes(q))
+        )
+        .slice(0, 6),
+      employees: (employees ?? [])
+        .filter((e: any) =>
+          e.full_name?.toLowerCase().includes(q) ||
+          e.employee_code?.toLowerCase().includes(q)
+        )
+        .slice(0, 4),
+      categories: (categories ?? [])
+        .filter((c: any) => c.category_name?.toLowerCase().includes(q))
+        .slice(0, 4),
+    };
+  }, [assets, employees, categories, globalSearch]);
+
+  const hasResults =
+    searchResults.assets.length + searchResults.employees.length + searchResults.categories.length > 0;
 
   const updateParams = (next: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams);
@@ -80,90 +118,195 @@ export default function Assets() {
               <div className="flex items-start justify-between flex-wrap gap-3">
                 <div className="page-header">
                   <h1 className="page-title">משאבים</h1>
-                  <p className="page-subtitle">ניהול מלאי ומעקב אחר כלל משאבי החברה</p>
-                </div>
-                <div className="flex gap-2">
-                  <ExportExcelButton
-                    disabled={!assets?.length}
-                    onClick={() => {
-                      if (!assets?.length) return;
-                      exportToExcel(assets.map((a: any) => ({
-                        ...a,
-                        category_name: a.asset_categories?.category_name ?? "",
-                        owner_name: a.employees?.full_name ?? "במלאי",
-                        status_label: assetStatusLabels[a.status] ?? a.status,
-                        expiry_fmt: a.expiry_date ? new Date(a.expiry_date).toLocaleDateString("en-GB").replace(/\//g, "-") : "",
-                      })), [
-                        { key: "asset_code", label: "מזהה" },
-                        { key: "asset_name", label: "שם פריט" },
-                        { key: "category_name", label: "קטגוריה" },
-                        { key: "serial_number", label: "מס׳ סידורי" },
-                        { key: "owner_name", label: "בעלות" },
-                        { key: "status_label", label: "סטטוס" },
-                        { key: "expiry_fmt", label: "תפוגה" },
-                        { key: "notes", label: "הערות" },
-                      ], "רשימת_ציוד");
-                    }}
-                  />
-                  <ImportExcelButton onClick={() => setImportOpen(true)} />
+                  <p className="page-subtitle">חיפוש וניהול של כלל משאבי החברה — פריטים, עובדים, קטגוריות</p>
                 </div>
               </div>
 
-              {/* Action bar: new + quick-assign + global search */}
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  className="gap-2 rounded-full"
-                  onClick={() => { setAddCategoryId(undefined); setAddOpen(true); }}
-                >
-                  <Plus className="w-4 h-4" />
-                  פריט חדש
-                </Button>
-                <Button
-                  variant="outline"
-                  className="gap-2 rounded-full"
-                  onClick={() =>
-                    toast({
-                      title: "שיוך מהיר לעובד",
-                      description: "פתחו את כרטיס העובד ולחצו על 'הוסף משאב' לשיוך מרובה. אשף ייעודי בקרוב.",
-                    })
-                  }
-                >
-                  <Zap className="w-4 h-4" />
-                  שיוך מהיר לעובד
-                </Button>
-                <div className="relative flex-1 min-w-[260px] max-w-xl">
-                  <div className="flex items-center gap-2 bg-card border border-border rounded-full px-3 py-2">
-                    <Search className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-                    <input
-                      type="search"
-                      aria-label="חיפוש משאבים"
-                      value={globalSearch}
-                      onChange={(e) => setGlobalSearch(e.target.value)}
-                      placeholder="חיפוש גלובלי בכל המשאבים (שם / קוד / עובד / מספר פוליסה...)"
-                      className="bg-transparent text-sm outline-none w-full"
-                    />
-                  </div>
-                  {searchResults.length > 0 && (
-                    <div className="absolute z-20 mt-1 w-full bg-card border border-border rounded-lg shadow-lg overflow-hidden">
-                      {searchResults.map((a: any) => (
-                        <button
-                          key={a.id}
-                          onClick={() => {
-                            setGlobalSearch("");
-                            goToAsset(a.id, a.category_id);
-                          }}
-                          className="w-full text-right px-3 py-2 hover:bg-muted/60 flex items-center gap-3 text-sm"
-                        >
-                          <span className="font-mono text-xs text-muted-foreground">{a.asset_code}</span>
-                          <span className="flex-1 truncate">{a.asset_name}</span>
-                          <span className="text-xs text-muted-foreground">{a.asset_categories?.category_name}</span>
-                        </button>
-                      ))}
-                    </div>
+              {/* HERO search */}
+              <div className="relative">
+                <div
+                  className={cn(
+                    "flex items-center gap-3 bg-card border rounded-2xl px-4 py-3 transition-all",
+                    searchFocused
+                      ? "border-primary shadow-lg ring-2 ring-primary/15"
+                      : "border-border shadow-sm hover:shadow"
                   )}
+                >
+                  <Search className="w-5 h-5 text-muted-foreground shrink-0" aria-hidden="true" />
+                  <input
+                    ref={searchInputRef}
+                    type="search"
+                    aria-label="חיפוש גלובלי"
+                    value={globalSearch}
+                    onChange={(e) => setGlobalSearch(e.target.value)}
+                    onFocus={() => setSearchFocused(true)}
+                    onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
+                    placeholder="חיפוש פריט, עובד או קטגוריה (שם / קוד / מס׳ סידורי / מס׳ פוליסה)..."
+                    className="bg-transparent text-base outline-none w-full placeholder:text-muted-foreground/70"
+                  />
+                  <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded border border-border bg-muted/50 text-[10px] font-mono text-muted-foreground shrink-0">
+                    ⌘K
+                  </kbd>
+
+                  <div className="flex items-center gap-2 shrink-0 pl-2 border-r border-border pr-3">
+                    <Button
+                      size="sm"
+                      className="gap-1.5 rounded-full"
+                      onClick={() => { setAddCategoryId(undefined); setAddOpen(true); }}
+                    >
+                      <Plus className="w-4 h-4" />
+                      פריט חדש
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 rounded-full"
+                      onClick={() =>
+                        toast({
+                          title: "שיוך מהיר לעובד",
+                          description: "פתחו את כרטיס העובד ולחצו על 'הוסף משאב' לשיוך מרובה. אשף ייעודי בקרוב.",
+                        })
+                      }
+                    >
+                      <Zap className="w-4 h-4" />
+                      שיוך מהיר
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" variant="ghost" className="px-2" aria-label="פעולות נוספות">
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem
+                          disabled={!assets?.length}
+                          onClick={() => {
+                            if (!assets?.length) return;
+                            exportToExcel(assets.map((a: any) => ({
+                              ...a,
+                              category_name: a.asset_categories?.category_name ?? "",
+                              owner_name: a.employees?.full_name ?? "במלאי",
+                              status_label: assetStatusLabels[a.status] ?? a.status,
+                              expiry_fmt: a.expiry_date ? new Date(a.expiry_date).toLocaleDateString("en-GB").replace(/\//g, "-") : "",
+                            })), [
+                              { key: "asset_code", label: "מזהה" },
+                              { key: "asset_name", label: "שם פריט" },
+                              { key: "category_name", label: "קטגוריה" },
+                              { key: "serial_number", label: "מס׳ סידורי" },
+                              { key: "owner_name", label: "בעלות" },
+                              { key: "status_label", label: "סטטוס" },
+                              { key: "expiry_fmt", label: "תפוגה" },
+                              { key: "notes", label: "הערות" },
+                            ], "רשימת_ציוד");
+                          }}
+                        >
+                          ייצוא לאקסל
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setImportOpen(true)}>
+                          ייבוא מאקסל
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => setSearchParams({ tab: "categories" })}>
+                          ניהול קטגוריות
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
+
+                {/* Grouped results dropdown */}
+                {searchFocused && globalSearch.length >= 2 && (
+                  <div className="absolute z-30 mt-2 w-full bg-card border border-border rounded-2xl shadow-2xl overflow-hidden max-h-[70vh] overflow-y-auto">
+                    {!hasResults ? (
+                      <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                        לא נמצאו תוצאות עבור "{globalSearch}"
+                      </div>
+                    ) : (
+                      <>
+                        {searchResults.assets.length > 0 && (
+                          <div>
+                            <div className="flex items-center gap-2 px-4 py-2 bg-muted/40 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+                              <Package className="w-3.5 h-3.5" />
+                              פריטים <span className="font-normal">({searchResults.assets.length})</span>
+                            </div>
+                            {searchResults.assets.map((a: any) => (
+                              <button
+                                key={a.id}
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  setGlobalSearch("");
+                                  setSearchFocused(false);
+                                  goToAsset(a.id, a.category_id);
+                                }}
+                                className="w-full text-right px-4 py-2.5 hover:bg-muted/60 flex items-center gap-3 text-sm border-t border-border/50"
+                              >
+                                <span className="font-mono text-xs text-muted-foreground shrink-0">{a.asset_code}</span>
+                                <span className="flex-1 truncate font-medium">{a.asset_name}</span>
+                                <span className="text-xs text-muted-foreground shrink-0">
+                                  {a.asset_categories?.category_name}
+                                </span>
+                                {a.employees?.full_name && (
+                                  <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">
+                                    {a.employees.full_name}
+                                  </span>
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {searchResults.employees.length > 0 && (
+                          <div>
+                            <div className="flex items-center gap-2 px-4 py-2 bg-muted/40 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+                              <UserRound className="w-3.5 h-3.5" />
+                              עובדים <span className="font-normal">({searchResults.employees.length})</span>
+                            </div>
+                            {searchResults.employees.map((e: any) => (
+                              <button
+                                key={e.id}
+                                onMouseDown={(ev) => {
+                                  ev.preventDefault();
+                                  setGlobalSearch("");
+                                  setSearchFocused(false);
+                                  navigate(`/employees/${e.id}?tab=assets`);
+                                }}
+                                className="w-full text-right px-4 py-2.5 hover:bg-muted/60 flex items-center gap-3 text-sm border-t border-border/50"
+                              >
+                                <span className="font-mono text-xs text-muted-foreground shrink-0">{e.employee_code}</span>
+                                <span className="flex-1 truncate font-medium">{e.full_name}</span>
+                                <span className="text-xs text-muted-foreground shrink-0">{e.role ?? ""}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {searchResults.categories.length > 0 && (
+                          <div>
+                            <div className="flex items-center gap-2 px-4 py-2 bg-muted/40 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+                              <FolderTree className="w-3.5 h-3.5" />
+                              קטגוריות <span className="font-normal">({searchResults.categories.length})</span>
+                            </div>
+                            {searchResults.categories.map((c: any) => (
+                              <button
+                                key={c.id}
+                                onMouseDown={(ev) => {
+                                  ev.preventDefault();
+                                  setGlobalSearch("");
+                                  setSearchFocused(false);
+                                  goToCategory(c.id);
+                                }}
+                                className="w-full text-right px-4 py-2.5 hover:bg-muted/60 flex items-center gap-3 text-sm border-t border-border/50"
+                              >
+                                <span className="font-mono text-xs text-muted-foreground shrink-0">{c.prefix}</span>
+                                <span className="flex-1 truncate font-medium">{c.category_name}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
+
 
               <DomainsGrid
                 onSelectCategory={goToCategory}
