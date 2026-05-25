@@ -133,6 +133,57 @@ export async function buildHandoverPdf(data: HandoverFormData): Promise<Blob> {
     }
   }
 
+  // ===== Optional protocol body — appended as a fresh A4 page =====
+  if (data.protocol_body && data.protocol_body.trim()) {
+    const W = 595, H = 842;
+    const MARGIN_R = 545, MARGIN_L = 50;
+    const CONTENT_W = MARGIN_R - MARGIN_L;
+    let page = pdf.addPage([W, H]);
+    let y = H - 50;
+
+    // Logo (top-right)
+    const logo = await embedLogo(pdf, data.company_logo_url ?? null);
+    if (logo) {
+      const ratio = logo.width / logo.height;
+      const h = 50;
+      const w = h * ratio;
+      page.drawImage(logo, { x: MARGIN_R - w, y: y - h, width: w, height: h });
+    }
+    if (data.company_name) {
+      drawRtlText({
+        page, text: data.company_name, font: bold, size: 12,
+        rightX: logo ? MARGIN_R - 110 : MARGIN_R, y: y - 25,
+        color: { r: 0.3, g: 0.3, b: 0.3 },
+      });
+    }
+    y -= 80;
+    page.drawLine({
+      start: { x: MARGIN_L, y }, end: { x: MARGIN_R, y },
+      thickness: 1, color: rgb(0.85, 0.85, 0.85),
+    });
+    y -= 30;
+    drawCenteredRtlText({
+      page, text: data.protocol_title || "פרוטוקול מסירה",
+      font: bold, size: 16, centerX: W / 2, y,
+    });
+    y -= 30;
+
+    const paragraphs = data.protocol_body.split(/\n+/);
+    for (const para of paragraphs) {
+      if (!para.trim()) { y -= 8; continue; }
+      const lines = wrapTextLines(para, regular, 11, CONTENT_W);
+      for (const line of lines) {
+        if (y < 80) {
+          page = pdf.addPage([W, H]);
+          y = H - 60;
+        }
+        drawRtlText({ page, text: line, font: regular, size: 11, rightX: MARGIN_R, y });
+        y -= 18;
+      }
+      y -= 6;
+    }
+  }
+
   const bytes = await pdf.save();
   return new Blob([bytes as BlobPart], { type: "application/pdf" });
 }
