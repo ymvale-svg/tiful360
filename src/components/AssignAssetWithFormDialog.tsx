@@ -42,9 +42,11 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   asset: Asset | null;
+  defaultEmployeeId?: string;
+  onAssigned?: () => void;
 }
 
-export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) {
+export function AssignAssetWithFormDialog({ open, onOpenChange, asset, defaultEmployeeId, onAssigned }: Props) {
   const { data: employees } = useEmployees();
   const { activeCompany, activeCompanyId } = useCompany();
   const { toast } = useToast();
