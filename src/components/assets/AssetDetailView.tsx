@@ -11,6 +11,9 @@ import { AssignAssetWithFormDialog } from "@/components/AssignAssetWithFormDialo
 import { AssetDocumentsSection } from "@/components/AssetDocumentsSection";
 import { VehicleDetailsPanel } from "@/components/assets/VehicleDetailsPanel";
 import { DigitalAccessPanel } from "@/components/assets/DigitalAccessPanel";
+import { LicenseDetailsPanel } from "@/components/assets/LicenseDetailsPanel";
+import { TrainingDetailsPanel } from "@/components/assets/TrainingDetailsPanel";
+import { classifyCategory } from "@/lib/assetDomains";
 import { useDeleteAsset } from "@/hooks/useMutations";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -228,11 +231,15 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
             )}
           </div>
 
-          {/* Vehicle-specific panel */}
-          {category?.protocol_type === "vehicle" && <VehicleDetailsPanel asset={asset} />}
-
-          {/* Digital access panel */}
-          {category?.protocol_type === "digital" && <DigitalAccessPanel asset={asset} />}
+          {/* Domain-specific panels */}
+          {(() => {
+            const domain = category ? classifyCategory(category) : null;
+            if (category?.protocol_type === "vehicle") return <VehicleDetailsPanel asset={asset} />;
+            if (domain === "digital") return <DigitalAccessPanel asset={asset} />;
+            if (domain === "licenses") return <LicenseDetailsPanel asset={asset} />;
+            if (domain === "training") return <TrainingDetailsPanel asset={asset} />;
+            return null;
+          })()}
 
           {/* Documents */}
           <div className="bg-card border border-border rounded-xl p-5">
