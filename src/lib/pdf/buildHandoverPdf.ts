@@ -4,6 +4,7 @@ import {
   drawRtlText,
   drawCenteredRtlText,
   embedSignaturePng,
+  embedLogo,
   wrapTextLines,
 } from "./hebrewPdf";
 import type { HandoverFormData, HandoverFormAsset } from "./types";
