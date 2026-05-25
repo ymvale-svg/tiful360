@@ -15,7 +15,7 @@ import { LicenseDetailsPanel } from "@/components/assets/LicenseDetailsPanel";
 import { TrainingDetailsPanel } from "@/components/assets/TrainingDetailsPanel";
 import { InsuranceDetailsPanel } from "@/components/assets/InsuranceDetailsPanel";
 import { RealEstateDetailsPanel } from "@/components/assets/RealEstateDetailsPanel";
-import { classifyCategory } from "@/lib/assetDomains";
+import { classifyCategory, getPanelOwnedCustomFieldKeys } from "@/lib/assetDomains";
 import { useDeleteAsset } from "@/hooks/useMutations";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -212,49 +212,60 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
         <div className={cn("space-y-4", isAssignable ? "lg:col-span-2" : "")}>
           <div className="bg-card border border-border rounded-xl p-5 space-y-3">
             <h2 className="text-sm font-semibold text-muted-foreground">פרטי הנכס</h2>
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-              <Field label="קטגוריה" value={category?.category_name} />
-              <Field label="מזהה" value={asset.asset_code} mono />
-              {asset.serial_number && <Field label="מס׳ סידורי" value={asset.serial_number} mono />}
-              {asset.manufacturer_model && <Field label="יצרן/דגם" value={asset.manufacturer_model} />}
-              {isAssignable && (
-                <Field
-                  label="סטטוס"
-                  value={
-                    <span className={cn("status-badge", assetStatusClasses[asset.status])}>
-                      {assetStatusLabels[asset.status] ?? asset.status}
-                    </span>
-                  }
-                />
-              )}
-              {asset.condition && <Field label="מצב" value={asset.condition} />}
-              {expiry && (
-                <Field
-                  label="תפוגה"
-                  value={
-                    <span className={expired ? "text-destructive font-medium" : ""}>
-                      {expiry.toLocaleDateString("en-GB").replace(/\//g, "-")}
-                      {expired && " (פג)"}
-                    </span>
-                  }
-                />
-              )}
-            </dl>
+            {(() => {
+              const domain = category ? classifyCategory(category) : null;
+              const panelKeys = getPanelOwnedCustomFieldKeys(domain, category);
+              const hideCondition = domain === "insurance";
+              const customEntries = asset.custom_fields
+                ? Object.entries(asset.custom_fields).filter(([k]) => !panelKeys.has(k))
+                : [];
+              return (
+                <>
+                  <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                    <Field label="קטגוריה" value={category?.category_name} />
+                    <Field label="מזהה" value={asset.asset_code} mono />
+                    {asset.serial_number && <Field label="מס׳ סידורי" value={asset.serial_number} mono />}
+                    {asset.manufacturer_model && <Field label="יצרן/דגם" value={asset.manufacturer_model} />}
+                    {isAssignable && (
+                      <Field
+                        label="סטטוס"
+                        value={
+                          <span className={cn("status-badge", assetStatusClasses[asset.status])}>
+                            {assetStatusLabels[asset.status] ?? asset.status}
+                          </span>
+                        }
+                      />
+                    )}
+                    {asset.condition && !hideCondition && <Field label="מצב" value={asset.condition} />}
+                    {expiry && (
+                      <Field
+                        label="תפוגה"
+                        value={
+                          <span className={expired ? "text-destructive font-medium" : ""}>
+                            {expiry.toLocaleDateString("en-GB").replace(/\//g, "-")}
+                            {expired && " (פג)"}
+                          </span>
+                        }
+                      />
+                    )}
+                  </dl>
 
-            {/* Custom fields */}
-            {asset.custom_fields && Object.keys(asset.custom_fields).length > 0 && (
-              <div className="pt-3 border-t border-border">
-                <h3 className="text-xs font-semibold text-muted-foreground mb-2">שדות נוספים</h3>
-                <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                  {Object.entries(asset.custom_fields).map(([k, v]) => {
-                    const s = String(v ?? "");
-                    const isIsoDate = /^\d{4}-\d{2}-\d{2}/.test(s);
-                    const display = isIsoDate ? `${s.slice(8,10)}-${s.slice(5,7)}-${s.slice(0,4)}` : (s || "—");
-                    return <Field key={k} label={k} value={display} />;
-                  })}
-                </dl>
-              </div>
-            )}
+                  {customEntries.length > 0 && (
+                    <div className="pt-3 border-t border-border">
+                      <h3 className="text-xs font-semibold text-muted-foreground mb-2">שדות נוספים</h3>
+                      <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                        {customEntries.map(([k, v]) => {
+                          const s = String(v ?? "");
+                          const isIsoDate = /^\d{4}-\d{2}-\d{2}/.test(s);
+                          const display = isIsoDate ? `${s.slice(8,10)}-${s.slice(5,7)}-${s.slice(0,4)}` : (s || "—");
+                          return <Field key={k} label={k} value={display} />;
+                        })}
+                      </dl>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
 
             {asset.notes && (
               <div className="pt-3 border-t border-border">
@@ -263,6 +274,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
               </div>
             )}
           </div>
+
 
           {/* Domain-specific panels */}
           {(() => {
