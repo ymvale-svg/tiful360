@@ -193,6 +193,7 @@ export type Database = {
           is_assignable: boolean
           prefix: string
           protocol_type: Database["public"]["Enums"]["protocol_domain"]
+          signing_protocol: string | null
           skip_handover_form: boolean
           skip_return_form: boolean
           sort_order: number
@@ -208,6 +209,7 @@ export type Database = {
           is_assignable?: boolean
           prefix: string
           protocol_type?: Database["public"]["Enums"]["protocol_domain"]
+          signing_protocol?: string | null
           skip_handover_form?: boolean
           skip_return_form?: boolean
           sort_order?: number
@@ -223,6 +225,7 @@ export type Database = {
           is_assignable?: boolean
           prefix?: string
           protocol_type?: Database["public"]["Enums"]["protocol_domain"]
+          signing_protocol?: string | null
           skip_handover_form?: boolean
           skip_return_form?: boolean
           sort_order?: number
@@ -885,6 +888,45 @@ export type Database = {
           },
         ]
       }
+      document_protocols: {
+        Row: {
+          body_template: string
+          company_id: string | null
+          created_at: string
+          display_name: string
+          id: string
+          protocol_type: string
+          requires_employee_sig: boolean
+          requires_issuer_sig: boolean
+          updated_at: string
+          validity_days: number | null
+        }
+        Insert: {
+          body_template: string
+          company_id?: string | null
+          created_at?: string
+          display_name: string
+          id?: string
+          protocol_type: string
+          requires_employee_sig?: boolean
+          requires_issuer_sig?: boolean
+          updated_at?: string
+          validity_days?: number | null
+        }
+        Update: {
+          body_template?: string
+          company_id?: string | null
+          created_at?: string
+          display_name?: string
+          id?: string
+          protocol_type?: string
+          requires_employee_sig?: boolean
+          requires_issuer_sig?: boolean
+          updated_at?: string
+          validity_days?: number | null
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -1460,6 +1502,105 @@ export type Database = {
         }
         Relationships: []
       }
+      offboarding_items: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          id: string
+          item_type: string
+          notes: string | null
+          owner_role: string
+          process_id: string
+          ref_id: string | null
+          signed_document_id: string | null
+          status: string
+          title: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          item_type: string
+          notes?: string | null
+          owner_role: string
+          process_id: string
+          ref_id?: string | null
+          signed_document_id?: string | null
+          status?: string
+          title: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          item_type?: string
+          notes?: string | null
+          owner_role?: string
+          process_id?: string
+          ref_id?: string | null
+          signed_document_id?: string | null
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offboarding_items_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "offboarding_processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offboarding_items_signed_document_id_fkey"
+            columns: ["signed_document_id"]
+            isOneToOne: false
+            referencedRelation: "signed_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offboarding_processes: {
+        Row: {
+          company_id: string
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          id: string
+          last_working_day: string
+          pdf_url: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          employee_id: string
+          id?: string
+          last_working_day: string
+          pdf_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string
+          id?: string
+          last_working_day?: string
+          pdf_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payslip_batches: {
         Row: {
           company_id: string
@@ -1723,6 +1864,66 @@ export type Database = {
           system_role?: Database["public"]["Enums"]["system_role"]
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      signed_documents: {
+        Row: {
+          asset_id: string | null
+          attached_doc_url: string | null
+          company_id: string
+          created_at: string
+          employee_id: string | null
+          employee_signature: string | null
+          form_snapshot: Json
+          id: string
+          issued_at: string
+          issuer_signature: string | null
+          method: string
+          notes: string | null
+          pdf_url: string | null
+          protocol_type: string
+          returned_at: string | null
+          signed_by: string | null
+          training_id: string | null
+        }
+        Insert: {
+          asset_id?: string | null
+          attached_doc_url?: string | null
+          company_id: string
+          created_at?: string
+          employee_id?: string | null
+          employee_signature?: string | null
+          form_snapshot?: Json
+          id?: string
+          issued_at?: string
+          issuer_signature?: string | null
+          method?: string
+          notes?: string | null
+          pdf_url?: string | null
+          protocol_type: string
+          returned_at?: string | null
+          signed_by?: string | null
+          training_id?: string | null
+        }
+        Update: {
+          asset_id?: string | null
+          attached_doc_url?: string | null
+          company_id?: string
+          created_at?: string
+          employee_id?: string | null
+          employee_signature?: string | null
+          form_snapshot?: Json
+          id?: string
+          issued_at?: string
+          issuer_signature?: string | null
+          method?: string
+          notes?: string | null
+          pdf_url?: string | null
+          protocol_type?: string
+          returned_at?: string | null
+          signed_by?: string | null
+          training_id?: string | null
         }
         Relationships: []
       }
@@ -2017,6 +2218,37 @@ export type Database = {
     Functions: {
       classify_existing_punches: {
         Args: { _company_id: string }
+        Returns: number
+      }
+      complete_offboarding_item: {
+        Args: {
+          _item_id: string
+          _notes?: string
+          _signed_document_id?: string
+        }
+        Returns: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          id: string
+          item_type: string
+          notes: string | null
+          owner_role: string
+          process_id: string
+          ref_id: string | null
+          signed_document_id: string | null
+          status: string
+          title: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "offboarding_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_offboarding_checklist: {
+        Args: { _process_id: string }
         Returns: number
       }
       delete_company_cascade: {
