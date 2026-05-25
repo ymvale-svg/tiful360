@@ -68,12 +68,21 @@ Deno.serve(async (req) => {
       });
     }
 
+    const escapeHtml = (s: unknown) =>
+      String(s ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+
     const employee = request.employee as any;
     const company = request.company as any;
     const start = new Date(request.start_date).toLocaleDateString("he-IL");
     const end = new Date(request.end_date).toLocaleDateString("he-IL");
 
     const subject = `הצהרת מחלה — ${employee?.full_name ?? "עובד"} (${start} – ${end})`;
+
     const attachmentUrl = (request as any).attachment_url as string | null;
     const attachmentBlock = attachmentUrl
       ? `<div style="margin-top: 20px; padding: 12px 16px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;">
@@ -82,19 +91,20 @@ Deno.serve(async (req) => {
       : `<p style="margin-top: 20px; padding: 10px; background: #fef3c7; border-radius: 8px; font-size: 13px; color: #92400e;">⚠️ לא צורף אישור מחלה</p>`;
     const html = `
       <div dir="rtl" style="font-family: Arial, sans-serif; padding: 24px; max-width: 600px; margin: auto;">
-        <h2 style="color: #1f2937;">הצהרת מחלה חדשה — ${company?.name ?? ""}</h2>
+        <h2 style="color: #1f2937;">הצהרת מחלה חדשה — ${escapeHtml(company?.name ?? "")}</h2>
         <table style="width: 100%; border-collapse: collapse; margin-top: 16px;">
-          <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>עובד:</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${employee?.full_name ?? "—"}</td></tr>
-          <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>קוד עובד:</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${employee?.employee_code ?? "—"}</td></tr>
-          <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>מחלקה:</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${employee?.department ?? "—"}</td></tr>
-          <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>תאריכים:</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${start} – ${end}</td></tr>
-          <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>סה"כ ימים:</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${request.total_days}</td></tr>
-          ${request.reason ? `<tr><td style="padding: 8px;"><strong>הערות:</strong></td><td style="padding: 8px;">${request.reason}</td></tr>` : ""}
+          <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>עובד:</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(employee?.full_name ?? "—")}</td></tr>
+          <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>קוד עובד:</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(employee?.employee_code ?? "—")}</td></tr>
+          <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>מחלקה:</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(employee?.department ?? "—")}</td></tr>
+          <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>תאריכים:</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(start)} – ${escapeHtml(end)}</td></tr>
+          <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>סה"כ ימים:</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(request.total_days)}</td></tr>
+          ${request.reason ? `<tr><td style="padding: 8px;"><strong>הערות:</strong></td><td style="padding: 8px;">${escapeHtml(request.reason)}</td></tr>` : ""}
         </table>
         ${attachmentBlock}
         <p style="margin-top: 24px; font-size: 12px; color: #6b7280;">הודעה אוטומטית — אין צורך להשיב.</p>
       </div>
     `;
+
 
     // Enqueue one email per recipient via existing email queue
     const enqueued: number[] = [];
