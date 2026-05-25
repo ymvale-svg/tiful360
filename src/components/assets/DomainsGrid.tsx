@@ -200,6 +200,7 @@ export function DomainsGrid({ onSelectCategory, onQuickAssign }: Props) {
               : null;
 
             const openDomain = () => navigate(`/assets/${DOMAIN_ROUTE[def.key]}`);
+            const isEmpty = cats.length === 0;
             return (
               <div
                 key={def.key}
@@ -207,16 +208,14 @@ export function DomainsGrid({ onSelectCategory, onQuickAssign }: Props) {
                 tabIndex={0}
                 onClick={openDomain}
                 onKeyDown={(e) => {
-                  if (!isEmpty && (e.key === "Enter" || e.key === " ")) {
+                  if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
                     openDomain();
                   }
                 }}
                 className={cn(
-                  "group relative bg-card border border-border rounded-2xl p-5 transition-all text-right",
-                  isEmpty
-                    ? "opacity-60 hover:opacity-100 hover:shadow-md hover:ring-1"
-                    : "cursor-pointer hover:shadow-lg hover:-translate-y-0.5 hover:ring-2 focus:outline-none focus:ring-2",
+                  "group relative bg-card border border-border rounded-2xl p-5 transition-all text-right cursor-pointer hover:shadow-lg hover:-translate-y-0.5 hover:ring-2 focus:outline-none focus:ring-2",
+                  isEmpty && "opacity-70",
                   def.color.ring
                 )}
               >
@@ -262,7 +261,7 @@ export function DomainsGrid({ onSelectCategory, onQuickAssign }: Props) {
                           key={c.id}
                           onClick={(e) => {
                             e.stopPropagation();
-                            onSelectCategory(c.id);
+                            navigate(`/assets/${DOMAIN_ROUTE[def.key]}?sub=${c.id}`);
                           }}
                           className={cn(
                             "inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border border-border bg-background hover:bg-muted transition-colors",
