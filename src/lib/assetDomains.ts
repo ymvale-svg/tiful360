@@ -110,7 +110,7 @@ const FLAT_DOMAINS: DomainKey[] = ["real-estate"];
 /** Returns the group-by key for an asset within its sub-category, per domain.
  *  Returns null when the domain should be displayed flat (no parent grouping). */
 export function getGroupKey(
-  asset: { asset_name?: string | null; custom_fields?: Record<string, any> | null; license_plate?: string | null },
+  asset: { asset_name?: string | null; custom_fields?: any; license_plate?: string | null },
   domain: DomainKey,
   category?: { prefix?: string; protocol_type?: string } | null,
 ): string | null {
