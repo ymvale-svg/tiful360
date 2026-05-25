@@ -30,6 +30,10 @@ export interface HandoverFormData {
 
   receiver_signature?: string | null;
   issuer_signature?: string | null;
+
+  /** Optional protocol body (appended as a final page in the PDF). */
+  protocol_title?: string | null;
+  protocol_body?: string | null;
 }
 
 export interface OffboardingFormAsset {
