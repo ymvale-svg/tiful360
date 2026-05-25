@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Settings as SettingsIcon, Bell, Shield, Database, Users,
-  Building2, Save, Smartphone, Upload, Trash2,
+  Building2, Save, Smartphone, Upload, Trash2, FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,6 +13,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { PortalSettingsTab } from "@/components/PortalSettingsTab";
 import { SubEmployersTab } from "@/components/SubEmployersTab";
 import { EmailTemplatesTab } from "@/components/EmailTemplatesTab";
+import { ProtocolTemplatesTab } from "@/components/settings/ProtocolTemplatesTab";
 import { Mail } from "lucide-react";
 
 // ============================
@@ -105,6 +106,10 @@ export default function Settings() {
             <Mail className="w-4 h-4" />
             תבניות מייל
           </TabsTrigger>
+          <TabsTrigger value="protocols" className="gap-1.5">
+            <FileText className="w-4 h-4" />
+            פרוטוקולי מסירה
+          </TabsTrigger>
           <TabsTrigger value="alerts" className="gap-1.5">
             <Bell className="w-4 h-4" />
             חוקי התראות
@@ -139,6 +144,10 @@ export default function Settings() {
 
         <TabsContent value="email_templates">
           <EmailTemplatesTab />
+        </TabsContent>
+
+        <TabsContent value="protocols">
+          <ProtocolTemplatesTab />
         </TabsContent>
 
         <TabsContent value="alerts">

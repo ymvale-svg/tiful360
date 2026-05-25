@@ -1,53 +1,48 @@
-# תוכנית יישום — מסך משאבים, פרוטוקולי חתימה ו-Offboarding
+## תוכנית מעודכנת — Stage 5: פרוטוקולים פר חברה + פר קטגוריה + ייצוא
 
-האפיון הזה הוא פרויקט גדול מאוד (6 דומיינים, 5 פרוטוקולי חתימה, מודול offboarding מלא, ~25 קבצי קוד חדשים, 4 טבלאות DB חדשות, migrations של נתונים קיימים). לא ניתן ולא נכון לבנות הכל בלופ אחד — נחלק לשלבים שאפשר לאשר ולבדוק כל אחד בנפרד.
+### 1. מסד נתונים
+מיגרציה ל-`document_protocols`:
+- הוספת `category_id uuid nullable` (FK ל-`asset_categories`).
+- אינדקס ייחודי `UNIQUE (company_id, protocol_type, category_id)` עם `NULLS NOT DISTINCT`.
+- עדכון RLS: admin/operations של החברה יכולים CRUD על השורות של החברה שלהם; כולם קוראים globals (company_id IS NULL).
 
-## חלוקה לשלבים (כל שלב = הודעה אחת)
+### 2. סדר עדיפויות בשליפת תבנית
+בזמן חתימה, `useProtocolTemplate(protocolType, categoryId, companyId)` מחזיר את התבנית הספציפית ביותר:
+1. `company_id = X AND category_id = Y` (הכי ספציפי)
+2. `company_id = X AND category_id IS NULL` (ברירת מחדל פר חברה)
+3. `company_id IS NULL AND category_id IS NULL` (ברירת מחדל גלובלית — fallback)
 
-### שלב 1 — תשתית DB
-- יצירת `signed_documents`, `offboarding_processes`, `offboarding_items`, `document_protocols`
-- הוספת `protocol_type` ל-`asset_categories` + הסבת נתונים קיימים
-- הסבת `asset_handover_forms` → `signed_documents`
-- DB functions: `create_offboarding_checklist`, `complete_offboarding_item`
-- RLS לכל הטבלאות החדשות
-- זריעת `document_protocols` עם 5 הטמפלייטים
+### 3. עורך התבניות — `ProtocolTemplatesTab.tsx`
+מסך בהגדרות עם שתי רמות:
+- **טאב "ברירות מחדל לחברה"** — 6 סוגי פרוטוקולים, עורך body_template + `requires_issuer_sig` + `validity_days`.
+- **טאב "פרוטוקולים פר קטגוריה"** — בחירת קטגוריה → פתיחת override שלה (פרוטוקולים: physical / virtual / vehicle / training / return_physical / return_virtual; הסוג נגזר אוטומטית מהקטגוריה).
+- כפתור "שחזר ברירת מחדל" → מוחק את ה-override.
+- כפתור **"תצוגה מקדימה כ-PDF"** → מרנדר preview PDF עם נתוני דמה (placeholders ממולאים בערכים לדוגמה) + לוגו החברה הקיים.
 
-### שלב 2 — שלד מסך משאבים + ניווט
-- `AssetsPage` (6 כרטיסי דומיין + שורת סיכום + חיפוש גלובלי)
-- routes חדשים: `/assets/:domain`, `/assets/:domain/:itemId`
-- `AssetsDomainPage` עם רשימת פריטים בסיסית לכל דומיין
-- העברת מצב קיים: domains שכבר קיימים נשארים, נוספים החסרים
+Placeholders נתמכים: `{{employee_name}}`, `{{employee_id}}`, `{{asset_name}}`, `{{asset_code}}`, `{{serial}}`, `{{category}}`, `{{date}}`, `{{company_name}}`.
 
-### שלב 3 — דומיינים פשוטים (4 מתוך 6)
-- ציוד פיזי, גישות דיגיטליות, רשיונות, הדרכות
-- רשימה + פרטי פריט לפי השדות שבאפיון
+### 4. עדכון `buildHandoverPdf`
+- מקבל אופציונלית `logoUrl` (מ-`companies.logo_url`).
+- טוען את הלוגו (fetch→base64) ומציב בכותרת ה-PDF.
+- מקבל `rendered_body` (מ-form_snapshot) כטקסט פרוטוקול שכבר עבר substitution.
 
-### שלב 4 — דומיינים מורכבים (2 הנותרים)
-- ביטוחים ורגולציה
-- נדל"ן (שני תת-דומיינים: מניבים + שכורים, כולל toggle ניהול חיצוני)
+### 5. ProtocolSigningDialog
+- שליפת תבנית לפי 3 רמות (hook).
+- substitution של placeholders.
+- הצגת הטקסט הסופי לעובד לפני חתימה.
+- שמירת `rendered_body` ב-`form_snapshot` (כדי שעריכה עתידית של התבנית לא תשנה פרוטוקולים חתומים).
 
-### שלב 5 — פרוטוקולי חתימה
-- `ProtocolSigning` מסך מלא (דיגיטלי / סריקה)
-- 5 טפסים: physical, virtual, vehicle, training, return
-- החלפת `AssignAssetWithFormDialog`
+### 6. ייצוא PDF בודד
+ב-`HandoverFormsList` — כפתור "הורד PDF" בכל שורה. אם `pdf_url` קיים (קישור ל-`signed_documents`/`asset_handover_forms`) → הורדה ישירה. אם לא קיים עדיין (legacy) → בנייה on-the-fly מה-snapshot.
 
-### שלב 6 — שיוך מהיר
-- `QuickAssignDialog` עם טאבים, חיפוש, יצירת נכסים חדשים תוך כדי שיוך
-- נקודות כניסה: ממסך עובדים + ממסך משאבים
+### 7. קבצים שייווצרו/יעודכנו
+- migration: `document_protocols` — `category_id` + index + RLS חדש.
+- `src/hooks/useProtocolTemplates.ts` — שליפה היררכית + upsert + reset.
+- `src/components/settings/ProtocolTemplatesTab.tsx` — עורך עם שני טאבים + preview.
+- `src/lib/buildHandoverPdf.ts` — תמיכה ב-logoUrl + rendered_body.
+- `src/components/protocols/ProtocolSigningDialog.tsx` — שימוש בתבנית דינמית.
+- `src/components/assets/HandoverFormsList.tsx` — כפתור הורדה.
+- הוספת טאב חדש בעמוד Settings.
 
-### שלב 7 — Offboarding
-- `OffboardingPage` + checklist
-- חיבור לפרוטוקול 5 (החזרה/ניתוק)
-- דוח PDF הניתן לייצוא בכל עת
-- התראות לפי תפקיד
-
-### שלב 8 — דוחות
-- 4 דוחות (ציוד עובד, היסטוריית נכס, הדרכות, גישות)
-
-## הצעה
-אני מציע להתחיל **משלב 1 (DB)** — זה הבסיס לכל השאר ובלעדיו אי-אפשר להתקדם. השלב הזה ידרוש מיגרציה עם הסבת נתונים שתצטרך לאשר.
-
-**שאלות לפני שאני מתחיל:**
-1. האם לאשר את החלוקה לשלבים, ולהתחיל משלב 1?
-2. בהסבת `asset_categories.protocol_type` — האם יש לך מיפוי קיים של קטגוריות לסוגי פרוטוקול, או שאני אסיק לפי שם הקטגוריה (vehicle/רכב→vehicle, ביטוח→ללא, אחר→physical)?
-3. האם להשאיר את `asset_handover_forms` הישנה (read-only) או למחוק אחרי ההסבה?
+### הערה
+ללא היסטוריית גרסאות (עריכה דורסת). שמירת `rendered_body` ב-snapshot מבטיחה שהטקסט שנחתם נשמר נצח.
