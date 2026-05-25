@@ -231,11 +231,15 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
             )}
           </div>
 
-          {/* Vehicle-specific panel */}
-          {category?.protocol_type === "vehicle" && <VehicleDetailsPanel asset={asset} />}
-
-          {/* Digital access panel */}
-          {category?.protocol_type === "digital" && <DigitalAccessPanel asset={asset} />}
+          {/* Domain-specific panels */}
+          {(() => {
+            const domain = category ? classifyCategory(category) : null;
+            if (category?.protocol_type === "vehicle") return <VehicleDetailsPanel asset={asset} />;
+            if (domain === "digital") return <DigitalAccessPanel asset={asset} />;
+            if (domain === "licenses") return <LicenseDetailsPanel asset={asset} />;
+            if (domain === "training") return <TrainingDetailsPanel asset={asset} />;
+            return null;
+          })()}
 
           {/* Documents */}
           <div className="bg-card border border-border rounded-xl p-5">
