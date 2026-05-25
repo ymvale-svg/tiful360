@@ -891,6 +891,7 @@ export type Database = {
       document_protocols: {
         Row: {
           body_template: string
+          category_id: string | null
           company_id: string | null
           created_at: string
           display_name: string
@@ -903,6 +904,7 @@ export type Database = {
         }
         Insert: {
           body_template: string
+          category_id?: string | null
           company_id?: string | null
           created_at?: string
           display_name: string
@@ -915,6 +917,7 @@ export type Database = {
         }
         Update: {
           body_template?: string
+          category_id?: string | null
           company_id?: string | null
           created_at?: string
           display_name?: string
@@ -925,7 +928,15 @@ export type Database = {
           updated_at?: string
           validity_days?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "document_protocols_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "asset_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_send_log: {
         Row: {
