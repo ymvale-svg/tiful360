@@ -37,6 +37,7 @@ export default function Assets() {
   const [addCategoryId, setAddCategoryId] = useState<string | undefined>(undefined);
   const [addTemplateName, setAddTemplateName] = useState<string | undefined>(undefined);
   const [importOpen, setImportOpen] = useState(false);
+  const [quickAssignOpen, setQuickAssignOpen] = useState(false);
   const globalSearch = searchParams.get("q") ?? "";
   const setGlobalSearch = (val: string) => {
     const next = new URLSearchParams(searchParams);
