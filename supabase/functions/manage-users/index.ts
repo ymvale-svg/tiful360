@@ -294,6 +294,16 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: "email, valid role, and at least one company required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
+      // Non-super-admins may only invite users with a restricted set of roles.
+      const ADMIN_INVITABLE_ROLES = new Set(["operations", "direct_manager", "finance", "legal"]);
+      if (!callerIsSuperAdmin && !ADMIN_INVITABLE_ROLES.has(role)) {
+        return new Response(
+          JSON.stringify({ error: "Only super_admin can invite users with this role" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+
       // Verify caller has access to ALL requested companies (unless super_admin)
       if (!callerIsSuperAdmin) {
         const { data: callerAccess } = await adminClient
