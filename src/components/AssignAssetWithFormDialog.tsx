@@ -298,6 +298,7 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset, defaultEm
       toast({ title: "הטופס נחתם ונשמר", description: "המסמך נוסף לתיק העובד" });
       qc.invalidateQueries({ queryKey: ["assets"] });
       qc.invalidateQueries({ queryKey: ["handover-forms"] });
+      onAssigned?.();
       close();
     } catch (err: any) {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
