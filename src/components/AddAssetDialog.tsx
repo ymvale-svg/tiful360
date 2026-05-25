@@ -94,10 +94,10 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
   // Hide custom fields that duplicate the system expiry_date field.
   // Any custom field literally named like the system expiry is treated as a duplicate.
   const EXPIRY_DUPLICATE_NAMES = new Set(["תוקף", "תוקף פוליסה", "תאריך תפוגה", "תאריך תוקף"]);
-  const catFields = (catFieldsRaw ?? []).filter((cf: any) => {
-    if (EXPIRY_DUPLICATE_NAMES.has((cf.field_name ?? "").trim())) return false;
-    return true;
-  });
+  const catFields = useMemo(
+    () => (catFieldsRaw ?? []).filter((cf: any) => !EXPIRY_DUPLICATE_NAMES.has((cf.field_name ?? "").trim())),
+    [catFieldsRaw]
+  );
 
   // Reset everything when dialog closes
   useEffect(() => {
@@ -162,8 +162,12 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
       if (isPerEmployeeByName(cf.field_name)) next.add(`cf:${cf.field_name}`);
     });
     setPerEmpFieldKeys(next);
-    setPerEmpRows({});
   }, [form.category_id, catFields, selectedCategory]);
+
+  // Reset per-employee rows only when category truly changes (not on every catFields re-filter)
+  useEffect(() => {
+    setPerEmpRows({});
+  }, [form.category_id]);
 
   // Auto-generate single asset_code (non-bulk) — running counter per category, never resets
   useEffect(() => {
