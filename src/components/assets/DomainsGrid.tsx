@@ -199,15 +199,13 @@ export function DomainsGrid({ onSelectCategory, onQuickAssign }: Props) {
               ? { text: `חידוש תוך 14 יום`, cls: "bg-warning/10 text-warning" }
               : null;
 
-            const isEmpty = cats.length === 0;
-            const primaryCatId = cats[0]?.id;
-            const openDomain = () => primaryCatId && onSelectCategory(primaryCatId);
+            const openDomain = () => navigate(`/assets/${DOMAIN_ROUTE[def.key]}`);
             return (
               <div
                 key={def.key}
-                role={isEmpty ? undefined : "button"}
-                tabIndex={isEmpty ? undefined : 0}
-                onClick={isEmpty ? undefined : openDomain}
+                role="button"
+                tabIndex={0}
+                onClick={openDomain}
                 onKeyDown={(e) => {
                   if (!isEmpty && (e.key === "Enter" || e.key === " ")) {
                     e.preventDefault();
