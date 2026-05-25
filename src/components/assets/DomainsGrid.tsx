@@ -18,7 +18,8 @@ import {
 import { classifyCategory as classifyCategoryShared } from "@/lib/assetDomains";
 
 interface Props {
-  onSelectCategory: (categoryId: string) => void;
+  /** Deprecated — domain cards now navigate via /assets/:domain. Kept optional for back-compat. */
+  onSelectCategory?: (categoryId: string) => void;
   onQuickAssign?: () => void;
 }
 
