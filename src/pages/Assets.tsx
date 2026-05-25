@@ -7,6 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useAssets, useEmployees, useAssetCategories } from "@/hooks/useData";
 import { AddAssetDialog } from "@/components/AddAssetDialog";
 import { ImportAssetsExcelDialog } from "@/components/ImportAssetsExcelDialog";
+import { QuickAssignDialog } from "@/components/QuickAssignDialog";
 import CategoryManager from "@/pages/CategoryManager";
 import { exportToExcel } from "@/lib/exportExcel";
 import { DomainsGrid } from "@/components/assets/DomainsGrid";
@@ -36,6 +37,7 @@ export default function Assets() {
   const [addCategoryId, setAddCategoryId] = useState<string | undefined>(undefined);
   const [addTemplateName, setAddTemplateName] = useState<string | undefined>(undefined);
   const [importOpen, setImportOpen] = useState(false);
+  const [quickAssignOpen, setQuickAssignOpen] = useState(false);
   const globalSearch = searchParams.get("q") ?? "";
   const setGlobalSearch = (val: string) => {
     const next = new URLSearchParams(searchParams);
@@ -161,12 +163,7 @@ export default function Assets() {
                       size="sm"
                       variant="outline"
                       className="gap-1.5 rounded-full"
-                      onClick={() =>
-                        toast({
-                          title: "שיוך מהיר לעובד",
-                          description: "פתחו את כרטיס העובד ולחצו על 'הוסף משאב' לשיוך מרובה. אשף ייעודי בקרוב.",
-                        })
-                      }
+                      onClick={() => setQuickAssignOpen(true)}
                     >
                       <Zap className="w-4 h-4" />
                       שיוך מהיר
@@ -310,12 +307,7 @@ export default function Assets() {
 
               <DomainsGrid
                 onSelectCategory={goToCategory}
-                onQuickAssign={() =>
-                  toast({
-                    title: "שיוך מהיר לעובד",
-                    description: "פתחו את כרטיס העובד ולחצו על 'הוסף משאב' לשיוך מרובה. אשף ייעודי בקרוב.",
-                  })
-                }
+                onQuickAssign={() => setQuickAssignOpen(true)}
               />
             </>
           )}
@@ -346,6 +338,7 @@ export default function Assets() {
 
       <AddAssetDialog open={addOpen} onOpenChange={(v) => { setAddOpen(v); if (!v) { setAddCategoryId(undefined); setAddTemplateName(undefined); } }} defaultCategoryId={addCategoryId} defaultAssetName={addTemplateName} />
       <ImportAssetsExcelDialog open={importOpen} onOpenChange={setImportOpen} />
+      <QuickAssignDialog open={quickAssignOpen} onOpenChange={setQuickAssignOpen} />
     </div>
   );
 }

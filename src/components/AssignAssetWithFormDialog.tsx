@@ -42,9 +42,11 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   asset: Asset | null;
+  defaultEmployeeId?: string;
+  onAssigned?: () => void;
 }
 
-export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) {
+export function AssignAssetWithFormDialog({ open, onOpenChange, asset, defaultEmployeeId, onAssigned }: Props) {
   const { data: employees } = useEmployees();
   const { activeCompany, activeCompanyId } = useCompany();
   const { toast } = useToast();
@@ -67,10 +69,12 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
   const [issuerDataUrl, setIssuerDataUrl] = useState<string | null>(null);
   const [receiverDataUrl, setReceiverDataUrl] = useState<string | null>(null);
 
-  // Auto-select current owner when asset is already assigned
+  // Auto-select current owner when asset is already assigned, or default employee for quick-assign
   useEffect(() => {
-    if (open && preassignedOwnerId) setEmployeeId(preassignedOwnerId);
-  }, [open, preassignedOwnerId]);
+    if (!open) return;
+    if (preassignedOwnerId) setEmployeeId(preassignedOwnerId);
+    else if (defaultEmployeeId) setEmployeeId(defaultEmployeeId);
+  }, [open, preassignedOwnerId, defaultEmployeeId]);
 
   // Skip handover form when category opted-out, OR for legacy "virtual" categories by name
   const categoryName = asset?.asset_categories?.category_name ?? "";
@@ -91,6 +95,7 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
       if (error) throw error;
       toast({ title: "הציוד שויך", description: "פריטים וירטואליים אינם דורשים טופס מסירה" });
       qc.invalidateQueries({ queryKey: ["assets"] });
+      onAssigned?.();
       close();
     } catch (err: any) {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
@@ -211,6 +216,7 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
       toast({ title: "טופס נשלח", description: "הטופס הופיע בפורטל העובד לחתימה" });
       qc.invalidateQueries({ queryKey: ["assets"] });
       qc.invalidateQueries({ queryKey: ["handover-forms"] });
+      onAssigned?.();
       close();
     } catch (err: any) {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
@@ -292,6 +298,7 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
       toast({ title: "הטופס נחתם ונשמר", description: "המסמך נוסף לתיק העובד" });
       qc.invalidateQueries({ queryKey: ["assets"] });
       qc.invalidateQueries({ queryKey: ["handover-forms"] });
+      onAssigned?.();
       close();
     } catch (err: any) {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
