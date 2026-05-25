@@ -17,16 +17,24 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { HandoverFormData } from "@/lib/pdf/types";
 import { buildHandoverPdf } from "@/lib/pdf/buildHandoverPdf";
 import { SignaturePad, SignaturePadHandle } from "./SignaturePad";
+import {
+  useProtocolTemplates,
+  resolveTemplate,
+  deriveProtocolTypeFromCategory,
+  substitutePlaceholders,
+} from "@/hooks/useProtocolTemplates";
 
 interface Asset {
   id: string;
   asset_code: string;
   asset_name: string;
+  serial_number?: string | null;
   manufacturer_model?: string | null;
   condition?: string | null;
   company_id?: string | null;
   current_owner_id?: string | null;
-  asset_categories?: { category_name?: string | null; skip_handover_form?: boolean | null } | null;
+  category_id?: string | null;
+  asset_categories?: { category_name?: string | null; skip_handover_form?: boolean | null; protocol_type?: string | null } | null;
   employees?: { full_name?: string | null } | null;
 }
 
@@ -108,20 +116,46 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
   const employee = employees?.find((e: any) => e.id === employeeId);
   const isPreassigned = !!preassignedOwnerId;
 
-  const formData: HandoverFormData | null = asset && employee && activeCompany ? {
-    company_name: activeCompany.name,
-    company_logo_url: activeCompany.logo_url,
-    employee_name: employee.full_name ?? "",
-    employee_department: (employee as any).department ?? "—",
-    date: new Date().toISOString(),
-    asset_name: asset.asset_name,
-    category_name: asset.asset_categories?.category_name ?? null,
-    manufacturer_model: asset.manufacturer_model,
-    asset_code: asset.asset_code,
-    condition: asset.condition || "good",
-    issuer_signature: issuerDataUrl,
-    receiver_signature: receiverDataUrl,
-  } : null;
+  // Resolve protocol template (per-category override → company default → global)
+  const { data: templates = [] } = useProtocolTemplates(activeCompanyId);
+  const protocolType = deriveProtocolTypeFromCategory(asset?.asset_categories?.protocol_type ?? "physical");
+  const resolvedTemplate = resolveTemplate(
+    templates,
+    protocolType,
+    activeCompanyId ?? null,
+    asset?.category_id ?? null,
+  );
+
+  const formData: HandoverFormData | null = asset && employee && activeCompany ? (() => {
+    const renderedBody = resolvedTemplate
+      ? substitutePlaceholders(resolvedTemplate.body_template, {
+          employee_name: employee.full_name ?? "",
+          employee_id: (employee as any).id_number ?? "",
+          asset_name: asset.asset_name ?? "",
+          asset_code: asset.asset_code ?? "",
+          serial: asset.serial_number ?? asset.asset_code ?? "",
+          category: asset.asset_categories?.category_name ?? "",
+          date: new Date().toLocaleDateString("en-GB").replace(/\//g, "-"),
+          company_name: activeCompany.name ?? "",
+        })
+      : null;
+    return {
+      company_name: activeCompany.name,
+      company_logo_url: activeCompany.logo_url,
+      employee_name: employee.full_name ?? "",
+      employee_department: (employee as any).department ?? "—",
+      date: new Date().toISOString(),
+      asset_name: asset.asset_name,
+      category_name: asset.asset_categories?.category_name ?? null,
+      manufacturer_model: asset.manufacturer_model,
+      asset_code: asset.asset_code,
+      condition: asset.condition || "good",
+      issuer_signature: issuerDataUrl,
+      receiver_signature: receiverDataUrl,
+      protocol_title: resolvedTemplate?.display_name ?? null,
+      protocol_body: renderedBody,
+    };
+  })() : null;
 
   // Live PDF preview
   useEffect(() => {
