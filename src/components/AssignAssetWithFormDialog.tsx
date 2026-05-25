@@ -95,6 +95,7 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset, defaultEm
       if (error) throw error;
       toast({ title: "הציוד שויך", description: "פריטים וירטואליים אינם דורשים טופס מסירה" });
       qc.invalidateQueries({ queryKey: ["assets"] });
+      onAssigned?.();
       close();
     } catch (err: any) {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
