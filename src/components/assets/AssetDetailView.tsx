@@ -11,6 +11,9 @@ import { AssignAssetWithFormDialog } from "@/components/AssignAssetWithFormDialo
 import { AssetDocumentsSection } from "@/components/AssetDocumentsSection";
 import { VehicleDetailsPanel } from "@/components/assets/VehicleDetailsPanel";
 import { DigitalAccessPanel } from "@/components/assets/DigitalAccessPanel";
+import { LicenseDetailsPanel } from "@/components/assets/LicenseDetailsPanel";
+import { TrainingDetailsPanel } from "@/components/assets/TrainingDetailsPanel";
+import { classifyCategory } from "@/lib/assetDomains";
 import { useDeleteAsset } from "@/hooks/useMutations";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
