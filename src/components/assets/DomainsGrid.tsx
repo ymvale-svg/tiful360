@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAssets, useAssetCategories, useITTickets } from "@/hooks/useData";
 import { useExpiringAssets } from "@/hooks/useExpiringAssets";
 import { cn } from "@/lib/utils";
@@ -14,6 +15,7 @@ import {
   Clock,
   ArrowLeftRight,
 } from "lucide-react";
+import { classifyCategory as classifyCategoryShared } from "@/lib/assetDomains";
 
 interface Props {
   onSelectCategory: (categoryId: string) => void;
