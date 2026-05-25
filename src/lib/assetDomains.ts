@@ -124,3 +124,68 @@ export function getGroupKey(
   }
   return (asset.asset_name ?? "ללא שם").trim() || "ללא שם";
 }
+
+/**
+ * Custom-field keys (Hebrew labels + English machine keys) rendered by the
+ * domain-specific panel below the generic "פרטי הנכס" card. Use this to hide
+ * them from the generic "שדות נוספים" list and avoid duplicate rows.
+ */
+export function getPanelOwnedCustomFieldKeys(
+  domain: DomainKey | null,
+  category?: { protocol_type?: string } | null,
+): Set<string> {
+  const keys = new Set<string>();
+  const add = (...ks: string[]) => ks.forEach((k) => keys.add(k));
+
+  if (category?.protocol_type === "vehicle") {
+    add(
+      "license_plate", "vehicle_type", "fuel_type", "year_of_manufacture", "current_km",
+      "test_expiry", "insurance_expiry", "license_expiry",
+      "מספר רישוי", "סוג רכב", "סוג דלק", "שנת ייצור", 'ק"מ נוכחי',
+      "תוקף טסט", "תוקף ביטוח", "תוקף רישוי",
+    );
+    return keys;
+  }
+  switch (domain) {
+    case "insurance":
+      add(
+        "insurance_company", "policy_number", "coverage_type", "coverage_amount",
+        "premium", "annual_premium", "start_date", "end_date",
+        "agent_name", "agent_phone",
+        "חברת ביטוח", "מספר פוליסה", "סוג כיסוי", "סכום כיסוי",
+        "פרמיה", "פרמיה שנתית", "תאריך תחילה", "תאריך סיום",
+        "סוכן", "שם סוכן ביטוח", "סוכן ביטוח", "טלפון סוכן",
+      );
+      break;
+    case "licenses":
+      add(
+        "vendor", "plan", "seats",
+        "ספק", "תוכנית", "Plan", "מס׳ מושבים", "מספר מושבים",
+      );
+      break;
+    case "training":
+      add(
+        "provider", "completed_at", "certificate_url", "score",
+        "ספק", "מדריך", "ספק / מדריך", "תאריך השלמה", "קישור לתעודה", "ציון", "ציון/תוצאה",
+      );
+      break;
+    case "real-estate":
+      add(
+        "tenure", "address", "area_sqm", "floor", "landlord", "landlord_phone",
+        "monthly_rent", "lease_start", "lease_end", "externally_managed", "management_company",
+        "סטטוס בעלות", "כתובת", 'שטח (מ"ר)', "קומה", "משכיר", "טלפון משכיר",
+        "שכ״ד חודשי", "תחילת חוזה", "סיום חוזה", "ניהול חיצוני", "חברת ניהול",
+      );
+      break;
+    case "digital":
+      add(
+        "url", "username", "platform", "access_level",
+        "כתובת", "שם משתמש", "פלטפורמה", "רמת גישה",
+      );
+      break;
+    default:
+      break;
+  }
+  return keys;
+}
+

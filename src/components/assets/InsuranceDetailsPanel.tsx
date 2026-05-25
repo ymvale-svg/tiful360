@@ -18,15 +18,15 @@ export function InsuranceDetailsPanel({ asset }: Props) {
   const cf = asset.custom_fields ?? {};
 
   const initial = () => ({
-    insurance_company: cf.insurance_company ?? asset.insurance_company ?? "",
-    policy_number: cf.policy_number ?? asset.insurance_policy_number ?? "",
-    coverage_type: cf.coverage_type ?? "",
-    coverage_amount: cf.coverage_amount ?? "",
-    premium: cf.premium ?? "",
-    start_date: cf.start_date ?? "",
-    end_date: asset.expiry_date ?? cf.end_date ?? "",
-    agent_name: cf.agent_name ?? "",
-    agent_phone: cf.agent_phone ?? "",
+    insurance_company: cf["חברת ביטוח"] ?? cf.insurance_company ?? asset.insurance_company ?? "",
+    policy_number: cf["מספר פוליסה"] ?? cf.policy_number ?? asset.insurance_policy_number ?? "",
+    coverage_type: cf["סוג כיסוי"] ?? cf.coverage_type ?? "",
+    coverage_amount: cf["סכום כיסוי"] ?? cf.coverage_amount ?? "",
+    premium: cf["פרמיה שנתית"] ?? cf["פרמיה"] ?? cf.premium ?? "",
+    start_date: cf["תאריך תחילה"] ?? cf.start_date ?? "",
+    end_date: asset.expiry_date ?? cf["תאריך סיום"] ?? cf.end_date ?? "",
+    agent_name: cf["שם סוכן ביטוח"] ?? cf["סוכן"] ?? cf.agent_name ?? "",
+    agent_phone: cf["טלפון סוכן"] ?? cf.agent_phone ?? "",
   });
   const [form, setForm] = useState(initial());
   useEffect(() => { setForm(initial()); /* eslint-disable-next-line */ }, [asset.id]);
@@ -50,17 +50,27 @@ export function InsuranceDetailsPanel({ asset }: Props) {
 
   const handleSave = async () => {
     setSaving(true);
+    // Strip any legacy duplicate keys so we don't store the same value twice.
+    const stripped = { ...cf };
+    [
+      "insurance_company", "policy_number", "coverage_type", "coverage_amount",
+      "premium", "annual_premium", "start_date", "end_date", "agent_name", "agent_phone",
+      "חברת ביטוח", "מספר פוליסה", "סוג כיסוי", "סכום כיסוי",
+      "פרמיה", "פרמיה שנתית", "תאריך תחילה", "תאריך סיום",
+      "סוכן", "שם סוכן ביטוח", "סוכן ביטוח", "טלפון סוכן",
+    ].forEach((k) => { delete stripped[k]; });
+
     const newCustom = {
-      ...cf,
-      insurance_company: form.insurance_company || null,
-      policy_number: form.policy_number || null,
-      coverage_type: form.coverage_type || null,
-      coverage_amount: form.coverage_amount || null,
-      premium: form.premium || null,
-      start_date: form.start_date || null,
-      end_date: form.end_date || null,
-      agent_name: form.agent_name || null,
-      agent_phone: form.agent_phone || null,
+      ...stripped,
+      "חברת ביטוח": form.insurance_company || null,
+      "מספר פוליסה": form.policy_number || null,
+      "סוג כיסוי": form.coverage_type || null,
+      "סכום כיסוי": form.coverage_amount || null,
+      "פרמיה שנתית": form.premium || null,
+      "תאריך תחילה": form.start_date || null,
+      "תאריך סיום": form.end_date || null,
+      "שם סוכן ביטוח": form.agent_name || null,
+      "טלפון סוכן": form.agent_phone || null,
     };
     const { error } = await supabase.from("assets").update({
       custom_fields: newCustom,
@@ -73,6 +83,7 @@ export function InsuranceDetailsPanel({ asset }: Props) {
     qc.invalidateQueries({ queryKey: ["expiring-assets"] });
     setEditing(false);
   };
+
 
   const F = ({ label, value, v, onChange, ltr, type = "text" }: any) => (
     <div>
