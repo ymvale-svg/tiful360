@@ -90,6 +90,19 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
   const expiry = asset.expiry_date ? new Date(asset.expiry_date) : null;
   const expired = expiry && expiry < new Date();
 
+  // Collect all relevant expiry dates across asset types
+  const expiryDates: { label: string; date: Date }[] = [];
+  if (asset.expiry_date) expiryDates.push({ label: "תפוגה", date: new Date(asset.expiry_date) });
+  if (asset.license_expires_at) expiryDates.push({ label: "רישיון", date: new Date(asset.license_expires_at) });
+  if (asset.test_expiry) expiryDates.push({ label: "טסט", date: new Date(asset.test_expiry) });
+  if (asset.insurance_expiry) expiryDates.push({ label: "ביטוח", date: new Date(asset.insurance_expiry) });
+  if (asset.license_expiry) expiryDates.push({ label: "רישוי", date: new Date(asset.license_expiry) });
+  const hasAnyExpiry = expiryDates.length > 0;
+  const earliest = hasAnyExpiry
+    ? expiryDates.reduce((a, b) => (a.date < b.date ? a : b))
+    : null;
+  const allValid = hasAnyExpiry && expiryDates.every((e) => e.date >= new Date());
+
   const empMap = new Map((employees ?? []).map((e: any) => [e.id, e]));
   const owner = asset.current_owner_id ? empMap.get(asset.current_owner_id) as any : null;
 
