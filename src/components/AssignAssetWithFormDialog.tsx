@@ -52,7 +52,7 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
 
   const preassignedOwnerId = asset?.current_owner_id ?? "";
   const [employeeId, setEmployeeId] = useState("");
-  const [method, setMethod] = useState<"portal" | "manager_present">("portal");
+  const [method, setMethod] = useState<"portal" | "manager_present">("manager_present");
   const [step, setStep] = useState<"choose" | "sign">("choose");
   const [attachment, setAttachment] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
