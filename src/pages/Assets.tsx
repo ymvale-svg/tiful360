@@ -307,12 +307,7 @@ export default function Assets() {
 
               <DomainsGrid
                 onSelectCategory={goToCategory}
-                onQuickAssign={() =>
-                  toast({
-                    title: "שיוך מהיר לעובד",
-                    description: "פתחו את כרטיס העובד ולחצו על 'הוסף משאב' לשיוך מרובה. אשף ייעודי בקרוב.",
-                  })
-                }
+                onQuickAssign={() => setQuickAssignOpen(true)}
               />
             </>
           )}
