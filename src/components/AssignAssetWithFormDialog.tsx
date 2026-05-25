@@ -17,6 +17,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { HandoverFormData } from "@/lib/pdf/types";
 import { buildHandoverPdf } from "@/lib/pdf/buildHandoverPdf";
 import { SignaturePad, SignaturePadHandle } from "./SignaturePad";
+import {
+  useProtocolTemplates,
+  resolveTemplate,
+  deriveProtocolTypeFromCategory,
+  substitutePlaceholders,
+} from "@/hooks/useProtocolTemplates";
 
 interface Asset {
   id: string;
