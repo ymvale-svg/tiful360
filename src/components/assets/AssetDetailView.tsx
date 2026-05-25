@@ -13,6 +13,8 @@ import { VehicleDetailsPanel } from "@/components/assets/VehicleDetailsPanel";
 import { DigitalAccessPanel } from "@/components/assets/DigitalAccessPanel";
 import { LicenseDetailsPanel } from "@/components/assets/LicenseDetailsPanel";
 import { TrainingDetailsPanel } from "@/components/assets/TrainingDetailsPanel";
+import { InsuranceDetailsPanel } from "@/components/assets/InsuranceDetailsPanel";
+import { RealEstateDetailsPanel } from "@/components/assets/RealEstateDetailsPanel";
 import { classifyCategory } from "@/lib/assetDomains";
 import { useDeleteAsset } from "@/hooks/useMutations";
 import { useToast } from "@/hooks/use-toast";
@@ -238,6 +240,8 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
             if (domain === "digital") return <DigitalAccessPanel asset={asset} />;
             if (domain === "licenses") return <LicenseDetailsPanel asset={asset} />;
             if (domain === "training") return <TrainingDetailsPanel asset={asset} />;
+            if (domain === "insurance") return <InsuranceDetailsPanel asset={asset} />;
+            if (domain === "real-estate") return <RealEstateDetailsPanel asset={asset} />;
             return null;
           })()}
 
