@@ -90,6 +90,19 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
   const expiry = asset.expiry_date ? new Date(asset.expiry_date) : null;
   const expired = expiry && expiry < new Date();
 
+  // Collect all relevant expiry dates across asset types
+  const expiryDates: { label: string; date: Date }[] = [];
+  if (asset.expiry_date) expiryDates.push({ label: "תפוגה", date: new Date(asset.expiry_date) });
+  if (asset.license_expires_at) expiryDates.push({ label: "רישיון", date: new Date(asset.license_expires_at) });
+  if (asset.test_expiry) expiryDates.push({ label: "טסט", date: new Date(asset.test_expiry) });
+  if (asset.insurance_expiry) expiryDates.push({ label: "ביטוח", date: new Date(asset.insurance_expiry) });
+  if (asset.license_expiry) expiryDates.push({ label: "רישוי", date: new Date(asset.license_expiry) });
+  const hasAnyExpiry = expiryDates.length > 0;
+  const earliest = hasAnyExpiry
+    ? expiryDates.reduce((a, b) => (a.date < b.date ? a : b))
+    : null;
+  const allValid = hasAnyExpiry && expiryDates.every((e) => e.date >= new Date());
+
   const empMap = new Map((employees ?? []).map((e: any) => [e.id, e]));
   const owner = asset.current_owner_id ? empMap.get(asset.current_owner_id) as any : null;
 
@@ -139,9 +152,27 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
             <Icon className="w-9 h-9" strokeWidth={1.75} />
           </div>
           <div>
-            <h1 className="text-xl font-bold flex items-center gap-2">
+            <h1 className="text-xl font-bold flex items-center gap-2 flex-wrap">
               {!isAssignable && <Building2 className="w-4 h-4 text-primary/70" />}
               {asset.asset_name}
+              {hasAnyExpiry && (
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border",
+                    allValid
+                      ? "bg-green-100 text-green-800 border-green-300 dark:bg-green-950 dark:text-green-300 dark:border-green-800"
+                      : "bg-red-100 text-red-800 border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-800"
+                  )}
+                  title={
+                    earliest
+                      ? `${earliest.label}: ${earliest.date.toLocaleDateString("en-GB").replace(/\//g, "-")}`
+                      : ""
+                  }
+                >
+                  <span className={cn("w-2 h-2 rounded-full", allValid ? "bg-green-500" : "bg-red-500")} />
+                  {allValid ? "בתוקף" : "לא בתוקף"}
+                </span>
+              )}
             </h1>
             <p className="text-xs font-mono text-muted-foreground">{asset.asset_code}</p>
           </div>
