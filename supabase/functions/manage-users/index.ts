@@ -133,9 +133,28 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: "user_id and role required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // Only super_admin can assign/remove super_admin role
-      if (role === "super_admin" && !callerIsSuperAdmin) {
-        return new Response(JSON.stringify({ error: "Only super_admin can assign super_admin role" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      // Server-side allowlist: non-super-admins may only manage a restricted set of roles.
+      // Admin/payroll/it_manager/super_admin must only be assignable by super_admin.
+      const ADMIN_ASSIGNABLE_ROLES = new Set([
+        "operations",
+        "direct_manager",
+        "finance",
+        "legal",
+        "employee",
+      ]);
+      if (!callerIsSuperAdmin && !ADMIN_ASSIGNABLE_ROLES.has(role)) {
+        return new Response(
+          JSON.stringify({ error: "Only super_admin can assign this role" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      // Admin cannot modify their own roles via this endpoint (prevents self-escalation paths).
+      if (!callerIsSuperAdmin && user_id === caller.id) {
+        return new Response(
+          JSON.stringify({ error: "Cannot modify your own roles" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
       }
 
       // Non-super-admin can only manage roles for users in their companies
@@ -151,6 +170,7 @@ Deno.serve(async (req) => {
 
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
 
     if (req.method === "POST" && action === "invite") {
       const body = await req.json();
@@ -273,6 +293,16 @@ Deno.serve(async (req) => {
       if (!email || !role || !allowedRoles.has(role) || company_ids.length === 0) {
         return new Response(JSON.stringify({ error: "email, valid role, and at least one company required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
+
+      // Non-super-admins may only invite users with a restricted set of roles.
+      const ADMIN_INVITABLE_ROLES = new Set(["operations", "direct_manager", "finance", "legal"]);
+      if (!callerIsSuperAdmin && !ADMIN_INVITABLE_ROLES.has(role)) {
+        return new Response(
+          JSON.stringify({ error: "Only super_admin can invite users with this role" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
 
       // Verify caller has access to ALL requested companies (unless super_admin)
       if (!callerIsSuperAdmin) {

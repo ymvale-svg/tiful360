@@ -179,12 +179,16 @@ export function EmailTemplatesTab() {
           <div className="text-xs text-muted-foreground">
             <strong>נושא:</strong> {renderPreview(subject)}
           </div>
-          <div
-            className="border border-border/50 rounded-lg p-4 bg-background"
-            dangerouslySetInnerHTML={{ __html: renderPreview(body) }}
+          {/* Sandboxed iframe prevents any HTML/JS in the template from executing in the admin's session. */}
+          <iframe
+            title="email-preview"
+            sandbox=""
+            srcDoc={renderPreview(body)}
+            className="w-full min-h-[320px] border border-border/50 rounded-lg bg-background"
           />
         </div>
       )}
+
     </div>
   );
 }
