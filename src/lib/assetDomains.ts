@@ -103,3 +103,24 @@ export function groupCategoriesByDomain<T extends { id: string; prefix?: string;
 export function isDomainKey(value: string | undefined): value is DomainKey {
   return !!value && (DOMAIN_ORDER as string[]).includes(value);
 }
+
+/** Domains where each row is unique — no parent grouping. */
+const FLAT_DOMAINS: DomainKey[] = ["real-estate"];
+
+/** Returns the group-by key for an asset within its sub-category, per domain.
+ *  Returns null when the domain should be displayed flat (no parent grouping). */
+export function getGroupKey(
+  asset: { asset_name?: string | null; custom_fields?: any; license_plate?: string | null },
+  domain: DomainKey,
+  category?: { prefix?: string; protocol_type?: string } | null,
+): string | null {
+  if (FLAT_DOMAINS.includes(domain)) return null;
+  // Vehicles: each car is unique
+  if (domain === "physical" && category?.protocol_type === "vehicle") return null;
+  // Insurance: group by coverage type from custom fields
+  if (domain === "insurance") {
+    const t = (asset.custom_fields?.["סוג כיסוי"] ?? "").toString().trim();
+    return t || "ללא סוג כיסוי";
+  }
+  return (asset.asset_name ?? "ללא שם").trim() || "ללא שם";
+}
