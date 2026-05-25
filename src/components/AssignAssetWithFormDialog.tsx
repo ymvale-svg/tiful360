@@ -69,10 +69,12 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset, defaultEm
   const [issuerDataUrl, setIssuerDataUrl] = useState<string | null>(null);
   const [receiverDataUrl, setReceiverDataUrl] = useState<string | null>(null);
 
-  // Auto-select current owner when asset is already assigned
+  // Auto-select current owner when asset is already assigned, or default employee for quick-assign
   useEffect(() => {
-    if (open && preassignedOwnerId) setEmployeeId(preassignedOwnerId);
-  }, [open, preassignedOwnerId]);
+    if (!open) return;
+    if (preassignedOwnerId) setEmployeeId(preassignedOwnerId);
+    else if (defaultEmployeeId) setEmployeeId(defaultEmployeeId);
+  }, [open, preassignedOwnerId, defaultEmployeeId]);
 
   // Skip handover form when category opted-out, OR for legacy "virtual" categories by name
   const categoryName = asset?.asset_categories?.category_name ?? "";
