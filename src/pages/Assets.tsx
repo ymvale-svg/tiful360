@@ -338,6 +338,7 @@ export default function Assets() {
 
       <AddAssetDialog open={addOpen} onOpenChange={(v) => { setAddOpen(v); if (!v) { setAddCategoryId(undefined); setAddTemplateName(undefined); } }} defaultCategoryId={addCategoryId} defaultAssetName={addTemplateName} />
       <ImportAssetsExcelDialog open={importOpen} onOpenChange={setImportOpen} />
+      <QuickAssignDialog open={quickAssignOpen} onOpenChange={setQuickAssignOpen} />
     </div>
   );
 }
