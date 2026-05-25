@@ -17,6 +17,7 @@ const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const Employees = lazy(() => import("@/pages/Employees"));
 const EmployeeDetail = lazy(() => import("@/pages/EmployeeDetail"));
 const Assets = lazy(() => import("@/pages/Assets"));
+const AssetsDomainPage = lazy(() => import("@/pages/AssetsDomainPage"));
 const ITTickets = lazy(() => import("@/pages/ITTickets"));
 const Alerts = lazy(() => import("@/pages/Alerts"));
 const EmployeePortal = lazy(() => import("@/pages/EmployeePortal"));
