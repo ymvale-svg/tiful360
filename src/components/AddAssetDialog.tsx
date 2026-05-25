@@ -94,10 +94,10 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
   // Hide custom fields that duplicate the system expiry_date field.
   // Any custom field literally named like the system expiry is treated as a duplicate.
   const EXPIRY_DUPLICATE_NAMES = new Set(["תוקף", "תוקף פוליסה", "תאריך תפוגה", "תאריך תוקף"]);
-  const catFields = (catFieldsRaw ?? []).filter((cf: any) => {
-    if (EXPIRY_DUPLICATE_NAMES.has((cf.field_name ?? "").trim())) return false;
-    return true;
-  });
+  const catFields = useMemo(
+    () => (catFieldsRaw ?? []).filter((cf: any) => !EXPIRY_DUPLICATE_NAMES.has((cf.field_name ?? "").trim())),
+    [catFieldsRaw]
+  );
 
   // Reset everything when dialog closes
   useEffect(() => {
