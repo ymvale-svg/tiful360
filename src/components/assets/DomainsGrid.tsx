@@ -114,7 +114,18 @@ const DOMAINS: Record<DomainKey, DomainDef> = {
 
 const DOMAIN_ORDER: DomainKey[] = ["physical", "digital", "licenses", "trainings", "insurance", "real_estate"];
 
+// Map this file's local DomainKey to the shared route slugs used in /assets/:domain
+const DOMAIN_ROUTE: Record<DomainKey, string> = {
+  physical: "physical",
+  digital: "digital",
+  licenses: "licenses",
+  trainings: "training",
+  insurance: "insurance",
+  real_estate: "real-estate",
+};
+
 export function DomainsGrid({ onSelectCategory, onQuickAssign }: Props) {
+  const navigate = useNavigate();
   const { data: categories, isLoading } = useAssetCategories();
   const { data: assets } = useAssets();
   const { data: expiring } = useExpiringAssets(30);
