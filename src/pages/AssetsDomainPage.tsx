@@ -248,30 +248,46 @@ export default function AssetsDomainPage() {
                   <div className="col-span-4 text-right">שם</div>
                   <div className="col-span-2 text-right">קוד</div>
                   <div className="col-span-3 text-right">עובד</div>
-                  <div className="col-span-2 text-right">סטטוס</div>
+                  <div className="col-span-2 text-right">
+                    {domain === "physical" ? "סטטוס" : "תפוגה"}
+                  </div>
                   <div className="col-span-1 text-left"></div>
                 </div>
-                {items.map((a: any) => (
-                  <button
-                    key={a.id}
-                    onClick={() => navigate(`/assets/${domain}/${a.id}`)}
-                    className="w-full grid grid-cols-12 gap-2 px-4 py-3 text-sm border-t border-border hover:bg-muted/40 text-right items-center transition-colors"
-                  >
-                    <div className="col-span-4 font-medium truncate">{a.asset_name}</div>
-                    <div className="col-span-2 font-mono text-xs text-muted-foreground">{a.asset_code}</div>
-                    <div className="col-span-3 text-muted-foreground truncate">
-                      {a.employees?.full_name ?? "—"}
-                    </div>
-                    <div className="col-span-2">
-                      <span className={cn("text-xs px-2 py-0.5 rounded-full", assetStatusClasses[a.status])}>
-                        {assetStatusLabels[a.status] ?? a.status}
-                      </span>
-                    </div>
-                    <div className="col-span-1 text-left text-muted-foreground">
-                      <ArrowRight className="w-4 h-4 mr-auto rtl:rotate-180" />
-                    </div>
-                  </button>
-                ))}
+                {items.map((a: any) => {
+                  const expiryDate = domain === "digital"
+                    ? (a.license_expires_at || a.password_expires_at)
+                    : domain === "licenses"
+                      ? a.license_expires_at
+                      : a.expiry_date;
+                  const days = expiryDate ? Math.ceil((new Date(expiryDate).getTime() - Date.now()) / 86400000) : null;
+                  const expiryCls = days === null ? "text-muted-foreground" : days < 0 ? "text-destructive font-semibold" : days <= 30 ? "text-amber-600 dark:text-amber-400 font-semibold" : "text-foreground";
+                  const expiryTxt = days === null ? "—" : days < 0 ? `פג לפני ${Math.abs(days)}י׳` : days === 0 ? "פג היום" : days <= 30 ? `בעוד ${days}י׳` : new Date(expiryDate).toLocaleDateString("en-GB").replace(/\//g, "-");
+                  return (
+                    <button
+                      key={a.id}
+                      onClick={() => navigate(`/assets/${domain}/${a.id}`)}
+                      className="w-full grid grid-cols-12 gap-2 px-4 py-3 text-sm border-t border-border hover:bg-muted/40 text-right items-center transition-colors"
+                    >
+                      <div className="col-span-4 font-medium truncate">{a.asset_name}</div>
+                      <div className="col-span-2 font-mono text-xs text-muted-foreground">{a.asset_code}</div>
+                      <div className="col-span-3 text-muted-foreground truncate">
+                        {a.employees?.full_name ?? "—"}
+                      </div>
+                      <div className="col-span-2">
+                        {domain === "physical" ? (
+                          <span className={cn("text-xs px-2 py-0.5 rounded-full", assetStatusClasses[a.status])}>
+                            {assetStatusLabels[a.status] ?? a.status}
+                          </span>
+                        ) : (
+                          <span className={cn("text-xs", expiryCls)}>{expiryTxt}</span>
+                        )}
+                      </div>
+                      <div className="col-span-1 text-left text-muted-foreground">
+                        <ArrowRight className="w-4 h-4 mr-auto rtl:rotate-180" />
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </section>
           ))}
