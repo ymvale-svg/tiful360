@@ -7,6 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useAssets, useEmployees, useAssetCategories } from "@/hooks/useData";
 import { AddAssetDialog } from "@/components/AddAssetDialog";
 import { ImportAssetsExcelDialog } from "@/components/ImportAssetsExcelDialog";
+import { QuickAssignDialog } from "@/components/QuickAssignDialog";
 import CategoryManager from "@/pages/CategoryManager";
 import { exportToExcel } from "@/lib/exportExcel";
 import { DomainsGrid } from "@/components/assets/DomainsGrid";
