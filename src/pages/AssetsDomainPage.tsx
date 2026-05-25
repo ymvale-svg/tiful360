@@ -476,20 +476,54 @@ function InstancesTable({
   domain: DomainKey;
   onSelect: (id: string) => void;
 }) {
+  const isInsurance = domain === "insurance";
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">
-      <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-muted/40 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
-        <div className="col-span-3 text-right">קוד</div>
-        <div className="col-span-3 text-right">מס׳ סידורי</div>
-        <div className="col-span-3 text-right">עובד</div>
-        <div className="col-span-2 text-right">{domain === "physical" ? "סטטוס" : "תפוגה"}</div>
-        <div className="col-span-1 text-left"></div>
+      <div className={cn(
+        "grid gap-2 px-4 py-2 bg-muted/40 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide",
+        isInsurance ? "grid-cols-[2fr_2fr_1.2fr_1.5fr_2rem]" : "grid-cols-12"
+      )}>
+        {isInsurance ? (
+          <>
+            <div className="text-right">שם הביטוח</div>
+            <div className="text-right">חברת ביטוח</div>
+            <div className="text-right">תוקף פוליסה</div>
+            <div className="text-right">סוכן ביטוח</div>
+            <div></div>
+          </>
+        ) : (
+          <>
+            <div className="col-span-3 text-right">קוד</div>
+            <div className="col-span-3 text-right">מס׳ סידורי</div>
+            <div className="col-span-3 text-right">עובד</div>
+            <div className="col-span-2 text-right">{domain === "physical" ? "סטטוס" : "תפוגה"}</div>
+            <div className="col-span-1 text-left"></div>
+          </>
+        )}
       </div>
       {items.map((a: any) => {
         const exp = expiryOf(a, domain);
         const days = exp ? Math.ceil((new Date(exp).getTime() - Date.now()) / 86400000) : null;
         const expiryCls = days === null ? "text-muted-foreground" : days < 0 ? "text-destructive font-semibold" : days <= 30 ? "text-amber-600 dark:text-amber-400 font-semibold" : "text-foreground";
         const expiryTxt = days === null ? "—" : days < 0 ? `פג לפני ${Math.abs(days)}י׳` : days === 0 ? "פג היום" : days <= 30 ? `בעוד ${days}י׳` : new Date(exp!).toLocaleDateString("en-GB").replace(/\//g, "-");
+        if (isInsurance) {
+          const cf = a.custom_fields ?? {};
+          return (
+            <button
+              key={a.id}
+              onClick={() => onSelect(a.id)}
+              className="w-full grid grid-cols-[2fr_2fr_1.2fr_1.5fr_2rem] gap-2 px-4 py-3 text-sm border-t border-border hover:bg-muted/40 text-right items-center transition-colors"
+            >
+              <div className="font-medium truncate">{a.asset_name ?? "—"}</div>
+              <div className="truncate">{cf["חברת ביטוח"] ?? <span className="text-muted-foreground">—</span>}</div>
+              <div className={cn("text-xs", expiryCls)}>{expiryTxt}</div>
+              <div className="truncate text-muted-foreground">{cf["שם סוכן ביטוח"] ?? "—"}</div>
+              <div className="text-left text-muted-foreground">
+                <ArrowRight className="w-4 h-4 mr-auto rtl:rotate-180" />
+              </div>
+            </button>
+          );
+        }
         return (
           <button
             key={a.id}
