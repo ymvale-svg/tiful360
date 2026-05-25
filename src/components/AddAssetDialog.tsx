@@ -162,8 +162,12 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
       if (isPerEmployeeByName(cf.field_name)) next.add(`cf:${cf.field_name}`);
     });
     setPerEmpFieldKeys(next);
-    setPerEmpRows({});
   }, [form.category_id, catFields, selectedCategory]);
+
+  // Reset per-employee rows only when category truly changes (not on every catFields re-filter)
+  useEffect(() => {
+    setPerEmpRows({});
+  }, [form.category_id]);
 
   // Auto-generate single asset_code (non-bulk) — running counter per category, never resets
   useEffect(() => {
