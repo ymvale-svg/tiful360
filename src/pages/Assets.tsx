@@ -163,12 +163,7 @@ export default function Assets() {
                       size="sm"
                       variant="outline"
                       className="gap-1.5 rounded-full"
-                      onClick={() =>
-                        toast({
-                          title: "שיוך מהיר לעובד",
-                          description: "פתחו את כרטיס העובד ולחצו על 'הוסף משאב' לשיוך מרובה. אשף ייעודי בקרוב.",
-                        })
-                      }
+                      onClick={() => setQuickAssignOpen(true)}
                     >
                       <Zap className="w-4 h-4" />
                       שיוך מהיר
