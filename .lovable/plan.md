@@ -1,48 +1,52 @@
-## תוכנית מעודכנת — Stage 5: פרוטוקולים פר חברה + פר קטגוריה + ייצוא
+## הבעיה
 
-### 1. מסד נתונים
-מיגרציה ל-`document_protocols`:
-- הוספת `category_id uuid nullable` (FK ל-`asset_categories`).
-- אינדקס ייחודי `UNIQUE (company_id, protocol_type, category_id)` עם `NULLS NOT DISTINCT`.
-- עדכון RLS: admin/operations של החברה יכולים CRUD על השורות של החברה שלהם; כולם קוראים globals (company_id IS NULL).
+במסך הנוכחי (`/assets/licenses` — "רישיונות ותוכנות") מוצגים 15 פריטים שכולם נקראים "פריוריטי" — כלומר 15 הקצאות של אותה תוכנה לעובדים שונים. הרשימה שטוחה ולא ניתן לראות "כמה תוכנות שונות יש לי", "כמה רישיונות פעילים לכל תוכנה", וכו'. אותה בעיה תחזור בכל דומיין עם מופעים חוזרים (גישות דיגיטליות, הדרכות, ביטוחים).
 
-### 2. סדר עדיפויות בשליפת תבנית
-בזמן חתימה, `useProtocolTemplate(protocolType, categoryId, companyId)` מחזיר את התבנית הספציפית ביותר:
-1. `company_id = X AND category_id = Y` (הכי ספציפי)
-2. `company_id = X AND category_id IS NULL` (ברירת מחדל פר חברה)
-3. `company_id IS NULL AND category_id IS NULL` (ברירת מחדל גלובלית — fallback)
+כבר קיים בפרויקט דפוס דו-שלבי ב-`CategoryAssetsList.tsx` (קטגוריה → תתי-קבוצות → מופעים). ההצעה: להחיל אותו דפוס גם ב-`AssetsDomainPage`.
 
-### 3. עורך התבניות — `ProtocolTemplatesTab.tsx`
-מסך בהגדרות עם שתי רמות:
-- **טאב "ברירות מחדל לחברה"** — 6 סוגי פרוטוקולים, עורך body_template + `requires_issuer_sig` + `validity_days`.
-- **טאב "פרוטוקולים פר קטגוריה"** — בחירת קטגוריה → פתיחת override שלה (פרוטוקולים: physical / virtual / vehicle / training / return_physical / return_virtual; הסוג נגזר אוטומטית מהקטגוריה).
-- כפתור "שחזר ברירת מחדל" → מוחק את ה-override.
-- כפתור **"תצוגה מקדימה כ-PDF"** → מרנדר preview PDF עם נתוני דמה (placeholders ממולאים בערכים לדוגמה) + לוגו החברה הקיים.
+## המודל המוצע — שלושה מפלסים
 
-Placeholders נתמכים: `{{employee_name}}`, `{{employee_id}}`, `{{asset_name}}`, `{{asset_code}}`, `{{serial}}`, `{{category}}`, `{{date}}`, `{{company_name}}`.
+```text
+דומיין (למשל "רישיונות ותוכנות")
+  └─ תת-קטגוריה (asset_category, למשל "תוכנות", "שירותי מנוי")
+       └─ פריט-אב / סוג (group key, למשל "פריוריטי", "Office 365")
+            └─ מופע / הקצאה (asset row — עובד, מס׳ רישיון, תפוגה)
+```
 
-### 4. עדכון `buildHandoverPdf`
-- מקבל אופציונלית `logoUrl` (מ-`companies.logo_url`).
-- טוען את הלוגו (fetch→base64) ומציב בכותרת ה-PDF.
-- מקבל `rendered_body` (מ-form_snapshot) כטקסט פרוטוקול שכבר עבר substitution.
+## ארגון תוך-קטגוריה (group key לפי דומיין)
 
-### 5. ProtocolSigningDialog
-- שליפת תבנית לפי 3 רמות (hook).
-- substitution של placeholders.
-- הצגת הטקסט הסופי לעובד לפני חתימה.
-- שמירת `rendered_body` ב-`form_snapshot` (כדי שעריכה עתידית של התבנית לא תשנה פרוטוקולים חתומים).
+| דומיין | מפתח קיבוץ ברירת מחדל | למה |
+|---|---|---|
+| licenses / digital | `asset_name` | "פריוריטי" / "Office" / "Gmail" — שם המוצר |
+| training | `asset_name` (שם ההדרכה) | כל הדרכה היא יישות, המופעים = עובדים שעברו |
+| insurance | `custom_fields["סוג כיסוי"]` | כבר קיים, נשמר |
+| vehicle / real-estate | ללא קיבוץ — רשימה שטוחה | כל רכב/נכס ייחודי |
+| physical | `asset_name` כברירת מחדל, ניתן לכבות | מחשב נייד "Dell XPS 13" עם 8 מופעים מול חד-פעמיים |
 
-### 6. ייצוא PDF בודד
-ב-`HandoverFormsList` — כפתור "הורד PDF" בכל שורה. אם `pdf_url` קיים (קישור ל-`signed_documents`/`asset_handover_forms`) → הורדה ישירה. אם לא קיים עדיין (legacy) → בנייה on-the-fly מה-snapshot.
+## סדר ותצוגה
 
-### 7. קבצים שייווצרו/יעודכנו
-- migration: `document_protocols` — `category_id` + index + RLS חדש.
-- `src/hooks/useProtocolTemplates.ts` — שליפה היררכית + upsert + reset.
-- `src/components/settings/ProtocolTemplatesTab.tsx` — עורך עם שני טאבים + preview.
-- `src/lib/buildHandoverPdf.ts` — תמיכה ב-logoUrl + rendered_body.
-- `src/components/protocols/ProtocolSigningDialog.tsx` — שימוש בתבנית דינמית.
-- `src/components/assets/HandoverFormsList.tsx` — כפתור הורדה.
-- הוספת טאב חדש בעמוד Settings.
+1. **סדר ברירת מחדל**: לפי מס' מופעים יורד (הגדולות קודם), שובר-שוויון לפי א'-ב' עברי.
+2. **כפתורי מיון בראש המסך**: "הכי הרבה מופעים" · "א-ב" · "תפוגה הקרובה ביותר".
+3. **תצוגה**: כרטיסי-אייקון (כמו ב-`CategoryAssetsList`) עם badge ספירה + שורת "X פעילים / Y סה"כ" + נקודה אדומה אם יש מופע פג-תוקף.
+4. **סינון תתי-קטגוריה הקיים** (chips "תוכנות / שירותי מנוי") נשאר מעל כרטיסי הפריט-אב.
+5. **חיפוש** מחפש גם בשם הפריט-אב וגם בשדות המופע (סידורי / עובד / מס' רישיון).
 
-### הערה
-ללא היסטוריית גרסאות (עריכה דורסת). שמירת `rendered_body` ב-snapshot מבטיחה שהטקסט שנחתם נשמר נצח.
+## ניווט (URL)
+
+```text
+/assets/:domain                       → כרטיסי פריט-אב מקובצים לפי תת-קטגוריה
+/assets/:domain?sub=<categoryId>      → רק תת-הקטגוריה הזו
+/assets/:domain?sub=<id>&group=<key>  → רשימת מופעים של אותו פריט-אב
+/assets/:domain/:assetId              → תצוגת מופע בודד (קיים)
+```
+
+## פרטים טכניים
+
+- מוסיפים helper `getGroupKey(asset, domain, category)` ב-`src/lib/assetDomains.ts` שמחזיר את המפתח לפי הטבלה למעלה.
+- `AssetsDomainPage.tsx`: מחליפים את הבלוק `groups` הנוכחי במבנה דו-מפלסי — `groupsByCategory → groupsByName`. כשיש פרמטר `group` ב-URL מציגים את ה-`<table>` הקיים, אחרת רשת כרטיסים.
+- שום שינוי סכמה. הכל קליינט-סייד מעל הנתונים שכבר נשלפים.
+- שדה אופציונלי עתידי `asset_categories.skip_subgrouping` כדי לאפשר רשימה שטוחה לקטגוריה ספציפית (לא נדרש בגרסה זו).
+
+## מה משתנה במסך שאתה רואה עכשיו
+
+במקום 15 שורות "פריוריטי" — כרטיס אחד גדול **"פריוריטי"** עם תג "15", שמראה "12 פעילים / 15", ובלחיצה נכנסים לטבלה הנוכחית עם 15 השורות.
