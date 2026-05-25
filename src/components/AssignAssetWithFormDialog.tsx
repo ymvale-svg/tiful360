@@ -22,11 +22,13 @@ interface Asset {
   id: string;
   asset_code: string;
   asset_name: string;
+  serial_number?: string | null;
   manufacturer_model?: string | null;
   condition?: string | null;
   company_id?: string | null;
   current_owner_id?: string | null;
-  asset_categories?: { category_name?: string | null; skip_handover_form?: boolean | null } | null;
+  category_id?: string | null;
+  asset_categories?: { category_name?: string | null; skip_handover_form?: boolean | null; protocol_type?: string | null } | null;
   employees?: { full_name?: string | null } | null;
 }
 
