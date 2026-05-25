@@ -106,6 +106,10 @@ export default function Settings() {
             <Mail className="w-4 h-4" />
             תבניות מייל
           </TabsTrigger>
+          <TabsTrigger value="protocols" className="gap-1.5">
+            <FileText className="w-4 h-4" />
+            פרוטוקולי מסירה
+          </TabsTrigger>
           <TabsTrigger value="alerts" className="gap-1.5">
             <Bell className="w-4 h-4" />
             חוקי התראות
