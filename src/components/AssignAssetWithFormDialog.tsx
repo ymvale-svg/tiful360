@@ -107,7 +107,7 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset }: Props) 
   }, [open, isVirtualAsset, asset?.id, preassignedOwnerId]);
 
   const reset = () => {
-    setEmployeeId(preassignedOwnerId); setMethod("portal"); setStep("choose");
+    setEmployeeId(preassignedOwnerId); setMethod("manager_present"); setStep("choose");
     setAttachment(null); setIssuerDataUrl(null); setReceiverDataUrl(null);
   };
 
