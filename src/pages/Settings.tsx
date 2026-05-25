@@ -146,6 +146,10 @@ export default function Settings() {
           <EmailTemplatesTab />
         </TabsContent>
 
+        <TabsContent value="protocols">
+          <ProtocolTemplatesTab />
+        </TabsContent>
+
         <TabsContent value="alerts">
           <AlertRulesSettings />
         </TabsContent>
