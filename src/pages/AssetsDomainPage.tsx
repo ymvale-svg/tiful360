@@ -313,24 +313,48 @@ export default function AssetsDomainPage() {
               </div>
             ) : <div />}
 
-            <div className="flex items-center gap-1 text-xs">
-              <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground" />
-              {([
-                { v: "count", l: "הכי הרבה" },
-                { v: "alpha", l: "א-ב" },
-                { v: "expiry", l: "תפוגה" },
-              ] as const).map((o) => (
+            <div className="flex items-center gap-3 text-xs">
+              <div className="flex items-center gap-1">
+                <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground" />
+                {([
+                  { v: "count", l: "הכי הרבה" },
+                  { v: "alpha", l: "א-ב" },
+                  { v: "expiry", l: "תפוגה" },
+                ] as const).map((o) => (
+                  <button
+                    key={o.v}
+                    onClick={() => setSortMode(o.v)}
+                    className={cn(
+                      "px-2.5 py-1 rounded-md transition-colors",
+                      sortMode === o.v ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/50",
+                    )}
+                  >
+                    {o.l}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-0.5 border border-border rounded-md p-0.5">
                 <button
-                  key={o.v}
-                  onClick={() => setSortMode(o.v)}
+                  onClick={() => changeView("grid")}
+                  title="תצוגת אייקונים"
                   className={cn(
-                    "px-2.5 py-1 rounded-md transition-colors",
-                    sortMode === o.v ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/50",
+                    "p-1 rounded transition-colors",
+                    viewMode === "grid" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50",
                   )}
                 >
-                  {o.l}
+                  <LayoutGrid className="w-3.5 h-3.5" />
                 </button>
-              ))}
+                <button
+                  onClick={() => changeView("list")}
+                  title="תצוגת רשימה"
+                  className={cn(
+                    "p-1 rounded transition-colors",
+                    viewMode === "list" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50",
+                  )}
+                >
+                  <List className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           </div>
         )}
