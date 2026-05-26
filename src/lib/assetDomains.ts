@@ -1,5 +1,6 @@
 // Shared domain classification for the assets feature.
-// Each asset_category maps to exactly one domain.
+// 6 fixed domains. Categories carry a hard `domain` column on the DB.
+// `classifyCategory` remains only as a fallback for legacy data.
 
 import {
   AppWindow,
@@ -16,7 +17,7 @@ export type DomainKey =
   | "licenses"
   | "training"
   | "insurance"
-  | "real-estate";
+  | "real_estate";
 
 export const DOMAIN_ORDER: DomainKey[] = [
   "physical",
@@ -24,68 +25,131 @@ export const DOMAIN_ORDER: DomainKey[] = [
   "licenses",
   "training",
   "insurance",
-  "real-estate",
+  "real_estate",
 ];
 
 export interface DomainMeta {
   key: DomainKey;
   title: string;
+  /** Short description of what lives in this domain. */
+  hint: string;
   icon: typeof AppWindow;
   /** Tailwind color tokens for icon bg / text / ring. */
-  color: { bg: string; text: string; ring: string };
+  color: { bg: string; text: string; ring: string; soft: string };
 }
 
 export const DOMAIN_META: Record<DomainKey, DomainMeta> = {
   physical: {
     key: "physical",
     title: "ציוד פיזי",
+    hint: "מחשבים, ציוד היקפי, רכב, ציוד עזר",
     icon: Monitor,
-    color: { bg: "bg-sky-500/10", text: "text-sky-600 dark:text-sky-400", ring: "hover:ring-sky-500/30" },
+    color: { bg: "bg-sky-500/10", text: "text-sky-600 dark:text-sky-400", ring: "hover:ring-sky-500/30", soft: "bg-sky-500/5" },
   },
   digital: {
     key: "digital",
     title: "גישות דיגיטליות",
+    hint: "חשבונות, מערכות, הרשאות, סיסמאות",
     icon: KeySquare,
-    color: { bg: "bg-purple-500/10", text: "text-purple-600 dark:text-purple-400", ring: "hover:ring-purple-500/30" },
+    color: { bg: "bg-purple-500/10", text: "text-purple-600 dark:text-purple-400", ring: "hover:ring-purple-500/30", soft: "bg-purple-500/5" },
   },
   licenses: {
     key: "licenses",
     title: "רישיונות ותוכנות",
+    hint: "מנויים, רישיונות תוכנה, ספקים",
     icon: AppWindow,
-    color: { bg: "bg-violet-500/10", text: "text-violet-600 dark:text-violet-400", ring: "hover:ring-violet-500/30" },
+    color: { bg: "bg-violet-500/10", text: "text-violet-600 dark:text-violet-400", ring: "hover:ring-violet-500/30", soft: "bg-violet-500/5" },
   },
   training: {
     key: "training",
     title: "הדרכות ותאימות",
+    hint: "הדרכות חובה, רענונים, תחזוקה תקופתית",
     icon: GraduationCap,
-    color: { bg: "bg-pink-500/10", text: "text-pink-600 dark:text-pink-400", ring: "hover:ring-pink-500/30" },
+    color: { bg: "bg-pink-500/10", text: "text-pink-600 dark:text-pink-400", ring: "hover:ring-pink-500/30", soft: "bg-pink-500/5" },
   },
   insurance: {
     key: "insurance",
     title: "ביטוחים ורגולציה",
+    hint: "פוליסות, אישורי בטיחות, רגולציה",
     icon: ShieldCheck,
-    color: { bg: "bg-emerald-500/10", text: "text-emerald-600 dark:text-emerald-400", ring: "hover:ring-emerald-500/30" },
+    color: { bg: "bg-emerald-500/10", text: "text-emerald-600 dark:text-emerald-400", ring: "hover:ring-emerald-500/30", soft: "bg-emerald-500/5" },
   },
-  "real-estate": {
-    key: "real-estate",
+  real_estate: {
+    key: "real_estate",
     title: 'נדל"ן וחוזים',
+    hint: "חוזי שכירות, ניהול נכסים",
     icon: Building,
-    color: { bg: "bg-amber-500/10", text: "text-amber-600 dark:text-amber-400", ring: "hover:ring-amber-500/30" },
+    color: { bg: "bg-amber-500/10", text: "text-amber-600 dark:text-amber-400", ring: "hover:ring-amber-500/30", soft: "bg-amber-500/5" },
   },
 };
 
-/** Classify a single category to its domain. Priority order — first match wins. */
+/** Defaults applied when creating a new sub-category under a given domain. */
+export const DOMAIN_DEFAULTS: Record<DomainKey, {
+  is_assignable: boolean;
+  protocol_type: "physical" | "vehicle" | "digital" | "license" | "insurance" | "training" | "real_estate";
+  suggested_prefix: string;
+}> = {
+  physical:    { is_assignable: true,  protocol_type: "physical",    suggested_prefix: "GEN" },
+  digital:     { is_assignable: false, protocol_type: "digital",     suggested_prefix: "DACC" },
+  licenses:    { is_assignable: false, protocol_type: "license",     suggested_prefix: "SFT" },
+  training:    { is_assignable: true,  protocol_type: "training",    suggested_prefix: "TRN" },
+  insurance:   { is_assignable: false, protocol_type: "insurance",   suggested_prefix: "INS" },
+  real_estate: { is_assignable: false, protocol_type: "real_estate", suggested_prefix: "LEASE" },
+};
+
+// --------- URL <-> internal key ---------
+// Internal/DB slug uses underscore. URLs historically used `real-estate`.
+
+const SLUG_TO_KEY: Record<string, DomainKey> = {
+  physical: "physical",
+  digital: "digital",
+  licenses: "licenses",
+  training: "training",
+  insurance: "insurance",
+  "real-estate": "real_estate",
+  real_estate: "real_estate",
+};
+
+const KEY_TO_SLUG: Record<DomainKey, string> = {
+  physical: "physical",
+  digital: "digital",
+  licenses: "licenses",
+  training: "training",
+  insurance: "insurance",
+  real_estate: "real-estate",
+};
+
+export function domainSlugToKey(slug: string | undefined): DomainKey | null {
+  if (!slug) return null;
+  return SLUG_TO_KEY[slug] ?? null;
+}
+export function domainKeyToSlug(key: DomainKey): string {
+  return KEY_TO_SLUG[key];
+}
+export function isDomainKey(value: string | undefined): value is DomainKey {
+  return !!value && (DOMAIN_ORDER as string[]).includes(value);
+}
+
+/** Legacy fallback — classifies a category by its prefix/protocol_type. */
 export function classifyCategory(c: { prefix?: string; protocol_type?: string }): DomainKey {
   if (c.prefix === "VRT" || c.protocol_type === "digital" || c.prefix === "DACC") return "digital";
   if (c.prefix === "SFT" || c.prefix === "MAN") return "licenses";
-  if (c.protocol_type === "real_estate" || c.prefix === "LEASE") return "real-estate";
+  if (c.protocol_type === "real_estate" || c.prefix === "LEASE") return "real_estate";
   if (c.protocol_type === "insurance" || c.prefix === "CERT" || c.prefix === "CINS") return "insurance";
   if (c.protocol_type === "training" || c.prefix === "MAINT") return "training";
   return "physical";
 }
 
+/** Primary lookup: prefers the DB `domain` column, falls back to legacy classifier. */
+export function getDomain(c: { domain?: string | null; prefix?: string; protocol_type?: string } | null | undefined): DomainKey {
+  if (!c) return "physical";
+  const d = (c as any).domain as string | null | undefined;
+  if (d && isDomainKey(d)) return d;
+  return classifyCategory(c);
+}
+
 /** Group categories into domains in a single pass. */
-export function groupCategoriesByDomain<T extends { id: string; prefix?: string; protocol_type?: string }>(
+export function groupCategoriesByDomain<T extends { id: string; domain?: string | null; prefix?: string; protocol_type?: string }>(
   categories: T[],
 ): Record<DomainKey, T[]> {
   const out: Record<DomainKey, T[]> = {
@@ -94,18 +158,14 @@ export function groupCategoriesByDomain<T extends { id: string; prefix?: string;
     licenses: [],
     training: [],
     insurance: [],
-    "real-estate": [],
+    real_estate: [],
   };
-  for (const c of categories) out[classifyCategory(c)].push(c);
+  for (const c of categories) out[getDomain(c)].push(c);
   return out;
 }
 
-export function isDomainKey(value: string | undefined): value is DomainKey {
-  return !!value && (DOMAIN_ORDER as string[]).includes(value);
-}
-
 /** Domains where each row is unique — no parent grouping. */
-const FLAT_DOMAINS: DomainKey[] = ["real-estate"];
+const FLAT_DOMAINS: DomainKey[] = ["real_estate"];
 
 /** Returns the group-by key for an asset within its sub-category, per domain.
  *  Returns null when the domain should be displayed flat (no parent grouping). */
@@ -169,7 +229,7 @@ export function getPanelOwnedCustomFieldKeys(
         "ספק", "מדריך", "ספק / מדריך", "תאריך השלמה", "קישור לתעודה", "ציון", "ציון/תוצאה",
       );
       break;
-    case "real-estate":
+    case "real_estate":
       add(
         "tenure", "address", "area_sqm", "floor", "landlord", "landlord_phone",
         "monthly_rent", "lease_start", "lease_end", "externally_managed", "management_company",
@@ -188,4 +248,3 @@ export function getPanelOwnedCustomFieldKeys(
   }
   return keys;
 }
-

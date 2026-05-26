@@ -4,18 +4,18 @@ import { useAssets, useAssetCategories, useITTickets } from "@/hooks/useData";
 import { useExpiringAssets } from "@/hooks/useExpiringAssets";
 import { cn } from "@/lib/utils";
 import {
+  DOMAIN_META,
+  DOMAIN_ORDER,
+  domainKeyToSlug,
+  getDomain,
+  type DomainKey,
+} from "@/lib/assetDomains";
+import {
   AlertTriangle,
-  AppWindow,
-  KeySquare,
-  Monitor,
-  Building,
-  GraduationCap,
-  ShieldCheck,
   Users,
   Clock,
   ArrowLeftRight,
 } from "lucide-react";
-
 
 interface Props {
   /** Deprecated — domain cards now navigate via /assets/:domain. Kept optional for back-compat. */
@@ -23,109 +23,39 @@ interface Props {
   onQuickAssign?: () => void;
 }
 
-type DomainKey =
-  | "licenses"
-  | "digital"
-  | "physical"
-  | "real_estate"
-  | "trainings"
-  | "insurance";
-
-interface DomainDef {
-  key: DomainKey;
-  title: string;
-  subtitle: (cats: any[], assets: any[]) => string;
-  icon: typeof AppWindow;
-  color: { bg: string; text: string; ring: string; soft: string };
-}
-
-// Priority order — first match wins, no category appears in two domains.
-function classifyCategory(c: any): DomainKey {
-  if (c.prefix === "VRT" || c.protocol_type === "digital" || c.prefix === "DACC") return "digital";
-  if (c.prefix === "SFT" || c.prefix === "MAN") return "licenses";
-  if (c.protocol_type === "real_estate" || c.prefix === "LEASE") return "real_estate";
-  if (c.protocol_type === "insurance" || c.prefix === "CERT" || c.prefix === "CINS") return "insurance";
-  if (c.protocol_type === "training" || c.prefix === "MAINT") return "trainings";
-  return "physical";
-}
-
-const DOMAINS: Record<DomainKey, DomainDef> = {
-  licenses: {
-    key: "licenses",
-    title: "רישיונות ותוכנות",
-    subtitle: (cats, assets) => {
+function domainSubtitle(key: DomainKey, cats: any[], assets: any[]): string {
+  switch (key) {
+    case "licenses": {
       const sw = assets.filter((a) => cats.find((c) => c.id === a.category_id)?.prefix === "SFT").length;
       const sub = assets.filter((a) => cats.find((c) => c.id === a.category_id)?.prefix === "MAN").length;
       return `${assets.length} פריטים · ${sw} תוכנות · ${sub} מנויים`;
-    },
-    icon: AppWindow,
-    color: { bg: "bg-violet-500/10", text: "text-violet-600 dark:text-violet-400", ring: "hover:ring-violet-500/30", soft: "bg-violet-500/5" },
-  },
-  digital: {
-    key: "digital",
-    title: "גישות דיגיטליות",
-    subtitle: (_cats, assets) => `${assets.length} גישות פעילות`,
-    icon: KeySquare,
-    color: { bg: "bg-purple-500/10", text: "text-purple-600 dark:text-purple-400", ring: "hover:ring-purple-500/30", soft: "bg-purple-500/5" },
-  },
-  physical: {
-    key: "physical",
-    title: "ציוד פיזי",
-    subtitle: (_cats, assets) => {
+    }
+    case "digital":
+      return `${assets.length} גישות פעילות`;
+    case "physical": {
       const inUse = assets.filter((a) => a.status === "in_use").length;
       const inStock = assets.filter((a) => a.status === "in_stock").length;
       return `${assets.length} פריטים · ${inUse} בשימוש · ${inStock} במלאי`;
-    },
-    icon: Monitor,
-    color: { bg: "bg-sky-500/10", text: "text-sky-600 dark:text-sky-400", ring: "hover:ring-sky-500/30", soft: "bg-sky-500/5" },
-  },
-  real_estate: {
-    key: "real_estate",
-    title: 'נדל"ן וחוזים',
-    subtitle: (_cats, assets) => {
+    }
+    case "real_estate": {
       const tenant = assets.filter((a) => (a.custom_fields as any)?.["כיוון חוזה"] === "החברה שוכרת").length;
       const landlord = assets.filter((a) => (a.custom_fields as any)?.["כיוון חוזה"] === "החברה משכירה").length;
       return `${assets.length} נכסים · ${tenant} שוכרים · ${landlord} משכירים`;
-    },
-    icon: Building,
-    color: { bg: "bg-amber-500/10", text: "text-amber-600 dark:text-amber-400", ring: "hover:ring-amber-500/30", soft: "bg-amber-500/5" },
-  },
-  trainings: {
-    key: "trainings",
-    title: "הדרכות ותחזוקה",
-    subtitle: (_cats, assets) => `${assets.length} פריטי הדרכה/תחזוקה`,
-    icon: GraduationCap,
-    color: { bg: "bg-pink-500/10", text: "text-pink-600 dark:text-pink-400", ring: "hover:ring-pink-500/30", soft: "bg-pink-500/5" },
-  },
-  insurance: {
-    key: "insurance",
-    title: "ביטוחים ורגולציה",
-    subtitle: (cats, assets) => {
+    }
+    case "training":
+      return `${assets.length} פריטי הדרכה/תאימות`;
+    case "insurance": {
       const insCount = assets.filter((a) => {
         const c = cats.find((cc) => cc.id === a.category_id);
         return c?.prefix === "CINS" || c?.protocol_type === "insurance";
       }).length;
       const certCount = assets.filter((a) => cats.find((c) => c.id === a.category_id)?.prefix === "CERT").length;
       return `${insCount} ביטוחים · ${certCount} אישורים`;
-    },
-    icon: ShieldCheck,
-    color: { bg: "bg-emerald-500/10", text: "text-emerald-600 dark:text-emerald-400", ring: "hover:ring-emerald-500/30", soft: "bg-emerald-500/5" },
-  },
-};
+    }
+  }
+}
 
-const DOMAIN_ORDER: DomainKey[] = ["physical", "digital", "licenses", "trainings", "insurance", "real_estate"];
-
-// Map this file's local DomainKey to the shared route slugs used in /assets/:domain
-const DOMAIN_ROUTE: Record<DomainKey, string> = {
-  physical: "physical",
-  digital: "digital",
-  licenses: "licenses",
-  trainings: "training",
-  insurance: "insurance",
-  real_estate: "real-estate",
-};
-
-export function DomainsGrid({ onSelectCategory, onQuickAssign }: Props) {
+export function DomainsGrid({ onQuickAssign }: Props) {
   const navigate = useNavigate();
   const { data: categories, isLoading } = useAssetCategories();
   const { data: assets } = useAssets();
@@ -135,24 +65,22 @@ export function DomainsGrid({ onSelectCategory, onQuickAssign }: Props) {
   const grouped = useMemo(() => {
     const cats = categories ?? [];
     const all = assets ?? [];
-    // Single-pass classification: each category goes to exactly one domain.
     const catsByDomain = new Map<DomainKey, any[]>();
     for (const k of DOMAIN_ORDER) catsByDomain.set(k, []);
-    for (const c of cats) catsByDomain.get(classifyCategory(c))!.push(c);
+    for (const c of cats) catsByDomain.get(getDomain(c))!.push(c);
 
     return DOMAIN_ORDER.map((key) => {
-      const def = DOMAINS[key];
+      const meta = DOMAIN_META[key];
       const domainCats = catsByDomain.get(key) ?? [];
       const catIds = new Set(domainCats.map((c) => c.id));
       const domainAssets = all.filter((a: any) => catIds.has(a.category_id));
-      // Sort sub-categories by asset count desc (most useful first).
       const sortedCats = [...domainCats]
         .map((c) => ({ ...c, _count: domainAssets.filter((a: any) => a.category_id === c.id).length }))
         .sort((a, b) => b._count - a._count);
       const domainExpiring = (expiring ?? []).filter((e) => catIds.has(e.category_id));
       const expired = domainExpiring.filter((e) => e.days_left <= 0).length;
       const soon = domainExpiring.filter((e) => e.days_left > 0 && e.days_left <= 14).length;
-      return { def, cats: sortedCats, assets: domainAssets, expired, soon };
+      return { meta, cats: sortedCats, assets: domainAssets, expired, soon };
     });
   }, [categories, assets, expiring]);
 
@@ -192,19 +120,20 @@ export function DomainsGrid({ onSelectCategory, onQuickAssign }: Props) {
       <div>
         <h2 className="text-xs font-semibold text-muted-foreground mb-3 text-right">6 דומיינים</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {grouped.map(({ def, cats, assets, expired, soon }) => {
-            const Icon = def.icon;
+          {grouped.map(({ meta, cats, assets, expired, soon }) => {
+            const Icon = meta.icon;
             const badge = expired > 0
               ? { text: `${expired} פגי תוקף`, cls: "bg-destructive/10 text-destructive" }
               : soon > 0
               ? { text: `חידוש תוך 14 יום`, cls: "bg-warning/10 text-warning" }
               : null;
 
-            const openDomain = () => navigate(`/assets/${DOMAIN_ROUTE[def.key]}`);
+            const slug = domainKeyToSlug(meta.key);
+            const openDomain = () => navigate(`/assets/${slug}`);
             const isEmpty = cats.length === 0;
             return (
               <div
-                key={def.key}
+                key={meta.key}
                 role="button"
                 tabIndex={0}
                 onClick={openDomain}
@@ -217,7 +146,7 @@ export function DomainsGrid({ onSelectCategory, onQuickAssign }: Props) {
                 className={cn(
                   "group relative bg-card border border-border rounded-2xl p-5 transition-all text-right cursor-pointer hover:shadow-lg hover:-translate-y-0.5 hover:ring-2 focus:outline-none focus:ring-2",
                   isEmpty && "opacity-70",
-                  def.color.ring
+                  meta.color.ring
                 )}
               >
                 {badge && (
@@ -232,14 +161,14 @@ export function DomainsGrid({ onSelectCategory, onQuickAssign }: Props) {
 
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1 text-right pr-2">
-                    <h3 className="text-base font-semibold leading-tight">{def.title}</h3>
+                    <h3 className="text-base font-semibold leading-tight">{meta.title}</h3>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {isEmpty ? "אין פריטים בדומיין זה" : def.subtitle(cats, assets)}
+                      {isEmpty ? "אין פריטים בדומיין זה" : domainSubtitle(meta.key, cats, assets)}
                     </p>
                   </div>
                   <div className={cn(
                     "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105",
-                    def.color.bg, def.color.text
+                    meta.color.bg, meta.color.text
                   )}>
                     <Icon className="w-6 h-6" strokeWidth={1.75} />
                   </div>
@@ -253,7 +182,7 @@ export function DomainsGrid({ onSelectCategory, onQuickAssign }: Props) {
                       onClick={(e) => e.stopPropagation()}
                       className="text-[11px] px-2 py-1 rounded-md border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
                     >
-                      + הוסף קטגוריה ראשונה
+                      + הוסף תת-קטגוריה ראשונה
                     </a>
                   ) : (
                     <>
@@ -262,11 +191,11 @@ export function DomainsGrid({ onSelectCategory, onQuickAssign }: Props) {
                           key={c.id}
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/assets/${DOMAIN_ROUTE[def.key]}?sub=${c.id}`);
+                            navigate(`/assets/${slug}?sub=${c.id}`);
                           }}
                           className={cn(
                             "inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border border-border bg-background hover:bg-muted transition-colors",
-                            def.color.text
+                            meta.color.text
                           )}
                         >
                           <span>{c.category_name}</span>

@@ -15,7 +15,7 @@ import { LicenseDetailsPanel } from "@/components/assets/LicenseDetailsPanel";
 import { TrainingDetailsPanel } from "@/components/assets/TrainingDetailsPanel";
 import { InsuranceDetailsPanel } from "@/components/assets/InsuranceDetailsPanel";
 import { RealEstateDetailsPanel } from "@/components/assets/RealEstateDetailsPanel";
-import { classifyCategory, getPanelOwnedCustomFieldKeys } from "@/lib/assetDomains";
+import { getDomain, getPanelOwnedCustomFieldKeys } from "@/lib/assetDomains";
 import { useDeleteAsset } from "@/hooks/useMutations";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -213,7 +213,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
           <div className="bg-card border border-border rounded-xl p-5 space-y-3">
             <h2 className="text-sm font-semibold text-muted-foreground">פרטי הנכס</h2>
             {(() => {
-              const domain = category ? classifyCategory(category) : null;
+              const domain = category ? getDomain(category) : null;
               const panelKeys = getPanelOwnedCustomFieldKeys(domain, category);
               const hideCondition = domain === "insurance";
               const customEntries = asset.custom_fields
@@ -278,13 +278,13 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
 
           {/* Domain-specific panels */}
           {(() => {
-            const domain = category ? classifyCategory(category) : null;
+            const domain = category ? getDomain(category) : null;
             if (category?.protocol_type === "vehicle") return <VehicleDetailsPanel asset={asset} />;
             if (domain === "digital") return <DigitalAccessPanel asset={asset} />;
             if (domain === "licenses") return <LicenseDetailsPanel asset={asset} />;
             if (domain === "training") return <TrainingDetailsPanel asset={asset} />;
             if (domain === "insurance") return <InsuranceDetailsPanel asset={asset} />;
-            if (domain === "real-estate") return <RealEstateDetailsPanel asset={asset} />;
+            if (domain === "real_estate") return <RealEstateDetailsPanel asset={asset} />;
             return null;
           })()}
 

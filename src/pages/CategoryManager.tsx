@@ -1,13 +1,13 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  Plus, GripVertical, Trash2, Save, ChevronLeft, Pencil,
-  Type, Hash, Calendar, List, ListChecks, Package, Settings2, Check, X,
+  Plus, GripVertical, Trash2, Save, Pencil,
+  Type, Hash, Calendar, List, ListChecks, Settings2, Check, X, ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAssetCategories } from "@/hooks/useData";
-import { useCategoryFields, useCreateCategory, useUpdateCategory, useSaveCategoryFields, useDeleteCategory, useReorderCategories } from "@/hooks/useCategories";
+import { useCategoryFields, useCreateCategory, useUpdateCategory, useSaveCategoryFields, useDeleteCategory } from "@/hooks/useCategories";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -16,6 +16,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { DOMAIN_ORDER, DOMAIN_META, DOMAIN_DEFAULTS, getDomain, type DomainKey } from "@/lib/assetDomains";
 
 type FieldType = "text" | "number" | "date" | "list" | "list_multi";
 
@@ -53,49 +54,30 @@ export default function CategoryManager() {
     if (!allCategories) return allCategories;
     return legalOnly ? allCategories.filter((c: any) => c.is_assignable === false) : allCategories;
   }, [allCategories, legalOnly]);
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newCatOpen, setNewCatOpen] = useState(false);
+  const [newCatDomain, setNewCatDomain] = useState<DomainKey | null>(null);
+  const [openDomains, setOpenDomains] = useState<Set<DomainKey>>(new Set(DOMAIN_ORDER));
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; assetCount: number } | null>(null);
   const { toast } = useToast();
   const deleteMutation = useDeleteCategory();
-  const reorderMutation = useReorderCategories();
 
-  // Local ordered list (for optimistic drag)
-  const [localOrder, setLocalOrder] = useState<string[] | null>(null);
-  const dragId = useRef<string | null>(null);
-  const dragOverId = useRef<string | null>(null);
-
-  useEffect(() => {
-    setLocalOrder(null);
+  // Group categories by domain
+  const byDomain = useMemo(() => {
+    const out: Record<DomainKey, any[]> = {
+      physical: [], digital: [], licenses: [], training: [], insurance: [], real_estate: [],
+    };
+    for (const c of categories ?? []) out[getDomain(c)].push(c);
+    return out;
   }, [categories]);
 
-  const orderedCategories = (() => {
-    if (!categories) return [];
-    if (!localOrder) return categories;
-    const map = new Map(categories.map(c => [c.id, c]));
-    return localOrder.map(id => map.get(id)).filter(Boolean) as typeof categories;
-  })();
-
-  const handleDragStart = (id: string) => { dragId.current = id; };
-  const handleDragEnter = (id: string) => { dragOverId.current = id; };
-  const handleDragEnd = async () => {
-    if (!dragId.current || !dragOverId.current || dragId.current === dragOverId.current) {
-      dragId.current = null; dragOverId.current = null; return;
-    }
-    const ids = orderedCategories.map(c => c.id);
-    const fromIdx = ids.indexOf(dragId.current);
-    const toIdx = ids.indexOf(dragOverId.current);
-    const [moved] = ids.splice(fromIdx, 1);
-    ids.splice(toIdx, 0, moved);
-    setLocalOrder(ids);
-    dragId.current = null; dragOverId.current = null;
-    try {
-      await reorderMutation.mutateAsync(ids);
-      toast({ title: "סדר הקטגוריות נשמר" });
-    } catch (err: any) {
-      toast({ title: "שגיאה בשמירת סדר", description: err.message, variant: "destructive" });
-      setLocalOrder(null);
-    }
+  const toggleDomain = (k: DomainKey) => {
+    setOpenDomains((prev) => {
+      const next = new Set(prev);
+      if (next.has(k)) next.delete(k); else next.add(k);
+      return next;
+    });
   };
 
   const handleDeleteClick = (e: React.MouseEvent, cat: any) => {
@@ -111,7 +93,7 @@ export default function CategoryManager() {
     if (!deleteTarget) return;
     try {
       await deleteMutation.mutateAsync(deleteTarget.id);
-      toast({ title: "הקטגוריה נמחקה" });
+      toast({ title: "תת-הקטגוריה נמחקה" });
       if (selectedId === deleteTarget.id) setSelectedId(null);
       setDeleteTarget(null);
     } catch (err: any) {
@@ -119,16 +101,23 @@ export default function CategoryManager() {
     }
   };
 
+  const openNewInDomain = (k: DomainKey | null) => {
+    setNewCatDomain(k);
+    setNewCatOpen(true);
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-start justify-between">
         <div className="page-header">
-          <h1 className="page-title">מחולל קטגוריות ציוד</h1>
-          <p className="page-subtitle">הגדר סוגי ציוד חדשים עם שדות מותאמים אישית • גרור לסידור מחדש</p>
+          <h1 className="page-title">ניהול דומיינים ותת-קטגוריות</h1>
+          <p className="page-subtitle">
+            6 דומיינים קשיחים · תת-קטגוריות נוצרות מתוך הדומיין שלהן עם שדות מותאמים
+          </p>
         </div>
-        <Button className="gap-2" onClick={() => setNewCatOpen(true)}>
+        <Button variant="outline" className="gap-2" onClick={() => openNewInDomain(null)}>
           <Plus className="w-4 h-4" />
-          קטגוריה חדשה
+          תת-קטגוריה חדשה
         </Button>
       </div>
 
@@ -136,96 +125,127 @@ export default function CategoryManager() {
         <div className="text-center py-12 text-muted-foreground">טוען...</div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Category list */}
-          <div className="space-y-2 lg:order-last">
-            {orderedCategories.map((cat) => {
-              const assetCount = (cat as any).assets?.[0]?.count ?? 0;
+          {/* Domains accordion */}
+          <div className="space-y-3 lg:order-last">
+            {DOMAIN_ORDER.map((key) => {
+              const meta = DOMAIN_META[key];
+              const Icon = meta.icon;
+              const cats = byDomain[key] ?? [];
+              const isOpen = openDomains.has(key);
+              const totalAssets = cats.reduce((s, c: any) => s + (c.assets?.[0]?.count ?? 0), 0);
               return (
-                <div
-                  key={cat.id}
-                  draggable
-                  onDragStart={() => handleDragStart(cat.id)}
-                  onDragEnter={() => handleDragEnter(cat.id)}
-                  onDragEnd={handleDragEnd}
-                  onDragOver={(e) => e.preventDefault()}
-                  onClick={() => setSelectedId(cat.id)}
-                  className={cn(
-                    "w-full text-right bg-card rounded-xl border p-4 transition-all hover:shadow-md cursor-pointer group",
-                    selectedId === cat.id ? "ring-2 ring-primary border-primary" : "border-border/50"
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="text-muted-foreground/40 group-hover:text-muted-foreground cursor-grab active:cursor-grabbing shrink-0">
-                      <GripVertical className="w-4 h-4" />
+                <div key={key} className="bg-card rounded-xl border border-border/60 overflow-hidden">
+                  <button
+                    onClick={() => toggleDomain(key)}
+                    className="w-full text-right p-3 flex items-center gap-3 hover:bg-muted/40 transition-colors"
+                  >
+                    <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", !isOpen && "-rotate-90")} />
+                    <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center shrink-0", meta.color.bg, meta.color.text)}>
+                      <Icon className="w-5 h-5" strokeWidth={1.75} />
                     </div>
-                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                      <Package className="w-5 h-5 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm">{cat.category_name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        קידומת: <span className="font-mono">{cat.prefix}</span>
-                        {" • "}
-                        {assetCount} פריטים
+                    <div className="flex-1 min-w-0 text-right">
+                      <p className="font-medium text-sm">{meta.title}</p>
+                      <p className="text-[11px] text-muted-foreground truncate">
+                        {cats.length} תת-קטגוריות · {totalAssets} פריטים
                       </p>
                     </div>
-                    <button
-                      onClick={(e) => handleDeleteClick(e, cat)}
-                      title="מחק קטגוריה"
-                      className="text-muted-foreground/40 hover:text-destructive transition-colors shrink-0 opacity-0 group-hover:opacity-100"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                  </button>
+                  {isOpen && (
+                    <div className="border-t border-border/50 p-2 space-y-1">
+                      {cats.length === 0 && (
+                        <p className="text-[11px] text-muted-foreground px-2 py-3 text-center">
+                          אין עדיין תת-קטגוריות בדומיין זה
+                        </p>
+                      )}
+                      {cats.map((cat: any) => {
+                        const assetCount = cat.assets?.[0]?.count ?? 0;
+                        const active = selectedId === cat.id;
+                        return (
+                          <div
+                            key={cat.id}
+                            onClick={() => setSelectedId(cat.id)}
+                            className={cn(
+                              "w-full text-right rounded-lg px-3 py-2 transition-all cursor-pointer group flex items-center gap-2",
+                              active ? "ring-2 ring-primary bg-primary/5" : "hover:bg-muted/50"
+                            )}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm">{cat.category_name}</p>
+                              <p className="text-[11px] text-muted-foreground">
+                                <span className="font-mono">{cat.prefix}</span> · {assetCount} פריטים
+                              </p>
+                            </div>
+                            <button
+                              onClick={(e) => handleDeleteClick(e, cat)}
+                              title="מחק תת-קטגוריה"
+                              className="text-muted-foreground/40 hover:text-destructive transition-colors shrink-0 opacity-0 group-hover:opacity-100"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                      <button
+                        onClick={() => openNewInDomain(key)}
+                        className={cn(
+                          "w-full text-right rounded-lg px-3 py-2 text-xs text-muted-foreground hover:text-primary hover:bg-primary/5 border border-dashed border-border/60 hover:border-primary/40 transition-colors flex items-center gap-2 justify-center"
+                        )}
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        תת-קטגוריה חדשה ב{meta.title}
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })}
-            {(!categories || categories.length === 0) && (
-              <div className="text-center py-8 text-muted-foreground text-sm">
-                אין קטגוריות. צור קטגוריה חדשה להתחלה.
-              </div>
-            )}
           </div>
 
           {/* Fields editor */}
           <div className="lg:col-span-2 lg:order-first">
             {selectedId ? (
               <div className="space-y-4">
-                <CategoryEditor category={categories?.find(c => c.id === selectedId)!} />
+                <CategoryEditor category={categories?.find((c) => c.id === selectedId)!} />
                 <FieldsEditor
                   categoryId={selectedId}
-                  categoryName={categories?.find(c => c.id === selectedId)?.category_name ?? ""}
+                  categoryName={categories?.find((c) => c.id === selectedId)?.category_name ?? ""}
                 />
               </div>
             ) : (
               <div className="bg-card rounded-xl border border-border/50 shadow-card p-12 text-center text-muted-foreground">
                 <Settings2 className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                <p className="font-medium">בחר קטגוריה לעריכת שדות</p>
-                <p className="text-sm mt-1">או צור קטגוריה חדשה</p>
+                <p className="font-medium">בחר תת-קטגוריה לעריכת שדות</p>
+                <p className="text-sm mt-1">או צור תת-קטגוריה חדשה מתוך אחד הדומיינים</p>
               </div>
             )}
           </div>
         </div>
       )}
 
-      <NewCategoryDialog open={newCatOpen} onOpenChange={setNewCatOpen} forceInstitutional={legalOnly} onCreated={(id) => {
-        setSelectedId(id);
-        setNewCatOpen(false);
-      }} />
+      <NewCategoryDialog
+        open={newCatOpen}
+        onOpenChange={setNewCatOpen}
+        lockedDomain={newCatDomain}
+        forceInstitutional={legalOnly}
+        onCreated={(id) => {
+          setSelectedId(id);
+          setNewCatOpen(false);
+        }}
+      />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
-            <AlertDialogTitle>מחיקת קטגוריה</AlertDialogTitle>
+            <AlertDialogTitle>מחיקת תת-קטגוריה</AlertDialogTitle>
             <AlertDialogDescription>
               {deleteTarget && deleteTarget.assetCount > 0 ? (
                 <>
-                  הקטגוריה <strong>{deleteTarget.name}</strong> מכילה {deleteTarget.assetCount} פריטים.
+                  תת-הקטגוריה <strong>{deleteTarget.name}</strong> מכילה {deleteTarget.assetCount} פריטים.
                   <br />
                   יש להעביר או למחוק את הפריטים תחילה.
                 </>
               ) : (
-                <>האם למחוק את הקטגוריה <strong>{deleteTarget?.name}</strong>? פעולה זו תמחק גם את השדות המותאמים שלה ואינה הפיכה.</>
+                <>האם למחוק את תת-הקטגוריה <strong>{deleteTarget?.name}</strong>? פעולה זו תמחק גם את השדות המותאמים שלה ואינה הפיכה.</>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -756,12 +776,15 @@ function NewCategoryDialog({
   onOpenChange,
   onCreated,
   forceInstitutional = false,
+  lockedDomain = null,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated: (id: string) => void;
   forceInstitutional?: boolean;
+  lockedDomain?: DomainKey | null;
 }) {
+  const [domain, setDomain] = useState<DomainKey>(lockedDomain ?? "physical");
   const [name, setName] = useState("");
   const [prefix, setPrefix] = useState("");
   const [description, setDescription] = useState("");
@@ -770,9 +793,22 @@ function NewCategoryDialog({
   const createMutation = useCreateCategory();
   const { toast } = useToast();
 
+  useEffect(() => {
+    if (open) {
+      setDomain(lockedDomain ?? "physical");
+      setPrefix("");
+      setName("");
+      setDescription("");
+      setSkipHandover(false);
+      setSkipReturn(false);
+    }
+  }, [open, lockedDomain]);
+
+  const defaults = DOMAIN_DEFAULTS[domain];
+
   const handleCreate = async () => {
     if (!name.trim() || !prefix.trim()) {
-      toast({ title: "שגיאה", description: "שם קטגוריה וקידומת הם שדות חובה", variant: "destructive" });
+      toast({ title: "שגיאה", description: "שם תת-קטגוריה וקידומת הם שדות חובה", variant: "destructive" });
       return;
     }
     try {
@@ -780,32 +816,63 @@ function NewCategoryDialog({
         category_name: name,
         prefix: prefix.toUpperCase(),
         description: description || undefined,
+        domain,
+        protocol_type: defaults.protocol_type,
+        is_assignable: forceInstitutional ? false : defaults.is_assignable,
         skip_handover_form: skipHandover,
         skip_return_form: skipReturn,
-        ...(forceInstitutional ? { is_assignable: false } : {}),
       });
-      toast({ title: "קטגוריה נוצרה בהצלחה" });
+      toast({ title: "תת-הקטגוריה נוצרה בהצלחה" });
       onCreated(cat.id);
-      setName("");
-      setPrefix("");
-      setDescription("");
-      setSkipHandover(false);
-      setSkipReturn(false);
     } catch (err: any) {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
     }
   };
 
+  const lockedMeta = lockedDomain ? DOMAIN_META[lockedDomain] : null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md" dir="rtl">
         <DialogHeader>
-          <DialogTitle>קטגוריה חדשה</DialogTitle>
-          <DialogDescription>הגדר סוג ציוד חדש עם קידומת ייחודית לברקוד</DialogDescription>
+          <DialogTitle>תת-קטגוריה חדשה</DialogTitle>
+          <DialogDescription>
+            {lockedMeta
+              ? `נוסיף תת-קטגוריה תחת הדומיין "${lockedMeta.title}"`
+              : "בחר דומיין והגדר תת-קטגוריה חדשה עם קידומת ייחודית לברקוד"}
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 mt-4">
+          {!lockedDomain && (
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">דומיין</label>
+              <select
+                value={domain}
+                onChange={(e) => {
+                  const d = e.target.value as DomainKey;
+                  setDomain(d);
+                  if (!prefix) setPrefix(DOMAIN_DEFAULTS[d].suggested_prefix);
+                }}
+                className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                {DOMAIN_ORDER.map((k) => (
+                  <option key={k} value={k}>{DOMAIN_META[k].title}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          {lockedMeta && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 border border-border/60">
+              <div className={cn("w-7 h-7 rounded-md flex items-center justify-center", lockedMeta.color.bg, lockedMeta.color.text)}>
+                <lockedMeta.icon className="w-4 h-4" />
+              </div>
+              <span className="text-sm font-medium">{lockedMeta.title}</span>
+              <span className="text-[11px] text-muted-foreground mr-auto">{lockedMeta.hint}</span>
+            </div>
+          )}
+
           <div>
-            <label className="text-sm font-medium mb-1.5 block">שם הקטגוריה</label>
+            <label className="text-sm font-medium mb-1.5 block">שם תת-הקטגוריה</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -817,11 +884,11 @@ function NewCategoryDialog({
             <label className="text-sm font-medium mb-1.5 block">קידומת (3 אותיות באנגלית)</label>
             <input
               value={prefix}
-              onChange={(e) => setPrefix(e.target.value.replace(/[^a-zA-Z]/g, "").slice(0, 3))}
-              placeholder="TAB"
+              onChange={(e) => setPrefix(e.target.value.replace(/[^a-zA-Z]/g, "").slice(0, 4))}
+              placeholder={defaults.suggested_prefix}
               className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 font-mono uppercase"
               dir="ltr"
-              maxLength={3}
+              maxLength={4}
             />
           </div>
           <div>
@@ -829,38 +896,40 @@ function NewCategoryDialog({
             <input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="תיאור קצר של סוג הציוד"
+              placeholder="תיאור קצר של תת-הקטגוריה"
               className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
             />
           </div>
 
-          <div className="space-y-2 pt-2 border-t border-border/50">
-            <p className="text-xs font-medium text-muted-foreground">הגדרות טופסי מסירה/החזרה</p>
-            <label className="flex items-start gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={skipHandover}
-                onChange={(e) => setSkipHandover(e.target.checked)}
-                className="mt-0.5 w-4 h-4 rounded border-border accent-primary"
-              />
-              <div className="text-sm">
-                <div>דלג על אישור משיכה</div>
-                <div className="text-[11px] text-muted-foreground">פריטים בקטגוריה זו ישויכו לעובד ישירות, ללא טופס מסירה וחתימה.</div>
-              </div>
-            </label>
-            <label className="flex items-start gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={skipReturn}
-                onChange={(e) => setSkipReturn(e.target.checked)}
-                className="mt-0.5 w-4 h-4 rounded border-border accent-primary"
-              />
-              <div className="text-sm">
-                <div>דלג על אישור זיכוי</div>
-                <div className="text-[11px] text-muted-foreground">החזרת פריטים בקטגוריה זו למלאי תתבצע ללא טופס החזרה וחתימה.</div>
-              </div>
-            </label>
-          </div>
+          {(forceInstitutional ? false : defaults.is_assignable) && (
+            <div className="space-y-2 pt-2 border-t border-border/50">
+              <p className="text-xs font-medium text-muted-foreground">הגדרות טופסי מסירה/החזרה</p>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={skipHandover}
+                  onChange={(e) => setSkipHandover(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded border-border accent-primary"
+                />
+                <div className="text-sm">
+                  <div>דלג על אישור משיכה</div>
+                  <div className="text-[11px] text-muted-foreground">פריטים בתת-קטגוריה זו ישויכו לעובד ישירות, ללא טופס מסירה וחתימה.</div>
+                </div>
+              </label>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={skipReturn}
+                  onChange={(e) => setSkipReturn(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded border-border accent-primary"
+                />
+                <div className="text-sm">
+                  <div>דלג על אישור זיכוי</div>
+                  <div className="text-[11px] text-muted-foreground">החזרת פריטים בתת-קטגוריה זו למלאי תתבצע ללא טופס החזרה וחתימה.</div>
+                </div>
+              </label>
+            </div>
+          )}
 
           <div className="flex gap-3 pt-2">
             <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
@@ -868,7 +937,7 @@ function NewCategoryDialog({
             </Button>
             <Button className="flex-1 gap-2" onClick={handleCreate} disabled={createMutation.isPending}>
               <Check className="w-4 h-4" />
-              {createMutation.isPending ? "יוצר..." : "צור קטגוריה"}
+              {createMutation.isPending ? "יוצר..." : "צור תת-קטגוריה"}
             </Button>
           </div>
         </div>
