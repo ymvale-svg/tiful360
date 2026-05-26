@@ -96,7 +96,7 @@ export default function AssetsDomainPage() {
     return domainAssets.filter((a: any) => {
       if (subParam && a.category_id !== subParam) return false;
       if (!q) return true;
-      const groupName = getGroupKey(a, domain, catById.get(a.category_id)) ?? "";
+      const groupName = getGroupKey(a, domain, catById.get(a.category_id), groupsById) ?? "";
       return (
         a.asset_name?.toLowerCase().includes(q) ||
         a.asset_code?.toLowerCase().includes(q) ||
