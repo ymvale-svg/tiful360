@@ -125,9 +125,9 @@ export default function CategoryManager() {
       {isLoading ? (
         <div className="text-center py-12 text-muted-foreground">טוען...</div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className={cn("grid gap-6", selectedId ? "grid-cols-1 lg:grid-cols-3" : "grid-cols-1")}>
           {/* Domains accordion */}
-          <div className="space-y-3 lg:order-last">
+          <div className={cn("space-y-3", selectedId && "lg:order-last")}>
             {DOMAIN_ORDER.map((key) => {
               const meta = DOMAIN_META[key];
               const Icon = meta.icon;
@@ -164,7 +164,7 @@ export default function CategoryManager() {
                         return (
                           <div
                             key={cat.id}
-                            onClick={() => setSelectedId(cat.id)}
+                            onClick={() => setSelectedId(active ? null : cat.id)}
                             className={cn(
                               "w-full text-right rounded-lg px-3 py-2 transition-all cursor-pointer group flex items-center gap-2",
                               active ? "ring-2 ring-primary bg-primary/5" : "hover:bg-muted/50"
@@ -202,25 +202,29 @@ export default function CategoryManager() {
             })}
           </div>
 
-          {/* Fields editor */}
-          <div className="lg:col-span-2 lg:order-first">
-            {selectedId ? (
+          {/* Fields editor - only when a category is selected */}
+          {selectedId && (
+            <div className="lg:col-span-2 lg:order-first">
               <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-muted-foreground">
+                    עריכת תת-קטגוריה
+                  </div>
+                  <Button variant="ghost" size="sm" className="gap-1.5 h-7" onClick={() => setSelectedId(null)}>
+                    <X className="w-3.5 h-3.5" />
+                    סגור
+                  </Button>
+                </div>
                 <CategoryEditor category={categories?.find((c) => c.id === selectedId)!} />
                 <FieldsEditor
                   categoryId={selectedId}
                   categoryName={categories?.find((c) => c.id === selectedId)?.category_name ?? ""}
                 />
               </div>
-            ) : (
-              <div className="bg-card rounded-xl border border-border/50 shadow-card p-12 text-center text-muted-foreground">
-                <Settings2 className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                <p className="font-medium">בחר תת-קטגוריה לעריכת שדות</p>
-                <p className="text-sm mt-1">או צור תת-קטגוריה חדשה מתוך אחד הדומיינים</p>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
+
       )}
 
       <NewCategoryDialog
