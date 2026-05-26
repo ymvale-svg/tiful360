@@ -156,10 +156,10 @@ export default function AssetsDomainPage() {
     if (!cat) return [];
     return visibleAssets.filter((a: any) => {
       if (a.category_id !== subParam) return false;
-      const k = getGroupKey(a, domain, cat) ?? "";
+      const k = getGroupKey(a, domain, cat, groupsById) ?? "";
       return k === groupParam;
     });
-  }, [subParam, groupParam, visibleAssets, catById, domain]);
+  }, [subParam, groupParam, visibleAssets, catById, domain, groupsById]);
 
   const expiringCount = useMemo(
     () => (expiring ?? []).filter((e) => catIds.has(e.category_id)).length,
