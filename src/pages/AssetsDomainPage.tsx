@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ChevronRight, Search, Plus, ArrowRight, Users, AlertTriangle, ArrowUpDown } from "lucide-react";
+import { ChevronRight, ChevronDown, Search, Plus, ArrowRight, Users, AlertTriangle, ArrowUpDown, LayoutGrid, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAssets, useAssetCategories } from "@/hooks/useData";
@@ -50,8 +50,25 @@ export default function AssetsDomainPage() {
 
   const [search, setSearch] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("count");
+  const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
+    if (typeof window === "undefined") return "grid";
+    return (localStorage.getItem("assets-domain-view") as "grid" | "list") || "grid";
+  });
+  const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
   const [addOpen, setAddOpen] = useState(false);
   const [addCategoryId, setAddCategoryId] = useState<string | undefined>(undefined);
+
+  const changeView = (v: "grid" | "list") => {
+    setViewMode(v);
+    try { localStorage.setItem("assets-domain-view", v); } catch {}
+  };
+  const toggleCat = (id: string) => {
+    setCollapsedCats((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
 
   const domainKey = domainSlugToKey(params.domain);
   if (!domainKey) {
