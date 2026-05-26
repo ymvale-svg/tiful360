@@ -169,29 +169,40 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
     setPerEmpRows({});
   }, [form.category_id]);
 
-  // Auto-generate single asset_code (non-bulk) — running counter per category, never resets
+  // Build MMYY token for current month
+  const monthToken = (() => {
+    const d = new Date();
+    return `${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getFullYear()).slice(-2)}`;
+  })();
+
+  // Find next running number for a given prefix within the current month
+  const nextRunningForPrefix = (prefix: string, offset = 0) => {
+    if (!existingAssets) return 1 + offset;
+    const pattern = `${prefix}-${monthToken}-`;
+    const max = existingAssets
+      .filter(a => a.asset_code?.startsWith(pattern))
+      .reduce((m, a) => {
+        const tail = a.asset_code.slice(pattern.length);
+        const match = tail.match(/^(\d+)/);
+        const n = match ? parseInt(match[1], 10) : 0;
+        return n > m ? n : m;
+      }, 0);
+    return max + 1 + offset;
+  };
+
+  // Auto-generate single asset_code (non-bulk) — PREFIX-MMYY-NNN, counter resets monthly
   useEffect(() => {
     if (form.category_id && categories && existingAssets && !bulkMode) {
       const cat = categories.find(c => c.id === form.category_id);
       if (cat) {
-        const pattern = `${cat.prefix}-`;
-        // Find max numeric suffix among existing codes for this prefix
-        const maxNum = existingAssets
-          .filter(a => a.asset_code.startsWith(pattern))
-          .reduce((max, a) => {
-            const tail = a.asset_code.slice(pattern.length);
-            // Take only the trailing numeric part (handles legacy MMYY-NNN format too)
-            const m = tail.match(/(\d+)\s*$/);
-            const n = m ? parseInt(m[1], 10) : 0;
-            return n > max ? n : max;
-          }, 0);
-        const nextNum = maxNum + 1;
+        const n = nextRunningForPrefix(cat.prefix);
         setForm(prev => ({
           ...prev,
-          asset_code: `${cat.prefix}-${String(nextNum).padStart(4, "0")}`,
+          asset_code: `${cat.prefix}-${monthToken}-${String(n).padStart(3, "0")}`,
         }));
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.category_id, categories, existingAssets, bulkMode]);
 
   // Auto-set status based on owner (single mode)
@@ -206,20 +217,12 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
     if (!bulkMode || !selectedCategory || !existingAssets) return;
     setPerEmpRows(prev => {
       const next: Record<string, Record<string, string>> = { ...prev };
-      const pattern = `${selectedCategory.prefix}-`;
-      const maxNum = existingAssets
-        .filter(a => a.asset_code.startsWith(pattern))
-        .reduce((max, a) => {
-          const tail = a.asset_code.slice(pattern.length);
-          const m = tail.match(/(\d+)\s*$/);
-          const n = m ? parseInt(m[1], 10) : 0;
-          return n > max ? n : max;
-        }, 0);
       selectedEmployeeIds.forEach((empId, idx) => {
         if (!next[empId]) next[empId] = {};
         if (!next[empId][SYSTEM_FIELD_KEYS.asset_code]) {
+          const n = nextRunningForPrefix(selectedCategory.prefix, idx);
           next[empId][SYSTEM_FIELD_KEYS.asset_code] =
-            `${selectedCategory.prefix}-${String(maxNum + idx + 1).padStart(4, "0")}`;
+            `${selectedCategory.prefix}-${monthToken}-${String(n).padStart(3, "0")}`;
         }
       });
       // Cleanup rows of unselected employees
@@ -228,6 +231,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
       });
       return next;
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bulkMode, selectedCategory, selectedEmployeeIds, existingAssets]);
 
   const set = (key: string, value: string) => {
@@ -513,35 +517,24 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
             {errors.category_id && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.category_id}</p>}
           </div>
 
-          {/* Single mode: asset_code + serial */}
+          {/* Single mode: asset_code (auto-generated, read-only) */}
           {!bulkMode && (
-            <div className={cn("grid gap-3", selectedCategory?.prefix === "CINS" ? "grid-cols-1" : "grid-cols-2")}>
-              <div>
-                <label className="text-sm font-medium mb-1 block">
-                  {selectedCategory?.prefix === "CINS" ? "מזהה פוליסה" : "מזהה פריט"}
-                  <span className="text-destructive mr-1">*</span>
-                </label>
-                <input
-                  value={form.asset_code}
-                  onChange={(e) => set("asset_code", e.target.value)}
-                  className={`w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 font-mono ${errors.asset_code ? "ring-2 ring-destructive/50" : "focus:ring-primary/30"}`}
-                  dir="ltr"
-                />
-                {errors.asset_code && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.asset_code}</p>}
-              </div>
-              {selectedCategory?.prefix !== "CINS" && selectedCategory?.prefix !== "CAR" && (
-                <div>
-                  <label className="text-sm font-medium mb-1 block">מספר סידורי</label>
-                  <input
-                    value={form.serial_number}
-                    onChange={(e) => set("serial_number", e.target.value)}
-                    placeholder="SN..."
-                    className={`w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 font-mono ${errors.serial_number ? "ring-2 ring-destructive/50" : "focus:ring-primary/30"}`}
-                    dir="ltr"
-                  />
-                  {errors.serial_number && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.serial_number}</p>}
-                </div>
-              )}
+            <div>
+              <label className="text-sm font-medium mb-1 block">
+                {selectedCategory?.prefix === "CINS" ? "מזהה פוליסה" : "מזהה / מס׳ סידורי"}
+                <span className="text-destructive mr-1">*</span>
+              </label>
+              <input
+                value={form.asset_code}
+                readOnly
+                placeholder={selectedCategory ? "" : "בחר קטגוריה ליצירת מזהה אוטומטי"}
+                className={`w-full px-3 py-2 bg-muted/60 rounded-lg text-sm outline-none font-mono cursor-not-allowed ${errors.asset_code ? "ring-2 ring-destructive/50" : ""}`}
+                dir="ltr"
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                נוצר אוטומטית בפורמט <span className="font-mono">PREFIX-MMYY-NNN</span> ומתאפס בכל חודש
+              </p>
+              {errors.asset_code && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.asset_code}</p>}
             </div>
           )}
 
