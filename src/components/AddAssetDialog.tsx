@@ -517,35 +517,24 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
             {errors.category_id && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.category_id}</p>}
           </div>
 
-          {/* Single mode: asset_code + serial */}
+          {/* Single mode: asset_code (auto-generated, read-only) */}
           {!bulkMode && (
-            <div className={cn("grid gap-3", selectedCategory?.prefix === "CINS" ? "grid-cols-1" : "grid-cols-2")}>
-              <div>
-                <label className="text-sm font-medium mb-1 block">
-                  {selectedCategory?.prefix === "CINS" ? "מזהה פוליסה" : "מזהה פריט"}
-                  <span className="text-destructive mr-1">*</span>
-                </label>
-                <input
-                  value={form.asset_code}
-                  onChange={(e) => set("asset_code", e.target.value)}
-                  className={`w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 font-mono ${errors.asset_code ? "ring-2 ring-destructive/50" : "focus:ring-primary/30"}`}
-                  dir="ltr"
-                />
-                {errors.asset_code && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.asset_code}</p>}
-              </div>
-              {selectedCategory?.prefix !== "CINS" && selectedCategory?.prefix !== "CAR" && (
-                <div>
-                  <label className="text-sm font-medium mb-1 block">מספר סידורי</label>
-                  <input
-                    value={form.serial_number}
-                    onChange={(e) => set("serial_number", e.target.value)}
-                    placeholder="SN..."
-                    className={`w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 font-mono ${errors.serial_number ? "ring-2 ring-destructive/50" : "focus:ring-primary/30"}`}
-                    dir="ltr"
-                  />
-                  {errors.serial_number && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.serial_number}</p>}
-                </div>
-              )}
+            <div>
+              <label className="text-sm font-medium mb-1 block">
+                {selectedCategory?.prefix === "CINS" ? "מזהה פוליסה" : "מזהה / מס׳ סידורי"}
+                <span className="text-destructive mr-1">*</span>
+              </label>
+              <input
+                value={form.asset_code}
+                readOnly
+                placeholder={selectedCategory ? "" : "בחר קטגוריה ליצירת מזהה אוטומטי"}
+                className={`w-full px-3 py-2 bg-muted/60 rounded-lg text-sm outline-none font-mono cursor-not-allowed ${errors.asset_code ? "ring-2 ring-destructive/50" : ""}`}
+                dir="ltr"
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                נוצר אוטומטית בפורמט <span className="font-mono">PREFIX-MMYY-NNN</span> ומתאפס בכל חודש
+              </p>
+              {errors.asset_code && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.asset_code}</p>}
             </div>
           )}
 
