@@ -175,18 +175,16 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
     return `${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getFullYear()).slice(-2)}`;
   })();
 
-  // Find next running number for a given prefix within the current month
+  // Find next running number for a given prefix — continuous across all months
+  // Matches both new format PREFIX-MMYY-NNN and legacy PREFIX-NNN
   const nextRunningForPrefix = (prefix: string, offset = 0) => {
     if (!existingAssets) return 1 + offset;
-    const pattern = `${prefix}-${monthToken}-`;
-    const max = existingAssets
-      .filter(a => a.asset_code?.startsWith(pattern))
-      .reduce((m, a) => {
-        const tail = a.asset_code.slice(pattern.length);
-        const match = tail.match(/^(\d+)/);
-        const n = match ? parseInt(match[1], 10) : 0;
-        return n > m ? n : m;
-      }, 0);
+    const re = new RegExp(`^${prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}-(?:\\d{4}-)?(\\d+)$`);
+    const max = existingAssets.reduce((m, a) => {
+      const match = a.asset_code?.match(re);
+      const n = match ? parseInt(match[1], 10) : 0;
+      return n > m ? n : m;
+    }, 0);
     return max + 1 + offset;
   };
 
