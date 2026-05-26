@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  Plus, Trash2, Save, Pencil,
+  Plus, GripVertical, Trash2, Save, Pencil,
   Type, Hash, Calendar, List, ListChecks, Settings2, Check, X, ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
