@@ -288,6 +288,47 @@ export type Database = {
         }
         Relationships: []
       }
+      asset_groups: {
+        Row: {
+          category_id: string
+          company_id: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          company_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_groups_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "asset_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_handover_forms: {
         Row: {
           asset_id: string
@@ -360,6 +401,7 @@ export type Database = {
           custom_fields: Json | null
           expiry_date: string | null
           fuel_type: string | null
+          group_id: string | null
           id: string
           insurance_company: string | null
           insurance_expiry: string | null
@@ -393,6 +435,7 @@ export type Database = {
           custom_fields?: Json | null
           expiry_date?: string | null
           fuel_type?: string | null
+          group_id?: string | null
           id?: string
           insurance_company?: string | null
           insurance_expiry?: string | null
@@ -426,6 +469,7 @@ export type Database = {
           custom_fields?: Json | null
           expiry_date?: string | null
           fuel_type?: string | null
+          group_id?: string | null
           id?: string
           insurance_company?: string | null
           insurance_expiry?: string | null
@@ -472,6 +516,13 @@ export type Database = {
             columns: ["current_owner_id"]
             isOneToOne: false
             referencedRelation: "employees_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assets_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "asset_groups"
             referencedColumns: ["id"]
           },
         ]
