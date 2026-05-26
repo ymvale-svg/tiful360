@@ -113,7 +113,7 @@ export default function AssetsDomainPage() {
     for (const a of visibleAssets) {
       const cat = catById.get(a.category_id);
       if (!cat) continue;
-      const key = getGroupKey(a, domain, cat);
+      const key = getGroupKey(a, domain, cat, groupsById);
       const mapKey = `${cat.id}::${key ?? "__flat__"}`;
       if (!map.has(mapKey)) map.set(mapKey, { category: cat, groupKey: key, items: [] });
       map.get(mapKey)!.items.push(a);
