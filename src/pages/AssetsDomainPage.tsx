@@ -45,6 +45,7 @@ export default function AssetsDomainPage() {
 
   const { data: assets, isLoading } = useAssets();
   const { data: categories } = useAssetCategories();
+  const { data: groups } = useAssetGroups();
   const { data: expiring } = useExpiringAssets(30);
 
   const [search, setSearch] = useState("");
