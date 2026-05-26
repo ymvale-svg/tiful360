@@ -169,29 +169,40 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
     setPerEmpRows({});
   }, [form.category_id]);
 
-  // Auto-generate single asset_code (non-bulk) — running counter per category, never resets
+  // Build MMYY token for current month
+  const monthToken = (() => {
+    const d = new Date();
+    return `${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getFullYear()).slice(-2)}`;
+  })();
+
+  // Find next running number for a given prefix within the current month
+  const nextRunningForPrefix = (prefix: string, offset = 0) => {
+    if (!existingAssets) return 1 + offset;
+    const pattern = `${prefix}-${monthToken}-`;
+    const max = existingAssets
+      .filter(a => a.asset_code?.startsWith(pattern))
+      .reduce((m, a) => {
+        const tail = a.asset_code.slice(pattern.length);
+        const match = tail.match(/^(\d+)/);
+        const n = match ? parseInt(match[1], 10) : 0;
+        return n > m ? n : m;
+      }, 0);
+    return max + 1 + offset;
+  };
+
+  // Auto-generate single asset_code (non-bulk) — PREFIX-MMYY-NNN, counter resets monthly
   useEffect(() => {
     if (form.category_id && categories && existingAssets && !bulkMode) {
       const cat = categories.find(c => c.id === form.category_id);
       if (cat) {
-        const pattern = `${cat.prefix}-`;
-        // Find max numeric suffix among existing codes for this prefix
-        const maxNum = existingAssets
-          .filter(a => a.asset_code.startsWith(pattern))
-          .reduce((max, a) => {
-            const tail = a.asset_code.slice(pattern.length);
-            // Take only the trailing numeric part (handles legacy MMYY-NNN format too)
-            const m = tail.match(/(\d+)\s*$/);
-            const n = m ? parseInt(m[1], 10) : 0;
-            return n > max ? n : max;
-          }, 0);
-        const nextNum = maxNum + 1;
+        const n = nextRunningForPrefix(cat.prefix);
         setForm(prev => ({
           ...prev,
-          asset_code: `${cat.prefix}-${String(nextNum).padStart(4, "0")}`,
+          asset_code: `${cat.prefix}-${monthToken}-${String(n).padStart(3, "0")}`,
         }));
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.category_id, categories, existingAssets, bulkMode]);
 
   // Auto-set status based on owner (single mode)
@@ -206,20 +217,12 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
     if (!bulkMode || !selectedCategory || !existingAssets) return;
     setPerEmpRows(prev => {
       const next: Record<string, Record<string, string>> = { ...prev };
-      const pattern = `${selectedCategory.prefix}-`;
-      const maxNum = existingAssets
-        .filter(a => a.asset_code.startsWith(pattern))
-        .reduce((max, a) => {
-          const tail = a.asset_code.slice(pattern.length);
-          const m = tail.match(/(\d+)\s*$/);
-          const n = m ? parseInt(m[1], 10) : 0;
-          return n > max ? n : max;
-        }, 0);
       selectedEmployeeIds.forEach((empId, idx) => {
         if (!next[empId]) next[empId] = {};
         if (!next[empId][SYSTEM_FIELD_KEYS.asset_code]) {
+          const n = nextRunningForPrefix(selectedCategory.prefix, idx);
           next[empId][SYSTEM_FIELD_KEYS.asset_code] =
-            `${selectedCategory.prefix}-${String(maxNum + idx + 1).padStart(4, "0")}`;
+            `${selectedCategory.prefix}-${monthToken}-${String(n).padStart(3, "0")}`;
         }
       });
       // Cleanup rows of unselected employees
@@ -228,6 +231,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
       });
       return next;
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bulkMode, selectedCategory, selectedEmployeeIds, existingAssets]);
 
   const set = (key: string, value: string) => {
