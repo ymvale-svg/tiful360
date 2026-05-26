@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ChevronRight, Search, Plus, ArrowRight, Users, AlertTriangle, ArrowUpDown } from "lucide-react";
+import { ChevronRight, ChevronDown, Search, Plus, ArrowRight, Users, AlertTriangle, ArrowUpDown, LayoutGrid, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAssets, useAssetCategories } from "@/hooks/useData";
@@ -50,8 +50,25 @@ export default function AssetsDomainPage() {
 
   const [search, setSearch] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("count");
+  const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
+    if (typeof window === "undefined") return "grid";
+    return (localStorage.getItem("assets-domain-view") as "grid" | "list") || "grid";
+  });
+  const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
   const [addOpen, setAddOpen] = useState(false);
   const [addCategoryId, setAddCategoryId] = useState<string | undefined>(undefined);
+
+  const changeView = (v: "grid" | "list") => {
+    setViewMode(v);
+    try { localStorage.setItem("assets-domain-view", v); } catch {}
+  };
+  const toggleCat = (id: string) => {
+    setCollapsedCats((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
 
   const domainKey = domainSlugToKey(params.domain);
   if (!domainKey) {
@@ -296,24 +313,48 @@ export default function AssetsDomainPage() {
               </div>
             ) : <div />}
 
-            <div className="flex items-center gap-1 text-xs">
-              <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground" />
-              {([
-                { v: "count", l: "הכי הרבה" },
-                { v: "alpha", l: "א-ב" },
-                { v: "expiry", l: "תפוגה" },
-              ] as const).map((o) => (
+            <div className="flex items-center gap-3 text-xs">
+              <div className="flex items-center gap-1">
+                <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground" />
+                {([
+                  { v: "count", l: "הכי הרבה" },
+                  { v: "alpha", l: "א-ב" },
+                  { v: "expiry", l: "תפוגה" },
+                ] as const).map((o) => (
+                  <button
+                    key={o.v}
+                    onClick={() => setSortMode(o.v)}
+                    className={cn(
+                      "px-2.5 py-1 rounded-md transition-colors",
+                      sortMode === o.v ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/50",
+                    )}
+                  >
+                    {o.l}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-0.5 border border-border rounded-md p-0.5">
                 <button
-                  key={o.v}
-                  onClick={() => setSortMode(o.v)}
+                  onClick={() => changeView("grid")}
+                  title="תצוגת אייקונים"
                   className={cn(
-                    "px-2.5 py-1 rounded-md transition-colors",
-                    sortMode === o.v ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/50",
+                    "p-1 rounded transition-colors",
+                    viewMode === "grid" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50",
                   )}
                 >
-                  {o.l}
+                  <LayoutGrid className="w-3.5 h-3.5" />
                 </button>
-              ))}
+                <button
+                  onClick={() => changeView("list")}
+                  title="תצוגת רשימה"
+                  className={cn(
+                    "p-1 rounded transition-colors",
+                    viewMode === "list" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50",
+                  )}
+                >
+                  <List className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -358,57 +399,122 @@ export default function AssetsDomainPage() {
             }, {})
           ).map(([catId, groups]) => {
             const cat = catById.get(catId);
+            const totalItems = groups.reduce((s, g) => s + g.items.length, 0);
+            const collapsed = collapsedCats.has(catId);
             return (
               <section key={catId}>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-muted-foreground">
-                    {cat?.category_name} <span className="font-normal">({groups.reduce((s, g) => s + g.items.length, 0)})</span>
+                <button
+                  onClick={() => toggleCat(catId)}
+                  className="w-full flex items-center justify-between mb-3 group"
+                >
+                  <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-1.5 group-hover:text-foreground transition-colors">
+                    <ChevronDown className={cn("w-4 h-4 transition-transform", collapsed && "-rotate-90")} />
+                    {cat?.category_name} <span className="font-normal">({totalItems})</span>
                   </h3>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  {groups.map((g) => {
-                    // Flat-domain group: render single "passthrough" card per item
-                    if (g.groupKey === null) {
-                      return g.items.map((a: any) => (
+                </button>
+                {!collapsed && (viewMode === "grid" ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {groups.map((g) => {
+                      if (g.groupKey === null) {
+                        return g.items.map((a: any) => (
+                          <ParentCard
+                            key={a.id}
+                            name={a.asset_name ?? a.asset_code}
+                            total={1}
+                            activeCount={a.status === "in_use" || a.current_owner_id ? 1 : 0}
+                            hasExpired={(() => {
+                              const e = expiryOf(a, domain);
+                              return !!(e && new Date(e) < new Date());
+                            })()}
+                            domain={domain}
+                            isAssignable={cat?.is_assignable !== false}
+                            onClick={() => navigate(`/assets/${domain}/${a.id}`)}
+                          />
+                        ));
+                      }
+                      const active = g.items.filter((a: any) => a.status === "in_use" || a.current_owner_id).length;
+                      const hasExpired = g.items.some((a: any) => {
+                        const e = expiryOf(a, domain);
+                        return e && new Date(e) < new Date();
+                      });
+                      return (
                         <ParentCard
-                          key={a.id}
-                          name={a.asset_name ?? a.asset_code}
-                          total={1}
-                          activeCount={a.status === "in_use" || a.current_owner_id ? 1 : 0}
-                          hasExpired={(() => {
-                            const e = expiryOf(a, domain);
-                            return !!(e && new Date(e) < new Date());
-                          })()}
+                          key={`${catId}-${g.groupKey}`}
+                          name={g.groupKey!}
+                          total={g.items.length}
+                          activeCount={active}
+                          hasExpired={hasExpired}
                           domain={domain}
                           isAssignable={cat?.is_assignable !== false}
-                          onClick={() => navigate(`/assets/${domain}/${a.id}`)}
+                          onClick={() => {
+                            const p = new URLSearchParams(searchParams);
+                            p.set("sub", catId);
+                            p.set("group", g.groupKey!);
+                            setSearchParams(p, { replace: true });
+                          }}
                         />
-                      ));
-                    }
-                    const active = g.items.filter((a: any) => a.status === "in_use" || a.current_owner_id).length;
-                    const hasExpired = g.items.some((a: any) => {
-                      const e = expiryOf(a, domain);
-                      return e && new Date(e) < new Date();
-                    });
-                    return (
-                      <ParentCard
-                        key={`${catId}-${g.groupKey}`}
-                        name={g.groupKey!}
-                        total={g.items.length}
-                        activeCount={active}
-                        hasExpired={hasExpired}
-                        domain={domain}
-                        isAssignable={cat?.is_assignable !== false}
-                        onClick={() => {
-                          const p = new URLSearchParams(searchParams);
-                          p.set("sub", catId);
-                          p.set("group", g.groupKey!);
-                          setSearchParams(p, { replace: true });
-                        }}
-                      />
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="bg-card border border-border rounded-xl overflow-hidden">
+                    <div className="grid grid-cols-[1fr_5rem_6rem_2rem] gap-2 px-4 py-2 bg-muted/40 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide text-right">
+                      <div>שם</div>
+                      <div>סה״כ</div>
+                      <div>פעילים</div>
+                      <div></div>
+                    </div>
+                    {groups.flatMap((g) => {
+                      if (g.groupKey === null) {
+                        return g.items.map((a: any) => {
+                          const e = expiryOf(a, domain);
+                          const expired = !!(e && new Date(e) < new Date());
+                          const isActive = a.status === "in_use" || a.current_owner_id;
+                          return (
+                            <button
+                              key={a.id}
+                              onClick={() => navigate(`/assets/${domain}/${a.id}`)}
+                              className="w-full grid grid-cols-[1fr_5rem_6rem_2rem] gap-2 px-4 py-2.5 text-sm border-t border-border hover:bg-muted/40 text-right items-center transition-colors"
+                            >
+                              <div className="flex items-center gap-2 truncate">
+                                {expired && <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0" />}
+                                <span className="truncate">{a.asset_name ?? a.asset_code}</span>
+                              </div>
+                              <div className="text-xs text-muted-foreground">1</div>
+                              <div className="text-xs">{isActive ? "1 / 1" : "0 / 1"}</div>
+                              <ArrowRight className="w-4 h-4 text-muted-foreground rtl:rotate-180" />
+                            </button>
+                          );
+                        });
+                      }
+                      const active = g.items.filter((a: any) => a.status === "in_use" || a.current_owner_id).length;
+                      const hasExpired = g.items.some((a: any) => {
+                        const e = expiryOf(a, domain);
+                        return e && new Date(e) < new Date();
+                      });
+                      return (
+                        <button
+                          key={`${catId}-${g.groupKey}`}
+                          onClick={() => {
+                            const p = new URLSearchParams(searchParams);
+                            p.set("sub", catId);
+                            p.set("group", g.groupKey!);
+                            setSearchParams(p, { replace: true });
+                          }}
+                          className="w-full grid grid-cols-[1fr_5rem_6rem_2rem] gap-2 px-4 py-2.5 text-sm border-t border-border hover:bg-muted/40 text-right items-center transition-colors"
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            {hasExpired && <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0" />}
+                            <span className="truncate font-medium">{g.groupKey}</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground">{g.items.length}</div>
+                          <div className="text-xs">{active} / {g.items.length}</div>
+                          <ArrowRight className="w-4 h-4 text-muted-foreground rtl:rotate-180" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
               </section>
             );
           })}
