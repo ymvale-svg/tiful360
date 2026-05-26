@@ -776,12 +776,15 @@ function NewCategoryDialog({
   onOpenChange,
   onCreated,
   forceInstitutional = false,
+  lockedDomain = null,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated: (id: string) => void;
   forceInstitutional?: boolean;
+  lockedDomain?: DomainKey | null;
 }) {
+  const [domain, setDomain] = useState<DomainKey>(lockedDomain ?? "physical");
   const [name, setName] = useState("");
   const [prefix, setPrefix] = useState("");
   const [description, setDescription] = useState("");
@@ -790,9 +793,22 @@ function NewCategoryDialog({
   const createMutation = useCreateCategory();
   const { toast } = useToast();
 
+  useEffect(() => {
+    if (open) {
+      setDomain(lockedDomain ?? "physical");
+      setPrefix("");
+      setName("");
+      setDescription("");
+      setSkipHandover(false);
+      setSkipReturn(false);
+    }
+  }, [open, lockedDomain]);
+
+  const defaults = DOMAIN_DEFAULTS[domain];
+
   const handleCreate = async () => {
     if (!name.trim() || !prefix.trim()) {
-      toast({ title: "שגיאה", description: "שם קטגוריה וקידומת הם שדות חובה", variant: "destructive" });
+      toast({ title: "שגיאה", description: "שם תת-קטגוריה וקידומת הם שדות חובה", variant: "destructive" });
       return;
     }
     try {
@@ -800,32 +816,63 @@ function NewCategoryDialog({
         category_name: name,
         prefix: prefix.toUpperCase(),
         description: description || undefined,
+        domain,
+        protocol_type: defaults.protocol_type,
+        is_assignable: forceInstitutional ? false : defaults.is_assignable,
         skip_handover_form: skipHandover,
         skip_return_form: skipReturn,
-        ...(forceInstitutional ? { is_assignable: false } : {}),
       });
-      toast({ title: "קטגוריה נוצרה בהצלחה" });
+      toast({ title: "תת-הקטגוריה נוצרה בהצלחה" });
       onCreated(cat.id);
-      setName("");
-      setPrefix("");
-      setDescription("");
-      setSkipHandover(false);
-      setSkipReturn(false);
     } catch (err: any) {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
     }
   };
 
+  const lockedMeta = lockedDomain ? DOMAIN_META[lockedDomain] : null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md" dir="rtl">
         <DialogHeader>
-          <DialogTitle>קטגוריה חדשה</DialogTitle>
-          <DialogDescription>הגדר סוג ציוד חדש עם קידומת ייחודית לברקוד</DialogDescription>
+          <DialogTitle>תת-קטגוריה חדשה</DialogTitle>
+          <DialogDescription>
+            {lockedMeta
+              ? `נוסיף תת-קטגוריה תחת הדומיין "${lockedMeta.title}"`
+              : "בחר דומיין והגדר תת-קטגוריה חדשה עם קידומת ייחודית לברקוד"}
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 mt-4">
+          {!lockedDomain && (
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">דומיין</label>
+              <select
+                value={domain}
+                onChange={(e) => {
+                  const d = e.target.value as DomainKey;
+                  setDomain(d);
+                  if (!prefix) setPrefix(DOMAIN_DEFAULTS[d].suggested_prefix);
+                }}
+                className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                {DOMAIN_ORDER.map((k) => (
+                  <option key={k} value={k}>{DOMAIN_META[k].title}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          {lockedMeta && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 border border-border/60">
+              <div className={cn("w-7 h-7 rounded-md flex items-center justify-center", lockedMeta.color.bg, lockedMeta.color.text)}>
+                <lockedMeta.icon className="w-4 h-4" />
+              </div>
+              <span className="text-sm font-medium">{lockedMeta.title}</span>
+              <span className="text-[11px] text-muted-foreground mr-auto">{lockedMeta.hint}</span>
+            </div>
+          )}
+
           <div>
-            <label className="text-sm font-medium mb-1.5 block">שם הקטגוריה</label>
+            <label className="text-sm font-medium mb-1.5 block">שם תת-הקטגוריה</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -837,11 +884,11 @@ function NewCategoryDialog({
             <label className="text-sm font-medium mb-1.5 block">קידומת (3 אותיות באנגלית)</label>
             <input
               value={prefix}
-              onChange={(e) => setPrefix(e.target.value.replace(/[^a-zA-Z]/g, "").slice(0, 3))}
-              placeholder="TAB"
+              onChange={(e) => setPrefix(e.target.value.replace(/[^a-zA-Z]/g, "").slice(0, 4))}
+              placeholder={defaults.suggested_prefix}
               className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 font-mono uppercase"
               dir="ltr"
-              maxLength={3}
+              maxLength={4}
             />
           </div>
           <div>
@@ -849,38 +896,40 @@ function NewCategoryDialog({
             <input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="תיאור קצר של סוג הציוד"
+              placeholder="תיאור קצר של תת-הקטגוריה"
               className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
             />
           </div>
 
-          <div className="space-y-2 pt-2 border-t border-border/50">
-            <p className="text-xs font-medium text-muted-foreground">הגדרות טופסי מסירה/החזרה</p>
-            <label className="flex items-start gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={skipHandover}
-                onChange={(e) => setSkipHandover(e.target.checked)}
-                className="mt-0.5 w-4 h-4 rounded border-border accent-primary"
-              />
-              <div className="text-sm">
-                <div>דלג על אישור משיכה</div>
-                <div className="text-[11px] text-muted-foreground">פריטים בקטגוריה זו ישויכו לעובד ישירות, ללא טופס מסירה וחתימה.</div>
-              </div>
-            </label>
-            <label className="flex items-start gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={skipReturn}
-                onChange={(e) => setSkipReturn(e.target.checked)}
-                className="mt-0.5 w-4 h-4 rounded border-border accent-primary"
-              />
-              <div className="text-sm">
-                <div>דלג על אישור זיכוי</div>
-                <div className="text-[11px] text-muted-foreground">החזרת פריטים בקטגוריה זו למלאי תתבצע ללא טופס החזרה וחתימה.</div>
-              </div>
-            </label>
-          </div>
+          {(forceInstitutional ? false : defaults.is_assignable) && (
+            <div className="space-y-2 pt-2 border-t border-border/50">
+              <p className="text-xs font-medium text-muted-foreground">הגדרות טופסי מסירה/החזרה</p>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={skipHandover}
+                  onChange={(e) => setSkipHandover(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded border-border accent-primary"
+                />
+                <div className="text-sm">
+                  <div>דלג על אישור משיכה</div>
+                  <div className="text-[11px] text-muted-foreground">פריטים בתת-קטגוריה זו ישויכו לעובד ישירות, ללא טופס מסירה וחתימה.</div>
+                </div>
+              </label>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={skipReturn}
+                  onChange={(e) => setSkipReturn(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded border-border accent-primary"
+                />
+                <div className="text-sm">
+                  <div>דלג על אישור זיכוי</div>
+                  <div className="text-[11px] text-muted-foreground">החזרת פריטים בתת-קטגוריה זו למלאי תתבצע ללא טופס החזרה וחתימה.</div>
+                </div>
+              </label>
+            </div>
+          )}
 
           <div className="flex gap-3 pt-2">
             <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
@@ -888,7 +937,7 @@ function NewCategoryDialog({
             </Button>
             <Button className="flex-1 gap-2" onClick={handleCreate} disabled={createMutation.isPending}>
               <Check className="w-4 h-4" />
-              {createMutation.isPending ? "יוצר..." : "צור קטגוריה"}
+              {createMutation.isPending ? "יוצר..." : "צור תת-קטגוריה"}
             </Button>
           </div>
         </div>
