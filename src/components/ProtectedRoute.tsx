@@ -29,12 +29,8 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
   // If specific roles required, check access
   if (requiredRoles && requiredRoles.length > 0) {
     if (roles.length === 0) {
-      // Roles still loading — show spinner
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-background">
-          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-        </div>
-      );
+      // Roles still loading — render nothing (shell stays visible, avoids flash)
+      return null;
     }
     const isSuperAdmin = roles.includes("super_admin");
     const hasAccess = isSuperAdmin || requiredRoles.some((r) => roles.includes(r));
