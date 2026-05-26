@@ -278,13 +278,13 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
 
           {/* Domain-specific panels */}
           {(() => {
-            const domain = category ? classifyCategory(category) : null;
+            const domain = category ? getDomain(category) : null;
             if (category?.protocol_type === "vehicle") return <VehicleDetailsPanel asset={asset} />;
             if (domain === "digital") return <DigitalAccessPanel asset={asset} />;
             if (domain === "licenses") return <LicenseDetailsPanel asset={asset} />;
             if (domain === "training") return <TrainingDetailsPanel asset={asset} />;
             if (domain === "insurance") return <InsuranceDetailsPanel asset={asset} />;
-            if (domain === "real-estate") return <RealEstateDetailsPanel asset={asset} />;
+            if (domain === "real_estate") return <RealEstateDetailsPanel asset={asset} />;
             return null;
           })()}
 
