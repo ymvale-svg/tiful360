@@ -2,8 +2,9 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import {
   Plus, GripVertical, Trash2, Save, Pencil,
-  Type, Hash, Calendar, List, ListChecks, Settings2, Check, X, ChevronDown,
+  Type, Hash, Calendar, List, ListChecks, Settings2, Check, X, ChevronDown, Users,
 } from "lucide-react";
+import { ManageGroupsDialog } from "@/components/ManageGroupsDialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAssetCategories } from "@/hooks/useData";
