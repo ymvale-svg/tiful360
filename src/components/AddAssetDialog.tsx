@@ -188,7 +188,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
     return max + 1 + offset;
   };
 
-  // Auto-generate single asset_code (non-bulk) — PREFIX-MMYY-NNN, counter resets monthly
+  // Auto-generate single asset_code — PREFIX-MMYY-NNN; counter runs continuously, month changes
   useEffect(() => {
     if (form.category_id && categories && existingAssets && !bulkMode) {
       const cat = categories.find(c => c.id === form.category_id);
