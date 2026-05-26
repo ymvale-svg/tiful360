@@ -4,6 +4,7 @@ import { ChevronRight, Search, Plus, ArrowRight, Users, AlertTriangle, ArrowUpDo
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAssets, useAssetCategories } from "@/hooks/useData";
+import { useAssetGroups } from "@/hooks/useAssetGroups";
 import { useExpiringAssets } from "@/hooks/useExpiringAssets";
 import { AssetDetailView } from "@/components/assets/AssetDetailView";
 import { AddAssetDialog } from "@/components/AddAssetDialog";
