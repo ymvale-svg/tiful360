@@ -399,57 +399,122 @@ export default function AssetsDomainPage() {
             }, {})
           ).map(([catId, groups]) => {
             const cat = catById.get(catId);
+            const totalItems = groups.reduce((s, g) => s + g.items.length, 0);
+            const collapsed = collapsedCats.has(catId);
             return (
               <section key={catId}>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-muted-foreground">
-                    {cat?.category_name} <span className="font-normal">({groups.reduce((s, g) => s + g.items.length, 0)})</span>
+                <button
+                  onClick={() => toggleCat(catId)}
+                  className="w-full flex items-center justify-between mb-3 group"
+                >
+                  <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-1.5 group-hover:text-foreground transition-colors">
+                    <ChevronDown className={cn("w-4 h-4 transition-transform", collapsed && "-rotate-90")} />
+                    {cat?.category_name} <span className="font-normal">({totalItems})</span>
                   </h3>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  {groups.map((g) => {
-                    // Flat-domain group: render single "passthrough" card per item
-                    if (g.groupKey === null) {
-                      return g.items.map((a: any) => (
+                </button>
+                {!collapsed && (viewMode === "grid" ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {groups.map((g) => {
+                      if (g.groupKey === null) {
+                        return g.items.map((a: any) => (
+                          <ParentCard
+                            key={a.id}
+                            name={a.asset_name ?? a.asset_code}
+                            total={1}
+                            activeCount={a.status === "in_use" || a.current_owner_id ? 1 : 0}
+                            hasExpired={(() => {
+                              const e = expiryOf(a, domain);
+                              return !!(e && new Date(e) < new Date());
+                            })()}
+                            domain={domain}
+                            isAssignable={cat?.is_assignable !== false}
+                            onClick={() => navigate(`/assets/${domain}/${a.id}`)}
+                          />
+                        ));
+                      }
+                      const active = g.items.filter((a: any) => a.status === "in_use" || a.current_owner_id).length;
+                      const hasExpired = g.items.some((a: any) => {
+                        const e = expiryOf(a, domain);
+                        return e && new Date(e) < new Date();
+                      });
+                      return (
                         <ParentCard
-                          key={a.id}
-                          name={a.asset_name ?? a.asset_code}
-                          total={1}
-                          activeCount={a.status === "in_use" || a.current_owner_id ? 1 : 0}
-                          hasExpired={(() => {
-                            const e = expiryOf(a, domain);
-                            return !!(e && new Date(e) < new Date());
-                          })()}
+                          key={`${catId}-${g.groupKey}`}
+                          name={g.groupKey!}
+                          total={g.items.length}
+                          activeCount={active}
+                          hasExpired={hasExpired}
                           domain={domain}
                           isAssignable={cat?.is_assignable !== false}
-                          onClick={() => navigate(`/assets/${domain}/${a.id}`)}
+                          onClick={() => {
+                            const p = new URLSearchParams(searchParams);
+                            p.set("sub", catId);
+                            p.set("group", g.groupKey!);
+                            setSearchParams(p, { replace: true });
+                          }}
                         />
-                      ));
-                    }
-                    const active = g.items.filter((a: any) => a.status === "in_use" || a.current_owner_id).length;
-                    const hasExpired = g.items.some((a: any) => {
-                      const e = expiryOf(a, domain);
-                      return e && new Date(e) < new Date();
-                    });
-                    return (
-                      <ParentCard
-                        key={`${catId}-${g.groupKey}`}
-                        name={g.groupKey!}
-                        total={g.items.length}
-                        activeCount={active}
-                        hasExpired={hasExpired}
-                        domain={domain}
-                        isAssignable={cat?.is_assignable !== false}
-                        onClick={() => {
-                          const p = new URLSearchParams(searchParams);
-                          p.set("sub", catId);
-                          p.set("group", g.groupKey!);
-                          setSearchParams(p, { replace: true });
-                        }}
-                      />
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="bg-card border border-border rounded-xl overflow-hidden">
+                    <div className="grid grid-cols-[1fr_5rem_6rem_2rem] gap-2 px-4 py-2 bg-muted/40 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide text-right">
+                      <div>שם</div>
+                      <div>סה״כ</div>
+                      <div>פעילים</div>
+                      <div></div>
+                    </div>
+                    {groups.flatMap((g) => {
+                      if (g.groupKey === null) {
+                        return g.items.map((a: any) => {
+                          const e = expiryOf(a, domain);
+                          const expired = !!(e && new Date(e) < new Date());
+                          const isActive = a.status === "in_use" || a.current_owner_id;
+                          return (
+                            <button
+                              key={a.id}
+                              onClick={() => navigate(`/assets/${domain}/${a.id}`)}
+                              className="w-full grid grid-cols-[1fr_5rem_6rem_2rem] gap-2 px-4 py-2.5 text-sm border-t border-border hover:bg-muted/40 text-right items-center transition-colors"
+                            >
+                              <div className="flex items-center gap-2 truncate">
+                                {expired && <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0" />}
+                                <span className="truncate">{a.asset_name ?? a.asset_code}</span>
+                              </div>
+                              <div className="text-xs text-muted-foreground">1</div>
+                              <div className="text-xs">{isActive ? "1 / 1" : "0 / 1"}</div>
+                              <ArrowRight className="w-4 h-4 text-muted-foreground rtl:rotate-180" />
+                            </button>
+                          );
+                        });
+                      }
+                      const active = g.items.filter((a: any) => a.status === "in_use" || a.current_owner_id).length;
+                      const hasExpired = g.items.some((a: any) => {
+                        const e = expiryOf(a, domain);
+                        return e && new Date(e) < new Date();
+                      });
+                      return (
+                        <button
+                          key={`${catId}-${g.groupKey}`}
+                          onClick={() => {
+                            const p = new URLSearchParams(searchParams);
+                            p.set("sub", catId);
+                            p.set("group", g.groupKey!);
+                            setSearchParams(p, { replace: true });
+                          }}
+                          className="w-full grid grid-cols-[1fr_5rem_6rem_2rem] gap-2 px-4 py-2.5 text-sm border-t border-border hover:bg-muted/40 text-right items-center transition-colors"
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            {hasExpired && <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0" />}
+                            <span className="truncate font-medium">{g.groupKey}</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground">{g.items.length}</div>
+                          <div className="text-xs">{active} / {g.items.length}</div>
+                          <ArrowRight className="w-4 h-4 text-muted-foreground rtl:rotate-180" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
               </section>
             );
           })}
