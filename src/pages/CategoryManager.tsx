@@ -59,7 +59,7 @@ export default function CategoryManager() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newCatOpen, setNewCatOpen] = useState(false);
   const [newCatDomain, setNewCatDomain] = useState<DomainKey | null>(null);
-  const [openDomains, setOpenDomains] = useState<Set<DomainKey>>(new Set(DOMAIN_ORDER));
+  const [openDomains, setOpenDomains] = useState<Set<DomainKey>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; assetCount: number } | null>(null);
   const { toast } = useToast();
   const deleteMutation = useDeleteCategory();
