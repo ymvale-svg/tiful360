@@ -243,14 +243,11 @@ export default function AssetsDomainPage() {
             <h1 className="text-2xl font-bold">
               {isDrilled ? groupParam : meta.title}
             </h1>
-            <p className="text-sm text-muted-foreground">
-              {isDrilled
-                ? `${drilledItems.length} מופעים · ${drilledCategory?.category_name}`
-                : <>
-                    {domainAssets.length} פריטים · {domainCats.length} תתי-קטגוריות
-                    {expiringCount > 0 && <> · <span className="text-warning">{expiringCount} פגי תוקף בקרוב</span></>}
-                  </>}
-            </p>
+            {isDrilled ? (
+              <p className="text-sm text-muted-foreground">{drilledCategory?.category_name}</p>
+            ) : expiringCount > 0 ? (
+              <p className="text-sm text-warning">{expiringCount} פגי תוקף בקרוב</p>
+            ) : null}
           </div>
         </div>
 
