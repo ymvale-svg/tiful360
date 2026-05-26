@@ -1,34 +1,25 @@
-# תיקון "ריפרוש מוזר" בלחיצה על משאב
+# הסרת ה"ריפרוש המיותר" במעבר בין מסכים נפוצים
 
 ## הבעיה
-ב-`src/App.tsx` יש שני Routes נפרדים לאותו רכיב:
-```
-/assets/:domain        → AssetsDomainPage
-/assets/:domain/:itemId → AssetsDomainPage
-```
-כשהמשתמש לוחץ על כרטיס משאב, ה-URL משתנה ו-React Router רואה זאת כ-match שונה. התוצאה: unmount + remount של `AssetsDomainPage` (lazy), מה שגורם ל:
-- הצגת ה-PageLoader של Suspense ("טוען...")
-- איפוס state מקומי (חיפוש, sort, sub וכד׳)
-- Re-execution של ה-queries
+ב-`src/App.tsx` כל הדפים מוגדרים כ-`lazy()`. בכניסה ראשונה לכל מסך, Vite טוען את ה-chunk רק בזמן ריצה, וה-`<Suspense>` ב-`AppLayout` מחליף את התוכן בספינר עד שה-chunk מגיע. זה נראה כמו "ריפרוש".
 
-זה ה"ריפרוש המוזר" שהמשתמש מתאר.
+הקאש פותר את הביקור השני, אבל המעבר הראשון לכל מסך — כולל אחרי refresh של הדפדפן — תמיד מבזיק.
 
 ## הפתרון
-לאחד לראוט יחיד עם פרמטר אופציונלי, כך ש-React Router שומר על אותו element instance במעבר בין רשימה לפרטים:
+לטעון eagerly (ייבוא רגיל, לא lazy) את המסכים הנפוצים שאתה מנווט אליהם הכי הרבה:
+- `Dashboard` (לוח בקרה)
+- `Employees` (רשימת עובדים)
+- `EmployeeDetail` (תיק עובד)
+- `AttendanceMap` (מפת נוכחות)
+- `AppLayout` עצמו (כדי שגם ה-shell לא יבזיק)
 
-```tsx
-<Route
-  path="/assets/:domain/:itemId?"
-  element={<ProtectedRoute ...><AssetsDomainPage /></ProtectedRoute>}
-/>
-```
-
-(React Router v6 תומך בסיומת `?` עבור פרמטרים אופציונליים.)
-
-הרכיב עצמו כבר תומך בשני המקרים פנימית (קורא `params.itemId` ומחזיר `AssetDetailView` כשקיים), אז אין שינוי לוגי נוסף.
+שאר הדפים (Companies, Settings, Tax101TokenPage, SignHandover וכו׳) יישארו lazy כדי לא לנפח את ה-bundle הראשוני.
 
 ## קבצים שמשתנים
-- `src/App.tsx` — איחוד שתי השורות 76-77 לראוט יחיד עם `:itemId?`.
+- `src/App.tsx` — להחליף את `lazy(() => import(...))` בייבוא רגיל עבור 5 המסכים לעיל.
+
+## למה זה בטוח
+המסכים האלה כל-מקום נטענים בכל מקרה תוך שניות מהכניסה למערכת (האדמין פותח Dashboard ראשון). הוספתם ל-bundle הראשוני חוסכת round-trip ומציגה את התוכן מיידית.
 
 ## בדיקה
-לחיצה על משאב ב-`/assets/physical` תעבור ל-`/assets/physical/<id>` ותציג את `AssetDetailView` ללא הבהוב, ללא Suspense fallback וללא איפוס state.
+מעבר בין הסיידבר ל-Dashboard / עובדים / מפת נוכחות / תיק עובד יציג את התוכן מיד, ללא ספינר ביניים.

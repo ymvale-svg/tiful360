@@ -8,14 +8,15 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { CompanyProvider } from "@/hooks/useCompany";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
-// Eager: critical entry pages (small + needed immediately)
+// Eager: critical entry pages and frequently-used screens (avoids Suspense flash on navigation)
 import Login from "@/pages/Login";
+import { AppLayout } from "@/components/AppLayout";
+import Dashboard from "@/pages/Dashboard";
+import Employees from "@/pages/Employees";
+import EmployeeDetail from "@/pages/EmployeeDetail";
+import AttendanceMap from "@/pages/AttendanceMap";
 
-// Lazy: everything else — split into separate chunks loaded on demand
-const AppLayout = lazy(() => import("@/components/AppLayout").then(m => ({ default: m.AppLayout })));
-const Dashboard = lazy(() => import("@/pages/Dashboard"));
-const Employees = lazy(() => import("@/pages/Employees"));
-const EmployeeDetail = lazy(() => import("@/pages/EmployeeDetail"));
+// Lazy: less-frequent pages — split into separate chunks loaded on demand
 const Assets = lazy(() => import("@/pages/Assets"));
 const AssetsDomainPage = lazy(() => import("@/pages/AssetsDomainPage"));
 const ITTickets = lazy(() => import("@/pages/ITTickets"));
@@ -34,7 +35,6 @@ const LeaveRequests = lazy(() => import("@/pages/LeaveRequests"));
 const AttendanceCorrections = lazy(() => import("@/pages/AttendanceCorrections"));
 const Payroll = lazy(() => import("@/pages/Payroll"));
 const Tax101TokenPage = lazy(() => import("@/pages/Tax101TokenPage"));
-const AttendanceMap = lazy(() => import("@/pages/AttendanceMap"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
