@@ -147,7 +147,7 @@ export default function AssetsDomainPage() {
       return an.localeCompare(bn, "he");
     });
     return arr;
-  }, [visibleAssets, catById, domain, sortMode]);
+  }, [visibleAssets, catById, domain, sortMode, groupsById]);
 
   // Currently-drilled group items
   const drilledItems = useMemo(() => {
