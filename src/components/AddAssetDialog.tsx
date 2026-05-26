@@ -530,7 +530,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
                 dir="ltr"
               />
               <p className="text-[11px] text-muted-foreground mt-1">
-                נוצר אוטומטית בפורמט <span className="font-mono">PREFIX-MMYY-NNN</span> ומתאפס בכל חודש
+                נוצר אוטומטית בפורמט <span className="font-mono">PREFIX-MMYY-NNN</span> — המונה ממשיך לרוץ, החודש מתעדכן אוטומטית
               </p>
               {errors.asset_code && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.asset_code}</p>}
             </div>
