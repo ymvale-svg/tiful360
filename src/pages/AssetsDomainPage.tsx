@@ -10,8 +10,8 @@ import { AddAssetDialog } from "@/components/AddAssetDialog";
 import { getCategoryIcon, getCategoryColor } from "@/lib/categoryIcons";
 import {
   DOMAIN_META,
-  classifyCategory,
-  isDomainKey,
+  getDomain,
+  domainSlugToKey,
   getGroupKey,
   type DomainKey,
 } from "@/lib/assetDomains";
@@ -51,7 +51,8 @@ export default function AssetsDomainPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [addCategoryId, setAddCategoryId] = useState<string | undefined>(undefined);
 
-  if (!isDomainKey(params.domain)) {
+  const domainKey = domainSlugToKey(params.domain);
+  if (!domainKey) {
     return (
       <div className="p-8 text-center" dir="rtl">
         <p className="text-muted-foreground mb-4">דומיין לא קיים: {params.domain}</p>
@@ -59,14 +60,14 @@ export default function AssetsDomainPage() {
       </div>
     );
   }
-  const domain: DomainKey = params.domain;
+  const domain: DomainKey = domainKey;
   const meta = DOMAIN_META[domain];
   const Icon = meta.icon;
   const subParam = searchParams.get("sub");
   const groupParam = searchParams.get("group");
 
   const domainCats = useMemo(
-    () => (categories ?? []).filter((c: any) => classifyCategory(c) === domain),
+    () => (categories ?? []).filter((c: any) => getDomain(c) === domain),
     [categories, domain],
   );
   const catById = useMemo(() => {
