@@ -188,6 +188,7 @@ export type Database = {
           created_at: string
           default_notification_days_before: number | null
           description: string | null
+          domain: string
           icon: string | null
           id: string
           is_assignable: boolean
@@ -204,6 +205,7 @@ export type Database = {
           created_at?: string
           default_notification_days_before?: number | null
           description?: string | null
+          domain?: string
           icon?: string | null
           id?: string
           is_assignable?: boolean
@@ -220,6 +222,7 @@ export type Database = {
           created_at?: string
           default_notification_days_before?: number | null
           description?: string | null
+          domain?: string
           icon?: string | null
           id?: string
           is_assignable?: boolean
