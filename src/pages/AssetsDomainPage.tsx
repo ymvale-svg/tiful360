@@ -4,6 +4,7 @@ import { ChevronRight, Search, Plus, ArrowRight, Users, AlertTriangle, ArrowUpDo
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAssets, useAssetCategories } from "@/hooks/useData";
+import { useAssetGroups } from "@/hooks/useAssetGroups";
 import { useExpiringAssets } from "@/hooks/useExpiringAssets";
 import { AssetDetailView } from "@/components/assets/AssetDetailView";
 import { AddAssetDialog } from "@/components/AddAssetDialog";
@@ -44,6 +45,7 @@ export default function AssetsDomainPage() {
 
   const { data: assets, isLoading } = useAssets();
   const { data: categories } = useAssetCategories();
+  const { data: groups } = useAssetGroups();
   const { data: expiring } = useExpiringAssets(30);
 
   const [search, setSearch] = useState("");
@@ -77,6 +79,12 @@ export default function AssetsDomainPage() {
   }, [domainCats]);
   const catIds = useMemo(() => new Set(domainCats.map((c: any) => c.id)), [domainCats]);
 
+  const groupsById = useMemo(() => {
+    const m = new Map<string, { name: string }>();
+    for (const g of groups ?? []) m.set(g.id, { name: g.name });
+    return m;
+  }, [groups]);
+
   const domainAssets = useMemo(
     () => (assets ?? []).filter((a: any) => catIds.has(a.category_id)),
     [assets, catIds],
@@ -88,7 +96,7 @@ export default function AssetsDomainPage() {
     return domainAssets.filter((a: any) => {
       if (subParam && a.category_id !== subParam) return false;
       if (!q) return true;
-      const groupName = getGroupKey(a, domain, catById.get(a.category_id)) ?? "";
+      const groupName = getGroupKey(a, domain, catById.get(a.category_id), groupsById) ?? "";
       return (
         a.asset_name?.toLowerCase().includes(q) ||
         a.asset_code?.toLowerCase().includes(q) ||
@@ -97,7 +105,7 @@ export default function AssetsDomainPage() {
         groupName.toLowerCase().includes(q)
       );
     });
-  }, [domainAssets, search, subParam, domain, catById]);
+  }, [domainAssets, search, subParam, domain, catById, groupsById]);
 
   // Build parent groups per (category, group-key)
   const parentGroups = useMemo(() => {
@@ -105,7 +113,7 @@ export default function AssetsDomainPage() {
     for (const a of visibleAssets) {
       const cat = catById.get(a.category_id);
       if (!cat) continue;
-      const key = getGroupKey(a, domain, cat);
+      const key = getGroupKey(a, domain, cat, groupsById);
       const mapKey = `${cat.id}::${key ?? "__flat__"}`;
       if (!map.has(mapKey)) map.set(mapKey, { category: cat, groupKey: key, items: [] });
       map.get(mapKey)!.items.push(a);
@@ -139,7 +147,7 @@ export default function AssetsDomainPage() {
       return an.localeCompare(bn, "he");
     });
     return arr;
-  }, [visibleAssets, catById, domain, sortMode]);
+  }, [visibleAssets, catById, domain, sortMode, groupsById]);
 
   // Currently-drilled group items
   const drilledItems = useMemo(() => {
@@ -148,10 +156,10 @@ export default function AssetsDomainPage() {
     if (!cat) return [];
     return visibleAssets.filter((a: any) => {
       if (a.category_id !== subParam) return false;
-      const k = getGroupKey(a, domain, cat) ?? "";
+      const k = getGroupKey(a, domain, cat, groupsById) ?? "";
       return k === groupParam;
     });
-  }, [subParam, groupParam, visibleAssets, catById, domain]);
+  }, [subParam, groupParam, visibleAssets, catById, domain, groupsById]);
 
   const expiringCount = useMemo(
     () => (expiring ?? []).filter((e) => catIds.has(e.category_id)).length,
