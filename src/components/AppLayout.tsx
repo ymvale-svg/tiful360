@@ -116,12 +116,7 @@ export function AppLayout() {
         </header>
 
         <main id="main-content" tabIndex={-1} className="p-6 focus:outline-none">
-          <Suspense fallback={
-            <div className="flex items-center justify-center py-20" role="status" aria-live="polite">
-              <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" aria-hidden="true" />
-              <span className="sr-only">טוען...</span>
-            </div>
-          }>
+          <Suspense fallback={null}>
             <Outlet />
           </Suspense>
         </main>
