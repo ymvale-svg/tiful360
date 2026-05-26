@@ -1,13 +1,34 @@
-## שינוי
-כברירת מחדל, הריבוע האמצעי (עורך השדות / empty state) לא יוצג כלל. הוא יופיע רק אחרי לחיצה על תת-קטגוריה.
+# תיקון "ריפרוש מוזר" בלחיצה על משאב
 
-## פרטים טכניים ב-`src/pages/CategoryManager.tsx`
-1. **Empty state מוסר** — הבלוק שמציג את `Settings2` עם "בחר תת-קטגוריה לעריכת שדות" (שורות ~215-221) לא יירונדר כשאין `selectedId`.
-2. **Layout דינמי** — ה-grid יעבור ל-single column כשאין בחירה, כך שרשימת הדומיינים תופסת את כל הרוחב:
-   - כש-`selectedId` קיים: `grid-cols-1 lg:grid-cols-3` (כמו היום, רשימה מימין + עורך משמאל).
-   - כשאין בחירה: `grid-cols-1` בלבד, ועמודת הדומיינים תופסת רוחב מלא ללא `lg:order-last`.
-3. **סגירת הפאנל** — לאחר בחירה, לחיצה חוזרת על אותה תת-קטגוריה (toggle) או כפתור סגירה ב-`FieldsEditor`/`CategoryEditor` יחזיר ל-`selectedId = null` ויסתיר שוב את הריבוע. אוסיף כפתור X קטן בכותרת ה-`FieldsEditor`.
+## הבעיה
+ב-`src/App.tsx` יש שני Routes נפרדים לאותו רכיב:
+```
+/assets/:domain        → AssetsDomainPage
+/assets/:domain/:itemId → AssetsDomainPage
+```
+כשהמשתמש לוחץ על כרטיס משאב, ה-URL משתנה ו-React Router רואה זאת כ-match שונה. התוצאה: unmount + remount של `AssetsDomainPage` (lazy), מה שגורם ל:
+- הצגת ה-PageLoader של Suspense ("טוען...")
+- איפוס state מקומי (חיפוש, sort, sub וכד׳)
+- Re-execution של ה-queries
 
-## ללא שינוי
-- לוגיקת הקבוצות, השדות, ה-CRUD והדיאלוגים נשארים זהים.
-- אין שינויי DB.
+זה ה"ריפרוש המוזר" שהמשתמש מתאר.
+
+## הפתרון
+לאחד לראוט יחיד עם פרמטר אופציונלי, כך ש-React Router שומר על אותו element instance במעבר בין רשימה לפרטים:
+
+```tsx
+<Route
+  path="/assets/:domain/:itemId?"
+  element={<ProtectedRoute ...><AssetsDomainPage /></ProtectedRoute>}
+/>
+```
+
+(React Router v6 תומך בסיומת `?` עבור פרמטרים אופציונליים.)
+
+הרכיב עצמו כבר תומך בשני המקרים פנימית (קורא `params.itemId` ומחזיר `AssetDetailView` כשקיים), אז אין שינוי לוגי נוסף.
+
+## קבצים שמשתנים
+- `src/App.tsx` — איחוד שתי השורות 76-77 לראוט יחיד עם `:itemId?`.
+
+## בדיקה
+לחיצה על משאב ב-`/assets/physical` תעבור ל-`/assets/physical/<id>` ותציג את `AssetDetailView` ללא הבהוב, ללא Suspense fallback וללא איפוס state.

@@ -73,8 +73,7 @@ const App = () => (
                   <Route path="/employees" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations", "payroll", "finance"]}><Employees /></ProtectedRoute>} />
                   <Route path="/employees/:id" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations", "direct_manager", "payroll", "finance"]}><EmployeeDetail /></ProtectedRoute>} />
                   <Route path="/assets" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin", "operations", "finance", "legal"]}><Assets /></ProtectedRoute>} />
-                  <Route path="/assets/:domain" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin", "operations", "finance", "legal"]}><AssetsDomainPage /></ProtectedRoute>} />
-                  <Route path="/assets/:domain/:itemId" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin", "operations", "finance", "legal"]}><AssetsDomainPage /></ProtectedRoute>} />
+                  <Route path="/assets/:domain/:itemId?" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin", "operations", "finance", "legal"]}><AssetsDomainPage /></ProtectedRoute>} />
 
                   <Route path="/categories" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations", "legal"]}><CategoryManager /></ProtectedRoute>} />
                   <Route path="/it-tickets" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin", "operations"]}><ITTickets /></ProtectedRoute>} />
