@@ -105,7 +105,7 @@ export default function AssetsDomainPage() {
         groupName.toLowerCase().includes(q)
       );
     });
-  }, [domainAssets, search, subParam, domain, catById]);
+  }, [domainAssets, search, subParam, domain, catById, groupsById]);
 
   // Build parent groups per (category, group-key)
   const parentGroups = useMemo(() => {
