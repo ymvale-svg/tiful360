@@ -79,6 +79,12 @@ export default function AssetsDomainPage() {
   }, [domainCats]);
   const catIds = useMemo(() => new Set(domainCats.map((c: any) => c.id)), [domainCats]);
 
+  const groupsById = useMemo(() => {
+    const m = new Map<string, { name: string }>();
+    for (const g of groups ?? []) m.set(g.id, { name: g.name });
+    return m;
+  }, [groups]);
+
   const domainAssets = useMemo(
     () => (assets ?? []).filter((a: any) => catIds.has(a.category_id)),
     [assets, catIds],
