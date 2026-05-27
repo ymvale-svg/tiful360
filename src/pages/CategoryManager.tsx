@@ -656,7 +656,7 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
           <div className="flex gap-2">
             <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setGroupsOpen(true)}>
               <Users className="w-3.5 h-3.5" />
-              קבוצות
+              משפחות
             </Button>
             <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setEditing(true)}>
               <Pencil className="w-3.5 h-3.5" />
