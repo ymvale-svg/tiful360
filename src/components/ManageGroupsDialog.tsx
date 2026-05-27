@@ -58,7 +58,7 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
       const g = await createGroup.mutateAsync({ category_id: categoryId, name });
       setNewName("");
       setSelectedGroupId(g.id);
-      toast({ title: "הקבוצה נוצרה" });
+      toast({ title: "המשפחה נוצרה" });
     } catch (e: any) {
       toast({ title: "שגיאה", description: e.message, variant: "destructive" });
     }
@@ -77,7 +77,7 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("למחוק את הקבוצה? הפריטים יוסרו מהקבוצה אך לא יימחקו.")) return;
+    if (!confirm("למחוק את המשפחה? הפריטים יוסרו מהמשפחה אך לא יימחקו.")) return;
     try {
       await deleteGroup.mutateAsync(id);
       if (selectedGroupId === id) setSelectedGroupId(null);
