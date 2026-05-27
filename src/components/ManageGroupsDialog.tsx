@@ -81,7 +81,7 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
     try {
       await deleteGroup.mutateAsync(id);
       if (selectedGroupId === id) setSelectedGroupId(null);
-      toast({ title: "הקבוצה נמחקה" });
+      toast({ title: "המשפחה נמחקה" });
     } catch (e: any) {
       toast({ title: "שגיאה", description: e.message, variant: "destructive" });
     }
@@ -108,22 +108,22 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent dir="rtl" className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>ניהול קבוצות · {categoryName}</DialogTitle>
+          <DialogTitle>ניהול משפחות · {categoryName}</DialogTitle>
           <DialogDescription>
-            הגדר קבוצות לאיחוד פריטים זהים תחת כרטיס-אב אחד (לחיצה תפתח רשימה של כל הפריטים).
+            הגדר משפחות לאיחוד פריטים זהים תחת כרטיס-אב אחד (לחיצה תפתח רשימה של כל הפריטים).
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Groups list */}
           <div className="space-y-2">
-            <div className="text-xs font-medium text-muted-foreground">קבוצות</div>
+            <div className="text-xs font-medium text-muted-foreground">משפחות</div>
             <div className="flex gap-2">
               <input
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-                placeholder="שם קבוצה חדשה"
+                placeholder="שם משפחה חדשה"
                 className="flex-1 px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
               />
               <Button size="sm" onClick={handleCreate} disabled={!newName.trim() || createGroup.isPending}>
@@ -134,7 +134,7 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
             <div className="space-y-1 max-h-80 overflow-y-auto">
               {catGroups.length === 0 ? (
                 <p className="text-xs text-muted-foreground p-3 text-center border border-dashed rounded-lg">
-                  אין עדיין קבוצות
+                  אין עדיין משפחות
                 </p>
               ) : (
                 catGroups.map((g) => {
@@ -200,12 +200,12 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
           {/* Items panel */}
           <div className="space-y-2">
             <div className="text-xs font-medium text-muted-foreground">
-              {selectedGroupId ? "פריטים בקבוצה" : "בחר קבוצה כדי לשייך פריטים"}
+              {selectedGroupId ? "פריטים במשפחה" : "בחר משפחה כדי לשייך פריטים"}
             </div>
             {selectedGroupId ? (
               <div className="space-y-3 max-h-80 overflow-y-auto">
                 <div>
-                  <div className="text-[11px] text-muted-foreground mb-1">בקבוצה ({inGroup.length})</div>
+                  <div className="text-[11px] text-muted-foreground mb-1">במשפחה ({inGroup.length})</div>
                   {inGroup.length === 0 ? (
                     <p className="text-[11px] text-muted-foreground p-2 border border-dashed rounded">אין פריטים</p>
                   ) : (
@@ -213,7 +213,7 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
                       {inGroup.map((a: any) => (
                         <li key={a.id} className="flex items-center justify-between gap-2 px-2 py-1.5 bg-primary/5 rounded text-sm">
                           <span className="truncate">{a.asset_name} · <span className="font-mono text-[11px]">{a.asset_code}</span></span>
-                          <button onClick={() => removeFromGroup(a.id)} className="text-muted-foreground hover:text-destructive shrink-0" title="הסר מהקבוצה">
+                          <button onClick={() => removeFromGroup(a.id)} className="text-muted-foreground hover:text-destructive shrink-0" title="הסר מהמשפחה">
                             <X className="w-3.5 h-3.5" />
                           </button>
                         </li>
@@ -231,7 +231,7 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
                         <li key={a.id} className="flex items-center justify-between gap-2 px-2 py-1.5 hover:bg-muted/50 rounded text-sm">
                           <span className="truncate">
                             {a.asset_name} · <span className="font-mono text-[11px]">{a.asset_code}</span>
-                            {a.group_id && <span className="text-[10px] text-muted-foreground mr-1">(בקבוצה אחרת)</span>}
+                            {a.group_id && <span className="text-[10px] text-muted-foreground mr-1">(במשפחה אחרת)</span>}
                           </span>
                           <button onClick={() => moveToGroup(a.id)} className="text-primary hover:underline text-[11px] shrink-0">
                             הוסף
@@ -245,7 +245,7 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
             ) : (
               <div className="text-xs text-muted-foreground p-6 text-center border border-dashed rounded-lg">
                 <ChevronRight className="w-4 h-4 mx-auto mb-2 opacity-50" />
-                בחר קבוצה מימין
+                בחר משפחה מימין
               </div>
             )}
           </div>
