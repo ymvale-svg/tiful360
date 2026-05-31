@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -14,7 +14,7 @@ import {
   Wallet,
   MapPin,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import logoImg from "@/assets/logo.png";
@@ -26,31 +26,45 @@ interface NavItem {
   icon: any;
   path: string;
   roles?: AppRole[];
+  preload?: () => Promise<unknown>;
 }
+
+// Preload functions for lazy chunks — triggered on hover for instant navigation
+const preload = {
+  assets: () => import("@/pages/Assets"),
+  itTickets: () => import("@/pages/ITTickets"),
+  payroll: () => import("@/pages/Payroll"),
+  settings: () => import("@/pages/Settings"),
+  portal: () => import("@/pages/EmployeePortal"),
+  companies: () => import("@/pages/Companies"),
+};
 
 const mainNav: NavItem[] = [
   { label: "לוח בקרה", icon: LayoutDashboard, path: "/", roles: ["admin", "it_manager", "super_admin", "operations", "payroll", "finance"] },
   { label: "עובדים", icon: Users, path: "/employees", roles: ["admin", "super_admin", "operations", "payroll", "finance"] },
-  { label: "משאבים", icon: Package, path: "/assets", roles: ["admin", "it_manager", "super_admin", "operations", "finance", "legal"] },
-  { label: "משימות IT", icon: Shield, path: "/it-tickets", roles: ["admin", "it_manager", "super_admin", "operations"] },
-  { label: "מחלקת שכר", icon: Wallet, path: "/payroll", roles: ["admin", "super_admin", "payroll", "finance"] },
+  { label: "משאבים", icon: Package, path: "/assets", roles: ["admin", "it_manager", "super_admin", "operations", "finance", "legal"], preload: preload.assets },
+  { label: "משימות IT", icon: Shield, path: "/it-tickets", roles: ["admin", "it_manager", "super_admin", "operations"], preload: preload.itTickets },
+  { label: "מחלקת שכר", icon: Wallet, path: "/payroll", roles: ["admin", "super_admin", "payroll", "finance"], preload: preload.payroll },
   { label: "מפת נוכחות", icon: MapPin, path: "/attendance-map", roles: ["admin", "super_admin", "payroll", "direct_manager"] },
 ];
 
 const superAdminNav: NavItem[] = [
-  { label: "ניהול חברות", icon: Building2, path: "/companies", roles: ["super_admin"] },
+  { label: "ניהול חברות", icon: Building2, path: "/companies", roles: ["super_admin"], preload: preload.companies },
 ];
 
 const portalNav: NavItem[] = [
-  { label: "פורטל עובדים", icon: UserCircle, path: "/portal" },
+  { label: "פורטל עובדים", icon: UserCircle, path: "/portal", preload: preload.portal },
 ];
 
 const bottomNav: NavItem[] = [
-  { label: "הגדרות", icon: Settings, path: "/settings", roles: ["admin", "super_admin"] },
+  { label: "הגדרות", icon: Settings, path: "/settings", roles: ["admin", "super_admin"], preload: preload.settings },
 ];
 
 export function AppSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [isPending, startTransition] = useTransition();
+  const [pendingPath, setPendingPath] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const { roles, signOut, user, isSuperAdmin } = useAuth();
 
@@ -63,19 +77,36 @@ export function AppSidebar() {
   const NavItemComponent = ({ item }: { item: NavItem }) => {
     const isActive = location.pathname === item.path ||
       (item.path !== "/" && location.pathname.startsWith(item.path));
+    const isLoading = isPending && pendingPath === item.path;
+
+    const handleClick = (e: React.MouseEvent) => {
+      // Allow modifier keys / middle click to behave like a normal link
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || (e as any).button === 1) return;
+      e.preventDefault();
+      if (location.pathname === item.path) return;
+      setPendingPath(item.path);
+      startTransition(() => {
+        navigate(item.path);
+      });
+    };
 
     return (
-      <Link
-        to={item.path}
+      <a
+        href={item.path}
+        onClick={handleClick}
+        onMouseEnter={() => item.preload?.()}
+        onFocus={() => item.preload?.()}
         className={cn(
           "sidebar-item",
-          isActive ? "sidebar-item-active" : "sidebar-item-inactive"
+          isActive ? "sidebar-item-active" : "sidebar-item-inactive",
+          isLoading && "opacity-70"
         )}
         title={collapsed ? item.label : undefined}
+        aria-current={isActive ? "page" : undefined}
       >
         <item.icon className="w-5 h-5 shrink-0" />
         {!collapsed && <span>{item.label}</span>}
-      </Link>
+      </a>
     );
   };
 
