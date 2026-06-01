@@ -417,9 +417,12 @@ function baseSystemPrompt(catalog: string): string {
 - "מי מחזיק רכבים" → query_table assets filter \`category_id in [<id רכב>]\` → ואז query_table employees filter \`id in [<current_owner_id-ים>]\` להבאת השמות.
 - "ביטוח שפג" → assets עם \`expiry_date lt היום\` (או \`insurance_expiry lt היום\` אם השדה הזה מאוכלס).
 - "ביטוחים של עיר/מקום/סניף X" או "באיזה מקומות יש ביטוח" → assets עם \`category_id in [<id-ים עם domain=insurance>]\`. השם/מיקום/סוג הביטוח נמצא ב-\`asset_name\` (לא ב-\`insurance_company\` — שם זה רק שם חברת הביטוח כמו "הראל"/"מנורה"). לחיפוש לפי מקום או סוג: \`asset_name ilike '%X%'\`.
+- **קריטי — סוגי ביטוח**: הקטגוריה היחידה היא "ביטוחים" (domain=insurance). מילים כמו **"מבנה"**, "רכב", "דירה", "עסק", "צד ג", "עבודות קבלניות", "אחריות מקצועית" וכו' הן **תתי-סוגים בתוך \`asset_name\`** — לא קטגוריות נפרדות. **לעולם אל תחפש קטגוריה בשם "ביטוח מבנה"** — היא לא קיימת. תמיד: \`category_id in [<insurance ids>]\` + \`asset_name ilike '%<סוג>%'\`.
+- "אילו נכסים יש להם ביטוח <סוג>?" (למשל "ביטוח מבנה", "ביטוח רכב") → query_table assets, filter: \`category_id in [<insurance ids>]\` + \`asset_name ilike '%<סוג>%'\`. דוגמה: "ביטוח מבנה" → \`asset_name ilike '%מבנה%'\`.
 - "ביטוח <סוג> בתוקף" (למשל "עבודות קבלניות בתוקף", "צד ג בתוקף") → assets domain=insurance + \`asset_name ilike '%<סוג>%'\` + \`expiry_date gte היום\`. **אל תסתמך על \`status\`** — תוקף ביטוח נקבע ע"י \`expiry_date\` (השדה הראשי לתפוגה בכל הנכסים), לא ע"י עמודת status.
 - **כלל כללי**: כשמחפשים נכס לפי "שם"/"מקום"/"תיאור"/"סוג" — תמיד \`asset_name ilike\` (זה השדה החופשי). שדות כמו \`insurance_company\`, \`manufacturer_model\`, \`license_plate\` הם נתוני-עזר ספציפיים, לא שם הנכס. אם עמודה ספציפית ריקה — נסה את \`asset_name\` לפני שאתה אומר "לא נמצא".
 - **"בתוקף" / "פג" לכל נכס** — תמיד \`expiry_date\` (gte/lt היום). אל תשתמש ב-\`status\` לבדיקת תוקף.
+- **לפני שאתה אומר "לא נמצא"**: ודא שהרצת \`asset_name ilike '%<מילת מפתח>%'\` (רק המילה החשובה, בלי "ביטוח" בתחילה). אם "ביטוח מבנה" לא מצא — נסה רק \`%מבנה%\`.
 
 ## מסמכים מצורפים (asset_documents)
 - לכל נכס יכולים להיות מסמכים בטבלת \`asset_documents\` (חוזים, פוליסות, תעודות, אישורים). חפש לפי \`asset_id\` או \`document_label ilike\`.
