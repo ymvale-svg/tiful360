@@ -8,11 +8,11 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-const MODEL = Deno.env.get("AI_MODEL") ?? "google/gemini-3-flash-preview";
-const AI_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const MODEL = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.0-flash";
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
 // ---------- Tool declarations (for Gemini function calling) ----------
 const tools = [{
