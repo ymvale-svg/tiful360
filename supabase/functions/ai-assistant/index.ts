@@ -383,6 +383,8 @@ function baseSystemPrompt(catalog: string): string {
 - "כל הנכסים הפיזיים" → query_table assets, filter \`category_id in [<כל ה-id-ים עם domain=physical מהקטלוג>]\`.
 - "מי מחזיק רכבים" → query_table assets filter \`category_id in [<id רכב>]\` → ואז query_table employees filter \`id in [<current_owner_id-ים>]\` להבאת השמות.
 - "ביטוח שפג" → assets עם \`insurance_expiry lt היום\`.
+- "ביטוחים של עיר/מקום/סניף X" או "באיזה מקומות יש ביטוח" → assets עם \`category_id in [<id-ים עם domain=insurance>]\`. השם/מיקום של הביטוח נמצא ב-\`asset_name\` (לא ב-\`insurance_company\` — שם זה רק שם חברת הביטוח כמו "הראל"/"מנורה"). לחיפוש לפי מקום: \`asset_name ilike '%X%'\`. ל"איזה מקומות" — החזר את כל הביטוחים והצג את \`asset_name\` שלהם.
+- **כלל כללי**: כשמחפשים נכס לפי "שם"/"מקום"/"תיאור" — תמיד \`asset_name ilike\` (זה השדה החופשי). שדות כמו \`insurance_company\`, \`manufacturer_model\`, \`license_plate\` הם נתוני-עזר ספציפיים, לא שם הנכס. אם עמודה ספציפית ריקה — נסה את \`asset_name\` לפני שאתה אומר "לא נמצא".
 
 ## חיפושים כלליים
 - העדף **ilike** על eq עבור טקסט בעברית.
