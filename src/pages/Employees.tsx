@@ -237,7 +237,7 @@ export default function Employees() {
                     exportToExcel(employees.map(e => ({
                       ...e,
                       status_label: statusLabels[e.status as EmployeeStatus] ?? e.status,
-                      start_date_fmt: new Date(e.start_date).toLocaleDateString("en-GB").replace(/\//g, "-"),
+                      start_date_fmt: new Date(e.start_date).toLocaleDateString("en-GB"),
                     })), [
                       { key: "employee_code", label: "מזהה עובד" },
                       { key: "full_name", label: "שם מלא" },

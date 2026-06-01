@@ -69,7 +69,7 @@ export default function ITTickets() {
                   status: t.status,
                   type: t.ticket_type,
                   employee: t.employees?.full_name ?? "",
-                  sla: t.sla_deadline ? new Date(t.sla_deadline).toLocaleDateString("en-GB").replace(/\//g, "-") : "",
+                  sla: t.sla_deadline ? new Date(t.sla_deadline).toLocaleDateString("en-GB") : "",
                 })),
                 [
                   { key: "ticket_code", label: "מזהה" },

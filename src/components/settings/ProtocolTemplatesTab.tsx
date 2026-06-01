@@ -243,7 +243,7 @@ function TemplateEditor({
         asset_code: "PC-001",
         serial: "ABC123XYZ",
         category: "מחשבים ניידים",
-        date: new Date().toLocaleDateString("en-GB").replace(/\//g, "-"),
+        date: new Date().toLocaleDateString("en-GB"),
         company_name: companyName,
       };
       const blob = await buildProtocolPreviewPdf({

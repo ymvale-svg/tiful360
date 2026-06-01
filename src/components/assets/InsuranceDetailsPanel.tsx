@@ -47,7 +47,7 @@ export function InsuranceDetailsPanel({ asset }: Props) {
     if (days < 0) return `פג לפני ${Math.abs(days)} ימים`;
     if (days === 0) return "פג היום";
     if (days <= 30) return `בעוד ${days} ימים`;
-    return new Date(d!).toLocaleDateString("en-GB").replace(/\//g, "-");
+    return new Date(d!).toLocaleDateString("en-GB");
   };
 
   // Lookup agent contact info from other insurance assets in the same company

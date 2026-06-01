@@ -50,7 +50,7 @@ export function TrainingDetailsPanel({ asset }: Props) {
     if (days < 0) return `פג לפני ${Math.abs(days)} ימים`;
     if (days === 0) return "פג היום";
     if (days <= 30) return `בעוד ${days} ימים`;
-    return new Date(d!).toLocaleDateString("en-GB").replace(/\//g, "-");
+    return new Date(d!).toLocaleDateString("en-GB");
   };
 
   const handleSave = async () => {
@@ -103,7 +103,7 @@ export function TrainingDetailsPanel({ asset }: Props) {
             <Input type="date" value={form.completed_at} onChange={(e) => setForm({ ...form, completed_at: e.target.value })} className="mt-1 text-left" dir="ltr" />
           ) : (
             <div className="font-medium mt-1 text-sm">
-              {cf.completed_at ? new Date(cf.completed_at).toLocaleDateString("en-GB").replace(/\//g, "-") : "—"}
+              {cf.completed_at ? new Date(cf.completed_at).toLocaleDateString("en-GB") : "—"}
             </div>
           )}
         </div>

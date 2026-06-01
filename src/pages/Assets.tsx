@@ -184,7 +184,7 @@ export default function Assets() {
                               category_name: a.asset_categories?.category_name ?? "",
                               owner_name: a.employees?.full_name ?? "במלאי",
                               status_label: assetStatusLabels[a.status] ?? a.status,
-                              expiry_fmt: a.expiry_date ? new Date(a.expiry_date).toLocaleDateString("en-GB").replace(/\//g, "-") : "",
+                              expiry_fmt: a.expiry_date ? new Date(a.expiry_date).toLocaleDateString("en-GB") : "",
                             })), [
                               { key: "asset_code", label: "מזהה" },
                               { key: "asset_name", label: "שם פריט" },

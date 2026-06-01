@@ -74,7 +74,7 @@ export default function Dashboard() {
                   {item.details && <p className="text-xs text-muted-foreground">{item.details}</p>}
                 </div>
                 <span className="text-xs text-muted-foreground whitespace-nowrap">
-                  {new Date(item.created_at).toLocaleDateString("en-GB").replace(/\//g, "-")}
+                  {new Date(item.created_at).toLocaleDateString("en-GB")}
                 </span>
               </div>
             ))}
@@ -102,7 +102,7 @@ export default function Dashboard() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm truncate">{alert.title}</p>
                     <p className="text-xs text-muted-foreground">
-                      {alert.target_date ? new Date(alert.target_date).toLocaleDateString("en-GB").replace(/\//g, "-") : "—"}
+                      {alert.target_date ? new Date(alert.target_date).toLocaleDateString("en-GB") : "—"}
                     </p>
                   </div>
                 </div>
