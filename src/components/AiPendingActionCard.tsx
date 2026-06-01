@@ -97,28 +97,28 @@ export function AiPendingActionCard({ action, loading, onApprove, onReject }: Pr
 
   useEffect(() => {
     let cancelled = false;
-    async function resolve() {
-      const lookups: Promise<void>[] = [];
+    (async () => {
       const next: Record<string, string> = {};
+      const tasks: Promise<unknown>[] = [];
       for (const [k, v] of Object.entries(values ?? {})) {
         if (typeof v === "string" && UUID_RE.test(v) && RESOLVERS[k]) {
           const { table, col } = RESOLVERS[k];
-          lookups.push(
-            supabase
-              .from(table as any)
-              .select(`${col}`)
-              .eq("id", v)
-              .maybeSingle()
-              .then(({ data }: any) => {
-                if (data?.[col]) next[v] = data[col];
-              }),
+          tasks.push(
+            (async () => {
+              const { data } = await supabase
+                .from(table as any)
+                .select(col)
+                .eq("id", v)
+                .maybeSingle();
+              const row = data as Record<string, any> | null;
+              if (row?.[col]) next[v] = String(row[col]);
+            })(),
           );
         }
       }
-      await Promise.all(lookups);
+      await Promise.all(tasks);
       if (!cancelled) setResolved(next);
-    }
-    resolve();
+    })();
     return () => { cancelled = true; };
   }, [values]);
 
