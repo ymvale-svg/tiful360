@@ -111,7 +111,7 @@ export function AiAssistantWidget() {
               </div>
               <div>
                 <p className="text-sm font-semibold">תפעול AI</p>
-                <p className="text-[11px] text-muted-foreground">עוזר חכם • Gemini</p>
+                <p className="text-[11px] text-muted-foreground">עוזר חכם • Lovable AI</p>
               </div>
             </div>
             <button
