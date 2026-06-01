@@ -1,4 +1,4 @@
-// AI Assistant Edge Function — calls Google Gemini directly with function calling
+// AI Assistant Edge Function — calls Lovable AI Gateway with function calling
 // Uses user's JWT to query Supabase with RLS enforcing role-based access.
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -8,10 +8,11 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-const MODEL = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.0-flash";
+const MODEL = Deno.env.get("AI_MODEL") ?? "google/gemini-3-flash-preview";
+const AI_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 // ---------- Tool declarations (for Gemini function calling) ----------
 const tools = [{
@@ -135,6 +136,15 @@ const SYSTEM_PROMPT = `אתה "תפעול AI" — עוזר חכם במערכת �
 - אל תמציא נתונים. אם חסר מידע — שאל את המשתמש.
 - פעולות כתיבה (יצירה/עדכון) רגישות — תאר מה אתה עומד לעשות וחכה לאישור המשתמש לפני שתבצע.`;
 
+const aiTools = tools[0].functionDeclarations.map((declaration) => ({
+  type: "function",
+  function: {
+    name: declaration.name,
+    description: declaration.description,
+    parameters: declaration.parameters,
+  },
+}));
+
 async function executeTool(name: string, args: any, supabase: any, companyId: string | null) {
   const lim = Math.min(args?.limit ?? 20, 50);
   try {
@@ -231,21 +241,39 @@ async function executeTool(name: string, args: any, supabase: any, companyId: st
   }
 }
 
-async function callGemini(contents: any[]) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-  const res = await fetch(url, {
+function parseToolArgs(rawArgs: unknown) {
+  if (!rawArgs) return {};
+  if (typeof rawArgs === "object") return rawArgs;
+  try {
+    return JSON.parse(String(rawArgs));
+  } catch {
+    return {};
+  }
+}
+
+async function callAiGateway(messages: any[]) {
+  const res = await fetch(AI_GATEWAY_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-      contents,
-      tools,
-      toolConfig: { functionCallingConfig: { mode: "AUTO" } },
+      model: MODEL,
+      messages,
+      tools: aiTools,
+      tool_choice: "auto",
     }),
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Gemini ${res.status}: ${text}`);
+    if (res.status === 429) {
+      return { choices: [{ message: { content: "שירות ה-AI מוגבל כרגע. נסה שוב בעוד דקה.", tool_calls: [] } }] };
+    }
+    if (res.status === 402) {
+      return { choices: [{ message: { content: "קרדיטי ה-AI נגמרו. יש להוסיף קרדיטים בהגדרות השימוש של Lovable כדי להמשיך.", tool_calls: [] } }] };
+    }
+    throw new Error(`AI Gateway ${res.status}: ${text}`);
   }
   return await res.json();
 }
@@ -253,8 +281,8 @@ async function callGemini(contents: any[]) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
-    if (!GEMINI_API_KEY) {
-      return new Response(JSON.stringify({ error: "GEMINI_API_KEY חסר" }),
+    if (!LOVABLE_API_KEY) {
+      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY חסר" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -280,51 +308,56 @@ Deno.serve(async (req) => {
       approvedAction?: { name: string; args: any } | null;
     };
 
-    // Convert chat history to Gemini "contents" shape
-    const contents: any[] = messages.map((m) => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }],
-    }));
+    const aiMessages: any[] = [
+      { role: "system", content: SYSTEM_PROMPT },
+      ...messages.map((m) => ({ role: m.role, content: m.content })),
+    ];
 
     // If this turn is an approved action — execute first and feed result back as a synthetic tool turn.
     if (approvedAction) {
       const result = await executeTool(approvedAction.name, approvedAction.args, supabase, companyId ?? null);
-      // Append assistant's previous functionCall + functionResponse so model can summarize
-      contents.push({ role: "model", parts: [{ functionCall: { name: approvedAction.name, args: approvedAction.args } }] });
-      contents.push({ role: "user", parts: [{ functionResponse: { name: approvedAction.name, response: result } }] });
+      aiMessages.push({
+        role: "user",
+        content: `הפעולה ${approvedAction.name} בוצעה. תוצאת הפעולה: ${JSON.stringify(result)}`,
+      });
     }
 
     // Agentic loop — up to 5 tool rounds
     for (let step = 0; step < 5; step++) {
-      const data = await callGemini(contents);
-      const candidate = data.candidates?.[0];
-      const parts = candidate?.content?.parts ?? [];
-      const functionCalls = parts.filter((p: any) => p.functionCall);
+      const data = await callAiGateway(aiMessages);
+      const message = data.choices?.[0]?.message ?? {};
+      const functionCalls = (message.tool_calls ?? []).map((call: any) => ({
+        id: call.id,
+        name: call.function?.name,
+        args: parseToolArgs(call.function?.arguments),
+      })).filter((call: any) => call.name);
 
       if (functionCalls.length === 0) {
-        const text = parts.filter((p: any) => p.text).map((p: any) => p.text).join("\n").trim();
+        const text = (message.content ?? "").trim();
         return new Response(JSON.stringify({ type: "message", text }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
       // Check for write actions that need confirmation
-      const writeCall = functionCalls.find((p: any) => WRITE_ACTIONS.has(p.functionCall.name));
+      const writeCall = functionCalls.find((call: any) => WRITE_ACTIONS.has(call.name));
       if (writeCall) {
         return new Response(JSON.stringify({
           type: "needs_approval",
-          action: { name: writeCall.functionCall.name, args: writeCall.functionCall.args ?? {} },
-          preface: parts.filter((p: any) => p.text).map((p: any) => p.text).join("\n").trim() || null,
+          action: { name: writeCall.name, args: writeCall.args ?? {} },
+          preface: (message.content ?? "").trim() || null,
         }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
       // Auto-execute read-only tools
-      contents.push({ role: "model", parts });
-      const responses = [];
-      for (const fc of functionCalls) {
-        const result = await executeTool(fc.functionCall.name, fc.functionCall.args ?? {}, supabase, companyId ?? null);
-        responses.push({ functionResponse: { name: fc.functionCall.name, response: result } });
+      aiMessages.push(message);
+      for (const call of functionCalls) {
+        const result = await executeTool(call.name, call.args ?? {}, supabase, companyId ?? null);
+        aiMessages.push({
+          role: "tool",
+          tool_call_id: call.id,
+          content: JSON.stringify(result),
+        });
       }
-      contents.push({ role: "user", parts: responses });
     }
 
     return new Response(JSON.stringify({ type: "message", text: "הגעתי למגבלת הצעדים. נסה לפצל את הבקשה." }),
