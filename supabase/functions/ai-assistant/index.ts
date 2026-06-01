@@ -281,8 +281,8 @@ async function callAiGateway(messages: any[]) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
-    if (!GEMINI_API_KEY) {
-      return new Response(JSON.stringify({ error: "GEMINI_API_KEY חסר" }),
+    if (!LOVABLE_API_KEY) {
+      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY חסר" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -308,51 +308,56 @@ Deno.serve(async (req) => {
       approvedAction?: { name: string; args: any } | null;
     };
 
-    // Convert chat history to Gemini "contents" shape
-    const contents: any[] = messages.map((m) => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }],
-    }));
+    const aiMessages: any[] = [
+      { role: "system", content: SYSTEM_PROMPT },
+      ...messages.map((m) => ({ role: m.role, content: m.content })),
+    ];
 
     // If this turn is an approved action — execute first and feed result back as a synthetic tool turn.
     if (approvedAction) {
       const result = await executeTool(approvedAction.name, approvedAction.args, supabase, companyId ?? null);
-      // Append assistant's previous functionCall + functionResponse so model can summarize
-      contents.push({ role: "model", parts: [{ functionCall: { name: approvedAction.name, args: approvedAction.args } }] });
-      contents.push({ role: "user", parts: [{ functionResponse: { name: approvedAction.name, response: result } }] });
+      aiMessages.push({
+        role: "user",
+        content: `הפעולה ${approvedAction.name} בוצעה. תוצאת הפעולה: ${JSON.stringify(result)}`,
+      });
     }
 
     // Agentic loop — up to 5 tool rounds
     for (let step = 0; step < 5; step++) {
-      const data = await callGemini(contents);
-      const candidate = data.candidates?.[0];
-      const parts = candidate?.content?.parts ?? [];
-      const functionCalls = parts.filter((p: any) => p.functionCall);
+      const data = await callAiGateway(aiMessages);
+      const message = data.choices?.[0]?.message ?? {};
+      const functionCalls = (message.tool_calls ?? []).map((call: any) => ({
+        id: call.id,
+        name: call.function?.name,
+        args: parseToolArgs(call.function?.arguments),
+      })).filter((call: any) => call.name);
 
       if (functionCalls.length === 0) {
-        const text = parts.filter((p: any) => p.text).map((p: any) => p.text).join("\n").trim();
+        const text = (message.content ?? "").trim();
         return new Response(JSON.stringify({ type: "message", text }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
       // Check for write actions that need confirmation
-      const writeCall = functionCalls.find((p: any) => WRITE_ACTIONS.has(p.functionCall.name));
+      const writeCall = functionCalls.find((call: any) => WRITE_ACTIONS.has(call.name));
       if (writeCall) {
         return new Response(JSON.stringify({
           type: "needs_approval",
-          action: { name: writeCall.functionCall.name, args: writeCall.functionCall.args ?? {} },
-          preface: parts.filter((p: any) => p.text).map((p: any) => p.text).join("\n").trim() || null,
+          action: { name: writeCall.name, args: writeCall.args ?? {} },
+          preface: (message.content ?? "").trim() || null,
         }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
       // Auto-execute read-only tools
-      contents.push({ role: "model", parts });
-      const responses = [];
-      for (const fc of functionCalls) {
-        const result = await executeTool(fc.functionCall.name, fc.functionCall.args ?? {}, supabase, companyId ?? null);
-        responses.push({ functionResponse: { name: fc.functionCall.name, response: result } });
+      aiMessages.push(message);
+      for (const call of functionCalls) {
+        const result = await executeTool(call.name, call.args ?? {}, supabase, companyId ?? null);
+        aiMessages.push({
+          role: "tool",
+          tool_call_id: call.id,
+          content: JSON.stringify(result),
+        });
       }
-      contents.push({ role: "user", parts: responses });
     }
 
     return new Response(JSON.stringify({ type: "message", text: "הגעתי למגבלת הצעדים. נסה לפצל את הבקשה." }),
