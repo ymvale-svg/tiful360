@@ -286,6 +286,76 @@ const tools = [
 
 const WRITE_ACTIONS = new Set(["insert_row", "update_row"]);
 
+// ============================================================
+// Company catalog cache — injected into system prompt so the agent
+// already knows the real categories/groups for this company.
+// ============================================================
+type CatalogEntry = { value: string; expiresAt: number };
+const catalogCache = new Map<string, CatalogEntry>();
+const CATALOG_TTL_MS = 60_000;
+
+async function loadCompanyCatalog(supabase: any, companyId: string | null): Promise<string> {
+  if (!companyId) return "## קטלוג החברה\n(לא זמין — אין companyId)";
+  const cached = catalogCache.get(companyId);
+  if (cached && cached.expiresAt > Date.now()) return cached.value;
+
+  const [catsRes, groupsRes, deptRes, roleRes] = await Promise.all([
+    supabase.from("asset_categories")
+      .select("id, category_name, domain, is_assignable")
+      .eq("company_id", companyId)
+      .order("domain")
+      .order("category_name"),
+    supabase.from("asset_groups")
+      .select("id, name, category_id")
+      .eq("company_id", companyId)
+      .order("name"),
+    supabase.from("employees")
+      .select("department")
+      .eq("company_id", companyId)
+      .not("department", "is", null)
+      .limit(500),
+    supabase.from("employees")
+      .select("role")
+      .eq("company_id", companyId)
+      .not("role", "is", null)
+      .limit(500),
+  ]);
+
+  const cats = catsRes.data ?? [];
+  const groups = groupsRes.data ?? [];
+  const departments = Array.from(new Set((deptRes.data ?? []).map((r: any) => r.department).filter(Boolean))).slice(0, 50);
+  const roles = Array.from(new Set((roleRes.data ?? []).map((r: any) => r.role).filter(Boolean))).slice(0, 50);
+
+  const groupsByCat = new Map<string, any[]>();
+  for (const g of groups) {
+    const arr = groupsByCat.get(g.category_id) ?? [];
+    arr.push(g);
+    groupsByCat.set(g.category_id, arr);
+  }
+
+  const catLines = cats.length
+    ? cats.map((c: any) => {
+        const gs = groupsByCat.get(c.id) ?? [];
+        const groupStr = gs.length ? ` | קבוצות: ${gs.map((g: any) => `"${g.name}" (${g.id})`).join(", ")}` : "";
+        const assignable = c.is_assignable ? "" : " [לא ניתן להקצאה]";
+        return `- domain=${c.domain} | "${c.category_name}" → id=${c.id}${assignable}${groupStr}`;
+      }).join("\n")
+    : "(אין קטגוריות מוגדרות לחברה)";
+
+  const value = `## קטלוג החברה (חי — השתמש בו במקום לנחש)
+### asset_categories
+${catLines}
+
+### מחלקות employees.department קיימות
+${departments.length ? departments.map((d) => `- ${d}`).join("\n") : "(אין נתונים)"}
+
+### תפקידים employees.role קיימים
+${roles.length ? roles.map((r) => `- ${r}`).join("\n") : "(אין נתונים)"}`;
+
+  catalogCache.set(companyId, { value, expiresAt: Date.now() + CATALOG_TTL_MS });
+  return value;
+}
+
 function baseSystemPrompt(catalog: string): string {
   return `אתה "תפעול AI" — עוזר חכם במערכת ניהול משאבי אנוש ונכסים.
 
