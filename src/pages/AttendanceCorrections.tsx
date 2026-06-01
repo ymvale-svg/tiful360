@@ -67,7 +67,7 @@ export default function AttendanceCorrections() {
               filtered.map((r: any) => ({
                 full_name: r.employee?.full_name ?? "",
                 department: r.employee?.department ?? "",
-                correction_date: new Date(r.correction_date).toLocaleDateString("en-GB").replace(/\//g, "-"),
+                correction_date: new Date(r.correction_date).toLocaleDateString("en-GB"),
                 original: `${r.original_check_in?.slice(0, 5) ?? "—"} – ${r.original_check_out?.slice(0, 5) ?? "—"}`,
                 requested: `${r.requested_check_in?.slice(0, 5) ?? "—"} – ${r.requested_check_out?.slice(0, 5) ?? "—"}`,
                 reason: r.reason ?? "",
@@ -123,7 +123,7 @@ export default function AttendanceCorrections() {
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-sm">{r.employee?.full_name}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {r.employee?.department} • תאריך תיקון: {new Date(r.correction_date).toLocaleDateString("en-GB").replace(/\//g, "-")}
+                    {r.employee?.department} • תאריך תיקון: {new Date(r.correction_date).toLocaleDateString("en-GB")}
                   </p>
                   <div className="mt-2 grid grid-cols-2 gap-x-6 text-xs">
                     <div className="text-muted-foreground">
@@ -160,7 +160,7 @@ export default function AttendanceCorrections() {
           </DialogHeader>
           {reviewing && (
             <div className="space-y-3 text-sm">
-              <p><strong>{reviewing.employee?.full_name}</strong> — {new Date(reviewing.correction_date).toLocaleDateString("en-GB").replace(/\//g, "-")}</p>
+              <p><strong>{reviewing.employee?.full_name}</strong> — {new Date(reviewing.correction_date).toLocaleDateString("en-GB")}</p>
               <p className="text-muted-foreground">סיבה: {reviewing.reason || "—"}</p>
               <Textarea aria-label="הערת מנהל לבקשת התיקון" placeholder="הערה (אופציונלי)" value={note} onChange={(e) => setNote(e.target.value)} />
             </div>

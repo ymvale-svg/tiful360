@@ -21,7 +21,7 @@ const conditionLabels: Record<string, string> = {
 function fmtDate(d?: string | null) {
   if (!d) return "";
   try {
-    return new Date(d).toLocaleDateString("en-GB").replace(/\//g, "-");
+    return new Date(d).toLocaleDateString("en-GB");
   } catch {
     return d;
   }

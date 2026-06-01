@@ -44,7 +44,7 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
     if (days <= 30) return "text-amber-600 dark:text-amber-400 font-medium";
     return "";
   };
-  const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString("en-GB").replace(/\//g, "-") : "—");
+  const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString("en-GB") : "—");
 
   // Determine the grouping key per asset:
   // - Insurance categories: group by custom_fields["סוג כיסוי"] (sub-category)
@@ -303,7 +303,7 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
                           {expiry ? (
                             <span className={cn("flex items-center gap-1", expired && "text-destructive")}>
                               {expired && <AlertTriangle className="w-3 h-3" />}
-                              {expiry.toLocaleDateString("en-GB").replace(/\//g, "-")}
+                              {expiry.toLocaleDateString("en-GB")}
                             </span>
                           ) : "—"}
                         </td>
@@ -348,7 +348,7 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
                         {expiry ? (
                           <span className={cn("flex items-center gap-1", expired && "text-destructive")}>
                             {expired && <AlertTriangle className="w-3 h-3" />}
-                            {expiry.toLocaleDateString("en-GB").replace(/\//g, "-")}
+                            {expiry.toLocaleDateString("en-GB")}
                           </span>
                         ) : "—"}
                       </td>

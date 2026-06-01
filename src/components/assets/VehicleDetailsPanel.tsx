@@ -65,7 +65,7 @@ export function VehicleDetailsPanel({ asset }: Props) {
     if (days < 0) return `פג לפני ${Math.abs(days)} ימים`;
     if (days === 0) return "פג היום";
     if (days <= 30) return `בעוד ${days} ימים`;
-    return new Date(d!).toLocaleDateString("en-GB").replace(/\//g, "-");
+    return new Date(d!).toLocaleDateString("en-GB");
   };
 
   const handleSave = async () => {

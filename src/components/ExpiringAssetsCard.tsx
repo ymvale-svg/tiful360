@@ -68,7 +68,7 @@ export function ExpiringAssetsCard() {
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2 flex-wrap">
                     <span>{item.field_label}</span>
-                    <span>· {new Date(item.expiry_date).toLocaleDateString("en-GB").replace(/\//g, "-")}</span>
+                    <span>· {new Date(item.expiry_date).toLocaleDateString("en-GB")}</span>
                     {item.is_assignable && item.owner_name && <span>· {item.owner_name}</span>}
                   </div>
                 </div>

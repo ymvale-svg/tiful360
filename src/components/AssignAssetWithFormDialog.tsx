@@ -140,7 +140,7 @@ export function AssignAssetWithFormDialog({ open, onOpenChange, asset, defaultEm
           asset_code: asset.asset_code ?? "",
           serial: asset.serial_number ?? asset.asset_code ?? "",
           category: asset.asset_categories?.category_name ?? "",
-          date: new Date().toLocaleDateString("en-GB").replace(/\//g, "-"),
+          date: new Date().toLocaleDateString("en-GB"),
           company_name: activeCompany.name ?? "",
         })
       : null;

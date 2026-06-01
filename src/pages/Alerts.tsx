@@ -37,7 +37,7 @@ export default function Alerts() {
               alerts.map((a: any) => ({
                 ...a,
                 severity_label: severityLabel[a.severity] ?? a.severity,
-                target_date_fmt: a.target_date ? new Date(a.target_date).toLocaleDateString("en-GB").replace(/\//g, "-") : "",
+                target_date_fmt: a.target_date ? new Date(a.target_date).toLocaleDateString("en-GB") : "",
               })),
               [
                 { key: "title", label: "כותרת" },
@@ -70,7 +70,7 @@ export default function Alerts() {
                 </span>
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
                   <Clock className="w-3 h-3" />
-                  {alert.target_date ? new Date(alert.target_date).toLocaleDateString("en-GB").replace(/\//g, "-") : "—"}
+                  {alert.target_date ? new Date(alert.target_date).toLocaleDateString("en-GB") : "—"}
                 </span>
               </div>
             </div>

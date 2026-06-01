@@ -165,7 +165,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
                   )}
                   title={
                     earliest
-                      ? `${earliest.label}: ${earliest.date.toLocaleDateString("en-GB").replace(/\//g, "-")}`
+                      ? `${earliest.label}: ${earliest.date.toLocaleDateString("en-GB")}`
                       : ""
                   }
                 >
@@ -242,7 +242,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
                         label="תפוגה"
                         value={
                           <span className={expired ? "text-destructive font-medium" : ""}>
-                            {expiry.toLocaleDateString("en-GB").replace(/\//g, "-")}
+                            {expiry.toLocaleDateString("en-GB")}
                             {expired && " (פג)"}
                           </span>
                         }

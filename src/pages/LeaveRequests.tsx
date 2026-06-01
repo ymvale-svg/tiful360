@@ -67,8 +67,8 @@ export default function LeaveRequests() {
                 full_name: r.employee?.full_name ?? "",
                 department: r.employee?.department ?? "",
                 request_type: TYPE_LABELS[r.request_type] ?? r.request_type,
-                start_date: new Date(r.start_date).toLocaleDateString("en-GB").replace(/\//g, "-"),
-                end_date: new Date(r.end_date).toLocaleDateString("en-GB").replace(/\//g, "-"),
+                start_date: new Date(r.start_date).toLocaleDateString("en-GB"),
+                end_date: new Date(r.end_date).toLocaleDateString("en-GB"),
                 total_days: r.total_days,
                 status: STATUS_LABELS[r.status] ?? r.status,
                 reason: r.reason ?? "",
@@ -128,7 +128,7 @@ export default function LeaveRequests() {
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {r.employee?.department} • {TYPE_LABELS[r.request_type as string]} •{" "}
                     {r.total_days} ימים •{" "}
-                    {new Date(r.start_date).toLocaleDateString("en-GB").replace(/\//g, "-")} – {new Date(r.end_date).toLocaleDateString("en-GB").replace(/\//g, "-")}
+                    {new Date(r.start_date).toLocaleDateString("en-GB")} – {new Date(r.end_date).toLocaleDateString("en-GB")}
                   </p>
                   {r.reason && <p className="text-xs text-muted-foreground mt-1">{r.reason}</p>}
                   {r.attachment_url && (
