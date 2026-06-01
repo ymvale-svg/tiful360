@@ -299,9 +299,25 @@ const tools = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "get_document_url",
+      description:
+        "מייצר קישור חתום זמני (10 דקות) להורדה/צפייה במסמך מתוך asset_documents לפי id. השתמש בו אחרי שמצאת מסמך עם query_table על asset_documents.",
+      parameters: {
+        type: "object",
+        required: ["document_id"],
+        properties: {
+          document_id: { type: "string", description: "id של השורה ב-asset_documents" },
+        },
+      },
+    },
+  },
 ];
 
 const WRITE_ACTIONS = new Set(["insert_row", "update_row"]);
+
 
 // ============================================================
 // Company catalog cache — injected into system prompt so the agent
