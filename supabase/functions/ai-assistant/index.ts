@@ -543,7 +543,29 @@ async function executeTool(name: string, args: any, supabase: any, companyId: st
       return error ? { error: error.message } : { success: true, row: data };
     }
 
+    if (name === "get_document_url") {
+      const docId = String(args?.document_id ?? "").trim();
+      if (!docId) return { error: "חסר document_id" };
+      let q = supabase.from("asset_documents").select("id, file_url, file_name, document_label, asset_id, company_id").eq("id", docId);
+      if (companyId) q = q.eq("company_id", companyId);
+      const { data: doc, error: docErr } = await q.maybeSingle();
+      if (docErr) return { error: docErr.message };
+      if (!doc) return { error: "מסמך לא נמצא או לא משויך לחברה" };
+      const { data: signed, error: signErr } = await supabase.storage
+        .from("asset-documents")
+        .createSignedUrl(doc.file_url, 60 * 10);
+      if (signErr) return { error: signErr.message };
+      return {
+        document_id: doc.id,
+        file_name: doc.file_name,
+        document_label: doc.document_label,
+        signed_url: signed?.signedUrl,
+        expires_in_seconds: 600,
+      };
+    }
+
     return { error: `כלי לא ידוע: ${name}` };
+
   } catch (e: any) {
     return { error: e?.message ?? String(e) };
   }
