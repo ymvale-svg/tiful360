@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { Bot, X, Send, Loader2, Check, AlertCircle } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Bot, X, Send, Loader2, Check, AlertCircle, GripHorizontal, ExternalLink, Download } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 
 type Msg = { role: "user" | "assistant"; content: string };
 type PendingAction = { name: string; args: Record<string, any> } | null;
+type DocViewer = { url: string; name: string } | null;
 
 const ACTION_LABELS: Record<string, string> = {
   create_employee: "יצירת עובד חדש",
@@ -15,15 +16,57 @@ const ACTION_LABELS: Record<string, string> = {
   close_it_ticket: "סגירת פניית IT",
 };
 
+const PANEL_W = 400;
+const PANEL_H = 600;
+const VIEWER_W = 720;
+const VIEWER_H = 640;
+
+function useDraggable(initial: { x: number; y: number }, size: { w: number; h: number }) {
+  const [pos, setPos] = useState(initial);
+  const dragRef = useRef<{ dx: number; dy: number } | null>(null);
+
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest("button,a,input,textarea")) return;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    dragRef.current = { dx: e.clientX - pos.x, dy: e.clientY - pos.y };
+  }, [pos]);
+
+  const onPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!dragRef.current) return;
+    const nx = Math.max(8, Math.min(window.innerWidth - size.w - 8, e.clientX - dragRef.current.dx));
+    const ny = Math.max(8, Math.min(window.innerHeight - size.h - 8, e.clientY - dragRef.current.dy));
+    setPos({ x: nx, y: ny });
+  }, [size.w, size.h]);
+
+  const onPointerUp = useCallback(() => {
+    dragRef.current = null;
+  }, []);
+
+  return { pos, setPos, handlers: { onPointerDown, onPointerMove, onPointerUp } };
+}
+
 export function AiAssistantWidget() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [pending, setPending] = useState<PendingAction>(null);
+  const [viewer, setViewer] = useState<DocViewer>(null);
   const { activeCompanyId } = useCompany();
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const panel = useDraggable(
+    { x: 24, y: typeof window !== "undefined" ? Math.max(24, window.innerHeight - PANEL_H - 96) : 100 },
+    { w: PANEL_W, h: PANEL_H },
+  );
+  const viewerDrag = useDraggable(
+    {
+      x: typeof window !== "undefined" ? Math.max(24, (window.innerWidth - VIEWER_W) / 2) : 200,
+      y: typeof window !== "undefined" ? Math.max(24, (window.innerHeight - VIEWER_H) / 2) : 80,
+    },
+    { w: VIEWER_W, h: VIEWER_H },
+  );
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -75,7 +118,11 @@ export function AiAssistantWidget() {
 
   function handleReject() {
     setPending(null);
-    setMessages((m) => [...m, { role: "user", content: "✗ ביטלתי את הפעולה" }, { role: "assistant", content: "בסדר, ביטלתי. במה עוד אוכל לעזור?" }]);
+    setMessages((m) => [
+      ...m,
+      { role: "user", content: "✗ ביטלתי את הפעולה" },
+      { role: "assistant", content: "בסדר, ביטלתי. במה עוד אוכל לעזור?" },
+    ]);
   }
 
   function reset() {
@@ -83,6 +130,8 @@ export function AiAssistantWidget() {
     setPending(null);
     setInput("");
   }
+
+  const openDoc = (url: string, name: string) => setViewer({ url, name });
 
   return (
     <>
@@ -102,10 +151,15 @@ export function AiAssistantWidget() {
       {open && (
         <div
           dir="rtl"
-          className="fixed bottom-24 left-6 z-40 w-[400px] max-w-[calc(100vw-3rem)] h-[600px] max-h-[calc(100vh-8rem)] bg-card border border-border rounded-xl shadow-2xl flex flex-col overflow-hidden"
+          style={{ left: panel.pos.x, top: panel.pos.y, width: PANEL_W, height: PANEL_H }}
+          className="fixed z-40 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-1rem)] bg-card border border-border rounded-xl shadow-2xl flex flex-col overflow-hidden"
         >
-          <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/40">
+          <header
+            {...panel.handlers}
+            className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/40 cursor-move select-none touch-none"
+          >
             <div className="flex items-center gap-2">
+              <GripHorizontal className="w-4 h-4 text-muted-foreground" />
               <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                 <Bot className="w-4 h-4 text-primary" />
               </div>
@@ -149,7 +203,31 @@ export function AiAssistantWidget() {
                 >
                   {m.role === "assistant" ? (
                     <div className="prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-table:my-2 prose-headings:my-2 dark:prose-invert">
-                      <ReactMarkdown>{m.content}</ReactMarkdown>
+                      <ReactMarkdown
+                        components={{
+                          a: ({ href, children, ...props }) => {
+                            const url = href ?? "";
+                            const label = String(Array.isArray(children) ? children.join("") : children ?? url);
+                            const isDoc = /^https?:\/\//i.test(url);
+                            return (
+                              <a
+                                href={url}
+                                {...props}
+                                onClick={(e) => {
+                                  if (!isDoc) return;
+                                  e.preventDefault();
+                                  openDoc(url, label);
+                                }}
+                                className="text-primary underline cursor-pointer"
+                              >
+                                {children}
+                              </a>
+                            );
+                          },
+                        }}
+                      >
+                        {m.content}
+                      </ReactMarkdown>
                     </div>
                   ) : (
                     <span className="whitespace-pre-wrap">{m.content}</span>
@@ -223,6 +301,56 @@ export function AiAssistantWidget() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Floating document viewer */}
+      {viewer && (
+        <div
+          dir="rtl"
+          style={{ left: viewerDrag.pos.x, top: viewerDrag.pos.y, width: VIEWER_W, height: VIEWER_H }}
+          className="fixed z-50 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-1rem)] bg-card border border-border rounded-xl shadow-2xl flex flex-col overflow-hidden"
+        >
+          <header
+            {...viewerDrag.handlers}
+            className="flex items-center justify-between px-3 py-2 border-b border-border bg-muted/40 cursor-move select-none touch-none"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <GripHorizontal className="w-4 h-4 text-muted-foreground shrink-0" />
+              <p className="text-sm font-semibold truncate">{viewer.name}</p>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <a
+                href={viewer.url}
+                target="_blank"
+                rel="noreferrer"
+                className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                title="פתח בכרטיסייה חדשה"
+              >
+                <ExternalLink className="w-4 h-4" />
+              </a>
+              <a
+                href={viewer.url}
+                download
+                className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                title="הורד"
+              >
+                <Download className="w-4 h-4" />
+              </a>
+              <button
+                onClick={() => setViewer(null)}
+                className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                title="סגור"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </header>
+          <iframe
+            src={viewer.url}
+            title={viewer.name}
+            className="flex-1 w-full bg-background"
+          />
         </div>
       )}
     </>
