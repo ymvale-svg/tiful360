@@ -583,7 +583,7 @@ Deno.serve(async (req) => {
     };
 
     const conv: any[] = [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: baseSystemPrompt(await loadCompanyCatalog(supabase, companyId ?? null)) },
       ...messages.map((m) => ({ role: m.role, content: m.content })),
     ];
 
