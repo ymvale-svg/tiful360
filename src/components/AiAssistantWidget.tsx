@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { cn } from "@/lib/utils";
+import { AiPendingActionCard } from "./AiPendingActionCard";
 
 type Msg = { role: "user" | "assistant"; content: string };
 type PendingAction = { name: string; args: Record<string, any> } | null;
