@@ -90,6 +90,16 @@ const SCHEMA: TableDef[] = [
       { name: "password_expires_at", type: "date", desc: "תפוגת סיסמה" },
       { name: "license_expires_at", type: "date", desc: "תפוגת רישיון תוכנה" },
     ],
+    writable: [
+      "asset_code", "asset_name", "category_id", "group_id",
+      "serial_number", "manufacturer_model", "current_owner_id",
+      "status", "condition", "expiry_date", "notification_days_before", "notes",
+      "license_plate", "vehicle_type", "fuel_type", "year_of_manufacture", "current_km",
+      "test_expiry", "insurance_expiry", "license_expiry",
+      "insurance_company", "insurance_policy_number",
+      "account_username", "account_url", "mfa_enabled",
+      "password_expires_at", "license_expires_at",
+    ],
   },
   {
     table: "asset_categories",
