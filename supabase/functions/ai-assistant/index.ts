@@ -795,6 +795,15 @@ Deno.serve(async (req) => {
       approvedAction?: { name: string; args: any } | null;
     };
 
+    const latestUserMessage = [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
+    if (!approvedAction && latestUserMessage) {
+      const directAssetAnswer = await tryAnswerAssetDocumentSearch(latestUserMessage, supabase, companyId ?? null);
+      if (directAssetAnswer) {
+        return new Response(JSON.stringify({ type: "message", text: directAssetAnswer }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
+
     const conv: any[] = [
       { role: "system", content: baseSystemPrompt(await loadCompanyCatalog(supabase, companyId ?? null)) },
       ...messages.map((m) => ({ role: m.role, content: m.content })),
