@@ -21,7 +21,7 @@ export function AiAssistantWidget() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [pending, setPending] = useState<PendingAction>(null);
-  const { selectedCompanyId } = useCompany() as any;
+  const { activeCompanyId } = useCompany();
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -37,7 +37,7 @@ export function AiAssistantWidget() {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("ai-assistant", {
-        body: { messages: history, companyId: selectedCompanyId ?? null, approvedAction },
+        body: { messages: history, companyId: activeCompanyId ?? null, approvedAction },
       });
       if (error) throw error;
       if (data?.type === "needs_approval") {

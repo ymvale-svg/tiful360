@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useData";
 import { hasDualAccess } from "@/lib/dualAccess";
 import { SkipLink } from "./SkipLink";
+import { AiAssistantWidget } from "./AiAssistantWidget";
 
 export function AppLayout() {
   const { user, signOut, isSuperAdmin, roles } = useAuth();
