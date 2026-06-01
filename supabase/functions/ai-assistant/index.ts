@@ -168,7 +168,24 @@ const SCHEMA: TableDef[] = [
       { name: "created_at", type: "timestamptz", desc: "מתי נוצרה" },
     ],
   },
+  {
+    table: "asset_documents",
+    desc: "מסמכים מצורפים לנכסים (חוזים, פוליסות, אישורים, תעודות וכו')",
+    requireCompany: true,
+    columns: [
+      { name: "id", type: "uuid", desc: "מזהה המסמך" },
+      { name: "asset_id", type: "uuid", desc: "FK ל-assets.id" },
+      { name: "document_type", type: "text", desc: "סוג מסמך (contract/policy/certificate/other וכו')" },
+      { name: "document_label", type: "text", desc: "תווית/שם תיאורי של המסמך" },
+      { name: "file_name", type: "text", desc: "שם הקובץ המקורי" },
+      { name: "file_size_bytes", type: "number", desc: "גודל בבייטים" },
+      { name: "expiry_date", type: "date", desc: "תאריך תפוגה של המסמך" },
+      { name: "notes", type: "text", desc: "הערות" },
+      { name: "uploaded_at", type: "timestamptz", desc: "מתי הועלה" },
+    ],
+  },
 ];
+
 
 function getTableDef(name: string): TableDef | undefined {
   return SCHEMA.find((t) => t.table === name);
@@ -282,9 +299,25 @@ const tools = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "get_document_url",
+      description:
+        "מייצר קישור חתום זמני (10 דקות) להורדה/צפייה במסמך מתוך asset_documents לפי id. השתמש בו אחרי שמצאת מסמך עם query_table על asset_documents.",
+      parameters: {
+        type: "object",
+        required: ["document_id"],
+        properties: {
+          document_id: { type: "string", description: "id של השורה ב-asset_documents" },
+        },
+      },
+    },
+  },
 ];
 
 const WRITE_ACTIONS = new Set(["insert_row", "update_row"]);
+
 
 // ============================================================
 // Company catalog cache — injected into system prompt so the agent
@@ -387,6 +420,12 @@ function baseSystemPrompt(catalog: string): string {
 - "ביטוח <סוג> בתוקף" (למשל "עבודות קבלניות בתוקף", "צד ג בתוקף") → assets domain=insurance + \`asset_name ilike '%<סוג>%'\` + \`expiry_date gte היום\`. **אל תסתמך על \`status\`** — תוקף ביטוח נקבע ע"י \`expiry_date\` (השדה הראשי לתפוגה בכל הנכסים), לא ע"י עמודת status.
 - **כלל כללי**: כשמחפשים נכס לפי "שם"/"מקום"/"תיאור"/"סוג" — תמיד \`asset_name ilike\` (זה השדה החופשי). שדות כמו \`insurance_company\`, \`manufacturer_model\`, \`license_plate\` הם נתוני-עזר ספציפיים, לא שם הנכס. אם עמודה ספציפית ריקה — נסה את \`asset_name\` לפני שאתה אומר "לא נמצא".
 - **"בתוקף" / "פג" לכל נכס** — תמיד \`expiry_date\` (gte/lt היום). אל תשתמש ב-\`status\` לבדיקת תוקף.
+
+## מסמכים מצורפים (asset_documents)
+- לכל נכס יכולים להיות מסמכים בטבלת \`asset_documents\` (חוזים, פוליסות, תעודות, אישורים). חפש לפי \`asset_id\` או \`document_label ilike\`.
+- "הראה לי את הפוליסה של X" / "תן לי את החוזה של X" / "קישור למסמך" → 1) query_table assets לפי X לקבל id, 2) query_table asset_documents עם \`asset_id eq <id>\`, 3) קרא ל-\`get_document_url\` עם document_id וקבל קישור חתום ל-10 דקות.
+- בתשובה הצג קישור Markdown: \`[שם הקובץ](signed_url)\` והדגש שהקישור תקף ל-10 דקות.
+
 
 ## חיפושים כלליים
 - העדף **ilike** על eq עבור טקסט בעברית.
@@ -510,7 +549,29 @@ async function executeTool(name: string, args: any, supabase: any, companyId: st
       return error ? { error: error.message } : { success: true, row: data };
     }
 
+    if (name === "get_document_url") {
+      const docId = String(args?.document_id ?? "").trim();
+      if (!docId) return { error: "חסר document_id" };
+      let q = supabase.from("asset_documents").select("id, file_url, file_name, document_label, asset_id, company_id").eq("id", docId);
+      if (companyId) q = q.eq("company_id", companyId);
+      const { data: doc, error: docErr } = await q.maybeSingle();
+      if (docErr) return { error: docErr.message };
+      if (!doc) return { error: "מסמך לא נמצא או לא משויך לחברה" };
+      const { data: signed, error: signErr } = await supabase.storage
+        .from("asset-documents")
+        .createSignedUrl(doc.file_url, 60 * 10);
+      if (signErr) return { error: signErr.message };
+      return {
+        document_id: doc.id,
+        file_name: doc.file_name,
+        document_label: doc.document_label,
+        signed_url: signed?.signedUrl,
+        expires_in_seconds: 600,
+      };
+    }
+
     return { error: `כלי לא ידוע: ${name}` };
+
   } catch (e: any) {
     return { error: e?.message ?? String(e) };
   }
