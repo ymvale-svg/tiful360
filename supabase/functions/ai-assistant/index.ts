@@ -244,29 +244,19 @@ function parseToolArgs(rawArgs: unknown) {
   }
 }
 
-async function callAiGateway(messages: any[]) {
-  const res = await fetch(AI_GATEWAY_URL, {
+async function callGemini(contents: any[]) {
+  const res = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
     method: "POST",
-    headers: {
-      "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: MODEL,
-      messages,
-      tools: aiTools,
-      tool_choice: "auto",
+      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      contents,
+      tools,
     }),
   });
   if (!res.ok) {
     const text = await res.text();
-    if (res.status === 429) {
-      return { choices: [{ message: { content: "שירות ה-AI מוגבל כרגע. נסה שוב בעוד דקה.", tool_calls: [] } }] };
-    }
-    if (res.status === 402) {
-      return { choices: [{ message: { content: "קרדיטי ה-AI נגמרו. יש להוסיף קרדיטים בהגדרות השימוש של Lovable כדי להמשיך.", tool_calls: [] } }] };
-    }
-    throw new Error(`AI Gateway ${res.status}: ${text}`);
+    throw new Error(`Gemini ${res.status}: ${text}`);
   }
   return await res.json();
 }
@@ -274,8 +264,8 @@ async function callAiGateway(messages: any[]) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY חסר" }),
+    if (!GEMINI_API_KEY) {
+      return new Response(JSON.stringify({ error: "GEMINI_API_KEY חסר" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -301,56 +291,52 @@ Deno.serve(async (req) => {
       approvedAction?: { name: string; args: any } | null;
     };
 
-    const aiMessages: any[] = [
-      { role: "system", content: SYSTEM_PROMPT },
-      ...messages.map((m) => ({ role: m.role, content: m.content })),
-    ];
+    const contents: any[] = messages.map((m) => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content }],
+    }));
 
-    // If this turn is an approved action — execute first and feed result back as a synthetic tool turn.
     if (approvedAction) {
       const result = await executeTool(approvedAction.name, approvedAction.args, supabase, companyId ?? null);
-      aiMessages.push({
+      contents.push({
         role: "user",
-        content: `הפעולה ${approvedAction.name} בוצעה. תוצאת הפעולה: ${JSON.stringify(result)}`,
+        parts: [{ text: `הפעולה ${approvedAction.name} בוצעה. תוצאת הפעולה: ${JSON.stringify(result)}` }],
       });
     }
 
     // Agentic loop — up to 5 tool rounds
     for (let step = 0; step < 5; step++) {
-      const data = await callAiGateway(aiMessages);
-      const message = data.choices?.[0]?.message ?? {};
-      const functionCalls = (message.tool_calls ?? []).map((call: any) => ({
-        id: call.id,
-        name: call.function?.name,
-        args: parseToolArgs(call.function?.arguments),
-      })).filter((call: any) => call.name);
+      const data = await callGemini(contents);
+      const candidate = data.candidates?.[0];
+      const parts = candidate?.content?.parts ?? [];
+      const functionCalls = parts
+        .filter((p: any) => p.functionCall)
+        .map((p: any) => ({ name: p.functionCall.name, args: p.functionCall.args ?? {} }));
 
       if (functionCalls.length === 0) {
-        const text = (message.content ?? "").trim();
+        const text = parts.map((p: any) => p.text ?? "").join("").trim();
         return new Response(JSON.stringify({ type: "message", text }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // Check for write actions that need confirmation
-      const writeCall = functionCalls.find((call: any) => WRITE_ACTIONS.has(call.name));
+      const writeCall = functionCalls.find((c: any) => WRITE_ACTIONS.has(c.name));
       if (writeCall) {
+        const preface = parts.map((p: any) => p.text ?? "").join("").trim();
         return new Response(JSON.stringify({
           type: "needs_approval",
-          action: { name: writeCall.name, args: writeCall.args ?? {} },
-          preface: (message.content ?? "").trim() || null,
+          action: { name: writeCall.name, args: writeCall.args },
+          preface: preface || null,
         }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // Auto-execute read-only tools
-      aiMessages.push(message);
+      // Append model turn + tool responses
+      contents.push({ role: "model", parts });
+      const responseParts: any[] = [];
       for (const call of functionCalls) {
-        const result = await executeTool(call.name, call.args ?? {}, supabase, companyId ?? null);
-        aiMessages.push({
-          role: "tool",
-          tool_call_id: call.id,
-          content: JSON.stringify(result),
-        });
+        const result = await executeTool(call.name, call.args, supabase, companyId ?? null);
+        responseParts.push({ functionResponse: { name: call.name, response: { result } } });
       }
+      contents.push({ role: "user", parts: responseParts });
     }
 
     return new Response(JSON.stringify({ type: "message", text: "הגעתי למגבלת הצעדים. נסה לפצל את הבקשה." }),
