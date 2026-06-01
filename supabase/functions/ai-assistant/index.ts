@@ -168,7 +168,24 @@ const SCHEMA: TableDef[] = [
       { name: "created_at", type: "timestamptz", desc: "מתי נוצרה" },
     ],
   },
+  {
+    table: "asset_documents",
+    desc: "מסמכים מצורפים לנכסים (חוזים, פוליסות, אישורים, תעודות וכו')",
+    requireCompany: true,
+    columns: [
+      { name: "id", type: "uuid", desc: "מזהה המסמך" },
+      { name: "asset_id", type: "uuid", desc: "FK ל-assets.id" },
+      { name: "document_type", type: "text", desc: "סוג מסמך (contract/policy/certificate/other וכו')" },
+      { name: "document_label", type: "text", desc: "תווית/שם תיאורי של המסמך" },
+      { name: "file_name", type: "text", desc: "שם הקובץ המקורי" },
+      { name: "file_size_bytes", type: "number", desc: "גודל בבייטים" },
+      { name: "expiry_date", type: "date", desc: "תאריך תפוגה של המסמך" },
+      { name: "notes", type: "text", desc: "הערות" },
+      { name: "uploaded_at", type: "timestamptz", desc: "מתי הועלה" },
+    ],
+  },
 ];
+
 
 function getTableDef(name: string): TableDef | undefined {
   return SCHEMA.find((t) => t.table === name);
