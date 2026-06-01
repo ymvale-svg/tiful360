@@ -1,5 +1,4 @@
 // AI Assistant Edge Function — calls Lovable AI Gateway with function calling
-// Uses user's JWT to query Supabase with RLS enforcing role-based access.
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -8,23 +7,17 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-const CONFIGURED_MODEL = Deno.env.get("GEMINI_MODEL")?.trim();
-const FALLBACK_MODELS = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.0-flash-lite", "gemini-2.0-flash"];
-const GEMINI_MODELS = Array.from(
-  new Set([CONFIGURED_MODEL, ...FALLBACK_MODELS].filter((model): model is string => Boolean(model))),
-);
+const MODEL = Deno.env.get("LOVABLE_AI_MODEL")?.trim() || "google/gemini-2.5-flash";
+const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
-function geminiUrl(model: string) {
-  return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-}
-
-// ---------- Tool declarations (for Gemini function calling) ----------
-const tools = [{
-  functionDeclarations: [
-    {
+// ---------- Tool declarations (OpenAI-compatible) ----------
+const tools = [
+  {
+    type: "function",
+    function: {
       name: "search_employees",
       description: "חיפוש עובדים לפי שם/מחלקה/סטטוס בחברה הנוכחית",
       parameters: {
@@ -37,7 +30,10 @@ const tools = [{
         },
       },
     },
-    {
+  },
+  {
+    type: "function",
+    function: {
       name: "search_assets",
       description: "חיפוש נכסים/ציוד",
       parameters: {
@@ -49,7 +45,10 @@ const tools = [{
         },
       },
     },
-    {
+  },
+  {
+    type: "function",
+    function: {
       name: "get_expiring_assets",
       description: "נכסים שתוקפם פג בקרוב (לפי expiry_date)",
       parameters: {
@@ -57,12 +56,18 @@ const tools = [{
         properties: { days_ahead: { type: "integer", description: "ברירת מחדל 30" } },
       },
     },
-    {
+  },
+  {
+    type: "function",
+    function: {
       name: "get_pending_leave_requests",
       description: "בקשות חופשה ממתינות לאישור",
       parameters: { type: "object", properties: {} },
     },
-    {
+  },
+  {
+    type: "function",
+    function: {
       name: "get_it_tickets",
       description: "פניות IT לפי סטטוס/קדימות",
       parameters: {
@@ -74,7 +79,10 @@ const tools = [{
         },
       },
     },
-    {
+  },
+  {
+    type: "function",
+    function: {
       name: "create_employee",
       description: "יצירת עובד חדש. דורש אישור משתמש לפני קריאה.",
       parameters: {
@@ -89,7 +97,10 @@ const tools = [{
         required: ["full_name"],
       },
     },
-    {
+  },
+  {
+    type: "function",
+    function: {
       name: "create_it_ticket",
       description: "פתיחת פניית IT חדשה",
       parameters: {
@@ -103,7 +114,10 @@ const tools = [{
         required: ["title"],
       },
     },
-    {
+  },
+  {
+    type: "function",
+    function: {
       name: "approve_leave_request",
       description: "אישור או דחיית בקשת חופשה",
       parameters: {
@@ -116,7 +130,10 @@ const tools = [{
         required: ["request_id", "decision"],
       },
     },
-    {
+  },
+  {
+    type: "function",
+    function: {
       name: "close_it_ticket",
       description: "סגירת פניית IT",
       parameters: {
@@ -128,10 +145,9 @@ const tools = [{
         required: ["ticket_id"],
       },
     },
-  ],
-}];
+  },
+];
 
-// Actions that require user confirmation
 const WRITE_ACTIONS = new Set([
   "create_employee", "create_it_ticket", "approve_leave_request", "close_it_ticket",
 ]);
@@ -142,8 +158,6 @@ const SYSTEM_PROMPT = `אתה "תפעול AI" — עוזר חכם במערכת �
 - כשאתה מציג נתונים, השתמש ב-Markdown ותציג טבלאות/רשימות כשמתאים.
 - אל תמציא נתונים. אם חסר מידע — שאל את המשתמש.
 - פעולות כתיבה (יצירה/עדכון) רגישות — תאר מה אתה עומד לעשות וחכה לאישור המשתמש לפני שתבצע.`;
-
-// Gemini uses functionDeclarations directly — no transform needed.
 
 async function executeTool(name: string, args: any, supabase: any, companyId: string | null) {
   const lim = Math.min(args?.limit ?? 20, 50);
@@ -251,80 +265,47 @@ function parseToolArgs(rawArgs: unknown) {
   }
 }
 
-class GeminiProviderError extends Error {
+class GatewayError extends Error {
   status: number;
   payload: any;
-  retryDelay?: string;
-  model: string;
-
-  constructor(status: number, payload: any, model: string) {
+  constructor(status: number, payload: any) {
     const message = payload?.error?.message ?? (typeof payload === "string" ? payload : JSON.stringify(payload));
-    super(`Gemini ${status}: ${message}`);
-    this.name = "GeminiProviderError";
+    super(`Lovable AI ${status}: ${message}`);
     this.status = status;
     this.payload = payload;
-    this.model = model;
-    this.retryDelay = payload?.error?.details?.find((detail: any) => detail?.["@type"]?.includes("RetryInfo"))?.retryDelay;
   }
 }
 
-function providerErrorMessage(error: GeminiProviderError) {
-  if (error.status === 429) {
-    const retry = error.retryDelay ? ` נסה שוב בעוד ${error.retryDelay}.` : " נסה שוב בעוד כמה דקות.";
-    return `מכסת Gemini של המפתח הישיר נגמרה עבור המודלים הזמינים.${retry} אם זה חוזר, צריך להפעיל/להגדיל מכסה או חיוב ב-Google AI Studio עבור המפתח הזה.`;
-  }
-  if (error.status === 403) {
-    return "למפתח Gemini הישיר אין הרשאה למודל הזה. ודא שהמפתח נוצר ב-Google AI Studio וש-Gemini API פעיל עבורו.";
-  }
-  if (error.status === 404) {
-    return "מודל Gemini שהוגדר לא זמין בחשבון הזה. הגדר GEMINI_MODEL למודל זמין או הסר את ההגדרה כדי להשתמש בברירת המחדל.";
-  }
-  return `שגיאת Gemini (${error.status}) במודל ${error.model}: ${error.payload?.error?.message ?? "הבקשה נכשלה"}`;
+function gatewayErrorMessage(error: GatewayError) {
+  if (error.status === 429) return "הגעת למגבלת קצב של Lovable AI. נסה שוב בעוד רגע.";
+  if (error.status === 402) return "נגמרו הקרדיטים של Lovable AI. הוסף קרדיטים בהגדרות Workspace → Usage.";
+  return `שגיאת Lovable AI (${error.status}): ${error.payload?.error?.message ?? "הבקשה נכשלה"}`;
 }
 
-async function callGemini(contents: any[]) {
-  let lastProviderError: GeminiProviderError | null = null;
+async function callGateway(messages: any[]) {
+  const res = await fetch(GATEWAY_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Lovable-API-Key": LOVABLE_API_KEY!,
+      "X-Lovable-AIG-SDK": "edge-function",
+    },
+    body: JSON.stringify({ model: MODEL, messages, tools }),
+  });
 
-  for (const model of GEMINI_MODELS) {
-    const res = await fetch(`${geminiUrl(model)}?key=${GEMINI_API_KEY}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        contents,
-        tools,
-      }),
-    });
+  if (res.ok) return await res.json();
 
-    if (res.ok) return await res.json();
-
-    const text = await res.text();
-    let payload: any = text;
-    try {
-      payload = JSON.parse(text);
-    } catch {
-      // Keep raw response text.
-    }
-
-    const providerError = new GeminiProviderError(res.status, payload, model);
-    lastProviderError = providerError;
-
-    if ((res.status === 429 || res.status === 404) && model !== GEMINI_MODELS.at(-1)) {
-      console.warn(`Gemini model ${model} failed with ${res.status}; trying next model.`);
-      continue;
-    }
-
-    throw providerError;
-  }
-
-  throw lastProviderError ?? new Error("Gemini request failed");
+  const text = await res.text();
+  let payload: any = text;
+  try { payload = JSON.parse(text); } catch { /* keep text */ }
+  throw new GatewayError(res.status, payload);
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
-    if (!GEMINI_API_KEY) {
-      return new Response(JSON.stringify({ error: "GEMINI_API_KEY חסר" }),
+    if (!LOVABLE_API_KEY) {
+      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY חסר" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -350,61 +331,64 @@ Deno.serve(async (req) => {
       approvedAction?: { name: string; args: any } | null;
     };
 
-    const contents: any[] = messages.map((m) => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }],
-    }));
+    const conv: any[] = [
+      { role: "system", content: SYSTEM_PROMPT },
+      ...messages.map((m) => ({ role: m.role, content: m.content })),
+    ];
 
     if (approvedAction) {
       const result = await executeTool(approvedAction.name, approvedAction.args, supabase, companyId ?? null);
-      contents.push({
+      conv.push({
         role: "user",
-        parts: [{ text: `הפעולה ${approvedAction.name} בוצעה. תוצאת הפעולה: ${JSON.stringify(result)}` }],
+        content: `הפעולה ${approvedAction.name} בוצעה. תוצאת הפעולה: ${JSON.stringify(result)}`,
       });
     }
 
     // Agentic loop — up to 5 tool rounds
     for (let step = 0; step < 5; step++) {
-      const data = await callGemini(contents);
-      const candidate = data.candidates?.[0];
-      const parts = candidate?.content?.parts ?? [];
-      const functionCalls = parts
-        .filter((p: any) => p.functionCall)
-        .map((p: any) => ({ name: p.functionCall.name, args: p.functionCall.args ?? {} }));
+      const data = await callGateway(conv);
+      const choice = data.choices?.[0];
+      const msg = choice?.message;
+      const toolCalls = msg?.tool_calls ?? [];
 
-      if (functionCalls.length === 0) {
-        const text = parts.map((p: any) => p.text ?? "").join("").trim();
+      if (!toolCalls.length) {
+        const text = (msg?.content ?? "").trim();
         return new Response(JSON.stringify({ type: "message", text }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      const writeCall = functionCalls.find((c: any) => WRITE_ACTIONS.has(c.name));
+      const writeCall = toolCalls.find((c: any) => WRITE_ACTIONS.has(c.function?.name));
       if (writeCall) {
-        const preface = parts.map((p: any) => p.text ?? "").join("").trim();
         return new Response(JSON.stringify({
           type: "needs_approval",
-          action: { name: writeCall.name, args: writeCall.args },
-          preface: preface || null,
+          action: { name: writeCall.function.name, args: parseToolArgs(writeCall.function.arguments) },
+          preface: (msg?.content ?? "").trim() || null,
         }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // Append model turn + tool responses
-      contents.push({ role: "model", parts });
-      const responseParts: any[] = [];
-      for (const call of functionCalls) {
-        const result = await executeTool(call.name, call.args, supabase, companyId ?? null);
-        responseParts.push({ functionResponse: { name: call.name, response: { result } } });
+      conv.push({
+        role: "assistant",
+        content: msg?.content ?? "",
+        tool_calls: toolCalls,
+      });
+      for (const call of toolCalls) {
+        const args = parseToolArgs(call.function?.arguments);
+        const result = await executeTool(call.function?.name, args, supabase, companyId ?? null);
+        conv.push({
+          role: "tool",
+          tool_call_id: call.id,
+          content: JSON.stringify(result),
+        });
       }
-      contents.push({ role: "user", parts: responseParts });
     }
 
     return new Response(JSON.stringify({ type: "message", text: "הגעתי למגבלת הצעדים. נסה לפצל את הבקשה." }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e: any) {
     console.error("ai-assistant error:", e);
-    const isProviderError = e instanceof GeminiProviderError;
-    const status = isProviderError && [400, 401, 403, 404, 429].includes(e.status) ? 200 : 500;
-    const error = isProviderError ? providerErrorMessage(e) : (e?.message ?? String(e));
+    const isGateway = e instanceof GatewayError;
+    const status = isGateway && [400, 401, 402, 403, 404, 429].includes(e.status) ? 200 : 500;
+    const error = isGateway ? gatewayErrorMessage(e) : (e?.message ?? String(e));
     return new Response(JSON.stringify({ type: "message", text: `⚠️ ${error}`, error }),
       { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
