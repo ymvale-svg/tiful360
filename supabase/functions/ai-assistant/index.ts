@@ -1,4 +1,4 @@
-// AI Assistant Edge Function — calls Google Gemini directly with function calling
+// AI Assistant Edge Function — calls Lovable AI Gateway with function calling
 // Uses user's JWT to query Supabase with RLS enforcing role-based access.
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -8,10 +8,11 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-const MODEL = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.0-flash";
+const MODEL = Deno.env.get("AI_MODEL") ?? "google/gemini-3-flash-preview";
+const AI_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 // ---------- Tool declarations (for Gemini function calling) ----------
 const tools = [{
@@ -135,6 +136,15 @@ const SYSTEM_PROMPT = `אתה "תפעול AI" — עוזר חכם במערכת �
 - אל תמציא נתונים. אם חסר מידע — שאל את המשתמש.
 - פעולות כתיבה (יצירה/עדכון) רגישות — תאר מה אתה עומד לעשות וחכה לאישור המשתמש לפני שתבצע.`;
 
+const aiTools = tools[0].functionDeclarations.map((declaration) => ({
+  type: "function",
+  function: {
+    name: declaration.name,
+    description: declaration.description,
+    parameters: declaration.parameters,
+  },
+}));
+
 async function executeTool(name: string, args: any, supabase: any, companyId: string | null) {
   const lim = Math.min(args?.limit ?? 20, 50);
   try {
@@ -231,21 +241,39 @@ async function executeTool(name: string, args: any, supabase: any, companyId: st
   }
 }
 
-async function callGemini(contents: any[]) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-  const res = await fetch(url, {
+function parseToolArgs(rawArgs: unknown) {
+  if (!rawArgs) return {};
+  if (typeof rawArgs === "object") return rawArgs;
+  try {
+    return JSON.parse(String(rawArgs));
+  } catch {
+    return {};
+  }
+}
+
+async function callAiGateway(messages: any[]) {
+  const res = await fetch(AI_GATEWAY_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-      contents,
-      tools,
-      toolConfig: { functionCallingConfig: { mode: "AUTO" } },
+      model: MODEL,
+      messages,
+      tools: aiTools,
+      tool_choice: "auto",
     }),
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Gemini ${res.status}: ${text}`);
+    if (res.status === 429) {
+      return { choices: [{ message: { content: "שירות ה-AI מוגבל כרגע. נסה שוב בעוד דקה.", tool_calls: [] } }] };
+    }
+    if (res.status === 402) {
+      return { choices: [{ message: { content: "קרדיטי ה-AI נגמרו. יש להוסיף קרדיטים בהגדרות השימוש של Lovable כדי להמשיך.", tool_calls: [] } }] };
+    }
+    throw new Error(`AI Gateway ${res.status}: ${text}`);
   }
   return await res.json();
 }
