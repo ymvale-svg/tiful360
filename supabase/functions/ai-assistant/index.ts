@@ -402,7 +402,10 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e: any) {
     console.error("ai-assistant error:", e);
-    return new Response(JSON.stringify({ error: e?.message ?? String(e) }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const isProviderError = e instanceof GeminiProviderError;
+    const status = isProviderError && [400, 401, 403, 404, 429].includes(e.status) ? 200 : 500;
+    const error = isProviderError ? providerErrorMessage(e) : (e?.message ?? String(e));
+    return new Response(JSON.stringify({ type: "message", text: `⚠️ ${error}`, error }),
+      { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
