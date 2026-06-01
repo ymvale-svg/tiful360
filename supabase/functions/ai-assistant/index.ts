@@ -509,6 +509,124 @@ function applyFilter(q: any, f: { column: string; op: string; value?: any }, all
   return q;
 }
 
+function formatDateDDMMYYYY(value: unknown): string | null {
+  if (!value) return null;
+  const raw = String(value).slice(0, 10);
+  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : String(value);
+}
+
+function normalizeHebrewSearchTerm(term: string): string {
+  let value = term
+    .replace(/["'״׳.,!?;:()[\]{}<>]/g, "")
+    .replace(/^(של|את|ה)/, "")
+    .replace(/^[ובכלמ]/, "")
+    .replace(/(ים|ות|יה|יו|ית|י|ה|ת)$/u, "")
+    .trim();
+  if (value.length < 3) value = term.replace(/["'״׳.,!?;:()[\]{}<>]/g, "").trim();
+  return value;
+}
+
+function extractAssetSearchTerms(message: string): string[] {
+  const stopWords = new Set([
+    "תן", "לי", "את", "של", "על", "עם", "כל", "מה", "מי", "איפה", "איזה", "איזו", "אלו", "יש",
+    "נא", "בבקשה", "פתח", "הצג", "תציג", "תראה", "קישור", "לינק", "מסמך", "מסמכים", "תצוגה",
+    "ביטוח", "הביטוח", "ביטוחים", "פוליסה", "פוליסת", "פוליסות", "אישור", "אישורי", "תוקף", "בתוקף", "פג",
+  ]);
+  const words = message.split(/\s+/).map((word) => word.trim()).filter(Boolean);
+  const terms = new Set<string>();
+  for (const word of words) {
+    const normalized = normalizeHebrewSearchTerm(word);
+    if (normalized.length >= 3 && !stopWords.has(word) && !stopWords.has(normalized)) terms.add(normalized);
+  }
+  return Array.from(terms);
+}
+
+function isAssetDocumentIntent(message: string): boolean {
+  return /(ביטוח|פוליס|מסמך|מסמכ|קישור|לינק|פתח|תצוג|חוזה|אישור|תעודה|רישיון|רשיון)/.test(message);
+}
+
+async function tryAnswerAssetDocumentSearch(message: string, supabase: any, companyId: string | null): Promise<string | null> {
+  if (!companyId || !isAssetDocumentIntent(message)) return null;
+
+  const isInsurance = /(ביטוח|פוליס)/.test(message);
+  const searchTerms = extractAssetSearchTerms(message);
+  const categoryIds: string[] = [];
+
+  if (isInsurance) {
+    const { data: categories } = await supabase
+      .from("asset_categories")
+      .select("id")
+      .eq("company_id", companyId)
+      .eq("domain", "insurance");
+    categoryIds.push(...(categories ?? []).map((row: any) => row.id).filter(Boolean));
+  }
+
+  const assetMap = new Map<string, any>();
+  const attempts = searchTerms.length ? searchTerms : isInsurance ? ["ביטוח", "פוליס"] : [];
+  for (const term of attempts) {
+    let q = supabase
+      .from("assets")
+      .select("id, asset_name, asset_code, category_id, expiry_date, insurance_expiry, insurance_company, insurance_policy_number")
+      .eq("company_id", companyId)
+      .ilike("asset_name", `%${term}%`)
+      .limit(10);
+    if (categoryIds.length) q = q.in("category_id", categoryIds);
+    const { data, error } = await q;
+    if (!error) for (const asset of data ?? []) assetMap.set(asset.id, asset);
+    if (assetMap.size) break;
+  }
+
+  if (!assetMap.size && searchTerms.length) {
+    for (const term of searchTerms) {
+      const { data, error } = await supabase
+        .from("assets")
+        .select("id, asset_name, asset_code, category_id, expiry_date, insurance_expiry, insurance_company, insurance_policy_number")
+        .eq("company_id", companyId)
+        .ilike("asset_name", `%${term}%`)
+        .limit(10);
+      if (!error) for (const asset of data ?? []) assetMap.set(asset.id, asset);
+      if (assetMap.size) break;
+    }
+  }
+
+  const assets = Array.from(assetMap.values());
+  if (!assets.length) return null;
+
+  const assetIds = assets.map((asset: any) => asset.id);
+  const { data: docs } = await supabase
+    .from("asset_documents")
+    .select("id, asset_id, file_url, file_name, document_label, document_type, expiry_date")
+    .eq("company_id", companyId)
+    .in("asset_id", assetIds)
+    .order("uploaded_at", { ascending: false });
+
+  const docsByAsset = new Map<string, any[]>();
+  for (const doc of docs ?? []) {
+    const list = docsByAsset.get(doc.asset_id) ?? [];
+    list.push(doc);
+    docsByAsset.set(doc.asset_id, list);
+  }
+
+  const lines: string[] = [assets.length === 1 ? "מצאתי את הנכס:" : "מצאתי את הנכסים:"];
+  for (const asset of assets) {
+    const expiry = formatDateDDMMYYYY(asset.expiry_date ?? asset.insurance_expiry);
+    lines.push(`- **${asset.asset_name}**${expiry ? ` — בתוקף עד ${expiry}` : ""}`);
+    const assetDocs = docsByAsset.get(asset.id) ?? [];
+    if (!assetDocs.length) {
+      lines.push("  - אין מסמכים מצורפים לנכס זה.");
+      continue;
+    }
+    for (const doc of assetDocs) {
+      const { data: signed } = await supabase.storage.from("asset-documents").createSignedUrl(doc.file_url, 60 * 10);
+      const label = doc.document_label || doc.file_name || "צפייה במסמך";
+      if (signed?.signedUrl) lines.push(`  - [${label}](${signed.signedUrl})`);
+    }
+  }
+  if ((docs ?? []).length) lines.push("הקישורים תקפים ל-10 דקות.");
+  return lines.join("\n");
+}
+
 async function executeTool(name: string, args: any, supabase: any, companyId: string | null) {
   try {
     if (name === "query_table") {
@@ -676,6 +794,15 @@ Deno.serve(async (req) => {
       companyId?: string | null;
       approvedAction?: { name: string; args: any } | null;
     };
+
+    const latestUserMessage = [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
+    if (!approvedAction && latestUserMessage) {
+      const directAssetAnswer = await tryAnswerAssetDocumentSearch(latestUserMessage, supabase, companyId ?? null);
+      if (directAssetAnswer) {
+        return new Response(JSON.stringify({ type: "message", text: directAssetAnswer }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
 
     const conv: any[] = [
       { role: "system", content: baseSystemPrompt(await loadCompanyCatalog(supabase, companyId ?? null)) },
