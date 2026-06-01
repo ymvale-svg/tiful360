@@ -247,31 +247,12 @@ export function AiAssistantWidget() {
             )}
 
             {pending && (
-              <div className="border border-amber-500/40 bg-amber-50 dark:bg-amber-950/30 rounded-lg p-3 space-y-2">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <AlertCircle className="w-4 h-4 text-amber-600" />
-                  אישור פעולה: {ACTION_LABELS[pending.name] ?? pending.name}
-                </div>
-                <pre className="text-xs bg-background/60 rounded p-2 overflow-x-auto" dir="ltr">
-                  {JSON.stringify(pending.args, null, 2)}
-                </pre>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleApprove}
-                    disabled={loading}
-                    className="flex-1 bg-primary text-primary-foreground rounded-md px-3 py-1.5 text-sm font-medium hover:opacity-90 flex items-center justify-center gap-1 disabled:opacity-50"
-                  >
-                    <Check className="w-3 h-3" /> אשר ובצע
-                  </button>
-                  <button
-                    onClick={handleReject}
-                    disabled={loading}
-                    className="flex-1 bg-muted text-foreground rounded-md px-3 py-1.5 text-sm font-medium hover:bg-muted/70 disabled:opacity-50"
-                  >
-                    ביטול
-                  </button>
-                </div>
-              </div>
+              <AiPendingActionCard
+                action={pending}
+                loading={loading}
+                onApprove={handleApprove}
+                onReject={handleReject}
+              />
             )}
           </div>
 
