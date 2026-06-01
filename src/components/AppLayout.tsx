@@ -122,6 +122,7 @@ export function AppLayout() {
           </Suspense>
         </main>
       </div>
+      <AiAssistantWidget />
     </div>
   );
 }
