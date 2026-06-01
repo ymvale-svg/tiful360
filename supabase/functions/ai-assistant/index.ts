@@ -421,6 +421,12 @@ function baseSystemPrompt(catalog: string): string {
 - **כלל כללי**: כשמחפשים נכס לפי "שם"/"מקום"/"תיאור"/"סוג" — תמיד \`asset_name ilike\` (זה השדה החופשי). שדות כמו \`insurance_company\`, \`manufacturer_model\`, \`license_plate\` הם נתוני-עזר ספציפיים, לא שם הנכס. אם עמודה ספציפית ריקה — נסה את \`asset_name\` לפני שאתה אומר "לא נמצא".
 - **"בתוקף" / "פג" לכל נכס** — תמיד \`expiry_date\` (gte/lt היום). אל תשתמש ב-\`status\` לבדיקת תוקף.
 
+## מסמכים מצורפים (asset_documents)
+- לכל נכס יכולים להיות מסמכים בטבלת \`asset_documents\` (חוזים, פוליסות, תעודות, אישורים). חפש לפי \`asset_id\` או \`document_label ilike\`.
+- "הראה לי את הפוליסה של X" / "תן לי את החוזה של X" / "קישור למסמך" → 1) query_table assets לפי X לקבל id, 2) query_table asset_documents עם \`asset_id eq <id>\`, 3) קרא ל-\`get_document_url\` עם document_id וקבל קישור חתום ל-10 דקות.
+- בתשובה הצג קישור Markdown: \`[שם הקובץ](signed_url)\` והדגש שהקישור תקף ל-10 דקות.
+
+
 ## חיפושים כלליים
 - העדף **ilike** על eq עבור טקסט בעברית.
 - "מי גר ב..." → employees \`city ilike '%X%'\`.
