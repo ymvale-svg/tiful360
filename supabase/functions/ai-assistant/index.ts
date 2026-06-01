@@ -11,8 +11,15 @@ const corsHeaders = {
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-const MODEL = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.0-flash";
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+const CONFIGURED_MODEL = Deno.env.get("GEMINI_MODEL")?.trim();
+const FALLBACK_MODELS = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.0-flash-lite", "gemini-2.0-flash"];
+const GEMINI_MODELS = Array.from(
+  new Set([CONFIGURED_MODEL, ...FALLBACK_MODELS].filter((model): model is string => Boolean(model))),
+);
+
+function geminiUrl(model: string) {
+  return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+}
 
 // ---------- Tool declarations (for Gemini function calling) ----------
 const tools = [{
@@ -244,21 +251,73 @@ function parseToolArgs(rawArgs: unknown) {
   }
 }
 
-async function callGemini(contents: any[]) {
-  const res = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-      contents,
-      tools,
-    }),
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Gemini ${res.status}: ${text}`);
+class GeminiProviderError extends Error {
+  status: number;
+  payload: any;
+  retryDelay?: string;
+  model: string;
+
+  constructor(status: number, payload: any, model: string) {
+    const message = payload?.error?.message ?? (typeof payload === "string" ? payload : JSON.stringify(payload));
+    super(`Gemini ${status}: ${message}`);
+    this.name = "GeminiProviderError";
+    this.status = status;
+    this.payload = payload;
+    this.model = model;
+    this.retryDelay = payload?.error?.details?.find((detail: any) => detail?.["@type"]?.includes("RetryInfo"))?.retryDelay;
   }
-  return await res.json();
+}
+
+function providerErrorMessage(error: GeminiProviderError) {
+  if (error.status === 429) {
+    const retry = error.retryDelay ? ` נסה שוב בעוד ${error.retryDelay}.` : " נסה שוב בעוד כמה דקות.";
+    return `מכסת Gemini של המפתח הישיר נגמרה עבור המודלים הזמינים.${retry} אם זה חוזר, צריך להפעיל/להגדיל מכסה או חיוב ב-Google AI Studio עבור המפתח הזה.`;
+  }
+  if (error.status === 403) {
+    return "למפתח Gemini הישיר אין הרשאה למודל הזה. ודא שהמפתח נוצר ב-Google AI Studio וש-Gemini API פעיל עבורו.";
+  }
+  if (error.status === 404) {
+    return "מודל Gemini שהוגדר לא זמין בחשבון הזה. הגדר GEMINI_MODEL למודל זמין או הסר את ההגדרה כדי להשתמש בברירת המחדל.";
+  }
+  return `שגיאת Gemini (${error.status}) במודל ${error.model}: ${error.payload?.error?.message ?? "הבקשה נכשלה"}`;
+}
+
+async function callGemini(contents: any[]) {
+  let lastProviderError: GeminiProviderError | null = null;
+
+  for (const model of GEMINI_MODELS) {
+    const res = await fetch(`${geminiUrl(model)}?key=${GEMINI_API_KEY}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents,
+        tools,
+      }),
+    });
+
+    if (res.ok) return await res.json();
+
+    const text = await res.text();
+    let payload: any = text;
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      // Keep raw response text.
+    }
+
+    const providerError = new GeminiProviderError(res.status, payload, model);
+    lastProviderError = providerError;
+
+    if ((res.status === 429 || res.status === 404) && model !== GEMINI_MODELS.at(-1)) {
+      console.warn(`Gemini model ${model} failed with ${res.status}; trying next model.`);
+      continue;
+    }
+
+    throw providerError;
+  }
+
+  throw lastProviderError ?? new Error("Gemini request failed");
 }
 
 Deno.serve(async (req) => {
@@ -343,7 +402,10 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e: any) {
     console.error("ai-assistant error:", e);
-    return new Response(JSON.stringify({ error: e?.message ?? String(e) }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const isProviderError = e instanceof GeminiProviderError;
+    const status = isProviderError && [400, 401, 403, 404, 429].includes(e.status) ? 200 : 500;
+    const error = isProviderError ? providerErrorMessage(e) : (e?.message ?? String(e));
+    return new Response(JSON.stringify({ type: "message", text: `⚠️ ${error}`, error }),
+      { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
