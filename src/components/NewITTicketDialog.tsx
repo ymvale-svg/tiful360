@@ -134,6 +134,8 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
       const checklist: any[] = [];
       if (siteLocation) checklist.push({ label: `מיקום: ${siteLocation}`, done: false });
       if (contactPhone) checklist.push({ label: `טלפון איש קשר: ${contactPhone}`, done: false });
+      if (contactEmail) checklist.push({ label: `מייל איש קשר: ${contactEmail}`, done: false });
+      if (callerEmployee?.full_name) checklist.push({ label: `פותח הקריאה: ${callerEmployee.full_name}`, done: false });
       if (description) checklist.push({ label: description, done: false, type: "description" });
       attachmentUrls.forEach(url => checklist.push({ label: "קובץ מצורף", url, done: false, type: "attachment" }));
 
@@ -148,7 +150,7 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
         title: titleWithSite,
         ticket_type: ticketType as any,
         priority: priority as any,
-        status: status as any,
+        status: "open" as any, // G.I.T.: SSERVSTATDES נכפה ל"בפתיחה" ביצירה
         checklist: checklist as any,
       }).select("id").single();
       if (error) throw error;
