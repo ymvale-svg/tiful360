@@ -24,17 +24,10 @@ const TICKET_TYPES: { value: string; label: string }[] = [
   { value: "offboarding", label: "ניתוקים / סיום העסקה" },
 ];
 
+// G.I.T. allows only "רגיל" / "מיידי" — נשמר מיפוי דו-כיווני בעת סנכרון
 const PRIORITIES: { value: string; label: string }[] = [
-  { value: "low", label: "נמוך" },
   { value: "medium", label: "רגיל" },
-  { value: "high", label: "גבוה" },
-  { value: "critical", label: "קריטי" },
-];
-
-const STATUSES: { value: string; label: string }[] = [
-  { value: "open", label: "בפתיחה" },
-  { value: "in_progress", label: "בטיפול" },
-  { value: "done", label: "טופל" },
+  { value: "critical", label: "מיידי" },
 ];
 
 export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps) {

@@ -1,80 +1,56 @@
 
-# אינטגרציה עם G.I.T. Service Calls API
+# מיפוי שדות: דיאלוג "קריאה חדשה" מול אפיון G.I.T. v1
 
-מטרה: סנכרון דו-כיווני בין `it_tickets` במערכת שלנו לבין מערכת הקריאות של G.I.T., כך שכל פתיחת/עדכון קריאה במערכת תיווצר גם אצל G.I.T., וכל שינוי אצלם יחזור אלינו. הרשימות הנפתחות בדיאלוג פתיחת הקריאה יהפכו דינמיות לפי החברה.
+מתוך `POST /api/v1/servicecalls` שבאפיון:
 
-## 1. שינויי DB
+**שדות חובה ב-G.I.T.:** `CODE` (אתר), `SSERVDES` (כותרת).
+**אופציונליים:** `SERNUM`, `SSLOCATION`, `PRIORLEVELDES` (רק `רגיל` / `מיידי`), `SSERVCALLTYPENAME`, `OPENMEN`, `OPENMENPHONE`, `OPENEMAIL`, `text` (HTML בסיסי).
+**נכפים על-ידי השרת:** `CUSTNAME` (מהמשתמש המאומת), `SSERVSTATDES` = `בפתיחה` תמיד ביצירה.
+**לא נתמך ב-V1:** העלאת קבצים.
 
-**טבלה `companies` — שדות אינטגרציה:**
-- `git_enabled` (bool)
-- `git_custname` (text) — קוד הלקוח אצל G.I.T.
-- `git_username` (text)
-- `git_password_encrypted` (text) — pgcrypto + key מ-secret
-- `git_base_url` (text, default `https://a.gold.org.il/api/v1`)
-- `git_default_site_code` (text, אופציונלי)
+## טבלת השוואה
 
-**טבלה `it_tickets` — שדות מיפוי:**
-- `git_sservname` (text) — מזהה הקריאה ב-G.I.T. (`SC00012345`)
-- `git_synced_at`, `git_sync_status`, `git_sync_error`
-- `git_site_code`, `git_sernum` (אופציונלי)
-- `external_source` (text: `local` / `git`) — מונע לולאות סנכרון
+| שדה G.I.T. | שדה בדיאלוג היום | סטטוס | פעולה נדרשת |
+|---|---|---|---|
+| `CODE` (אתר) | "אתר" (sub_employers) | ✓ קיים | בחברת G.I.T. → רשימה מ-`GET /sites` |
+| `SSERVDES` (כותרת) | "תיאור הקריאה" (120) | ✓ קיים | — |
+| `SSLOCATION` | "מיקום באתר" | ✓ קיים | — |
+| `SERNUM` (ציוד) | — | ❌ חסר | להוסיף שדה ציוד (כבר בתוכנית) |
+| `PRIORLEVELDES` (רגיל/מיידי) | "דחיפות" (4 ערכים) | ⚠️ פער | בחברת G.I.T. → רק 2 ערכים; אחרת מיפוי: low/medium→`רגיל`, high/critical→`מיידי` |
+| `SSERVCALLTYPENAME` | "סוג קריאת שירות" | ✓ קיים | בחברת G.I.T. → רשימה מ-`GET /servicecall-types` |
+| `OPENMEN` | — | ❌ חסר | להציג לקריאה בלבד מ-`callerEmployee.full_name` |
+| `OPENMENPHONE` | "טלפון איש קשר" | ✓ קיים | — |
+| `OPENEMAIL` | — | ❌ חסר | להוסיף שדה מייל איש קשר (prefill מהעובד) |
+| `text` | "תיאור נוסף" | ✓ קיים | להמיר ל-HTML בסיסי בשליחה |
+| `SSERVSTATDES` | "סטטוס" dropdown | ⚠️ פוגע באפיון | להסיר ביצירה — תמיד `בפתיחה`. עריכת סטטוס תהיה רק במסך פירוט הקריאה |
+| קבצים מצורפים | "הוסף קובץ"/"הדבק צילום מסך" | ⚠️ לא נתמך ב-V1 | להשאיר לשימוש מקומי בלבד, להוסיף הערה: "לא יסונכרן ל-G.I.T. בשלב זה" |
 
-**טבלה חדשה `git_lookups_cache`** — מטמון רשימות לכל חברה:
-- `company_id`, `lookup_type` (`sites` / `devices` / `call_types` / `statuses` / `priorities`), `data` (jsonb), `fetched_at`
-- TTL: 1 שעה לרשימות גדולות (sites/devices), 24h לרשימות יציבות (call_types/statuses/priorities).
+## שינויים בדיאלוג `NewITTicketDialog.tsx`
 
-**Secret חדש:** `GIT_CREDENTIALS_ENCRYPTION_KEY`.
+1. **הסרת dropdown "סטטוס"** — נכפה ל-`open`/`בפתיחה` תמיד.
+2. **הוספת שדה "מייל איש קשר"** — prefill מ-`callerEmployee.email`, ולידציה רגילה.
+3. **הוספת שדה לקריאה "פותח הקריאה"** — מציג `callerEmployee.full_name`, לא ניתן לעריכה (יישלח כ-`OPENMEN`).
+4. **דחיפות** — לחברת G.I.T. ייצג רק `רגיל`/`מיידי`; לחברה רגילה נשאר כפי שהיה.
+5. **הוספת הערה תחת אזור הקבצים** (לחברת G.I.T. בלבד): "קבצים נשמרים אצלנו בלבד — סנכרון קבצים ל-G.I.T. יתווסף ב-V2".
 
-## 2. Edge Functions
+## יישור טקסטים לימין
 
-### `git-api-client` (מודול משותף)
-- `login(companyId)` עם cache של 24h
-- `request(companyId, method, path, body)` עם רענון אוטומטי
-- פענוח סיסמה מוצפנת
+הדיאלוג כבר ב-`dir="rtl"`, אך המקומות הבאים יושרו במפורש:
 
-### `git-lookups` (חדש — לטעינת הרשימות לדיאלוג)
-- `GET /sites`, `GET /servicecall-types`, `GET /devices?site=X`
-- בנוסף ערכים סטטיים שמתועדים ב-API:
-  - **סטטוסים מותרים ללקוח**: `בפתיחה`, `מבוטל`
-  - **דחיפויות**: `רגיל`, `מיידי`
-- שמירה ב-`git_lookups_cache` עם invalidation.
+- `#ticket-title-counter` — מ-`text-left` ל-`text-right`.
+- `Textarea` "תיאור נוסף" — להוסיף `text-right`.
+- `Input` של טלפון נשאר `dir="ltr"` (מספרים), אך labels ו-hint כבר `text-right` ✓.
+- מייל איש קשר — `dir="ltr"` לאינפוט, label לימין.
+- כל ה-`SelectValue` יבדק שיהיה `text-right` (ברירת מחדל של shadcn ב-rtl זה כבר ימין).
 
-### `git-sync-ticket` (push: אלינו → G.I.T.)
-- על Insert: `POST /servicecalls` עם `CODE` (site), `SSERVDES` (כותרת), `SERNUM`, `SSLOCATION`, `PRIORLEVELDES`, `SSERVCALLTYPENAME`, `text` (תיאור).
-- על Update: `PATCH /servicecalls/{id}` + `POST .../notes` להערות חדשות.
-- שמירת `git_sservname` ושגיאות חזרה.
+## הערה לגבי טבלת DB
 
-### `git-pull-tickets` (pull: G.I.T. → אלינו, cron 5 דק')
-- לכל חברה עם `git_enabled`: `GET /servicecalls?status=open,progress&from=<last_sync>`
-- מיפוי סטטוסים: `בפתיחה→open`, `בטיפול→in_progress`, `סגור/מבוטל→done`
-- מיפוי דחיפות: `מיידי→critical`, `רגיל→medium`
-- משיכת הערות → `checklist` עם `type:'git_note'`
+אין שינוי סכמה נוסף מעבר למה שכבר תוכנן: שדה `OPENEMAIL` ייכנס ל-`checklist` כפריט מטא, ובסנכרון ל-G.I.T. ייקרא מ-`callerEmployee.email`.
 
-## 3. שינויי UI
+## פרטים טכניים
 
-### `src/components/NewITTicketDialog.tsx` — רשימות דינמיות
-כשהחברה מחוברת ל-G.I.T., כל ה-dropdowns ימשכו ערכים מ-`git-lookups` (עם React Query, cached):
-
-| שדה | מקור היום | מקור חדש (חברת G.I.T.) |
-|---|---|---|
-| אתר | `sub_employers` | `GET /sites` (CODE + DCODEDES + ADDRESS) |
-| ציוד / S/N | — (חדש) | `GET /devices?site=<CODE>` (SERNUM + PARTDES + LOCATION) |
-| סוג קריאה | קבוע (`TICKET_TYPES`) | `GET /servicecall-types` (SSERVCALLTYPENAME + SSERVCALLTYPEDES) |
-| סטטוס | `open/in_progress/done` | `בפתיחה` / `מבוטל` (מותרים ללקוח) |
-| דחיפות | 4 ערכים מקומיים | `רגיל` / `מיידי` |
-
-- כשהחברה לא מחוברת ל-G.I.T. → התנהגות נוכחית נשמרת ללא שינוי.
-- שדה ציוד הוא חדש לחלוטין (מופיע רק לחברות G.I.T.), עם searchable-select.
-- בחירת אתר מעדכנת בצורה דינמית את רשימת הציוד (נשלף לפי `site=CODE`).
-- מיפוי דו-כיווני בעת שמירה: הערך המקומי (`open`) נשמר ב-DB שלנו, והערך העברי (`בפתיחה`) נשלח ל-G.I.T. דרך `git-sync-ticket`.
-- אינדיקטור קטן מעל הדיאלוג: "🔄 הקריאה תיפתח גם במערכת G.I.T."
-
-### `src/pages/ITTickets.tsx`
-- Badge חדש "G.I.T." עם מזהה `SC...` + tooltip סטטוס סנכרון.
-- אייקון "סנכרן שוב" לקריאות שנכשלו.
-- כפתור גלובלי "משוך מ-G.I.T.".
-
-### `src/components/CompanySettings` — tab חדש "אינטגרציית G.I.T."
-- Toggle הפעלה
-- שדות: שם משתמש, סיסמה, CUSTNAME, Base URL, קוד אתר ברירת מחדל
-- כפתור "בדיקת חיבור" (מציג שם חברה + מ
+- מיפוי דחיפות בעת שליחה ל-G.I.T.:
+  - `low`, `medium` → `"רגיל"`
+  - `high`, `critical` → `"מיידי"`
+- שדה `text` יישלח כ-`<p>{description}</p>` כדי לעמוד באפיון HTML הבסיסי.
+- אחרי ההכנסה ל-DB המקומי, edge function `git-sync-ticket` שולח `POST /servicecalls` עם השדות לעיל, ושומר `git_sservname` חזרה.
