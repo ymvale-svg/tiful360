@@ -1,56 +1,80 @@
-# למה הוא ממשיך לשאול?
 
-ה-system prompt מתאר את **המבנה** של הטבלאות (יש `category_id`, יש `asset_categories.category_name`), אבל הבוט לא יודע **אילו קטגוריות באמת קיימות אצלך בחברה**. לכן הוא "משחק על בטוח" ושואל לפני שהוא מריץ ilike. לא משנה כמה דוגמאות נדחוף ל-prompt — כל עוד הרשימה האמיתית לא לפניו, הוא ימשיך לחשוש.
+# אינטגרציה עם G.I.T. Service Calls API
 
-הפתרון הוא חד-פעמי: ללמד אותו את הקטלוג של החברה **דינמית בכל שיחה**, ולאסור עליו לשאול שאלות הבהרה על מיפוי שפה חופשית.
+מטרה: סנכרון דו-כיווני בין `it_tickets` במערכת שלנו לבין מערכת הקריאות של G.I.T., כך שכל פתיחת/עדכון קריאה במערכת תיווצר גם אצל G.I.T., וכל שינוי אצלם יחזור אלינו. הרשימות הנפתחות בדיאלוג פתיחת הקריאה יהפכו דינמיות לפי החברה.
 
-# מה משנים
+## 1. שינויי DB
 
-## 1. הזרקת קטלוג חי לתחילת השיחה
-לפני שמתחילים את הלולאה האג'נטית, הפונקציה תריץ שאילתה קצרה ל-Supabase ותביא:
-- כל `asset_categories` של החברה — `id`, `category_name`, `domain`, `is_assignable`.
-- כל `asset_groups` של החברה — `id`, `name`, `category_id`.
-- ערכים נפוצים (distinct) ל-`employees.department` ו-`employees.role`.
+**טבלה `companies` — שדות אינטגרציה:**
+- `git_enabled` (bool)
+- `git_custname` (text) — קוד הלקוח אצל G.I.T.
+- `git_username` (text)
+- `git_password_encrypted` (text) — pgcrypto + key מ-secret
+- `git_base_url` (text, default `https://a.gold.org.il/api/v1`)
+- `git_default_site_code` (text, אופציונלי)
 
-הנתונים יוזרקו כבלוק נוסף ב-system prompt תחת הכותרת "קטלוג החברה (נכון להיום)". זה אומר שלרשימה תהיה את ה-id של "מחשבים ניידים" כבר ברגע הראשון — בלי שאילתת ביניים.
+**טבלה `it_tickets` — שדות מיפוי:**
+- `git_sservname` (text) — מזהה הקריאה ב-G.I.T. (`SC00012345`)
+- `git_synced_at`, `git_sync_status`, `git_sync_error`
+- `git_site_code`, `git_sernum` (אופציונלי)
+- `external_source` (text: `local` / `git`) — מונע לולאות סנכרון
 
-הטעינה תיעשה פעם אחת לכל קריאה לפונקציה, עם cache קצר בזיכרון (60 שניות) כדי לא להעמיס.
+**טבלה חדשה `git_lookups_cache`** — מטמון רשימות לכל חברה:
+- `company_id`, `lookup_type` (`sites` / `devices` / `call_types` / `statuses` / `priorities`), `data` (jsonb), `fetched_at`
+- TTL: 1 שעה לרשימות גדולות (sites/devices), 24h לרשימות יציבות (call_types/statuses/priorities).
 
-## 2. כלל "אל תשאל, חפש" ב-system prompt
-מוסיפים סעיף ברור:
-- **אסור לשאול שאלת הבהרה על מיפוי בין מילה בעברית לעמודה / קטגוריה.** הקטלוג כבר נמצא ב-prompt — חפש שם.
-- **אסור לשאול את המשתמש "האם התכוונת ל-X או Y".** במקום זה: הרץ ilike רחב שמכסה את כל החלופות הסבירות, והצג את התוצאה.
-- חזרה לשאלת הבהרה מותרת **רק** אם:
-  - השאילתה הראשונה החזירה 0 שורות *וגם* הרחבת ה-ilike עדיין 0,
-  - או שיש פעולת כתיבה (insert/update) שדורשת אישור.
+**Secret חדש:** `GIT_CREDENTIALS_ENCRYPTION_KEY`.
 
-## 3. דוגמאות few-shot של "מחשבה → query_table"
-בלוק קצר ב-prompt שמראה 3-4 דוגמאות מלאות:
-- "תן לי את כל המחשבים הניידים" → query_table על assets עם `category_id in [<id מהקטלוג של "מחשבים ניידים">]`.
-- "מי מחזיק רכבים?" → query_table assets עם `category_id in [<id "רכב">]`, אחר כך employees לפי current_owner_id.
-- "כל הנכסים הפיזיים" → query_table assets עם `category_id in [<id-ים של כל הקטגוריות עם domain=physical>]`.
+## 2. Edge Functions
 
-הדוגמאות יכתבו עם ה-id-ים האמיתיים מהקטלוג שהוזרק, כדי שהמודל יראה את הצורה המדויקת.
+### `git-api-client` (מודול משותף)
+- `login(companyId)` עם cache של 24h
+- `request(companyId, method, path, body)` עם רענון אוטומטי
+- פענוח סיסמה מוצפנת
 
-## 4. תיעוד שגיאות במקום שאלות
-אם בכל זאת לא מצא תוצאה: התשובה תהיה "לא נמצאו רשומות עבור X. ניסיתי: ilike '%X%' על category_name, ו-asset_name ilike '%X%'." — בלי לבקש מהמשתמש להחליט.
+### `git-lookups` (חדש — לטעינת הרשימות לדיאלוג)
+- `GET /sites`, `GET /servicecall-types`, `GET /devices?site=X`
+- בנוסף ערכים סטטיים שמתועדים ב-API:
+  - **סטטוסים מותרים ללקוח**: `בפתיחה`, `מבוטל`
+  - **דחיפויות**: `רגיל`, `מיידי`
+- שמירה ב-`git_lookups_cache` עם invalidation.
 
-# פרטים טכניים
+### `git-sync-ticket` (push: אלינו → G.I.T.)
+- על Insert: `POST /servicecalls` עם `CODE` (site), `SSERVDES` (כותרת), `SERNUM`, `SSLOCATION`, `PRIORLEVELDES`, `SSERVCALLTYPENAME`, `text` (תיאור).
+- על Update: `PATCH /servicecalls/{id}` + `POST .../notes` להערות חדשות.
+- שמירת `git_sservname` ושגיאות חזרה.
 
-קבצים שמשתנים:
-- `supabase/functions/ai-assistant/index.ts` בלבד.
+### `git-pull-tickets` (pull: G.I.T. → אלינו, cron 5 דק')
+- לכל חברה עם `git_enabled`: `GET /servicecalls?status=open,progress&from=<last_sync>`
+- מיפוי סטטוסים: `בפתיחה→open`, `בטיפול→in_progress`, `סגור/מבוטל→done`
+- מיפוי דחיפות: `מיידי→critical`, `רגיל→medium`
+- משיכת הערות → `checklist` עם `type:'git_note'`
 
-שינויים בקוד:
-- פונקציה חדשה `loadCompanyCatalog(supabase, companyId)` שמחזירה מחרוזת מעוצבת עם הקטגוריות, הקבוצות, וערכי enum נפוצים.
-- `SYSTEM_PROMPT` הופך לפונקציה `buildSystemPrompt(catalog)` שמשרשרת את הסכימה הסטטית + הקטלוג החי + סעיף "אל תשאל".
-- ה-cache הוא `Map<companyId, { value, expiresAt }>` ברמת המודול, TTL 60 שניות.
-- אין שינויים ב-UI, ב-DB, או בהרשאות.
+## 3. שינויי UI
 
-מה זה פותר:
-- "מחשבים ניידים" — הבוט יראה את הקטגוריה ואת ה-id שלה מיד.
-- "טלפונים", "רכבים", "תוכנות" — אותו דבר, אוטומטית, עבור כל הקטגוריות שיש לך עכשיו וגם כאלה שיתווספו בעתיד.
-- ה-RLS ממילא מגביל כל שאילתה ל-company של המשתמש, אז הקטלוג שמוזרק תמיד יהיה רק של החברה הרלוונטית.
+### `src/components/NewITTicketDialog.tsx` — רשימות דינמיות
+כשהחברה מחוברת ל-G.I.T., כל ה-dropdowns ימשכו ערכים מ-`git-lookups` (עם React Query, cached):
 
-מה לא משתנה:
-- הכלים (query_table, describe_table, insert_row, update_row) נשארים זהים.
-- מבנה ה-tool_calls וה-needs_approval לא משתנה.
+| שדה | מקור היום | מקור חדש (חברת G.I.T.) |
+|---|---|---|
+| אתר | `sub_employers` | `GET /sites` (CODE + DCODEDES + ADDRESS) |
+| ציוד / S/N | — (חדש) | `GET /devices?site=<CODE>` (SERNUM + PARTDES + LOCATION) |
+| סוג קריאה | קבוע (`TICKET_TYPES`) | `GET /servicecall-types` (SSERVCALLTYPENAME + SSERVCALLTYPEDES) |
+| סטטוס | `open/in_progress/done` | `בפתיחה` / `מבוטל` (מותרים ללקוח) |
+| דחיפות | 4 ערכים מקומיים | `רגיל` / `מיידי` |
+
+- כשהחברה לא מחוברת ל-G.I.T. → התנהגות נוכחית נשמרת ללא שינוי.
+- שדה ציוד הוא חדש לחלוטין (מופיע רק לחברות G.I.T.), עם searchable-select.
+- בחירת אתר מעדכנת בצורה דינמית את רשימת הציוד (נשלף לפי `site=CODE`).
+- מיפוי דו-כיווני בעת שמירה: הערך המקומי (`open`) נשמר ב-DB שלנו, והערך העברי (`בפתיחה`) נשלח ל-G.I.T. דרך `git-sync-ticket`.
+- אינדיקטור קטן מעל הדיאלוג: "🔄 הקריאה תיפתח גם במערכת G.I.T."
+
+### `src/pages/ITTickets.tsx`
+- Badge חדש "G.I.T." עם מזהה `SC...` + tooltip סטטוס סנכרון.
+- אייקון "סנכרן שוב" לקריאות שנכשלו.
+- כפתור גלובלי "משוך מ-G.I.T.".
+
+### `src/components/CompanySettings` — tab חדש "אינטגרציית G.I.T."
+- Toggle הפעלה
+- שדות: שם משתמש, סיסמה, CUSTNAME, Base URL, קוד אתר ברירת מחדל
+- כפתור "בדיקת חיבור" (מציג שם חברה + מ
