@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Plus, MapPin, Phone, Tag, MessageSquare, ListChecks, Zap, Info, Paperclip, Camera, Loader2 } from "lucide-react";
+import { Plus, MapPin, Phone, Mail, User, Tag, MessageSquare, ListChecks, Zap, Paperclip, Camera, Loader2 } from "lucide-react";
 
 interface NewITTicketDialogProps {
   open: boolean;
