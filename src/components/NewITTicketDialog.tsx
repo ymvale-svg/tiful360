@@ -81,16 +81,19 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
     if (open && callerEmployee?.phone && !contactPhone) {
       setContactPhone(callerEmployee.phone);
     }
-  }, [open, callerEmployee, contactPhone]);
+    if (open && callerEmployee?.email && !contactEmail) {
+      setContactEmail(callerEmployee.email);
+    }
+  }, [open, callerEmployee, contactPhone, contactEmail]);
 
   const reset = () => {
     setSiteId("");
     setSiteLocation("");
     setContactPhone("");
+    setContactEmail("");
     setTitle("");
     setDescription("");
     setTicketType("hardware");
-    setStatus("open");
     setPriority("medium");
     setFiles([]);
   };
