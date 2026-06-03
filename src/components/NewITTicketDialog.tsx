@@ -54,7 +54,7 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
     queryFn: async () => {
       const { data } = await supabase
         .from("employees")
-        .select("id, full_name, phone")
+        .select("id, full_name, phone, email")
         .eq("linked_user_id", user!.id)
         .eq("company_id", activeCompanyId!)
         .maybeSingle();
