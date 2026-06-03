@@ -39,10 +39,10 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
   const [siteId, setSiteId] = useState<string>("");
   const [siteLocation, setSiteLocation] = useState("");
   const [contactPhone, setContactPhone] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [ticketType, setTicketType] = useState<string>("hardware");
-  const [status, setStatus] = useState<string>("open");
   const [priority, setPriority] = useState<string>("medium");
   const [files, setFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
