@@ -211,6 +211,14 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
             </div>
           </div>
 
+          {/* Opener (read-only) */}
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-1 justify-end text-sm">
+              פותח הקריאה <User className="w-3.5 h-3.5 text-warning" aria-hidden="true" />
+            </Label>
+            <Input value={callerEmployee?.full_name ?? ""} readOnly className="bg-muted text-right" />
+          </div>
+
           {/* Contact phone */}
           <div className="space-y-1.5">
             <Label htmlFor="ticket-phone" className="flex items-center gap-1 justify-end text-sm">
@@ -222,13 +230,21 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
             <Input id="ticket-phone" value={contactPhone} onChange={e => setContactPhone(e.target.value)} dir="ltr" inputMode="tel" autoComplete="tel" aria-describedby="ticket-phone-hint" aria-required="true" />
           </div>
 
+          {/* Contact email */}
+          <div className="space-y-1.5">
+            <Label htmlFor="ticket-email" className="flex items-center gap-1 justify-end text-sm">
+              מייל איש קשר <Mail className="w-3.5 h-3.5 text-warning" aria-hidden="true" />
+            </Label>
+            <Input id="ticket-email" type="email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} dir="ltr" autoComplete="email" placeholder="name@example.com" />
+          </div>
+
           {/* Title */}
           <div className="space-y-1.5">
             <Label htmlFor="ticket-title" className="flex items-center gap-1 justify-end text-sm">
               <span className="text-destructive" aria-hidden="true">*</span> תיאור הקריאה <Tag className="w-3.5 h-3.5 text-warning" aria-hidden="true" />
             </Label>
-            <Input id="ticket-title" value={title} onChange={e => setTitle(e.target.value.slice(0, 120))} placeholder="תאר בקצרה את הבעיה" aria-required="true" maxLength={120} aria-describedby="ticket-title-counter" />
-            <div id="ticket-title-counter" className="text-xs text-muted-foreground text-left" aria-live="polite">{title.length} / 120</div>
+            <Input id="ticket-title" value={title} onChange={e => setTitle(e.target.value.slice(0, 120))} placeholder="תאר בקצרה את הבעיה" className="text-right" aria-required="true" maxLength={120} aria-describedby="ticket-title-counter" />
+            <div id="ticket-title-counter" className="text-xs text-muted-foreground text-right" aria-live="polite">{title.length} / 120</div>
           </div>
 
           {/* Description */}
@@ -236,7 +252,7 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
             <Label htmlFor="ticket-description" className="flex items-center gap-1 justify-end text-sm">
               תיאור נוסף <MessageSquare className="w-3.5 h-3.5 text-warning" aria-hidden="true" />
             </Label>
-            <Textarea id="ticket-description" value={description} onChange={e => setDescription(e.target.value)} placeholder="ספרו לנו עוד פרטים על הבעיה..." rows={4} />
+            <Textarea id="ticket-description" value={description} onChange={e => setDescription(e.target.value)} placeholder="ספרו לנו עוד פרטים על הבעיה..." rows={4} className="text-right" />
           </div>
 
           {/* Ticket type */}
@@ -252,30 +268,17 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
             </Select>
           </div>
 
-          {/* Status + Priority */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="ticket-status" className="flex items-center gap-1 justify-end text-sm">
-                סטטוס <Info className="w-3.5 h-3.5 text-warning" aria-hidden="true" />
-              </Label>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger id="ticket-status" className="bg-muted"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="ticket-priority" className="flex items-center gap-1 justify-end text-sm">
-                דחיפות <Zap className="w-3.5 h-3.5 text-warning" aria-hidden="true" />
-              </Label>
-              <Select value={priority} onValueChange={setPriority}>
-                <SelectTrigger id="ticket-priority"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {PRIORITIES.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Priority (status is enforced "בפתיחה" by G.I.T. on creation) */}
+          <div className="space-y-1.5">
+            <Label htmlFor="ticket-priority" className="flex items-center gap-1 justify-end text-sm">
+              דחיפות <Zap className="w-3.5 h-3.5 text-warning" aria-hidden="true" />
+            </Label>
+            <Select value={priority} onValueChange={setPriority}>
+              <SelectTrigger id="ticket-priority"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {PRIORITIES.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Attachments */}
@@ -283,6 +286,9 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
             <span className="flex items-center gap-1 justify-end text-sm font-medium">
               קבצים מצורפים <Paperclip className="w-3.5 h-3.5 text-warning" aria-hidden="true" />
             </span>
+            <p className="text-xs text-muted-foreground text-right">
+              הקבצים נשמרים במערכת בלבד — סנכרון קבצים ל-G.I.T. יתווסף ב-V2.
+            </p>
             {files.length > 0 && (
               <ul className="space-y-1" aria-label="רשימת קבצים מצורפים">
                 {files.map((f, i) => (
