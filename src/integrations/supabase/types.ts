@@ -808,6 +808,12 @@ export type Database = {
           created_at: string
           created_by: string | null
           expiry_notification_emails: string | null
+          git_base_url: string | null
+          git_custname: string | null
+          git_default_site_code: string | null
+          git_enabled: boolean
+          git_password_encrypted: string | null
+          git_username: string | null
           id: string
           it_emails: string | null
           logo_url: string | null
@@ -820,6 +826,12 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           expiry_notification_emails?: string | null
+          git_base_url?: string | null
+          git_custname?: string | null
+          git_default_site_code?: string | null
+          git_enabled?: boolean
+          git_password_encrypted?: string | null
+          git_username?: string | null
           id?: string
           it_emails?: string | null
           logo_url?: string | null
@@ -832,6 +844,12 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           expiry_notification_emails?: string | null
+          git_base_url?: string | null
+          git_custname?: string | null
+          git_default_site_code?: string | null
+          git_enabled?: boolean
+          git_password_encrypted?: string | null
+          git_username?: string | null
           id?: string
           it_emails?: string | null
           logo_url?: string | null
@@ -1291,6 +1309,41 @@ export type Database = {
         }
         Relationships: []
       }
+      git_lookups_cache: {
+        Row: {
+          company_id: string
+          data: Json
+          fetched_at: string
+          id: string
+          lookup_key: string
+          lookup_type: string
+        }
+        Insert: {
+          company_id: string
+          data?: Json
+          fetched_at?: string
+          id?: string
+          lookup_key?: string
+          lookup_type: string
+        }
+        Update: {
+          company_id?: string
+          data?: Json
+          fetched_at?: string
+          id?: string
+          lookup_key?: string
+          lookup_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "git_lookups_cache_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       it_tickets: {
         Row: {
           assigned_to: string | null
@@ -1298,6 +1351,13 @@ export type Database = {
           company_id: string | null
           created_at: string
           employee_id: string
+          external_source: string
+          git_sernum: string | null
+          git_site_code: string | null
+          git_sservname: string | null
+          git_sync_error: string | null
+          git_sync_status: string
+          git_synced_at: string | null
           id: string
           priority: Database["public"]["Enums"]["ticket_priority"]
           resolved_at: string | null
@@ -1315,6 +1375,13 @@ export type Database = {
           company_id?: string | null
           created_at?: string
           employee_id: string
+          external_source?: string
+          git_sernum?: string | null
+          git_site_code?: string | null
+          git_sservname?: string | null
+          git_sync_error?: string | null
+          git_sync_status?: string
+          git_synced_at?: string | null
           id?: string
           priority?: Database["public"]["Enums"]["ticket_priority"]
           resolved_at?: string | null
@@ -1332,6 +1399,13 @@ export type Database = {
           company_id?: string | null
           created_at?: string
           employee_id?: string
+          external_source?: string
+          git_sernum?: string | null
+          git_site_code?: string | null
+          git_sservname?: string | null
+          git_sync_error?: string | null
+          git_sync_status?: string
+          git_synced_at?: string | null
           id?: string
           priority?: Database["public"]["Enums"]["ticket_priority"]
           resolved_at?: string | null
@@ -2518,6 +2592,14 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      git_decrypt_password: {
+        Args: { _cipher: string; _key: string }
+        Returns: string
+      }
+      git_encrypt_password: {
+        Args: { _key: string; _plain: string }
+        Returns: string
       }
       has_role: {
         Args: {
