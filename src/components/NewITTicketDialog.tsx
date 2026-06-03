@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Plus, MapPin, Phone, Tag, MessageSquare, ListChecks, Zap, Info, Paperclip, Camera, Loader2 } from "lucide-react";
+import { Plus, MapPin, Phone, Mail, User, Tag, MessageSquare, ListChecks, Zap, Paperclip, Camera, Loader2 } from "lucide-react";
 
 interface NewITTicketDialogProps {
   open: boolean;
@@ -24,17 +24,10 @@ const TICKET_TYPES: { value: string; label: string }[] = [
   { value: "offboarding", label: "ניתוקים / סיום העסקה" },
 ];
 
+// G.I.T. allows only "רגיל" / "מיידי" — נשמר מיפוי דו-כיווני בעת סנכרון
 const PRIORITIES: { value: string; label: string }[] = [
-  { value: "low", label: "נמוך" },
   { value: "medium", label: "רגיל" },
-  { value: "high", label: "גבוה" },
-  { value: "critical", label: "קריטי" },
-];
-
-const STATUSES: { value: string; label: string }[] = [
-  { value: "open", label: "בפתיחה" },
-  { value: "in_progress", label: "בטיפול" },
-  { value: "done", label: "טופל" },
+  { value: "critical", label: "מיידי" },
 ];
 
 export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps) {
@@ -46,10 +39,10 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
   const [siteId, setSiteId] = useState<string>("");
   const [siteLocation, setSiteLocation] = useState("");
   const [contactPhone, setContactPhone] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [ticketType, setTicketType] = useState<string>("hardware");
-  const [status, setStatus] = useState<string>("open");
   const [priority, setPriority] = useState<string>("medium");
   const [files, setFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -61,7 +54,7 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
     queryFn: async () => {
       const { data } = await supabase
         .from("employees")
-        .select("id, full_name, phone")
+        .select("id, full_name, phone, email")
         .eq("linked_user_id", user!.id)
         .eq("company_id", activeCompanyId!)
         .maybeSingle();
@@ -88,16 +81,19 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
     if (open && callerEmployee?.phone && !contactPhone) {
       setContactPhone(callerEmployee.phone);
     }
-  }, [open, callerEmployee, contactPhone]);
+    if (open && callerEmployee?.email && !contactEmail) {
+      setContactEmail(callerEmployee.email);
+    }
+  }, [open, callerEmployee, contactPhone, contactEmail]);
 
   const reset = () => {
     setSiteId("");
     setSiteLocation("");
     setContactPhone("");
+    setContactEmail("");
     setTitle("");
     setDescription("");
     setTicketType("hardware");
-    setStatus("open");
     setPriority("medium");
     setFiles([]);
   };
@@ -138,6 +134,8 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
       const checklist: any[] = [];
       if (siteLocation) checklist.push({ label: `מיקום: ${siteLocation}`, done: false });
       if (contactPhone) checklist.push({ label: `טלפון איש קשר: ${contactPhone}`, done: false });
+      if (contactEmail) checklist.push({ label: `מייל איש קשר: ${contactEmail}`, done: false });
+      if (callerEmployee?.full_name) checklist.push({ label: `פותח הקריאה: ${callerEmployee.full_name}`, done: false });
       if (description) checklist.push({ label: description, done: false, type: "description" });
       attachmentUrls.forEach(url => checklist.push({ label: "קובץ מצורף", url, done: false, type: "attachment" }));
 
@@ -152,7 +150,7 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
         title: titleWithSite,
         ticket_type: ticketType as any,
         priority: priority as any,
-        status: status as any,
+        status: "open" as any, // G.I.T.: SSERVSTATDES נכפה ל"בפתיחה" ביצירה
         checklist: checklist as any,
       }).select("id").single();
       if (error) throw error;
@@ -213,6 +211,14 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
             </div>
           </div>
 
+          {/* Opener (read-only) */}
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-1 justify-end text-sm">
+              פותח הקריאה <User className="w-3.5 h-3.5 text-warning" aria-hidden="true" />
+            </Label>
+            <Input value={callerEmployee?.full_name ?? ""} readOnly className="bg-muted text-right" />
+          </div>
+
           {/* Contact phone */}
           <div className="space-y-1.5">
             <Label htmlFor="ticket-phone" className="flex items-center gap-1 justify-end text-sm">
@@ -224,13 +230,21 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
             <Input id="ticket-phone" value={contactPhone} onChange={e => setContactPhone(e.target.value)} dir="ltr" inputMode="tel" autoComplete="tel" aria-describedby="ticket-phone-hint" aria-required="true" />
           </div>
 
+          {/* Contact email */}
+          <div className="space-y-1.5">
+            <Label htmlFor="ticket-email" className="flex items-center gap-1 justify-end text-sm">
+              מייל איש קשר <Mail className="w-3.5 h-3.5 text-warning" aria-hidden="true" />
+            </Label>
+            <Input id="ticket-email" type="email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} dir="ltr" autoComplete="email" placeholder="name@example.com" />
+          </div>
+
           {/* Title */}
           <div className="space-y-1.5">
             <Label htmlFor="ticket-title" className="flex items-center gap-1 justify-end text-sm">
               <span className="text-destructive" aria-hidden="true">*</span> תיאור הקריאה <Tag className="w-3.5 h-3.5 text-warning" aria-hidden="true" />
             </Label>
-            <Input id="ticket-title" value={title} onChange={e => setTitle(e.target.value.slice(0, 120))} placeholder="תאר בקצרה את הבעיה" aria-required="true" maxLength={120} aria-describedby="ticket-title-counter" />
-            <div id="ticket-title-counter" className="text-xs text-muted-foreground text-left" aria-live="polite">{title.length} / 120</div>
+            <Input id="ticket-title" value={title} onChange={e => setTitle(e.target.value.slice(0, 120))} placeholder="תאר בקצרה את הבעיה" className="text-right" aria-required="true" maxLength={120} aria-describedby="ticket-title-counter" />
+            <div id="ticket-title-counter" className="text-xs text-muted-foreground text-right" aria-live="polite">{title.length} / 120</div>
           </div>
 
           {/* Description */}
@@ -238,7 +252,7 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
             <Label htmlFor="ticket-description" className="flex items-center gap-1 justify-end text-sm">
               תיאור נוסף <MessageSquare className="w-3.5 h-3.5 text-warning" aria-hidden="true" />
             </Label>
-            <Textarea id="ticket-description" value={description} onChange={e => setDescription(e.target.value)} placeholder="ספרו לנו עוד פרטים על הבעיה..." rows={4} />
+            <Textarea id="ticket-description" value={description} onChange={e => setDescription(e.target.value)} placeholder="ספרו לנו עוד פרטים על הבעיה..." rows={4} className="text-right" />
           </div>
 
           {/* Ticket type */}
@@ -254,30 +268,17 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
             </Select>
           </div>
 
-          {/* Status + Priority */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="ticket-status" className="flex items-center gap-1 justify-end text-sm">
-                סטטוס <Info className="w-3.5 h-3.5 text-warning" aria-hidden="true" />
-              </Label>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger id="ticket-status" className="bg-muted"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="ticket-priority" className="flex items-center gap-1 justify-end text-sm">
-                דחיפות <Zap className="w-3.5 h-3.5 text-warning" aria-hidden="true" />
-              </Label>
-              <Select value={priority} onValueChange={setPriority}>
-                <SelectTrigger id="ticket-priority"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {PRIORITIES.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Priority (status is enforced "בפתיחה" by G.I.T. on creation) */}
+          <div className="space-y-1.5">
+            <Label htmlFor="ticket-priority" className="flex items-center gap-1 justify-end text-sm">
+              דחיפות <Zap className="w-3.5 h-3.5 text-warning" aria-hidden="true" />
+            </Label>
+            <Select value={priority} onValueChange={setPriority}>
+              <SelectTrigger id="ticket-priority"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {PRIORITIES.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Attachments */}
@@ -285,6 +286,9 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
             <span className="flex items-center gap-1 justify-end text-sm font-medium">
               קבצים מצורפים <Paperclip className="w-3.5 h-3.5 text-warning" aria-hidden="true" />
             </span>
+            <p className="text-xs text-muted-foreground text-right">
+              הקבצים נשמרים במערכת בלבד — סנכרון קבצים ל-G.I.T. יתווסף ב-V2.
+            </p>
             {files.length > 0 && (
               <ul className="space-y-1" aria-label="רשימת קבצים מצורפים">
                 {files.map((f, i) => (
