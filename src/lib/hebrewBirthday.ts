@@ -124,6 +124,33 @@ export function formatHebrewYearGematriya(year: number): string {
   }
 }
 
+// Parse Hebrew day written in gematriya (e.g. 'כ"ב', "ט\"ו", "א'") -> 1-30
+export function parseHebrewDayGematriya(text: string): number | null {
+  if (!text) return null;
+  const s = stripNikud(text).replace(/[״"׳'`’״\s\-־]/g, "").trim();
+  if (!s) return null;
+  let sum = 0;
+  for (const ch of s) {
+    const v = LETTER_VALUES[ch];
+    if (!v) return null;
+    sum += v;
+  }
+  if (sum < 1 || sum > 30) return null;
+  return sum;
+}
+
+// Render a numeric Hebrew day (1-30) as gematriya (e.g. 'כ"ב')
+export function formatHebrewDayGematriya(day: number): string {
+  try {
+    const hd = new HDate(day, 7, 5785);
+    const full = stripNikud(hd.renderGematriya());
+    const parts = full.trim().split(/\s+/);
+    return parts[0] || "";
+  } catch {
+    return "";
+  }
+}
+
 // Compute the Gregorian Date this year for a Hebrew birthday
 export function hebrewBirthdayGregorianThisYear(
   day: number,
