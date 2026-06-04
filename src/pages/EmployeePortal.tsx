@@ -5,7 +5,7 @@ import {
   FileText, CalendarDays, AlertCircle, LogOut, Cake, PartyPopper,
   Box, Wifi, LayoutDashboard
 } from "lucide-react";
-import logoImg from "@/assets/logo.png";
+import portalLogo from "@/assets/portal-logo.png.asset.json";
 import { hasDualAccess } from "@/lib/dualAccess";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
