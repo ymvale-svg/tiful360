@@ -36,14 +36,14 @@ export function WelcomeDateTime() {
   const hebDate = formatTodayHebrewGematriya();
 
   return (
-    <div className="text-left ltr:text-left rtl:text-left shrink-0 leading-tight text-xs sm:text-sm">
+    <div dir="ltr" className="text-left shrink-0 leading-tight text-xs sm:text-sm">
       <div className="flex items-center gap-1.5 text-foreground font-semibold text-base sm:text-lg justify-start">
-        <Clock className="w-4 h-4 text-primary" aria-hidden="true" />
         <span dir="ltr">{time}</span>
+        <Clock className="w-4 h-4 text-primary" aria-hidden="true" />
       </div>
-      <div className="text-muted-foreground mt-0.5">{weekday}</div>
-      <div className="text-muted-foreground">{gregDate}</div>
-      {hebDate && <div className="text-muted-foreground">{hebDate}</div>}
+      <div dir="rtl" className="text-muted-foreground mt-0.5 text-left">{weekday}</div>
+      <div dir="rtl" className="text-muted-foreground text-left">{gregDate}</div>
+      {hebDate && <div dir="rtl" className="text-muted-foreground text-left">{hebDate}</div>}
     </div>
   );
 }

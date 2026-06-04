@@ -52,8 +52,16 @@ export function formatHebrewBirthGematriya(
   year: number
 ): string {
   try {
+    const leap = HDate.isLeapYear(year);
     const hd = new HDate(day, toHebcalMonth(month, year), year);
-    return stripNikud(hd.renderGematriya());
+    let s = stripNikud(hd.renderGematriya());
+    // In a non-leap year hebcal renders Adar as just "אדר".
+    // Preserve the user's selection by labelling it אדר א' / אדר ב' explicitly.
+    if (!leap && (month === 12 || month === 13)) {
+      const suffix = month === 13 ? "אדר ב'" : "אדר א'";
+      s = s.replace(/אדר/, suffix);
+    }
+    return s;
   } catch {
     return "";
   }

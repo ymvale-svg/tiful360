@@ -103,9 +103,9 @@ export function BirthdayPreferenceCard({ employee }: Props) {
           <p className="text-xs text-muted-foreground bg-muted/40 rounded-lg p-2.5 leading-relaxed">
             התאריך העברי נשמר כפי שמוזן ולא מומר מהתאריך הלועזי שלך.
           </p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-2 text-right">
             <div>
-              <Label className="text-xs">יום</Label>
+              <Label className="text-xs block text-right">יום</Label>
               <Input
                 type="text"
                 inputMode="text"
@@ -113,15 +113,16 @@ export function BirthdayPreferenceCard({ employee }: Props) {
                 onChange={(e) => setDayText(e.target.value)}
                 placeholder='לדוג׳ כ"ב'
                 aria-invalid={dayInvalid}
+                className="text-right"
               />
               {dayInvalid && (
-                <p className="text-[11px] text-destructive mt-1">יום לא תקין</p>
+                <p className="text-[11px] text-destructive mt-1 text-right">יום לא תקין</p>
               )}
             </div>
             <div>
-              <Label className="text-xs">חודש</Label>
+              <Label className="text-xs block text-right">חודש</Label>
               <Select value={month} onValueChange={setMonth}>
-                <SelectTrigger><SelectValue placeholder="חודש" /></SelectTrigger>
+                <SelectTrigger className="text-right"><SelectValue placeholder="חודש" /></SelectTrigger>
                 <SelectContent>
                   {monthOptions.map((m) => (
                     <SelectItem key={m.value} value={String(m.value)}>{m.label}</SelectItem>
@@ -130,7 +131,7 @@ export function BirthdayPreferenceCard({ employee }: Props) {
               </Select>
             </div>
             <div>
-              <Label className="text-xs">שנה (עברית)</Label>
+              <Label className="text-xs block text-right">שנה (עברית)</Label>
               <Input
                 type="text"
                 inputMode="text"
@@ -138,9 +139,10 @@ export function BirthdayPreferenceCard({ employee }: Props) {
                 onChange={(e) => setYearText(e.target.value)}
                 placeholder='לדוג׳ תשמ"ה'
                 aria-invalid={yearInvalid}
+                className="text-right"
               />
               {yearInvalid && (
-                <p className="text-[11px] text-destructive mt-1">שנה לא תקינה</p>
+                <p className="text-[11px] text-destructive mt-1 text-right">שנה לא תקינה</p>
               )}
             </div>
           </div>
