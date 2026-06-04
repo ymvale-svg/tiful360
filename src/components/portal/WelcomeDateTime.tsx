@@ -13,18 +13,15 @@ export function WelcomeDateTime() {
 
   useEffect(() => {
     const tick = () => setNow(new Date());
-    // Align next tick to top of minute
+    let interval: ReturnType<typeof setInterval> | null = null;
     const ms = (60 - new Date().getSeconds()) * 1000;
     const timeout = setTimeout(() => {
       tick();
-      const interval = setInterval(tick, 60_000);
-      // store on window to clear via cleanup below
-      (timeout as any)._interval = interval;
+      interval = setInterval(tick, 60_000);
     }, ms);
     return () => {
       clearTimeout(timeout);
-      const i = (timeout as any)._interval;
-      if (i) clearInterval(i);
+      if (interval) clearInterval(interval);
     };
   }, []);
 
