@@ -136,7 +136,7 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
       if (payload.birthday_calendar_preference === "hebrew") {
         payload.hebrew_birth_day = parseInt(payload.hebrew_birth_day, 10) || null;
         payload.hebrew_birth_month = parseInt(payload.hebrew_birth_month, 10) || null;
-        payload.hebrew_birth_year = parseInt(payload.hebrew_birth_year, 10) || null;
+        payload.hebrew_birth_year = hebYearNum ?? null;
         if (!payload.hebrew_birth_day || !payload.hebrew_birth_month || !payload.hebrew_birth_year) {
           throw new Error("נא למלא יום, חודש ושנה לתאריך עברי");
         }
@@ -266,23 +266,33 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
                     <Select value={form.hebrew_birth_month ? String(form.hebrew_birth_month) : ""} onValueChange={(v) => set("hebrew_birth_month", v)}>
                       <SelectTrigger><SelectValue placeholder="חודש" /></SelectTrigger>
                       <SelectContent>
-                        {HEBREW_MONTHS.map((m) => (
+                        {hebMonthOptions.map((m) => (
                           <SelectItem key={m.value} value={String(m.value)}>{m.label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-xs">שנה עברית</Label>
-                    <Input type="number" min={5000} max={6000} value={form.hebrew_birth_year ?? ""} onChange={(e) => set("hebrew_birth_year", e.target.value)} placeholder="לדוג׳ 5745" />
+                    <Label className="text-xs">שנה (עברית)</Label>
+                    <Input
+                      type="text"
+                      inputMode="text"
+                      value={hebYearText}
+                      onChange={(e) => setHebYearText(e.target.value)}
+                      placeholder='לדוג׳ תשמ"ה'
+                      aria-invalid={hebYearInvalid}
+                    />
+                    {hebYearInvalid && (
+                      <p className="text-[11px] text-destructive mt-1">שנה לא תקינה</p>
+                    )}
                   </div>
                 </div>
-                {form.hebrew_birth_day && form.hebrew_birth_month && form.hebrew_birth_year && (
+                {form.hebrew_birth_day && form.hebrew_birth_month && hebYearNum && (
                   <div className="text-sm mt-2">
                     תצוגה: <span className="font-semibold">{formatHebrewBirthGematriya(
                       parseInt(form.hebrew_birth_day, 10),
                       parseInt(form.hebrew_birth_month, 10),
-                      parseInt(form.hebrew_birth_year, 10),
+                      hebYearNum,
                     )}</span>
                   </div>
                 )}
