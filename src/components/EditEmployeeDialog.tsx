@@ -223,7 +223,62 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
               searchPlaceholder="חפש מעסיק..."
             />
           </div>
+          <div className="md:col-span-2 border-t border-border/50 pt-3 mt-1">
+            <Label className="mb-2 block">לוח שנה ליום הולדת</Label>
+            <RadioGroup
+              value={form.birthday_calendar_preference ?? "gregorian"}
+              onValueChange={(v) => set("birthday_calendar_preference", v)}
+              className="flex gap-4 mb-2"
+            >
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="gregorian" id="edit-cal-greg" />
+                <Label htmlFor="edit-cal-greg" className="text-sm cursor-pointer">לועזי</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="hebrew" id="edit-cal-heb" />
+                <Label htmlFor="edit-cal-heb" className="text-sm cursor-pointer">עברי</Label>
+              </div>
+            </RadioGroup>
+            {form.birthday_calendar_preference === "hebrew" && (
+              <>
+                <p className="text-xs text-muted-foreground mb-2">
+                  התאריך העברי נשמר כפי שמוזן ולא מומר מהתאריך הלועזי.
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <Label className="text-xs">יום עברי</Label>
+                    <Input type="number" min={1} max={30} value={form.hebrew_birth_day ?? ""} onChange={(e) => set("hebrew_birth_day", e.target.value)} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">חודש עברי</Label>
+                    <Select value={form.hebrew_birth_month ? String(form.hebrew_birth_month) : ""} onValueChange={(v) => set("hebrew_birth_month", v)}>
+                      <SelectTrigger><SelectValue placeholder="חודש" /></SelectTrigger>
+                      <SelectContent>
+                        {HEBREW_MONTHS.map((m) => (
+                          <SelectItem key={m.value} value={String(m.value)}>{m.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">שנה עברית</Label>
+                    <Input type="number" min={5000} max={6000} value={form.hebrew_birth_year ?? ""} onChange={(e) => set("hebrew_birth_year", e.target.value)} placeholder="לדוג׳ 5745" />
+                  </div>
+                </div>
+                {form.hebrew_birth_day && form.hebrew_birth_month && form.hebrew_birth_year && (
+                  <div className="text-sm mt-2">
+                    תצוגה: <span className="font-semibold">{formatHebrewBirthGematriya(
+                      parseInt(form.hebrew_birth_day, 10),
+                      parseInt(form.hebrew_birth_month, 10),
+                      parseInt(form.hebrew_birth_year, 10),
+                    )}</span>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
+
 
         {canManageAccess && (
         <div className="mt-4 p-3 rounded-lg border border-border bg-muted/30 flex items-start justify-between gap-3">
