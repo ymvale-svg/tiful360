@@ -39,7 +39,7 @@ export function formatHebrewBirthGematriya(
 ): string {
   try {
     const hd = new HDate(day, toHebcalMonth(month, year), year);
-    return hd.renderGematriya();
+    return stripNikud(hd.renderGematriya());
   } catch {
     return "";
   }
