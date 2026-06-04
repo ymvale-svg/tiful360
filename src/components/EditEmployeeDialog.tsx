@@ -18,6 +18,8 @@ import {
   formatHebrewBirthGematriya,
   formatHebrewYearGematriya,
   parseHebrewYearGematriya,
+  parseHebrewDayGematriya,
+  formatHebrewDayGematriya,
 } from "@/lib/hebrewBirthday";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,6 +43,7 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
   const canManageAccess = isAdmin || isSuperAdmin;
   const [form, setForm] = useState<any>({});
   const [hebYearText, setHebYearText] = useState<string>("");
+  const [hebDayText, setHebDayText] = useState<string>("");
 
   useEffect(() => {
     if (employee) {
@@ -65,12 +68,15 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
         hebrew_birth_year: employee.hebrew_birth_year ?? "",
       });
       setHebYearText(employee.hebrew_birth_year ? formatHebrewYearGematriya(employee.hebrew_birth_year) : "");
+      setHebDayText(employee.hebrew_birth_day ? formatHebrewDayGematriya(employee.hebrew_birth_day) : "");
     }
   }, [employee, open]);
 
   const hebYearNum = useMemo(() => parseHebrewYearGematriya(hebYearText), [hebYearText]);
+  const hebDayNum = useMemo(() => parseHebrewDayGematriya(hebDayText), [hebDayText]);
   const hebMonthOptions = useMemo(() => getHebrewMonthsForYear(hebYearNum ?? undefined), [hebYearNum]);
   const hebYearInvalid = form.birthday_calendar_preference === "hebrew" && hebYearText.length > 0 && !hebYearNum;
+  const hebDayInvalid = form.birthday_calendar_preference === "hebrew" && hebDayText.length > 0 && !hebDayNum;
 
 
   const set = (k: string, v: any) => setForm((p: any) => ({ ...p, [k]: v }));
@@ -134,7 +140,7 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
       }
       // Hebrew birthday fields: only send when preference is hebrew, otherwise clear
       if (payload.birthday_calendar_preference === "hebrew") {
-        payload.hebrew_birth_day = parseInt(payload.hebrew_birth_day, 10) || null;
+        payload.hebrew_birth_day = hebDayNum ?? null;
         payload.hebrew_birth_month = parseInt(payload.hebrew_birth_month, 10) || null;
         payload.hebrew_birth_year = hebYearNum ?? null;
         if (!payload.hebrew_birth_day || !payload.hebrew_birth_month || !payload.hebrew_birth_year) {
@@ -258,8 +264,18 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
                 </p>
                 <div className="grid grid-cols-3 gap-2">
                   <div>
-                    <Label className="text-xs">יום עברי</Label>
-                    <Input type="number" min={1} max={30} value={form.hebrew_birth_day ?? ""} onChange={(e) => set("hebrew_birth_day", e.target.value)} />
+                    <Label className="text-xs">יום (עברי)</Label>
+                    <Input
+                      type="text"
+                      inputMode="text"
+                      value={hebDayText}
+                      onChange={(e) => setHebDayText(e.target.value)}
+                      placeholder='לדוג׳ כ"ב'
+                      aria-invalid={hebDayInvalid}
+                    />
+                    {hebDayInvalid && (
+                      <p className="text-[11px] text-destructive mt-1">יום לא תקין</p>
+                    )}
                   </div>
                   <div>
                     <Label className="text-xs">חודש עברי</Label>
@@ -287,10 +303,10 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
                     )}
                   </div>
                 </div>
-                {form.hebrew_birth_day && form.hebrew_birth_month && hebYearNum && (
+                {hebDayNum && form.hebrew_birth_month && hebYearNum && (
                   <div className="text-sm mt-2">
                     תצוגה: <span className="font-semibold">{formatHebrewBirthGematriya(
-                      parseInt(form.hebrew_birth_day, 10),
+                      hebDayNum,
                       parseInt(form.hebrew_birth_month, 10),
                       hebYearNum,
                     )}</span>

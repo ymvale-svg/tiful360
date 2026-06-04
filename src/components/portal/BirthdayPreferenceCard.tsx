@@ -13,6 +13,8 @@ import {
   formatHebrewBirthGematriya,
   formatHebrewYearGematriya,
   parseHebrewYearGematriya,
+  parseHebrewDayGematriya,
+  formatHebrewDayGematriya,
 } from "@/lib/hebrewBirthday";
 
 interface Props {
@@ -29,7 +31,7 @@ export function BirthdayPreferenceCard({ employee }: Props) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [pref, setPref] = useState<"gregorian" | "hebrew">("gregorian");
-  const [day, setDay] = useState<string>("");
+  const [dayText, setDayText] = useState<string>("");
   const [month, setMonth] = useState<string>("");
   // Year is stored numerically but entered in Hebrew letters
   const [yearText, setYearText] = useState<string>("");
@@ -37,32 +39,23 @@ export function BirthdayPreferenceCard({ employee }: Props) {
   useEffect(() => {
     if (!employee) return;
     setPref(employee.birthday_calendar_preference || "gregorian");
-    setDay(employee.hebrew_birth_day ? String(employee.hebrew_birth_day) : "");
+    setDayText(employee.hebrew_birth_day ? formatHebrewDayGematriya(employee.hebrew_birth_day) : "");
     setMonth(employee.hebrew_birth_month ? String(employee.hebrew_birth_month) : "");
     setYearText(employee.hebrew_birth_year ? formatHebrewYearGematriya(employee.hebrew_birth_year) : "");
   }, [employee]);
 
+  const dayNum = useMemo(() => parseHebrewDayGematriya(dayText), [dayText]);
   const yearNum = useMemo(() => parseHebrewYearGematriya(yearText), [yearText]);
   const monthOptions = useMemo(() => getHebrewMonthsForYear(yearNum ?? undefined), [yearNum]);
-
-  // If year changed and current month no longer valid (e.g. 13 chosen, now non-leap), clear it.
-  useEffect(() => {
-    if (!month) return;
-    if (!monthOptions.some((m) => String(m.value) === month)) {
-      setMonth("");
-    }
-  }, [monthOptions, month]);
 
   const save = useMutation({
     mutationFn: async () => {
       const payload: any = { _preference: pref };
       if (pref === "hebrew") {
-        const d = parseInt(day, 10);
+        const d = dayNum;
         const m = parseInt(month, 10);
         const y = yearNum;
         if (!d || !m || !y) throw new Error("נא למלא יום, חודש ושנה עבריים");
-        if (d < 1 || d > 30) throw new Error("יום עברי לא תקין");
-        if (m < 1 || m > 13) throw new Error("חודש עברי לא תקין");
         payload._hebrew_day = d;
         payload._hebrew_month = m;
         payload._hebrew_year = y;
@@ -80,11 +73,12 @@ export function BirthdayPreferenceCard({ employee }: Props) {
 
   if (!employee) return null;
 
-  const preview = pref === "hebrew" && day && month && yearNum
-    ? formatHebrewBirthGematriya(parseInt(day, 10), parseInt(month, 10), yearNum)
+  const preview = pref === "hebrew" && dayNum && month && yearNum
+    ? formatHebrewBirthGematriya(dayNum, parseInt(month, 10), yearNum)
     : "";
 
   const yearInvalid = pref === "hebrew" && yearText.length > 0 && !yearNum;
+  const dayInvalid = pref === "hebrew" && dayText.length > 0 && !dayNum;
 
   return (
     <div className="bg-card rounded-xl border border-border/50 shadow-card p-5 space-y-4">
@@ -112,7 +106,17 @@ export function BirthdayPreferenceCard({ employee }: Props) {
           <div className="grid grid-cols-3 gap-2">
             <div>
               <Label className="text-xs">יום</Label>
-              <Input type="number" min={1} max={30} value={day} onChange={(e) => setDay(e.target.value)} />
+              <Input
+                type="text"
+                inputMode="text"
+                value={dayText}
+                onChange={(e) => setDayText(e.target.value)}
+                placeholder='לדוג׳ כ"ב'
+                aria-invalid={dayInvalid}
+              />
+              {dayInvalid && (
+                <p className="text-[11px] text-destructive mt-1">יום לא תקין</p>
+              )}
             </div>
             <div>
               <Label className="text-xs">חודש</Label>
