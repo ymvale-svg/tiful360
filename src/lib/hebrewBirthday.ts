@@ -5,38 +5,37 @@ function stripNikud(s: string): string {
   return s.replace(/[\u0591-\u05C7]/g, "");
 }
 
-// Base month list (numeric value 1-13). Adar label is computed dynamically per year.
+// Base month list (numeric value 1-13). Order: Tishrei (start of civil year) -> Elul.
+// Both Adar I and Adar II are always offered; in a non-leap year value 13 falls back
+// to plain Adar via toHebcalMonth.
 const BASE_HEBREW_MONTHS: { value: number; label: string }[] = [
+  { value: 7, label: "תשרי" },
+  { value: 8, label: "חשון" },
+  { value: 9, label: "כסלו" },
+  { value: 10, label: "טבת" },
+  { value: 11, label: "שבט" },
+  { value: 12, label: "אדר א'" },
+  { value: 13, label: "אדר ב'" },
   { value: 1, label: "ניסן" },
   { value: 2, label: "אייר" },
   { value: 3, label: "סיון" },
   { value: 4, label: "תמוז" },
   { value: 5, label: "אב" },
   { value: 6, label: "אלול" },
-  { value: 7, label: "תשרי" },
-  { value: 8, label: "חשון" },
-  { value: 9, label: "כסלו" },
-  { value: 10, label: "טבת" },
-  { value: 11, label: "שבט" },
-  { value: 12, label: "אדר" },
-  { value: 13, label: "אדר ב'" },
 ];
 
-// Backwards-compatible static export (used in legacy places).
+// Backwards-compatible static export
 export const HEBREW_MONTHS = BASE_HEBREW_MONTHS;
 
 // Returns month list adapted to the supplied Hebrew year.
-// Leap year: 12 -> "אדר א'", 13 -> "אדר ב'".
-// Non-leap year: 12 -> "אדר", 13 hidden.
+// Non-leap year: 12 -> "אדר" (Adar II option still shown but treated as plain Adar on save).
+// Leap year: "אדר א'" / "אדר ב'".
 export function getHebrewMonthsForYear(hyear: number | null | undefined): { value: number; label: string }[] {
-  if (!hyear || hyear < 1) return BASE_HEBREW_MONTHS;
-  const leap = HDate.isLeapYear(hyear);
-  return BASE_HEBREW_MONTHS
-    .filter((m) => (m.value === 13 ? leap : true))
-    .map((m) => {
-      if (m.value === 12) return { value: 12, label: leap ? "אדר א'" : "אדר" };
-      return m;
-    });
+  const leap = !!hyear && HDate.isLeapYear(hyear);
+  return BASE_HEBREW_MONTHS.map((m) => {
+    if (m.value === 12) return { value: 12, label: leap ? "אדר א'" : "אדר" };
+    return m;
+  });
 }
 
 // Map our 1-13 numbering to @hebcal numeric months.
