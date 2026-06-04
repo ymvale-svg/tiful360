@@ -40,6 +40,7 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
   const { isAdmin, isSuperAdmin } = useAuth();
   const canManageAccess = isAdmin || isSuperAdmin;
   const [form, setForm] = useState<any>({});
+  const [hebYearText, setHebYearText] = useState<string>("");
 
   useEffect(() => {
     if (employee) {
@@ -63,8 +64,14 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
         hebrew_birth_month: employee.hebrew_birth_month ?? "",
         hebrew_birth_year: employee.hebrew_birth_year ?? "",
       });
+      setHebYearText(employee.hebrew_birth_year ? formatHebrewYearGematriya(employee.hebrew_birth_year) : "");
     }
   }, [employee, open]);
+
+  const hebYearNum = useMemo(() => parseHebrewYearGematriya(hebYearText), [hebYearText]);
+  const hebMonthOptions = useMemo(() => getHebrewMonthsForYear(hebYearNum ?? undefined), [hebYearNum]);
+  const hebYearInvalid = form.birthday_calendar_preference === "hebrew" && hebYearText.length > 0 && !hebYearNum;
+
 
   const set = (k: string, v: any) => setForm((p: any) => ({ ...p, [k]: v }));
 
