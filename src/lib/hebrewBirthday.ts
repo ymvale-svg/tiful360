@@ -1,4 +1,9 @@
-import { HDate, months as HMonths } from "@hebcal/core";
+import { HDate } from "@hebcal/core";
+
+// Strip Hebrew nikud (vowel points) and cantillation marks
+function stripNikud(s: string): string {
+  return s.replace(/[\u0591-\u05C7]/g, "");
+}
 
 // Hebrew month names in correct order (1-13 with Adar I/II support)
 export const HEBREW_MONTHS: { value: number; label: string }[] = [
