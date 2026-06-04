@@ -25,6 +25,7 @@ import { MyTax101FormsList } from "@/components/portal/MyTax101FormsList";
 import { useMyPunches, useCreateRemotePunch } from "@/hooks/useAttendancePunches";
 import { useToast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
+import { InstallAppBanner } from "@/components/InstallAppBanner";
 
 const portalTabs = [
   { id: "assets", label: "הציוד שלי", icon: Package },
