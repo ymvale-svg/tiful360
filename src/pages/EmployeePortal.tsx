@@ -25,6 +25,7 @@ import { MyTax101FormsList } from "@/components/portal/MyTax101FormsList";
 import { useMyPunches, useCreateRemotePunch } from "@/hooks/useAttendancePunches";
 import { useToast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
+import { InstallAppBanner } from "@/components/InstallAppBanner";
 
 const portalTabs = [
   { id: "assets", label: "הציוד שלי", icon: Package },
@@ -332,6 +333,7 @@ export default function EmployeePortal() {
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
+      <InstallAppBanner />
       {/* Mobile/tablet-friendly top bar */}
       <header role="banner" className="sticky top-0 z-30 bg-card/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">
