@@ -26,6 +26,8 @@ import { useMyPunches, useCreateRemotePunch } from "@/hooks/useAttendancePunches
 import { useToast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
 import { InstallAppBanner } from "@/components/InstallAppBanner";
+import { BirthdayPreferenceCard } from "@/components/portal/BirthdayPreferenceCard";
+import { processBirthdaysForCurrentMonth } from "@/lib/hebrewBirthday";
 
 const portalTabs = [
   { id: "assets", label: "הציוד שלי", icon: Package },
@@ -388,26 +390,30 @@ export default function EmployeePortal() {
 
         {/* Announcements & Birthdays card */}
         <div className="space-y-3">
-          {birthdayEmployees.length > 0 && (
-            <div className="bg-gradient-to-l from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-xl border border-amber-200/50 dark:border-amber-800/50 p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Cake className="w-4 h-4 text-amber-600" />
-                <h3 className="font-semibold text-sm text-amber-800 dark:text-amber-300">🎂 ימי הולדת החודש</h3>
+          {(() => {
+            const processed = processBirthdaysForCurrentMonth(birthdayEmployees as any);
+            if (processed.length === 0) return null;
+            return (
+              <div className="bg-gradient-to-l from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-xl border border-amber-200/50 dark:border-amber-800/50 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Cake className="w-4 h-4 text-amber-600" />
+                  <h3 className="font-semibold text-sm text-amber-800 dark:text-amber-300">🎂 ימי הולדת החודש</h3>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {processed.map((emp) => {
+                    const dateText = emp.isToday ? "🎉 היום!" : emp.isTomorrow ? "מחר" : emp.label;
+                    return (
+                      <div key={emp.id} className="flex items-center gap-2 bg-white/60 dark:bg-white/10 rounded-lg px-3 py-1.5">
+                        <PartyPopper className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <span className="text-xs font-medium">{emp.full_name}</span>
+                        <span className="text-[11px] text-muted-foreground">— {dateText}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {birthdayEmployees.map((emp) => {
-                  const bd = new Date(emp.birth_date!);
-                  return (
-                    <div key={emp.id} className="flex items-center gap-1.5 bg-white/60 dark:bg-white/10 rounded-lg px-3 py-1.5">
-                      <PartyPopper className="w-3.5 h-3.5 text-amber-600" />
-                      <span className="text-xs font-medium">{emp.full_name}</span>
-                      <span className="text-[10px] text-muted-foreground">({bd.getDate()}/{bd.getMonth() + 1})</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           {announcements.length > 0 && (
             <div className="bg-card rounded-xl border border-border/50 p-4">
@@ -743,6 +749,8 @@ export default function EmployeePortal() {
               </h3>
               <MyTax101FormsList employeeId={myEmployee?.id} />
             </div>
+
+            <BirthdayPreferenceCard employee={myEmployee} />
           </div>
         )}
 
