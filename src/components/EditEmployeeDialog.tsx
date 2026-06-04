@@ -53,6 +53,10 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
         sub_employer_id: employee.sub_employer_id ?? "",
         exclude_from_contacts: !!employee.exclude_from_contacts,
         can_remote_punch: !!employee.can_remote_punch,
+        birthday_calendar_preference: employee.birthday_calendar_preference ?? "gregorian",
+        hebrew_birth_day: employee.hebrew_birth_day ?? "",
+        hebrew_birth_month: employee.hebrew_birth_month ?? "",
+        hebrew_birth_year: employee.hebrew_birth_year ?? "",
       });
     }
   }, [employee, open]);
