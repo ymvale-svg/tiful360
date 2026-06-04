@@ -13,6 +13,8 @@ import {
   formatHebrewBirthGematriya,
   formatHebrewYearGematriya,
   parseHebrewYearGematriya,
+  parseHebrewDayGematriya,
+  formatHebrewDayGematriya,
 } from "@/lib/hebrewBirthday";
 
 interface Props {
