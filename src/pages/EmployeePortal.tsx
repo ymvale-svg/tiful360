@@ -5,6 +5,7 @@ import {
   FileText, CalendarDays, AlertCircle, LogOut, Cake, PartyPopper,
   Box, Wifi, LayoutDashboard
 } from "lucide-react";
+import logoImg from "@/assets/logo.png";
 import { hasDualAccess } from "@/lib/dualAccess";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -340,13 +341,11 @@ export default function EmployeePortal() {
       {/* Mobile/tablet-friendly top bar */}
       <header role="banner" className="sticky top-0 z-30 bg-card/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center shrink-0" aria-hidden="true">
-            <span className="text-xs font-bold text-primary-foreground">{initials}</span>
-          </div>
+          <img src={logoImg} alt="אשל שלי" className="w-9 h-9 rounded-full object-contain shrink-0 bg-white" />
           <div className="min-w-0">
-            <h1 className="text-sm font-semibold leading-tight truncate">פורטל עובדים — שלום, {employeeName.split(" ")[0]} <span aria-hidden="true">👋</span></h1>
+            <h1 className="text-sm font-semibold leading-tight truncate">אשל שלי — שלום, {(employeeName.trim().split(/\s+/).slice(-1)[0]) || employeeName} <span aria-hidden="true">👋</span></h1>
             <p className="text-[11px] text-muted-foreground">
-              {myEmployee ? `${myEmployee.role} • ${myEmployee.department}` : "פורטל עובדים"}
+              {myEmployee ? `${myEmployee.role} • ${myEmployee.department}` : "אשל שלי"}
             </p>
           </div>
         </div>
