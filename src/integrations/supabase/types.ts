@@ -1142,6 +1142,7 @@ export type Database = {
           balances_source: string | null
           balances_updated_at: string | null
           birth_date: string | null
+          birthday_calendar_preference: Database["public"]["Enums"]["birthday_calendar_pref"]
           can_remote_punch: boolean
           city: string | null
           company_id: string | null
@@ -1157,6 +1158,9 @@ export type Database = {
           full_name: string
           gender: string | null
           health_fund_member: boolean | null
+          hebrew_birth_day: number | null
+          hebrew_birth_month: number | null
+          hebrew_birth_year: number | null
           house_number: string | null
           id: string
           id_number: string
@@ -1180,6 +1184,7 @@ export type Database = {
           balances_source?: string | null
           balances_updated_at?: string | null
           birth_date?: string | null
+          birthday_calendar_preference?: Database["public"]["Enums"]["birthday_calendar_pref"]
           can_remote_punch?: boolean
           city?: string | null
           company_id?: string | null
@@ -1195,6 +1200,9 @@ export type Database = {
           full_name: string
           gender?: string | null
           health_fund_member?: boolean | null
+          hebrew_birth_day?: number | null
+          hebrew_birth_month?: number | null
+          hebrew_birth_year?: number | null
           house_number?: string | null
           id?: string
           id_number: string
@@ -1218,6 +1226,7 @@ export type Database = {
           balances_source?: string | null
           balances_updated_at?: string | null
           birth_date?: string | null
+          birthday_calendar_preference?: Database["public"]["Enums"]["birthday_calendar_pref"]
           can_remote_punch?: boolean
           city?: string | null
           company_id?: string | null
@@ -1233,6 +1242,9 @@ export type Database = {
           full_name?: string
           gender?: string | null
           health_fund_member?: boolean | null
+          hebrew_birth_day?: number | null
+          hebrew_birth_month?: number | null
+          hebrew_birth_year?: number | null
           house_number?: string | null
           id?: string
           id_number?: string
@@ -2427,7 +2439,11 @@ export type Database = {
         Args: { _company_id: string }
         Returns: {
           birth_date: string
+          birthday_calendar_preference: Database["public"]["Enums"]["birthday_calendar_pref"]
           full_name: string
+          hebrew_birth_day: number
+          hebrew_birth_month: number
+          hebrew_birth_year: number
           id: string
         }[]
       }
@@ -2648,6 +2664,7 @@ export type Database = {
           balances_source: string | null
           balances_updated_at: string | null
           birth_date: string | null
+          birthday_calendar_preference: Database["public"]["Enums"]["birthday_calendar_pref"]
           can_remote_punch: boolean
           city: string | null
           company_id: string | null
@@ -2663,6 +2680,9 @@ export type Database = {
           full_name: string
           gender: string | null
           health_fund_member: boolean | null
+          hebrew_birth_day: number | null
+          hebrew_birth_month: number | null
+          hebrew_birth_year: number | null
           house_number: string | null
           id: string
           id_number: string
@@ -2786,6 +2806,62 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      update_my_birthday_preference: {
+        Args: {
+          _hebrew_day?: number
+          _hebrew_month?: number
+          _hebrew_year?: number
+          _preference: Database["public"]["Enums"]["birthday_calendar_pref"]
+        }
+        Returns: {
+          aliyah_date: string | null
+          balances_source: string | null
+          balances_updated_at: string | null
+          birth_date: string | null
+          birthday_calendar_preference: Database["public"]["Enums"]["birthday_calendar_pref"]
+          can_remote_punch: boolean
+          city: string | null
+          company_id: string | null
+          contact_sort_order: number | null
+          country_of_birth: string | null
+          created_at: string
+          department: string
+          direct_manager_id: string | null
+          email: string | null
+          employee_code: string
+          end_date: string | null
+          exclude_from_contacts: boolean
+          full_name: string
+          gender: string | null
+          health_fund_member: boolean | null
+          hebrew_birth_day: number | null
+          hebrew_birth_month: number | null
+          hebrew_birth_year: number | null
+          house_number: string | null
+          id: string
+          id_number: string
+          is_israeli_resident: boolean | null
+          linked_user_id: string | null
+          marital_status: string | null
+          phone: string | null
+          po_box: string | null
+          postal_code: string | null
+          role: string
+          sick_balance: number
+          start_date: string
+          status: Database["public"]["Enums"]["employee_status"]
+          street: string | null
+          sub_employer_id: string | null
+          updated_at: string
+          vacation_balance: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "employees"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       user_company_ids: { Args: { _user_id: string }; Returns: string[] }
     }
     Enums: {
@@ -2802,6 +2878,7 @@ export type Database = {
         | "finance"
         | "legal"
       asset_status: "in_use" | "in_stock" | "in_repair" | "lost"
+      birthday_calendar_pref: "gregorian" | "hebrew"
       employee_status: "active" | "onboarding" | "leaving" | "inactive"
       field_type: "text" | "number" | "date" | "list" | "list_multi"
       leave_request_status: "pending" | "approved" | "rejected" | "cancelled"
@@ -2960,6 +3037,7 @@ export const Constants = {
         "legal",
       ],
       asset_status: ["in_use", "in_stock", "in_repair", "lost"],
+      birthday_calendar_pref: ["gregorian", "hebrew"],
       employee_status: ["active", "onboarding", "leaving", "inactive"],
       field_type: ["text", "number", "date", "list", "list_multi"],
       leave_request_status: ["pending", "approved", "rejected", "cancelled"],
