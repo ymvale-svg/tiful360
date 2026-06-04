@@ -749,6 +749,8 @@ export default function EmployeePortal() {
               </h3>
               <MyTax101FormsList employeeId={myEmployee?.id} />
             </div>
+
+            <BirthdayPreferenceCard employee={myEmployee} />
           </div>
         )}
 
