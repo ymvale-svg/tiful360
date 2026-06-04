@@ -1,4 +1,4 @@
-import { HDate } from "@hebcal/core";
+import { HDate } from "@hebcal/hdate";
 
 // Strip Hebrew nikud (vowel points) and cantillation marks
 function stripNikud(s: string): string {
