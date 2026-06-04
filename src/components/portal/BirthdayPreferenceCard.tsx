@@ -106,7 +106,17 @@ export function BirthdayPreferenceCard({ employee }: Props) {
           <div className="grid grid-cols-3 gap-2">
             <div>
               <Label className="text-xs">יום</Label>
-              <Input type="number" min={1} max={30} value={day} onChange={(e) => setDay(e.target.value)} />
+              <Input
+                type="text"
+                inputMode="text"
+                value={dayText}
+                onChange={(e) => setDayText(e.target.value)}
+                placeholder='לדוג׳ כ"ב'
+                aria-invalid={dayInvalid}
+              />
+              {dayInvalid && (
+                <p className="text-[11px] text-destructive mt-1">יום לא תקין</p>
+              )}
             </div>
             <div>
               <Label className="text-xs">חודש</Label>
