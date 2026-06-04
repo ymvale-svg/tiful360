@@ -5,8 +5,8 @@ function stripNikud(s: string): string {
   return s.replace(/[\u0591-\u05C7]/g, "");
 }
 
-// Hebrew month names in correct order (1-13 with Adar I/II support)
-export const HEBREW_MONTHS: { value: number; label: string }[] = [
+// Base month list (numeric value 1-13). Adar label is computed dynamically per year.
+const BASE_HEBREW_MONTHS: { value: number; label: string }[] = [
   { value: 1, label: "ניסן" },
   { value: 2, label: "אייר" },
   { value: 3, label: "סיון" },
@@ -22,12 +22,27 @@ export const HEBREW_MONTHS: { value: number; label: string }[] = [
   { value: 13, label: "אדר ב'" },
 ];
 
+// Backwards-compatible static export (used in legacy places).
+export const HEBREW_MONTHS = BASE_HEBREW_MONTHS;
+
+// Returns month list adapted to the supplied Hebrew year.
+// Leap year: 12 -> "אדר א'", 13 -> "אדר ב'".
+// Non-leap year: 12 -> "אדר", 13 hidden.
+export function getHebrewMonthsForYear(hyear: number | null | undefined): { value: number; label: string }[] {
+  if (!hyear || hyear < 1) return BASE_HEBREW_MONTHS;
+  const leap = HDate.isLeapYear(hyear);
+  return BASE_HEBREW_MONTHS
+    .filter((m) => (m.value === 13 ? leap : true))
+    .map((m) => {
+      if (m.value === 12) return { value: 12, label: leap ? "אדר א'" : "אדר" };
+      return m;
+    });
+}
+
 // Map our 1-13 numbering to @hebcal numeric months.
-// @hebcal: Nisan=1..Elul=6, Tishrei=7, Cheshvan=8, Kislev=9, Tevet=10, Shevat=11, Adar I=12, Adar II=13.
-// In a non-leap year, Adar I (12) falls back to plain Adar (12 in @hebcal).
 function toHebcalMonth(month: number, hyear: number): number {
   const leap = HDate.isLeapYear(hyear);
-  if (month === 13 && !leap) return 12; // Adar II in a non-leap year -> Adar
+  if (month === 13 && !leap) return 12;
   return month;
 }
 
@@ -45,7 +60,72 @@ export function formatHebrewBirthGematriya(
   }
 }
 
-// Compute the Gregorian Date this year (or next year if already passed) for a Hebrew birthday
+// Today's date as Hebrew gematriya string
+export function formatTodayHebrewGematriya(): string {
+  try {
+    return stripNikud(new HDate(new Date()).renderGematriya());
+  } catch {
+    return "";
+  }
+}
+
+// ---------- Hebrew year parsing ----------
+
+const LETTER_VALUES: Record<string, number> = {
+  "א": 1, "ב": 2, "ג": 3, "ד": 4, "ה": 5, "ו": 6, "ז": 7, "ח": 8, "ט": 9,
+  "י": 10, "כ": 20, "ך": 20, "ל": 30, "מ": 40, "ם": 40, "נ": 50, "ן": 50,
+  "ס": 60, "ע": 70, "פ": 80, "ף": 80, "צ": 90, "ץ": 90,
+  "ק": 100, "ר": 200, "ש": 300, "ת": 400,
+};
+
+// Parse Hebrew year written in gematriya (e.g. "תשמ"ה", "תשפ"ד", "ה'תשפ"ד") -> 5745.
+// Returns null if cannot parse / contains non-Hebrew letters.
+export function parseHebrewYearGematriya(text: string): number | null {
+  if (!text) return null;
+  // Remove punctuation: quotes, geresh, gershayim, apostrophes, spaces, nikud
+  let s = stripNikud(text)
+    .replace(/[״"׳'`’״\s\-־]/g, "")
+    .trim();
+  if (!s) return null;
+
+  // Handle thousands prefix: ה' (5000), ו' (6000) — already stripped quotes.
+  // If first letter is one of ה/ו AND length > 1, treat as thousands and strip.
+  let thousands = 0;
+  if (s.length > 1 && (s[0] === "ה" || s[0] === "ו" || s[0] === "ד")) {
+    thousands = LETTER_VALUES[s[0]] * 1000;
+    s = s.slice(1);
+  }
+
+  let sum = 0;
+  for (const ch of s) {
+    const v = LETTER_VALUES[ch];
+    if (!v) return null;
+    sum += v;
+  }
+  if (sum === 0) return null;
+
+  let total = thousands + sum;
+  // If no explicit thousands and result < 1000, assume 5000s.
+  if (thousands === 0 && total < 1000) total += 5000;
+  if (total < 5000 || total > 6000) return null;
+  return total;
+}
+
+// Render a numeric Hebrew year (e.g. 5745) as gematriya without the thousands prefix
+// (e.g. "תשמ"ה"). Uses hebcal's HDate.
+export function formatHebrewYearGematriya(year: number): string {
+  try {
+    // Use 1 Tishrei of that year as a reference, then trim day/month parts.
+    const hd = new HDate(1, 7, year);
+    const full = stripNikud(hd.renderGematriya()); // e.g. "א׳ תשרי תשמ״ה"
+    const parts = full.trim().split(/\s+/);
+    return parts[parts.length - 1] || "";
+  } catch {
+    return "";
+  }
+}
+
+// Compute the Gregorian Date this year for a Hebrew birthday
 export function hebrewBirthdayGregorianThisYear(
   day: number,
   month: number,
@@ -55,7 +135,6 @@ export function hebrewBirthdayGregorianThisYear(
     const today = new HDate(new Date());
     const hyear = today.getFullYear();
     let m = toHebcalMonth(month, hyear);
-    // Clamp day if month is shorter that year
     const daysInMonth = HDate.daysInMonth(m, hyear);
     const d = Math.min(day, daysInMonth);
     return new HDate(d, m, hyear).greg();
@@ -64,7 +143,6 @@ export function hebrewBirthdayGregorianThisYear(
   }
 }
 
-// Gregorian month names in Hebrew
 const GREG_MONTHS_HE = [
   "ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני",
   "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר",
@@ -87,14 +165,13 @@ export interface BirthdayEmployee {
 export interface ProcessedBirthday {
   id: string;
   full_name: string;
-  effectiveDate: Date; // Gregorian date this year
-  label: string; // Display text (Hebrew gematriya or Hebrew-Gregorian)
+  effectiveDate: Date;
+  label: string;
   isHebrew: boolean;
   isToday: boolean;
   isTomorrow: boolean;
 }
 
-// Process raw birthday rows: keep only those whose effective Gregorian date is in current month, sort ascending
 export function processBirthdaysForCurrentMonth(
   rows: BirthdayEmployee[]
 ): ProcessedBirthday[] {

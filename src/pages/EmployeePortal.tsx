@@ -27,6 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
 import { InstallAppBanner } from "@/components/InstallAppBanner";
 import { BirthdayPreferenceCard } from "@/components/portal/BirthdayPreferenceCard";
+import { WelcomeDateTime } from "@/components/portal/WelcomeDateTime";
 import { processBirthdaysForCurrentMonth } from "@/lib/hebrewBirthday";
 
 const portalTabs = [
@@ -380,12 +381,17 @@ export default function EmployeePortal() {
       <main id="main-content" tabIndex={-1} className="max-w-2xl md:max-w-3xl mx-auto px-4 py-4 space-y-4 overflow-x-hidden focus:outline-none">
         {/* Welcome banner */}
         <div className="bg-gradient-to-l from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 rounded-xl border border-primary/20 p-5">
-          <h2 className="text-lg font-bold text-foreground">ברוכים הבאים, {employeeName} 👋</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            {myEmployee 
-              ? `${myEmployee.role} • מחלקת ${myEmployee.department}`
-              : "שמחים לראות אותך בפורטל העובדים"}
-          </p>
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg font-bold text-foreground">ברוכים הבאים, {employeeName} 👋</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                {myEmployee 
+                  ? `${myEmployee.role} • מחלקת ${myEmployee.department}`
+                  : "שמחים לראות אותך בפורטל העובדים"}
+              </p>
+            </div>
+            <WelcomeDateTime />
+          </div>
         </div>
 
         {/* Announcements & Birthdays card */}
@@ -401,7 +407,8 @@ export default function EmployeePortal() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {processed.map((emp) => {
-                    const dateText = emp.isToday ? "🎉 היום!" : emp.isTomorrow ? "מחר" : emp.label;
+                    const prefix = emp.isToday ? "🎉 היום!" : emp.isTomorrow ? "מחר" : null;
+                    const dateText = prefix ? `${prefix} · ${emp.label}` : emp.label;
                     return (
                       <div key={emp.id} className="flex items-center gap-2 bg-white/60 dark:bg-white/10 rounded-lg px-3 py-1.5">
                         <PartyPopper className="w-3.5 h-3.5 text-amber-600 shrink-0" />

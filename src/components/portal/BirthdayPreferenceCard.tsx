@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Cake } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -8,7 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { HEBREW_MONTHS, formatHebrewBirthGematriya } from "@/lib/hebrewBirthday";
+import {
+  getHebrewMonthsForYear,
+  formatHebrewBirthGematriya,
+  formatHebrewYearGematriya,
+  parseHebrewYearGematriya,
+} from "@/lib/hebrewBirthday";
 
 interface Props {
   employee: {
@@ -26,15 +31,27 @@ export function BirthdayPreferenceCard({ employee }: Props) {
   const [pref, setPref] = useState<"gregorian" | "hebrew">("gregorian");
   const [day, setDay] = useState<string>("");
   const [month, setMonth] = useState<string>("");
-  const [year, setYear] = useState<string>("");
+  // Year is stored numerically but entered in Hebrew letters
+  const [yearText, setYearText] = useState<string>("");
 
   useEffect(() => {
     if (!employee) return;
     setPref(employee.birthday_calendar_preference || "gregorian");
     setDay(employee.hebrew_birth_day ? String(employee.hebrew_birth_day) : "");
     setMonth(employee.hebrew_birth_month ? String(employee.hebrew_birth_month) : "");
-    setYear(employee.hebrew_birth_year ? String(employee.hebrew_birth_year) : "");
+    setYearText(employee.hebrew_birth_year ? formatHebrewYearGematriya(employee.hebrew_birth_year) : "");
   }, [employee]);
+
+  const yearNum = useMemo(() => parseHebrewYearGematriya(yearText), [yearText]);
+  const monthOptions = useMemo(() => getHebrewMonthsForYear(yearNum ?? undefined), [yearNum]);
+
+  // If year changed and current month no longer valid (e.g. 13 chosen, now non-leap), clear it.
+  useEffect(() => {
+    if (!month) return;
+    if (!monthOptions.some((m) => String(m.value) === month)) {
+      setMonth("");
+    }
+  }, [monthOptions, month]);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -42,11 +59,10 @@ export function BirthdayPreferenceCard({ employee }: Props) {
       if (pref === "hebrew") {
         const d = parseInt(day, 10);
         const m = parseInt(month, 10);
-        const y = parseInt(year, 10);
+        const y = yearNum;
         if (!d || !m || !y) throw new Error("נא למלא יום, חודש ושנה עבריים");
         if (d < 1 || d > 30) throw new Error("יום עברי לא תקין");
         if (m < 1 || m > 13) throw new Error("חודש עברי לא תקין");
-        if (y < 5000 || y > 6000) throw new Error("שנה עברית לא תקינה");
         payload._hebrew_day = d;
         payload._hebrew_month = m;
         payload._hebrew_year = y;
@@ -64,9 +80,11 @@ export function BirthdayPreferenceCard({ employee }: Props) {
 
   if (!employee) return null;
 
-  const preview = pref === "hebrew" && day && month && year
-    ? formatHebrewBirthGematriya(parseInt(day, 10), parseInt(month, 10), parseInt(year, 10))
+  const preview = pref === "hebrew" && day && month && yearNum
+    ? formatHebrewBirthGematriya(parseInt(day, 10), parseInt(month, 10), yearNum)
     : "";
+
+  const yearInvalid = pref === "hebrew" && yearText.length > 0 && !yearNum;
 
   return (
     <div className="bg-card rounded-xl border border-border/50 shadow-card p-5 space-y-4">
@@ -101,15 +119,25 @@ export function BirthdayPreferenceCard({ employee }: Props) {
               <Select value={month} onValueChange={setMonth}>
                 <SelectTrigger><SelectValue placeholder="חודש" /></SelectTrigger>
                 <SelectContent>
-                  {HEBREW_MONTHS.map((m) => (
+                  {monthOptions.map((m) => (
                     <SelectItem key={m.value} value={String(m.value)}>{m.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label className="text-xs">שנה</Label>
-              <Input type="number" min={5000} max={6000} value={year} onChange={(e) => setYear(e.target.value)} placeholder="לדוג׳ 5745" />
+              <Label className="text-xs">שנה (עברית)</Label>
+              <Input
+                type="text"
+                inputMode="text"
+                value={yearText}
+                onChange={(e) => setYearText(e.target.value)}
+                placeholder='לדוג׳ תשמ"ה'
+                aria-invalid={yearInvalid}
+              />
+              {yearInvalid && (
+                <p className="text-[11px] text-destructive mt-1">שנה לא תקינה</p>
+              )}
             </div>
           </div>
           {preview && (
