@@ -1,0 +1,49 @@
+{
+  "name": "תפעול 360 - פורטל עובדים",
+  "short_name": "תפעול 360",
+  "description": "פורטל העובדים של תפעול 360 - נוכחות, חופשות, תלושי שכר ועוד",
+  "start_url": "/portal?source=pwa",
+  "scope": "/",
+  "id": "/portal",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#1e40af",
+  "lang": "he",
+  "dir": "rtl",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "החתמת נוכחות",
+      "short_name": "נוכחות",
+      "url": "/portal?tab=attendance",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "בקשת חופשה",
+      "short_name": "חופשה",
+      "url": "/portal?tab=leave",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
