@@ -120,6 +120,19 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
       if (!payload.sub_employer_id || payload.sub_employer_id === "__main__") {
         payload.sub_employer_id = null;
       }
+      // Hebrew birthday fields: only send when preference is hebrew, otherwise clear
+      if (payload.birthday_calendar_preference === "hebrew") {
+        payload.hebrew_birth_day = parseInt(payload.hebrew_birth_day, 10) || null;
+        payload.hebrew_birth_month = parseInt(payload.hebrew_birth_month, 10) || null;
+        payload.hebrew_birth_year = parseInt(payload.hebrew_birth_year, 10) || null;
+        if (!payload.hebrew_birth_day || !payload.hebrew_birth_month || !payload.hebrew_birth_year) {
+          throw new Error("נא למלא יום, חודש ושנה לתאריך עברי");
+        }
+      } else {
+        payload.hebrew_birth_day = null;
+        payload.hebrew_birth_month = null;
+        payload.hebrew_birth_year = null;
+      }
       await update.mutateAsync({ id: employee.id, ...payload });
       queryClient.invalidateQueries({ queryKey: ["employees-full"] });
       toast({ title: "פרטי העובד נשמרו" });
