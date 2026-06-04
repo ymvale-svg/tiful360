@@ -303,10 +303,10 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
                     )}
                   </div>
                 </div>
-                {form.hebrew_birth_day && form.hebrew_birth_month && hebYearNum && (
+                {hebDayNum && form.hebrew_birth_month && hebYearNum && (
                   <div className="text-sm mt-2">
                     תצוגה: <span className="font-semibold">{formatHebrewBirthGematriya(
-                      parseInt(form.hebrew_birth_day, 10),
+                      hebDayNum,
                       parseInt(form.hebrew_birth_month, 10),
                       hebYearNum,
                     )}</span>
