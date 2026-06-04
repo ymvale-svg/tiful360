@@ -264,8 +264,18 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
                 </p>
                 <div className="grid grid-cols-3 gap-2">
                   <div>
-                    <Label className="text-xs">יום עברי</Label>
-                    <Input type="number" min={1} max={30} value={form.hebrew_birth_day ?? ""} onChange={(e) => set("hebrew_birth_day", e.target.value)} />
+                    <Label className="text-xs">יום (עברי)</Label>
+                    <Input
+                      type="text"
+                      inputMode="text"
+                      value={hebDayText}
+                      onChange={(e) => setHebDayText(e.target.value)}
+                      placeholder='לדוג׳ כ"ב'
+                      aria-invalid={hebDayInvalid}
+                    />
+                    {hebDayInvalid && (
+                      <p className="text-[11px] text-destructive mt-1">יום לא תקין</p>
+                    )}
                   </div>
                   <div>
                     <Label className="text-xs">חודש עברי</Label>
