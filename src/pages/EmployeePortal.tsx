@@ -26,6 +26,8 @@ import { useMyPunches, useCreateRemotePunch } from "@/hooks/useAttendancePunches
 import { useToast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
 import { InstallAppBanner } from "@/components/InstallAppBanner";
+import { BirthdayPreferenceCard } from "@/components/portal/BirthdayPreferenceCard";
+import { processBirthdaysForCurrentMonth } from "@/lib/hebrewBirthday";
 
 const portalTabs = [
   { id: "assets", label: "הציוד שלי", icon: Package },
