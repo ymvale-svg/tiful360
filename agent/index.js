@@ -407,6 +407,16 @@ async function main() {
   setInterval(() => runCycle().catch((e) => { HEARTBEAT_STATE.lastError = String(e?.message || e); console.error("מחזור נכשל:", e); }), POLL_INTERVAL_MS);
   setInterval(() => sendHeartbeat().catch((e) => console.warn("heartbeat err:", e?.message || e)), HEARTBEAT_INTERVAL_MS);
 
+  // 🐕 Watchdog — אם אין שום סימן חיים בפרק הזמן המוגדר, יוצאים וה-Service יפעיל מחדש
+  console.log(`🐕 watchdog פעיל — timeout ${Math.round(WATCHDOG_TIMEOUT_MS / 60000)} דק׳`);
+  setInterval(() => {
+    const idleMs = Date.now() - LAST_ALIVE_AT;
+    if (idleMs > WATCHDOG_TIMEOUT_MS) {
+      console.error(`💀 watchdog: אין סימן חיים ${Math.round(idleMs / 1000)}s — יוצא כדי שה-Service יפעיל מחדש`);
+      setTimeout(() => process.exit(2), 500);
+    }
+  }, WATCHDOG_CHECK_MS);
+
   if (updater && updater.startUpdaterLoop) {
     updater.startUpdaterLoop(AGENT_VERSION);
   }
