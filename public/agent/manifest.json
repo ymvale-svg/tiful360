@@ -1,0 +1,21 @@
+{
+  "version": "2.3.0",
+  "updatedAt": "2026-06-07T13:56:58.884Z",
+  "files": [
+    {
+      "name": "index.js",
+      "url": "https://tiful360.com/agent/index.js",
+      "sha256": "57d292dfa86ab6d518a4516001dee8c5904a1482227d552362d00874cc2199b2"
+    },
+    {
+      "name": "updater.js",
+      "url": "https://tiful360.com/agent/updater.js",
+      "sha256": "06c455fb32f0e6083805c7ef262fe3ae9f42869591b73ad117c0bae84528e53a"
+    },
+    {
+      "name": "package.json",
+      "url": "https://tiful360.com/agent/package.json",
+      "sha256": "d736b61aaf32a6fd3d8c39fa35908b719c3677bdb9c1f408197a0da044d4b780"
+    }
+  ]
+}
