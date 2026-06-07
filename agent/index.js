@@ -13,8 +13,11 @@ const path = require("path");
 const net = require("net");
 const os = require("os");
 
-const AGENT_VERSION = "2.2.0";
+const AGENT_VERSION = "2.3.0";
 const HEARTBEAT_INTERVAL_MS = 60000;
+
+let updater = null;
+try { updater = require("./updater"); } catch (e) { console.warn("⚠️  updater לא נטען:", e.message || e); }
 
 function loadEnv() {
   const envPath = path.join(__dirname, ".env");
