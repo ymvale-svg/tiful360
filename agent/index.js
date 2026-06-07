@@ -231,6 +231,7 @@ async function sendHeartbeat() {
       console.warn(`💓 heartbeat נכשל: HTTP ${res.status}: ${txt}`);
     } else {
       console.log(`💓 heartbeat נשלח | clock_reachable=${reachable}`);
+      markAlive();
     }
   } catch (e) {
     console.warn("💓 heartbeat נכשל:", e.message || e);
