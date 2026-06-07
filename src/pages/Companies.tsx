@@ -33,7 +33,7 @@ export default function Companies() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("companies")
-        .select("*")
+        .select("id, name, logo_url, created_at, portal_name, portal_logo_url, portal_primary_color")
         .order("name");
       if (error) throw error;
       return data;
