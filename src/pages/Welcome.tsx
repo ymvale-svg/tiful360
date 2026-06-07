@@ -2,16 +2,12 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
-import { Building2, Lock, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { Building2, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { translateAuthError } from "@/lib/authErrors";
 
 export default function Welcome() {
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [hasSession, setHasSession] = useState(false);
   const [checking, setChecking] = useState(true);
@@ -22,7 +18,6 @@ export default function Welcome() {
   useEffect(() => {
     // Supabase puts the invite tokens in the URL hash; the SDK consumes them automatically.
     const init = async () => {
-      // Give the SDK a moment to process the hash on first mount
       await new Promise((r) => setTimeout(r, 50));
       const { data } = await supabase.auth.getSession();
       if (data.session) {
@@ -42,32 +37,12 @@ export default function Welcome() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleSetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password !== confirmPassword) {
-      toast({ title: "שגיאה", description: "הסיסמאות אינן תואמות", variant: "destructive" });
-      return;
-    }
-    if (password.length < 6) {
-      toast({ title: "שגיאה", description: "הסיסמה חייבת להכיל לפחות 6 תווים", variant: "destructive" });
-      return;
-    }
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) throw error;
-      toast({ title: "ברוך הבא!", description: "הסיסמה הוגדרה בהצלחה" });
-      navigate("/");
-    } catch (error: any) {
-      toast({ title: "שגיאה", description: translateAuthError(error), variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleGoogle = async () => {
     setGoogleLoading(true);
     try {
+      // Sign out the invite session first so Google sign-in establishes a
+      // fresh, fully-validated session tied to the user's Google identity.
+      await supabase.auth.signOut();
       const result = await lovable.auth.signInWithOAuth("google", {
         redirect_uri: `${window.location.origin}/`,
       });
@@ -83,8 +58,6 @@ export default function Welcome() {
       setGoogleLoading(false);
     }
   };
-
-  const handleSkip = () => navigate("/");
 
   if (checking) {
     return (
@@ -123,98 +96,32 @@ export default function Welcome() {
           </div>
           <h1 className="text-2xl font-bold">ברוך הבא!</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {userEmail ? `${userEmail} — ` : ""}בחר כיצד תרצה להיכנס למערכת
+            {userEmail ? `${userEmail} — ` : ""}הכניסה למערכת מתבצעת באמצעות חשבון Google בלבד
           </p>
         </div>
 
-        <div className="bg-card rounded-2xl border border-border shadow-card p-8 space-y-6">
-          {/* Set password */}
-          <form onSubmit={handleSetPassword} className="space-y-4" aria-labelledby="welcome-pw-heading">
-            <div>
-              <h2 id="welcome-pw-heading" className="text-base font-semibold mb-1">הגדרת סיסמה</h2>
-              <p className="text-xs text-muted-foreground">קבע סיסמה כדי להתחבר באמצעות אימייל</p>
-            </div>
-            <div>
-              <label htmlFor="welcome-password" className="text-sm font-medium mb-1.5 block">סיסמה חדשה</label>
-              <div className="relative">
-                <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
-                <input
-                  id="welcome-password"
-                  name="password"
-                  autoComplete="new-password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full pr-10 pl-10 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 transition-all"
-                  dir="ltr"
-                  aria-required="true"
-                  minLength={6}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
-                  aria-label={showPassword ? "הסתר סיסמה" : "הצג סיסמה"}
-                  aria-pressed={showPassword}
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
-                </button>
-              </div>
-            </div>
-            <div>
-              <label htmlFor="welcome-password-confirm" className="text-sm font-medium mb-1.5 block">אימות סיסמה</label>
-              <div className="relative">
-                <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
-                <input
-                  id="welcome-password-confirm"
-                  name="password-confirm"
-                  autoComplete="new-password"
-                  type={showPassword ? "text" : "password"}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full pr-10 pl-4 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 transition-all"
-                  dir="ltr"
-                  aria-required="true"
-                  minLength={6}
-                />
-              </div>
-            </div>
-            <Button type="submit" className="w-full" disabled={loading || !password || !confirmPassword} aria-busy={loading}>
-              {loading ? "שומר..." : "הגדר סיסמה והיכנס"}
-            </Button>
-          </form>
-
-          <div className="relative" role="separator" aria-label="או">
-            <div className="absolute inset-0 flex items-center" aria-hidden="true">
-              <div className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center text-xs">
-              <span className="bg-card px-2 text-muted-foreground">או</span>
-            </div>
-          </div>
-
-          {/* Google */}
+        <section aria-labelledby="welcome-google-heading" className="bg-card rounded-2xl border border-border shadow-card p-8">
+          <h2 id="welcome-google-heading" className="sr-only">כניסה באמצעות Google</h2>
+          <p className="text-xs text-muted-foreground text-center mb-6">
+            לפי מדיניות המערכת, הכניסה מתבצעת אך ורק באמצעות חשבון Google המשויך לכתובת האימייל שאליה נשלחה ההזמנה.
+          </p>
           <Button
             type="button"
             variant="outline"
-            className="w-full"
+            className="w-full gap-3 py-5"
             onClick={handleGoogle}
             disabled={googleLoading}
             aria-busy={googleLoading}
           >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
             {googleLoading ? "מעביר ל-Google..." : "המשך עם Google"}
           </Button>
-
-          <button
-            type="button"
-            onClick={handleSkip}
-            className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
-          >
-            דלג והיכנס למערכת
-          </button>
-        </div>
+        </section>
       </div>
     </main>
   );
