@@ -118,8 +118,8 @@ function PayrollSettingsTab() {
     queryKey: ["company-full", activeCompanyId],
     queryFn: async () => {
       if (!activeCompanyId) return null;
-      const { data } = await supabase.from("companies").select("*").eq("id", activeCompanyId).single();
-      return data;
+      const { data } = await supabase.rpc("get_company_routing_emails", { _company_id: activeCompanyId });
+      return Array.isArray(data) ? data[0] ?? null : data;
     },
     enabled: !!activeCompanyId,
   });
