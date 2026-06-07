@@ -735,6 +735,7 @@ Deno.serve(async (req) => {
         company_logo: logoHtml,
         company_logo_url: companyLogoUrl,
         portal_url: portalUrl,
+        portal_name: portalName,
       };
       const subject = renderTpl(tplSubject, vars);
       let html = renderTpl(tplBody, vars);
