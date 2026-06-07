@@ -390,6 +390,10 @@ async function main() {
 
   setInterval(() => runCycle().catch((e) => { HEARTBEAT_STATE.lastError = String(e?.message || e); console.error("מחזור נכשל:", e); }), POLL_INTERVAL_MS);
   setInterval(() => sendHeartbeat().catch((e) => console.warn("heartbeat err:", e?.message || e)), HEARTBEAT_INTERVAL_MS);
+
+  if (updater && updater.startUpdaterLoop) {
+    updater.startUpdaterLoop(AGENT_VERSION);
+  }
 }
 
 main().catch((e) => { console.error("שגיאה קריטית:", e); process.exit(1); });
