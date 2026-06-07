@@ -179,7 +179,7 @@ export default function Companies() {
             <DialogHeader>
               <DialogTitle>{editId ? "עריכת חברה" : "חברה חדשה"}</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 pt-4">
+            <div className="space-y-4 pt-4 max-h-[70vh] overflow-y-auto">
               <div>
                 <Label htmlFor="company-name">שם החברה</Label>
                 <Input
@@ -189,6 +189,63 @@ export default function Companies() {
                   placeholder="הכנס שם חברה"
                 />
               </div>
+
+              <div className="border-t pt-4 space-y-3">
+                <h3 className="text-sm font-semibold">מיתוג פורטל עובדים</h3>
+                <div>
+                  <Label htmlFor="portal-name">שם הפורטל</Label>
+                  <Input
+                    id="portal-name"
+                    value={portalName}
+                    onChange={(e) => setPortalName(e.target.value)}
+                    placeholder='לדוגמה: "אשל שלי" (ברירת מחדל: פורטל עובדים)'
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="portal-logo">לוגו הפורטל</Label>
+                  <div className="flex items-center gap-3">
+                    {portalLogoUrl && (
+                      <img src={portalLogoUrl} alt="לוגו" className="w-12 h-12 rounded-lg object-contain bg-white border" />
+                    )}
+                    <Input
+                      id="portal-logo"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => e.target.files?.[0] && handleLogoFile(e.target.files[0])}
+                      disabled={logoUploading}
+                    />
+                    {portalLogoUrl && (
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setPortalLogoUrl("")}>
+                        הסר
+                      </Button>
+                    )}
+                  </div>
+                  <Input
+                    className="mt-2"
+                    value={portalLogoUrl}
+                    onChange={(e) => setPortalLogoUrl(e.target.value)}
+                    placeholder="או הדבק כתובת URL ללוגו"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="portal-color">צבע ראשי (HEX)</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="portal-color"
+                      type="color"
+                      value={portalPrimaryColor || "#3b82f6"}
+                      onChange={(e) => setPortalPrimaryColor(e.target.value)}
+                      className="w-16 h-10 p-1"
+                    />
+                    <Input
+                      value={portalPrimaryColor}
+                      onChange={(e) => setPortalPrimaryColor(e.target.value)}
+                      placeholder="#3b82f6 (אופציונלי)"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <Button
                 onClick={() => saveMutation.mutate()}
                 disabled={!name.trim() || saveMutation.isPending}
