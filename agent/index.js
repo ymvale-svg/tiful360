@@ -13,8 +13,23 @@ const path = require("path");
 const net = require("net");
 const os = require("os");
 
-const AGENT_VERSION = "2.3.0";
+const AGENT_VERSION = "2.4.0";
 const HEARTBEAT_INTERVAL_MS = 60000;
+// Watchdog: אם אין מחזור מוצלח / heartbeat במשך הזמן הזה — יוצאים, וה-Service יפעיל מחדש
+const WATCHDOG_TIMEOUT_MS = parseInt(process.env.WATCHDOG_TIMEOUT_MS || String(15 * 60 * 1000), 10);
+const WATCHDOG_CHECK_MS = 30000;
+let LAST_ALIVE_AT = Date.now();
+function markAlive() { LAST_ALIVE_AT = Date.now(); }
+
+// תפיסת חריגות לא-מטופלות — לוג + יציאה כדי שה-Service יפעיל מחדש
+process.on("uncaughtException", (e) => {
+  console.error("💥 uncaughtException:", e?.stack || e?.message || e);
+  setTimeout(() => process.exit(1), 500);
+});
+process.on("unhandledRejection", (e) => {
+  console.error("💥 unhandledRejection:", e?.stack || e?.message || e);
+  setTimeout(() => process.exit(1), 500);
+});
 
 let updater = null;
 try { updater = require("./updater"); } catch (e) { console.warn("⚠️  updater לא נטען:", e.message || e); }
@@ -216,6 +231,7 @@ async function sendHeartbeat() {
       console.warn(`💓 heartbeat נכשל: HTTP ${res.status}: ${txt}`);
     } else {
       console.log(`💓 heartbeat נשלח | clock_reachable=${reachable}`);
+      markAlive();
     }
   } catch (e) {
     console.warn("💓 heartbeat נכשל:", e.message || e);
@@ -359,7 +375,7 @@ async function runCycle() {
     }
   }
   console.log(`\nסיכום: נשלחו ${ok} | נכשלו ${fail} | זוהו ${matched} | לא זוהו ${unmatched}`);
-  if (fail === 0) { HEARTBEAT_STATE.lastError = null; HEARTBEAT_STATE.lastSuccessfulPoll = new Date().toISOString(); }
+  if (fail === 0) { HEARTBEAT_STATE.lastError = null; HEARTBEAT_STATE.lastSuccessfulPoll = new Date().toISOString(); markAlive(); }
 
   if (CLEAR_AFTER_SEND && fail === 0 && ok > 0) {
     try {
@@ -390,6 +406,16 @@ async function main() {
 
   setInterval(() => runCycle().catch((e) => { HEARTBEAT_STATE.lastError = String(e?.message || e); console.error("מחזור נכשל:", e); }), POLL_INTERVAL_MS);
   setInterval(() => sendHeartbeat().catch((e) => console.warn("heartbeat err:", e?.message || e)), HEARTBEAT_INTERVAL_MS);
+
+  // 🐕 Watchdog — אם אין שום סימן חיים בפרק הזמן המוגדר, יוצאים וה-Service יפעיל מחדש
+  console.log(`🐕 watchdog פעיל — timeout ${Math.round(WATCHDOG_TIMEOUT_MS / 60000)} דק׳`);
+  setInterval(() => {
+    const idleMs = Date.now() - LAST_ALIVE_AT;
+    if (idleMs > WATCHDOG_TIMEOUT_MS) {
+      console.error(`💀 watchdog: אין סימן חיים ${Math.round(idleMs / 1000)}s — יוצא כדי שה-Service יפעיל מחדש`);
+      setTimeout(() => process.exit(2), 500);
+    }
+  }, WATCHDOG_CHECK_MS);
 
   if (updater && updater.startUpdaterLoop) {
     updater.startUpdaterLoop(AGENT_VERSION);
