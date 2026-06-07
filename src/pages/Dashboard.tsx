@@ -6,6 +6,7 @@ import { Link, Navigate } from "react-router-dom";
 import { useDashboardStats, useAlerts, useEmployees, useActivityLog } from "@/hooks/useData";
 import { useAuth } from "@/hooks/useAuth";
 import { ExpiringAssetsCard } from "@/components/ExpiringAssetsCard";
+import { hasDualAccess } from "@/lib/dualAccess";
 
 export default function Dashboard() {
   const { roles, loading } = useAuth();
@@ -24,6 +25,12 @@ export default function Dashboard() {
   const isEmployeeOnly = roles.every(r => r === "employee");
   if (isEmployeeOnly) {
     return <Navigate to="/portal" replace />;
+  }
+
+  // Dual-access users (employee + ops role) should pick an experience first
+  // unless they already chose one in this session.
+  if (hasDualAccess(roles) && sessionStorage.getItem("activeExperience") !== "ops") {
+    return <Navigate to="/select-experience" replace />;
   }
   const { data: stats } = useDashboardStats();
   const { data: alerts } = useAlerts();
