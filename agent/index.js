@@ -35,9 +35,11 @@ function loadEnv() {
 }
 loadEnv();
 
-let ZKLib;
+let ZKLib, ZKLibUDP;
 try {
   ZKLib = require("node-zklib");
+  // טוענים גם את מחלקת ה-UDP ישירות, כדי שנוכל לכפות UDP כשהשעון לא מדבר ZK ב-TCP
+  try { ZKLibUDP = require("node-zklib/zklibudp"); } catch {}
 } catch (e) {
   console.error("❌ חסר node-zklib. הרץ: npm install");
   process.exit(1);
