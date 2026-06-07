@@ -57,12 +57,18 @@ export default function Companies() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      const payload = {
+        name,
+        portal_name: portalName.trim() || null,
+        portal_logo_url: portalLogoUrl.trim() || null,
+        portal_primary_color: portalPrimaryColor.trim() || null,
+      };
       if (editId) {
-        const { error } = await supabase.from("companies").update({ name }).eq("id", editId);
+        const { error } = await supabase.from("companies").update(payload).eq("id", editId);
         if (error) throw error;
       } else {
         const { data: { user } } = await supabase.auth.getUser();
-        const { error } = await supabase.from("companies").insert({ name, created_by: user?.id });
+        const { error } = await supabase.from("companies").insert({ ...payload, created_by: user?.id });
         if (error) throw error;
       }
     },
@@ -71,6 +77,9 @@ export default function Companies() {
       toast({ title: editId ? "חברה עודכנה" : "חברה נוצרה בהצלחה" });
       setOpen(false);
       setName("");
+      setPortalName("");
+      setPortalLogoUrl("");
+      setPortalPrimaryColor("");
       setEditId(null);
     },
     onError: (err: any) => {
@@ -94,15 +103,41 @@ export default function Companies() {
     },
   });
 
+  const handleLogoFile = async (file: File) => {
+    if (!file) return;
+    try {
+      setLogoUploading(true);
+      const ext = file.name.split(".").pop() || "png";
+      const path = `portal/${editId || "new"}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("company-logos").upload(path, file, {
+        upsert: true, contentType: file.type,
+      });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("company-logos").getPublicUrl(path);
+      setPortalLogoUrl(pub.publicUrl);
+      toast({ title: "הלוגו הועלה" });
+    } catch (e: any) {
+      toast({ title: "שגיאה בהעלאת לוגו", description: e.message, variant: "destructive" });
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
   const handleEdit = (company: any) => {
     setEditId(company.id);
     setName(company.name);
+    setPortalName(company.portal_name || "");
+    setPortalLogoUrl(company.portal_logo_url || "");
+    setPortalPrimaryColor(company.portal_primary_color || "");
     setOpen(true);
   };
 
   const handleNew = () => {
     setEditId(null);
     setName("");
+    setPortalName("");
+    setPortalLogoUrl("");
+    setPortalPrimaryColor("");
     setOpen(true);
   };
 
