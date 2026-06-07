@@ -48,7 +48,9 @@ export default function EmployeePortal() {
   const { user, signOut, roles } = useAuth();
   const { data: profile } = useProfile();
   const { activeCompanyId, activeCompany } = useCompany();
-  const portalName = activeCompany?.name?.includes("אשל הירדן") ? "אשל שלי" : "פורטל עובדים";
+  const portalName = (activeCompany?.portal_name && activeCompany.portal_name.trim())
+    || (activeCompany?.name?.includes("אשל הירדן") ? "אשל שלי" : "פורטל עובדים");
+  const portalLogoSrc = activeCompany?.portal_logo_url || portalLogo.url;
   const navigate = useNavigate();
   const createPunch = useCreateRemotePunch();
   const { toast } = useToast();
