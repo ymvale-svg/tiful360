@@ -418,6 +418,10 @@ async function runCycleGuarded() {
   } catch (e) {
     HEARTBEAT_STATE.lastError = String(e?.message || e);
     console.error("מחזור נכשל/נתקע:", e?.message || e);
+    if (String(e?.message || e).startsWith("cycle_timeout_")) {
+      console.error("💀 מחזור תקוע — יוצא כדי שה-Service יפעיל מחדש את ה-agent וישחרר את החיבור לשעון");
+      setTimeout(() => process.exit(2), 500);
+    }
   } finally {
     if (timer) clearTimeout(timer);
     cycleRunning = false;
