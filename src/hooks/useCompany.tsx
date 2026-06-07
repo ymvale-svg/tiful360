@@ -6,6 +6,9 @@ interface Company {
   id: string;
   name: string;
   logo_url: string | null;
+  portal_name?: string | null;
+  portal_logo_url?: string | null;
+  portal_primary_color?: string | null;
 }
 
 interface CompanyContextType {
@@ -43,14 +46,14 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         // Super admin sees all companies
         const { data } = await supabase
           .from("companies")
-          .select("id, name, logo_url")
+          .select("id, name, logo_url, portal_name, portal_logo_url, portal_primary_color")
           .order("name");
         setCompanies(data ?? []);
       } else {
         // Regular users see only their companies via user_company_access
         const { data } = await supabase
           .from("user_company_access")
-          .select("company_id, companies(id, name, logo_url)")
+          .select("company_id, companies(id, name, logo_url, portal_name, portal_logo_url, portal_primary_color)")
           .eq("user_id", user.id);
         const mapped = (data ?? [])
           .map((d: any) => d.companies)

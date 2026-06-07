@@ -820,6 +820,9 @@ export type Database = {
           name: string
           operations_emails: string | null
           payroll_emails: string | null
+          portal_logo_url: string | null
+          portal_name: string | null
+          portal_primary_color: string | null
           updated_at: string
         }
         Insert: {
@@ -838,6 +841,9 @@ export type Database = {
           name: string
           operations_emails?: string | null
           payroll_emails?: string | null
+          portal_logo_url?: string | null
+          portal_name?: string | null
+          portal_primary_color?: string | null
           updated_at?: string
         }
         Update: {
@@ -856,6 +862,9 @@ export type Database = {
           name?: string
           operations_emails?: string | null
           payroll_emails?: string | null
+          portal_logo_url?: string | null
+          portal_name?: string | null
+          portal_primary_color?: string | null
           updated_at?: string
         }
         Relationships: []

@@ -22,6 +22,10 @@ export default function Companies() {
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [name, setName] = useState("");
+  const [portalName, setPortalName] = useState("");
+  const [portalLogoUrl, setPortalLogoUrl] = useState("");
+  const [portalPrimaryColor, setPortalPrimaryColor] = useState("");
+  const [logoUploading, setLogoUploading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
   const { data: companies = [], isLoading } = useQuery({
@@ -29,7 +33,7 @@ export default function Companies() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("companies")
-        .select("*")
+        .select("id, name, logo_url, created_at, portal_name, portal_logo_url, portal_primary_color")
         .order("name");
       if (error) throw error;
       return data;
@@ -53,12 +57,18 @@ export default function Companies() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      const payload = {
+        name,
+        portal_name: portalName.trim() || null,
+        portal_logo_url: portalLogoUrl.trim() || null,
+        portal_primary_color: portalPrimaryColor.trim() || null,
+      };
       if (editId) {
-        const { error } = await supabase.from("companies").update({ name }).eq("id", editId);
+        const { error } = await supabase.from("companies").update(payload).eq("id", editId);
         if (error) throw error;
       } else {
         const { data: { user } } = await supabase.auth.getUser();
-        const { error } = await supabase.from("companies").insert({ name, created_by: user?.id });
+        const { error } = await supabase.from("companies").insert({ ...payload, created_by: user?.id });
         if (error) throw error;
       }
     },
@@ -67,6 +77,9 @@ export default function Companies() {
       toast({ title: editId ? "חברה עודכנה" : "חברה נוצרה בהצלחה" });
       setOpen(false);
       setName("");
+      setPortalName("");
+      setPortalLogoUrl("");
+      setPortalPrimaryColor("");
       setEditId(null);
     },
     onError: (err: any) => {
@@ -90,15 +103,41 @@ export default function Companies() {
     },
   });
 
+  const handleLogoFile = async (file: File) => {
+    if (!file) return;
+    try {
+      setLogoUploading(true);
+      const ext = file.name.split(".").pop() || "png";
+      const path = `portal/${editId || "new"}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("company-logos").upload(path, file, {
+        upsert: true, contentType: file.type,
+      });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("company-logos").getPublicUrl(path);
+      setPortalLogoUrl(pub.publicUrl);
+      toast({ title: "הלוגו הועלה" });
+    } catch (e: any) {
+      toast({ title: "שגיאה בהעלאת לוגו", description: e.message, variant: "destructive" });
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
   const handleEdit = (company: any) => {
     setEditId(company.id);
     setName(company.name);
+    setPortalName(company.portal_name || "");
+    setPortalLogoUrl(company.portal_logo_url || "");
+    setPortalPrimaryColor(company.portal_primary_color || "");
     setOpen(true);
   };
 
   const handleNew = () => {
     setEditId(null);
     setName("");
+    setPortalName("");
+    setPortalLogoUrl("");
+    setPortalPrimaryColor("");
     setOpen(true);
   };
 
@@ -140,7 +179,7 @@ export default function Companies() {
             <DialogHeader>
               <DialogTitle>{editId ? "עריכת חברה" : "חברה חדשה"}</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 pt-4">
+            <div className="space-y-4 pt-4 max-h-[70vh] overflow-y-auto">
               <div>
                 <Label htmlFor="company-name">שם החברה</Label>
                 <Input
@@ -150,6 +189,63 @@ export default function Companies() {
                   placeholder="הכנס שם חברה"
                 />
               </div>
+
+              <div className="border-t pt-4 space-y-3">
+                <h3 className="text-sm font-semibold">מיתוג פורטל עובדים</h3>
+                <div>
+                  <Label htmlFor="portal-name">שם הפורטל</Label>
+                  <Input
+                    id="portal-name"
+                    value={portalName}
+                    onChange={(e) => setPortalName(e.target.value)}
+                    placeholder='לדוגמה: "אשל שלי" (ברירת מחדל: פורטל עובדים)'
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="portal-logo">לוגו הפורטל</Label>
+                  <div className="flex items-center gap-3">
+                    {portalLogoUrl && (
+                      <img src={portalLogoUrl} alt="לוגו" className="w-12 h-12 rounded-lg object-contain bg-white border" />
+                    )}
+                    <Input
+                      id="portal-logo"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => e.target.files?.[0] && handleLogoFile(e.target.files[0])}
+                      disabled={logoUploading}
+                    />
+                    {portalLogoUrl && (
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setPortalLogoUrl("")}>
+                        הסר
+                      </Button>
+                    )}
+                  </div>
+                  <Input
+                    className="mt-2"
+                    value={portalLogoUrl}
+                    onChange={(e) => setPortalLogoUrl(e.target.value)}
+                    placeholder="או הדבק כתובת URL ללוגו"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="portal-color">צבע ראשי (HEX)</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="portal-color"
+                      type="color"
+                      value={portalPrimaryColor || "#3b82f6"}
+                      onChange={(e) => setPortalPrimaryColor(e.target.value)}
+                      className="w-16 h-10 p-1"
+                    />
+                    <Input
+                      value={portalPrimaryColor}
+                      onChange={(e) => setPortalPrimaryColor(e.target.value)}
+                      placeholder="#3b82f6 (אופציונלי)"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <Button
                 onClick={() => saveMutation.mutate()}
                 disabled={!name.trim() || saveMutation.isPending}
