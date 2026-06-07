@@ -1,0 +1,1 @@
+DELETE FROM public.attendance_punches WHERE punch_at > now() + interval '1 day';
