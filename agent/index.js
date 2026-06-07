@@ -13,11 +13,12 @@ const path = require("path");
 const net = require("net");
 const os = require("os");
 
-const AGENT_VERSION = "2.4.0";
+const AGENT_VERSION = "2.4.1";
 const HEARTBEAT_INTERVAL_MS = 60000;
 // Watchdog: אם אין מחזור מוצלח / heartbeat במשך הזמן הזה — יוצאים, וה-Service יפעיל מחדש
 const WATCHDOG_TIMEOUT_MS = parseInt(process.env.WATCHDOG_TIMEOUT_MS || String(15 * 60 * 1000), 10);
 const WATCHDOG_CHECK_MS = 30000;
+const FETCH_TIMEOUT_MS = parseInt(process.env.FETCH_TIMEOUT_MS || "20000", 10);
 let LAST_ALIVE_AT = Date.now();
 function markAlive() { LAST_ALIVE_AT = Date.now(); }
 
@@ -73,6 +74,7 @@ const CLOCK_TIMEOUT = parseInt(process.env.CLOCK_TIMEOUT || "5500", 10);
 // פרוטוקול: auto (TCP ואז UDP), udp (כפוי — מומלץ ל-U560), tcp (כפוי)
 const CLOCK_PROTOCOL = (process.env.CLOCK_PROTOCOL || "udp").toLowerCase();
 const POLL_INTERVAL_MS = parseInt(process.env.POLL_INTERVAL_MS || "30000", 10);
+const CYCLE_TIMEOUT_MS = parseInt(process.env.CYCLE_TIMEOUT_MS || String(Math.max(POLL_INTERVAL_MS - 2000, CLOCK_TIMEOUT * 6, 45000)), 10);
 const CLEAR_AFTER_SEND = (process.env.CLEAR_AFTER_SEND || "false").toLowerCase() === "true";
 const STATE_FILE = path.resolve(__dirname, process.env.STATE_FILE || "./state.json");
 // קידומת לקוד עובד — כי בשעון מספר חשוף (363) ובמערכת EMP-363
@@ -174,8 +176,18 @@ function toPayload(rec) {
   };
 }
 
+async function fetchWithTimeout(url, options = {}, timeoutMs = FETCH_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function sendBatch(batch) {
-  const res = await fetch(`${FUNCTIONS_URL}/ingest-attendance-punch`, {
+  const res = await fetchWithTimeout(`${FUNCTIONS_URL}/ingest-attendance-punch`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${TOKEN}` },
     body: JSON.stringify(batch.map(toPayload)),
