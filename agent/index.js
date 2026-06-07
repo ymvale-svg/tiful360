@@ -52,6 +52,8 @@ const CLOCK_HOST = process.env.CLOCK_HOST || "10.0.0.114";
 const CLOCK_PORT = parseInt(process.env.CLOCK_PORT || "4370", 10);
 const CLOCK_INPORT = parseInt(process.env.CLOCK_INPORT || "5200", 10);
 const CLOCK_TIMEOUT = parseInt(process.env.CLOCK_TIMEOUT || "5500", 10);
+// פרוטוקול: auto (TCP ואז UDP), udp (כפוי — מומלץ ל-U560), tcp (כפוי)
+const CLOCK_PROTOCOL = (process.env.CLOCK_PROTOCOL || "udp").toLowerCase();
 const POLL_INTERVAL_MS = parseInt(process.env.POLL_INTERVAL_MS || "30000", 10);
 const CLEAR_AFTER_SEND = (process.env.CLEAR_AFTER_SEND || "false").toLowerCase() === "true";
 const STATE_FILE = path.resolve(__dirname, process.env.STATE_FILE || "./state.json");
