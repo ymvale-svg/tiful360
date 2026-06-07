@@ -13,8 +13,23 @@ const path = require("path");
 const net = require("net");
 const os = require("os");
 
-const AGENT_VERSION = "2.3.0";
+const AGENT_VERSION = "2.4.0";
 const HEARTBEAT_INTERVAL_MS = 60000;
+// Watchdog: אם אין מחזור מוצלח / heartbeat במשך הזמן הזה — יוצאים, וה-Service יפעיל מחדש
+const WATCHDOG_TIMEOUT_MS = parseInt(process.env.WATCHDOG_TIMEOUT_MS || String(15 * 60 * 1000), 10);
+const WATCHDOG_CHECK_MS = 30000;
+let LAST_ALIVE_AT = Date.now();
+function markAlive() { LAST_ALIVE_AT = Date.now(); }
+
+// תפיסת חריגות לא-מטופלות — לוג + יציאה כדי שה-Service יפעיל מחדש
+process.on("uncaughtException", (e) => {
+  console.error("💥 uncaughtException:", e?.stack || e?.message || e);
+  setTimeout(() => process.exit(1), 500);
+});
+process.on("unhandledRejection", (e) => {
+  console.error("💥 unhandledRejection:", e?.stack || e?.message || e);
+  setTimeout(() => process.exit(1), 500);
+});
 
 let updater = null;
 try { updater = require("./updater"); } catch (e) { console.warn("⚠️  updater לא נטען:", e.message || e); }
