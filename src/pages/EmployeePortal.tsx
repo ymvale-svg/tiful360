@@ -47,7 +47,8 @@ export default function EmployeePortal() {
   const [punchingDir, setPunchingDir] = useState<"in" | "out" | null>(null);
   const { user, signOut, roles } = useAuth();
   const { data: profile } = useProfile();
-  const { activeCompanyId } = useCompany();
+  const { activeCompanyId, activeCompany } = useCompany();
+  const portalName = activeCompany?.name?.includes("אשל הירדן") ? "אשל שלי" : "פורטל עובדים";
   const navigate = useNavigate();
   const createPunch = useCreateRemotePunch();
   const { toast } = useToast();
