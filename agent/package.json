@@ -1,6 +1,6 @@
 {
   "name": "attendance-clock-agent",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Agent מקומי לשעון ZKTeco U560 — מושך פאנצ'ים בפרוטוקול ZK ושולח ל-Lovable Cloud",
   "main": "index.js",
   "scripts": {
