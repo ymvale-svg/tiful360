@@ -342,11 +342,11 @@ export default function EmployeePortal() {
       {/* Mobile/tablet-friendly top bar */}
       <header role="banner" className="sticky top-0 z-30 bg-card/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">
-          <img src={portalLogo.url} alt="אשל שלי" className="w-9 h-9 rounded-full object-contain shrink-0 bg-white" />
+          <img src={portalLogo.url} alt={portalName} className="w-9 h-9 rounded-full object-contain shrink-0 bg-white" />
           <div className="min-w-0">
-            <h1 className="text-sm font-semibold leading-tight truncate">אשל שלי — שלום, {(employeeName.trim().split(/\s+/).slice(-1)[0]) || employeeName} <span aria-hidden="true">👋</span></h1>
+            <h1 className="text-sm font-semibold leading-tight truncate">{portalName} — שלום, {(employeeName.trim().split(/\s+/).slice(-1)[0]) || employeeName} <span aria-hidden="true">👋</span></h1>
             <p className="text-[11px] text-muted-foreground">
-              {myEmployee ? `${myEmployee.role} • ${myEmployee.department}` : "אשל שלי"}
+              {myEmployee ? `${myEmployee.role} • ${myEmployee.department}` : portalName}
             </p>
           </div>
         </div>
