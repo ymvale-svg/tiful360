@@ -6,6 +6,9 @@ interface Company {
   id: string;
   name: string;
   logo_url: string | null;
+  portal_name?: string | null;
+  portal_logo_url?: string | null;
+  portal_primary_color?: string | null;
 }
 
 interface CompanyContextType {
