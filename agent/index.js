@@ -233,7 +233,7 @@ async function sendHeartbeat() {
   };
 
   try {
-    const res = await fetch(`${FUNCTIONS_URL}/ingest-attendance-heartbeat`, {
+    const res = await fetchWithTimeout(`${FUNCTIONS_URL}/ingest-attendance-heartbeat`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${TOKEN}` },
       body: JSON.stringify(payload),
@@ -399,6 +399,31 @@ async function runCycle() {
   try { await zk.disconnect(); } catch {}
 }
 
+let cycleRunning = false;
+async function runCycleGuarded() {
+  if (cycleRunning) {
+    HEARTBEAT_STATE.lastError = `מחזור קודם עדיין רץ מעל ${Math.round(CYCLE_TIMEOUT_MS / 1000)} שנ׳`;
+    console.warn(`⏳ מדלג על מחזור — המחזור הקודם עדיין תקוע`);
+    return;
+  }
+  cycleRunning = true;
+  let timer;
+  try {
+    await Promise.race([
+      runCycle(),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`cycle_timeout_${CYCLE_TIMEOUT_MS}ms`)), CYCLE_TIMEOUT_MS);
+      }),
+    ]);
+  } catch (e) {
+    HEARTBEAT_STATE.lastError = String(e?.message || e);
+    console.error("מחזור נכשל/נתקע:", e?.message || e);
+  } finally {
+    if (timer) clearTimeout(timer);
+    cycleRunning = false;
+  }
+}
+
 async function main() {
   if (!RAW_MODE && (!TOKEN || !FUNCTIONS_URL || !COMPANY_ID)) {
     console.error("❌ חסרה הגדרה ב-.env (ATTENDANCE_INGEST_TOKEN / SUPABASE_FUNCTIONS_URL / COMPANY_ID).");
@@ -413,10 +438,10 @@ async function main() {
   console.log(`Mode: ${RAW_MODE ? "RAW" : ONCE_MODE ? "ONCE" : `POLL ${POLL_INTERVAL_MS}ms`}`);
 
   await sendHeartbeat();
-  await runCycle().catch((e) => { HEARTBEAT_STATE.lastError = String(e?.message || e); console.error("מחזור נכשל:", e); });
+  await runCycleGuarded();
   if (RAW_MODE || ONCE_MODE) return;
 
-  setInterval(() => runCycle().catch((e) => { HEARTBEAT_STATE.lastError = String(e?.message || e); console.error("מחזור נכשל:", e); }), POLL_INTERVAL_MS);
+  setInterval(() => runCycleGuarded(), POLL_INTERVAL_MS);
   setInterval(() => sendHeartbeat().catch((e) => console.warn("heartbeat err:", e?.message || e)), HEARTBEAT_INTERVAL_MS);
 
   // 🐕 Watchdog — אם אין שום סימן חיים בפרק הזמן המוגדר, יוצאים וה-Service יפעיל מחדש
