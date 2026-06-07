@@ -13,11 +13,12 @@ const path = require("path");
 const net = require("net");
 const os = require("os");
 
-const AGENT_VERSION = "2.4.0";
+const AGENT_VERSION = "2.4.1";
 const HEARTBEAT_INTERVAL_MS = 60000;
 // Watchdog: אם אין מחזור מוצלח / heartbeat במשך הזמן הזה — יוצאים, וה-Service יפעיל מחדש
 const WATCHDOG_TIMEOUT_MS = parseInt(process.env.WATCHDOG_TIMEOUT_MS || String(15 * 60 * 1000), 10);
 const WATCHDOG_CHECK_MS = 30000;
+const FETCH_TIMEOUT_MS = parseInt(process.env.FETCH_TIMEOUT_MS || "20000", 10);
 let LAST_ALIVE_AT = Date.now();
 function markAlive() { LAST_ALIVE_AT = Date.now(); }
 
@@ -73,6 +74,7 @@ const CLOCK_TIMEOUT = parseInt(process.env.CLOCK_TIMEOUT || "5500", 10);
 // פרוטוקול: auto (TCP ואז UDP), udp (כפוי — מומלץ ל-U560), tcp (כפוי)
 const CLOCK_PROTOCOL = (process.env.CLOCK_PROTOCOL || "udp").toLowerCase();
 const POLL_INTERVAL_MS = parseInt(process.env.POLL_INTERVAL_MS || "30000", 10);
+const CYCLE_TIMEOUT_MS = parseInt(process.env.CYCLE_TIMEOUT_MS || String(Math.max(POLL_INTERVAL_MS - 2000, CLOCK_TIMEOUT * 6, 45000)), 10);
 const CLEAR_AFTER_SEND = (process.env.CLEAR_AFTER_SEND || "false").toLowerCase() === "true";
 const STATE_FILE = path.resolve(__dirname, process.env.STATE_FILE || "./state.json");
 // קידומת לקוד עובד — כי בשעון מספר חשוף (363) ובמערכת EMP-363
@@ -174,8 +176,18 @@ function toPayload(rec) {
   };
 }
 
+async function fetchWithTimeout(url, options = {}, timeoutMs = FETCH_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function sendBatch(batch) {
-  const res = await fetch(`${FUNCTIONS_URL}/ingest-attendance-punch`, {
+  const res = await fetchWithTimeout(`${FUNCTIONS_URL}/ingest-attendance-punch`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${TOKEN}` },
     body: JSON.stringify(batch.map(toPayload)),
@@ -221,7 +233,7 @@ async function sendHeartbeat() {
   };
 
   try {
-    const res = await fetch(`${FUNCTIONS_URL}/ingest-attendance-heartbeat`, {
+    const res = await fetchWithTimeout(`${FUNCTIONS_URL}/ingest-attendance-heartbeat`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${TOKEN}` },
       body: JSON.stringify(payload),
@@ -387,6 +399,35 @@ async function runCycle() {
   try { await zk.disconnect(); } catch {}
 }
 
+let cycleRunning = false;
+async function runCycleGuarded() {
+  if (cycleRunning) {
+    HEARTBEAT_STATE.lastError = `מחזור קודם עדיין רץ מעל ${Math.round(CYCLE_TIMEOUT_MS / 1000)} שנ׳`;
+    console.warn(`⏳ מדלג על מחזור — המחזור הקודם עדיין תקוע`);
+    return;
+  }
+  cycleRunning = true;
+  let timer;
+  try {
+    await Promise.race([
+      runCycle(),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`cycle_timeout_${CYCLE_TIMEOUT_MS}ms`)), CYCLE_TIMEOUT_MS);
+      }),
+    ]);
+  } catch (e) {
+    HEARTBEAT_STATE.lastError = String(e?.message || e);
+    console.error("מחזור נכשל/נתקע:", e?.message || e);
+    if (String(e?.message || e).startsWith("cycle_timeout_")) {
+      console.error("💀 מחזור תקוע — יוצא כדי שה-Service יפעיל מחדש את ה-agent וישחרר את החיבור לשעון");
+      setTimeout(() => process.exit(2), 500);
+    }
+  } finally {
+    if (timer) clearTimeout(timer);
+    cycleRunning = false;
+  }
+}
+
 async function main() {
   if (!RAW_MODE && (!TOKEN || !FUNCTIONS_URL || !COMPANY_ID)) {
     console.error("❌ חסרה הגדרה ב-.env (ATTENDANCE_INGEST_TOKEN / SUPABASE_FUNCTIONS_URL / COMPANY_ID).");
@@ -401,10 +442,10 @@ async function main() {
   console.log(`Mode: ${RAW_MODE ? "RAW" : ONCE_MODE ? "ONCE" : `POLL ${POLL_INTERVAL_MS}ms`}`);
 
   await sendHeartbeat();
-  await runCycle().catch((e) => { HEARTBEAT_STATE.lastError = String(e?.message || e); console.error("מחזור נכשל:", e); });
+  await runCycleGuarded();
   if (RAW_MODE || ONCE_MODE) return;
 
-  setInterval(() => runCycle().catch((e) => { HEARTBEAT_STATE.lastError = String(e?.message || e); console.error("מחזור נכשל:", e); }), POLL_INTERVAL_MS);
+  setInterval(() => runCycleGuarded(), POLL_INTERVAL_MS);
   setInterval(() => sendHeartbeat().catch((e) => console.warn("heartbeat err:", e?.message || e)), HEARTBEAT_INTERVAL_MS);
 
   // 🐕 Watchdog — אם אין שום סימן חיים בפרק הזמן המוגדר, יוצאים וה-Service יפעיל מחדש
