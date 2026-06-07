@@ -8,10 +8,20 @@ import { useAuth } from "@/hooks/useAuth";
 import { ExpiringAssetsCard } from "@/components/ExpiringAssetsCard";
 
 export default function Dashboard() {
-  const { roles } = useAuth();
-  
+  const { roles, loading } = useAuth();
+
+  // Wait for roles to load before rendering — prevents flash of admin UI
+  // for employee-only users before the redirect kicks in.
+  if (loading || roles.length === 0) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   // Employee-only users should see the portal, not the dashboard
-  const isEmployeeOnly = roles.length > 0 && roles.every(r => r === "employee");
+  const isEmployeeOnly = roles.every(r => r === "employee");
   if (isEmployeeOnly) {
     return <Navigate to="/portal" replace />;
   }
