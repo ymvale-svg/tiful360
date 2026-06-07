@@ -219,14 +219,53 @@ async function sendHeartbeat() {
   }
 }
 
-async function runCycle() {
+async function createZkConnection() {
   const zk = new ZKLib(CLOCK_HOST, CLOCK_PORT, CLOCK_TIMEOUT, CLOCK_INPORT);
+
+  // ניסיון UDP בלבד — מאתחל ידנית ומסמן connectionType='udp'.
+  const tryUdp = async () => {
+    if (!ZKLibUDP) throw new Error("ZKLibUDP לא זמין בגרסת node-zklib הזו");
+    const udp = new ZKLibUDP(CLOCK_HOST, CLOCK_PORT, CLOCK_TIMEOUT, CLOCK_INPORT);
+    await udp.createSocket(
+      (err) => { console.warn("UDP socket err:", err?.message || err); },
+      () => {},
+    );
+    await udp.connect();
+    zk.zklibUdp = udp;
+    zk.connectionType = "udp";
+  };
+
+  if (CLOCK_PROTOCOL === "udp") {
+    console.log("🔌 פרוטוקול: UDP (כפוי)");
+    await tryUdp();
+    return zk;
+  }
+  if (CLOCK_PROTOCOL === "tcp") {
+    console.log("🔌 פרוטוקול: TCP (כפוי)");
+    await zk.createSocket();
+    return zk;
+  }
+  // auto — TCP קודם, ואז UDP גם על TIMEOUT (לא רק EADDRINUSE כברירת המחדל של הספרייה)
+  console.log("🔌 פרוטוקול: auto (TCP ואז UDP fallback)");
+  try {
+    await zk.createSocket();
+    return zk;
+  } catch (e) {
+    console.warn("⚠️  TCP נכשל, מנסה UDP:", e?.message || e);
+    try { await zk.disconnect(); } catch {}
+    await tryUdp();
+    return zk;
+  }
+}
+
+async function runCycle() {
   const ts = new Date().toISOString();
   console.log(`\n[${ts}] מתחבר ל-${CLOCK_HOST}:${CLOCK_PORT} ...`);
 
-  try { await zk.createSocket(); } catch (e) {
+  let zk;
+  try { zk = await createZkConnection(); } catch (e) {
     console.error("❌ נכשל החיבור:", e.message || e);
-    try { await zk.disconnect(); } catch {}
+    HEARTBEAT_STATE.lastError = String(e?.message || e);
     return;
   }
 
