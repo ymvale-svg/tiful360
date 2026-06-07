@@ -10,14 +10,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const TEMPLATE_KEY = "payslip-available";
 
-const DEFAULT_SUBJECT = "תלוש השכר שלך לחודש {{period_label}} זמין באזור האישי";
+const DEFAULT_SUBJECT = "תלוש המשכורת של חודש {{period_label}} זמין לצפייה במערכת {{portal_name}}";
 const DEFAULT_BODY = `<div dir="rtl" style="font-family: Arial, sans-serif; padding: 24px; max-width: 600px; margin: auto;">
   <h2 style="color: #1f2937;">שלום {{employee_name}},</h2>
   <p style="color: #374151; font-size: 15px; line-height: 1.6;">
-    תלוש השכר שלך לחודש <strong>{{period_label}}</strong> מטעם <strong>{{company_name}}</strong> עלה לאזור האישי שלך.
+    תלוש המשכורת של חודש <strong>{{period_label}}</strong> מטעם <strong>{{company_name}}</strong> זמין לצפייה במערכת <strong>{{portal_name}}</strong>.
   </p>
   <p style="margin-top: 20px;">
-    <a href="{{portal_url}}" target="_blank" style="background: #1d4ed8; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block;">צפייה בתלוש</a>
+    <a href="{{portal_url}}" target="_blank" style="background: #1d4ed8; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block;">כניסה ל{{portal_name}}</a>
   </p>
   <p style="margin-top: 24px; font-size: 12px; color: #6b7280;">הודעה אוטומטית — אין צורך להשיב.</p>
 </div>`;
@@ -28,6 +28,7 @@ const VARIABLES: { key: string; desc: string; sample: string }[] = [
   { key: "{{period_month}}", desc: "מספר החודש (1-12)", sample: "5" },
   { key: "{{period_year}}", desc: "שנה (4 ספרות)", sample: "2026" },
   { key: "{{company_name}}", desc: "שם החברה / המעסיק", sample: "חברת דוגמה בע״מ" },
+  { key: "{{portal_name}}", desc: "שם הפורטל המותאם של החברה (למשל 'אשל שלי')", sample: "אשל שלי" },
   { key: "{{company_logo}}", desc: "לוגו החברה ממורכז (HTML מלא). אם לא תכלול אותו - הלוגו יוצמד אוטומטית בראש המייל", sample: '<div style="text-align:center;padding:16px 0;"><img src="https://via.placeholder.com/200x60?text=LOGO" style="max-height:80px"/></div>' },
   { key: "{{company_logo_url}}", desc: "כתובת ה-URL של לוגו החברה בלבד (לשימוש מותאם)", sample: "https://via.placeholder.com/200x60?text=LOGO" },
   { key: "{{portal_url}}", desc: "קישור לאזור האישי", sample: "https://tiful360.com/portal" },

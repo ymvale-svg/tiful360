@@ -298,11 +298,13 @@ Deno.serve(async (req) => {
       if (norm) idMap.set(norm, { id: e.id, full_name: e.full_name, email: e.email ?? null });
     }
 
-    // Fetch company name + logo once for email subject/body
+    // Fetch company name + logo + portal branding once for email subject/body
     const { data: companyRow } = await admin
-      .from('companies').select('name, logo_url').eq('id', company_id).single();
+      .from('companies').select('name, logo_url, portal_name, portal_logo_url').eq('id', company_id).single();
     const companyName = companyRow?.name ?? '';
-    const companyLogoUrl: string = companyRow?.logo_url ?? '';
+    const companyLogoUrl: string = companyRow?.portal_logo_url || companyRow?.logo_url || '';
+    const portalName: string = (companyRow?.portal_name && String(companyRow.portal_name).trim())
+      || (companyName.includes('אשל הירדן') ? 'אשל שלי' : 'פורטל עובדים');
 
     // Collect notifications to send after processing
     const payslipNotifications: { to: string; employee_name: string; period_year: number; period_month: number; employee_id: string }[] = [];
@@ -689,14 +691,14 @@ Deno.serve(async (req) => {
     const monthNames = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 
     // Load custom template (per company) if defined; otherwise fall back to default
-    const DEFAULT_SUBJECT = 'תלוש השכר שלך לחודש {{period_label}} זמין באזור האישי';
+    const DEFAULT_SUBJECT = 'תלוש המשכורת של חודש {{period_label}} זמין לצפייה במערכת {{portal_name}}';
     const DEFAULT_BODY = `<div dir="rtl" style="font-family: Arial, sans-serif; padding: 24px; max-width: 600px; margin: auto;">
   <h2 style="color: #1f2937;">שלום {{employee_name}},</h2>
   <p style="color: #374151; font-size: 15px; line-height: 1.6;">
-    תלוש השכר שלך לחודש <strong>{{period_label}}</strong> מטעם <strong>{{company_name}}</strong> עלה לאזור האישי שלך.
+    תלוש המשכורת של חודש <strong>{{period_label}}</strong> מטעם <strong>{{company_name}}</strong> זמין לצפייה במערכת <strong>{{portal_name}}</strong>.
   </p>
   <p style="margin-top: 20px;">
-    <a href="{{portal_url}}" target="_blank" style="background: #1d4ed8; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block;">צפייה בתלוש</a>
+    <a href="{{portal_url}}" target="_blank" style="background: #1d4ed8; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block;">כניסה ל{{portal_name}}</a>
   </p>
   <p style="margin-top: 24px; font-size: 12px; color: #6b7280;">הודעה אוטומטית — אין צורך להשיב.</p>
 </div>`;
@@ -733,6 +735,7 @@ Deno.serve(async (req) => {
         company_logo: logoHtml,
         company_logo_url: companyLogoUrl,
         portal_url: portalUrl,
+        portal_name: portalName,
       };
       const subject = renderTpl(tplSubject, vars);
       let html = renderTpl(tplBody, vars);
