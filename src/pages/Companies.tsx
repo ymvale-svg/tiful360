@@ -22,6 +22,10 @@ export default function Companies() {
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [name, setName] = useState("");
+  const [portalName, setPortalName] = useState("");
+  const [portalLogoUrl, setPortalLogoUrl] = useState("");
+  const [portalPrimaryColor, setPortalPrimaryColor] = useState("");
+  const [logoUploading, setLogoUploading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
   const { data: companies = [], isLoading } = useQuery({
