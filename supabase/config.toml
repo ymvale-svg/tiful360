@@ -19,3 +19,5 @@ project_id = "rhzmhiknbcipucfvgkok"
     verify_jwt = false
   [functions.notify-expiring-assets]
     verify_jwt = false
+  [functions.tax-form-101-signed-url]
+    verify_jwt = false
