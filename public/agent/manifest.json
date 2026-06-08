@@ -1,11 +1,11 @@
 {
-  "version": "2.4.3",
-  "updatedAt": "2026-06-08T09:00:00.000Z",
+  "version": "2.4.4",
+  "updatedAt": "2026-06-08T12:00:00.000Z",
   "files": [
     {
       "name": "index.js",
       "url": "https://tiful360.com/agent/index.js",
-      "sha256": "9fc2ceb3fab6f3b66a48e15c03d33b07d42dad913f7f38696600e1b6282f7d21"
+      "sha256": "9a9f68fb0316ff3da9ce8f7f17d0b97986370e3753de726b7324fa36c0a23ebf"
     },
     {
       "name": "updater.js",
@@ -15,7 +15,7 @@
     {
       "name": "package.json",
       "url": "https://tiful360.com/agent/package.json",
-      "sha256": "b55f23621196e61bd8f697a56c49e9b03f57578e0e4ed8ea09c7b35101f3347d"
+      "sha256": "fcd7475e5f7f3bb316e5fcabe91beac5aa4d9227a0bd9a2fdedf04ab19ad84a0"
     },
     {
       "name": "probe.js",

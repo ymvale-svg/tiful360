@@ -14,7 +14,7 @@ const net = require("net");
 const os = require("os");
 const dgram = require("dgram");
 
-const AGENT_VERSION = "2.4.3";
+const AGENT_VERSION = "2.4.4";
 const HEARTBEAT_INTERVAL_MS = 60000;
 // Watchdog: אם אין מחזור מוצלח / heartbeat במשך הזמן הזה — יוצאים, וה-Service יפעיל מחדש
 const WATCHDOG_TIMEOUT_MS = parseInt(process.env.WATCHDOG_TIMEOUT_MS || String(15 * 60 * 1000), 10);
@@ -72,11 +72,13 @@ const CLOCK_HOST = process.env.CLOCK_HOST || "10.0.0.114";
 const CLOCK_PORT = parseInt(process.env.CLOCK_PORT || "4370", 10);
 const CLOCK_INPORT = parseInt(process.env.CLOCK_INPORT || "5200", 10);
 const CLOCK_TIMEOUT = parseInt(process.env.CLOCK_TIMEOUT || "5500", 10);
-// פרוטוקול: udp (ברירת מחדל קשיחה — U560 לא יציב ב-TCP). רק --allow-tcp או FORCE_TCP=1 יעקפו.
-let CLOCK_PROTOCOL = (process.env.CLOCK_PROTOCOL || "udp").toLowerCase();
-if (CLOCK_PROTOCOL !== "udp" && process.env.FORCE_TCP !== "1") {
-  console.warn(`⚠️  CLOCK_PROTOCOL="${CLOCK_PROTOCOL}" התעלמנו — נכפה UDP (השעון לא יציב ב-TCP). הגדר FORCE_TCP=1 כדי לעקוף.`);
-  CLOCK_PROTOCOL = "udp";
+// פרוטוקול: ברירת מחדל auto — מנסה TCP ואז UDP fallback.
+// FORCE_TCP=1 כופה TCP גם אם CLOCK_PROTOCOL נשאר udp בקובץ .env ישן.
+let CLOCK_PROTOCOL = (process.env.CLOCK_PROTOCOL || "auto").toLowerCase();
+if (process.env.FORCE_TCP === "1") CLOCK_PROTOCOL = "tcp";
+if (!["auto", "tcp", "udp"].includes(CLOCK_PROTOCOL)) {
+  console.warn(`⚠️  CLOCK_PROTOCOL="${CLOCK_PROTOCOL}" לא תקין — עובר ל-auto`);
+  CLOCK_PROTOCOL = "auto";
 }
 const POLL_INTERVAL_MS = parseInt(process.env.POLL_INTERVAL_MS || "30000", 10);
 const CYCLE_TIMEOUT_MS = parseInt(process.env.CYCLE_TIMEOUT_MS || String(Math.max(POLL_INTERVAL_MS - 2000, CLOCK_TIMEOUT * 6, 45000)), 10);
