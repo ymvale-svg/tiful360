@@ -129,8 +129,8 @@ function startUpdaterLoop(currentVersion) {
     return;
   }
   console.log(`🔄 עדכון אוטומטי פעיל — בדיקה כל ${Math.round(CHECK_INTERVAL_MS / 60000)} דק׳ מ-${MANIFEST_URL}`);
-  // בדיקה ראשונית בעוד 30 שניות (לאחר חיבור ראשון לשעון)
-  setTimeout(() => checkAndApplyUpdate(currentVersion), 30000);
+  // בדיקה ראשונית מיד: עדכון לא צריך להיות תלוי בחיבור מוצלח לשעון/UDP.
+  setTimeout(() => checkAndApplyUpdate(currentVersion), 1000);
   setInterval(() => checkAndApplyUpdate(currentVersion), CHECK_INTERVAL_MS);
 }
 
