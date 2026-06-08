@@ -6,8 +6,8 @@ import time
 from datetime import datetime, timezone
 
 import config
-from config import CLOCK_IP, CLOCK_PORT, POLL_INTERVAL, LOG_DIR, AGENT_VERSION
-from state import load_last_punch_at, save_last_punch_at
+from config import CLOCK_IP, CLOCK_PORT, POLL_INTERVAL, LOG_DIR, AGENT_VERSION, MIN_PUNCH_DATE
+from state import load_last_punch_at, save_last_punch_at, ensure_initial_state
 from uploader import punch_to_payload, send_in_batches
 from heartbeat import start_loop as start_heartbeat
 import zk_client
