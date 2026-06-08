@@ -32,6 +32,9 @@ const FIXED_DEFAULTS = {
   POLL_INTERVAL_MS: "30000",
   CLEAR_AFTER_SEND: "false",
   STATE_FILE: "./state.json",
+  AUTO_UPDATE: "true",
+  AGENT_MANIFEST_URL: "https://tiful360.com/agent/manifest.json",
+  UPDATE_CHECK_INTERVAL_MS: "3600000",
 };
 
 const PROMPT_DEFAULTS = {
@@ -119,6 +122,9 @@ function writeEnv(values) {
     "POLL_INTERVAL_MS",
     "CLEAR_AFTER_SEND",
     "STATE_FILE",
+    "AUTO_UPDATE",
+    "AGENT_MANIFEST_URL",
+    "UPDATE_CHECK_INTERVAL_MS",
   ];
   const lines = ["# נוצר על ידי npm run setup", ""];
   for (const k of order) lines.push(`${k}=${values[k] ?? ""}`);
