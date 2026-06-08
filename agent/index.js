@@ -13,7 +13,7 @@ const path = require("path");
 const net = require("net");
 const os = require("os");
 
-const AGENT_VERSION = "2.4.2";
+const AGENT_VERSION = "2.4.3";
 const HEARTBEAT_INTERVAL_MS = 60000;
 // Watchdog: אם אין מחזור מוצלח / heartbeat במשך הזמן הזה — יוצאים, וה-Service יפעיל מחדש
 const WATCHDOG_TIMEOUT_MS = parseInt(process.env.WATCHDOG_TIMEOUT_MS || String(15 * 60 * 1000), 10);
@@ -476,6 +476,9 @@ async function main() {
   console.log(`Host: ${CLOCK_HOST}:${CLOCK_PORT} | Prefix: "${EMPLOYEE_CODE_PREFIX}"`);
   console.log(`HARD_MIN_DATE: ${HARD_MIN_DATE.toISOString()} | Effective SINCE: ${SINCE.toISOString()}${LIMIT ? ` | limit=${LIMIT}` : ""}`);
   console.log(`Mode: ${RAW_MODE ? "RAW" : ONCE_MODE ? "ONCE" : `POLL ${POLL_INTERVAL_MS}ms`}`);
+
+  // 🔎 בדיקת נגישות מהירה (TCP+UDP) — תוצאות ישר בלוגים
+  await runReachabilityProbe();
 
   await sendHeartbeat();
   await runCycleGuarded();
