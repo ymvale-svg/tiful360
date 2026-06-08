@@ -1,4 +1,5 @@
 """Tiful360 Attendance Agent — Python edition (polling-only)."""
+import json
 import logging
 import logging.handlers
 import threading
@@ -6,8 +7,7 @@ import time
 from datetime import datetime, timezone
 
 import config
-from config import CLOCK_IP, CLOCK_PORT, POLL_INTERVAL, LOG_DIR, AGENT_VERSION, MIN_PUNCH_DATE
-from state import load_last_punch_at, save_last_punch_at, ensure_initial_state
+from config import CLOCK_IP, CLOCK_PORT, POLL_INTERVAL, LOG_DIR, AGENT_VERSION, MIN_PUNCH_DATE, STATE_PATH
 from uploader import punch_to_payload, send_in_batches
 from heartbeat import start_loop as start_heartbeat
 import zk_client
@@ -30,6 +30,37 @@ def _as_aware(dt: datetime) -> datetime:
     if dt.tzinfo is None:
         return dt.replace(tzinfo=timezone.utc)
     return dt
+
+
+def load_last_punch_at() -> datetime | None:
+    if not STATE_PATH.exists():
+        return None
+    try:
+        data = json.loads(STATE_PATH.read_text(encoding="utf-8-sig"))
+        v = data.get("last_punch_at")
+        if not v:
+            return None
+        return datetime.fromisoformat(v)
+    except Exception:
+        return None
+
+
+def save_last_punch_at(dt: datetime) -> None:
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    STATE_PATH.write_text(
+        json.dumps({"last_punch_at": dt.isoformat()}),
+        encoding="utf-8",
+    )
+
+
+def ensure_initial_state(default: datetime) -> datetime:
+    """If no state file exists, seed it with `default` to skip historical data."""
+    existing = load_last_punch_at()
+    if existing is not None:
+        return existing
+    save_last_punch_at(default)
+    return default
 
 
 def filter_new(atts):
