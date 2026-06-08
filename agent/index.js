@@ -12,6 +12,7 @@ const fs = require("fs");
 const path = require("path");
 const net = require("net");
 const os = require("os");
+const dgram = require("dgram");
 
 const AGENT_VERSION = "2.4.3";
 const HEARTBEAT_INTERVAL_MS = 60000;
@@ -462,6 +463,41 @@ async function runCycleGuarded() {
     if (timer) clearTimeout(timer);
     cycleRunning = false;
   }
+}
+
+// 🔎 בדיקת נגישות מהירה לשעון בשני הפרוטוקולים
+async function runReachabilityProbe() {
+  const T = 3000;
+  const tcp = await new Promise((resolve) => {
+    const start = Date.now();
+    const sock = new net.Socket();
+    let done = false;
+    const fin = (s, d) => { if (done) return; done = true; try { sock.destroy(); } catch {} resolve({ s, d, ms: Date.now() - start }); };
+    sock.setTimeout(T);
+    sock.once("connect", () => fin("OK", "connected"));
+    sock.once("timeout", () => fin("TIMEOUT", `no response in ${T}ms`));
+    sock.once("error", (e) => fin("ERROR", `${e.code || ""} ${e.message}`.trim()));
+    try { sock.connect(CLOCK_PORT, CLOCK_HOST); } catch (e) { fin("ERROR", e.message); }
+  });
+  const udp = await new Promise((resolve) => {
+    const start = Date.now();
+    const sock = dgram.createSocket("udp4");
+    let done = false;
+    const fin = (s, d) => { if (done) return; done = true; try { sock.close(); } catch {} resolve({ s, d, ms: Date.now() - start }); };
+    const tmr = setTimeout(() => fin("TIMEOUT", `no reply in ${T}ms`), T);
+    const pkt = Buffer.alloc(8);
+    pkt.writeUInt16LE(1000, 0); // CMD_CONNECT
+    sock.once("error", (e) => { clearTimeout(tmr); fin("ERROR", `${e.code || ""} ${e.message}`.trim()); });
+    sock.once("message", (msg) => { clearTimeout(tmr); fin("OK", `replied ${msg.length} bytes`); });
+    try { sock.send(pkt, CLOCK_PORT, CLOCK_HOST, (err) => { if (err) { clearTimeout(tmr); fin("ERROR", err.message); } }); }
+    catch (e) { clearTimeout(tmr); fin("ERROR", e.message); }
+  });
+  console.log(`🔎 probe ${CLOCK_HOST}:${CLOCK_PORT}`);
+  console.log(`   TCP → ${tcp.s.padEnd(7)} (${tcp.ms}ms) ${tcp.d}`);
+  console.log(`   UDP → ${udp.s.padEnd(7)} (${udp.ms}ms) ${udp.d}`);
+  if (udp.s === "OK")       console.log("   ✅ UDP זמין — הסוכן אמור לעבוד");
+  else if (tcp.s === "OK")  console.log("   ⚠️ רק TCP זמין — שקול FORCE_TCP=1");
+  else                      console.log("   ❌ השעון אינו נגיש — בדוק IP/הפעלה/חיווט/firewall");
 }
 
 async function main() {
