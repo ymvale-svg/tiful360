@@ -1,6 +1,6 @@
 {
   "name": "attendance-clock-agent",
-  "version": "2.4.2",
+  "version": "2.4.3",
   "description": "Agent מקומי לשעון ZKTeco U560 — מושך פאנצ'ים בפרוטוקול ZK ושולח ל-Lovable Cloud",
   "main": "index.js",
   "scripts": {
@@ -8,6 +8,7 @@
     "start": "node index.js",
     "raw": "node index.js --raw",
     "once": "node index.js --once",
+    "probe": "node probe.js",
     "service:install": "node install-service.js",
     "service:uninstall": "node uninstall-service.js"
   },
