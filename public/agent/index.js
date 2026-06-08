@@ -14,7 +14,7 @@ const net = require("net");
 const os = require("os");
 const dgram = require("dgram");
 
-const AGENT_VERSION = "2.4.4";
+const AGENT_VERSION = "2.4.5";
 const HEARTBEAT_INTERVAL_MS = 60000;
 // Watchdog: אם אין מחזור מוצלח / heartbeat במשך הזמן הזה — יוצאים, וה-Service יפעיל מחדש
 const WATCHDOG_TIMEOUT_MS = parseInt(process.env.WATCHDOG_TIMEOUT_MS || String(15 * 60 * 1000), 10);
@@ -515,6 +515,10 @@ async function main() {
   console.log(`HARD_MIN_DATE: ${HARD_MIN_DATE.toISOString()} | Effective SINCE: ${SINCE.toISOString()}${LIMIT ? ` | limit=${LIMIT}` : ""}`);
   console.log(`Mode: ${RAW_MODE ? "RAW" : ONCE_MODE ? "ONCE" : `POLL ${POLL_INTERVAL_MS}ms`}`);
 
+  if (!RAW_MODE && !ONCE_MODE && updater && updater.startUpdaterLoop) {
+    updater.startUpdaterLoop(AGENT_VERSION);
+  }
+
   // 🔎 בדיקת נגישות מהירה (TCP+UDP) — תוצאות ישר בלוגים
   await runReachabilityProbe();
 
@@ -535,9 +539,6 @@ async function main() {
     }
   }, WATCHDOG_CHECK_MS);
 
-  if (updater && updater.startUpdaterLoop) {
-    updater.startUpdaterLoop(AGENT_VERSION);
-  }
 }
 
 main().catch((e) => { console.error("שגיאה קריטית:", e); process.exit(1); });
