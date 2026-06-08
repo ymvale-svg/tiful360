@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const expectedToken = Deno.env.get("ATTENDANCE_INGEST_TOKEN");
+    const expectedToken = Deno.env.get("ATTENDANCE_INGEST_TOKEN") ?? Deno.env.get("INGEST_TOKEN");
     if (!expectedToken) return json({ error: "server_misconfigured" }, 500);
 
     const auth = req.headers.get("authorization") ?? "";
