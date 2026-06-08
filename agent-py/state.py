@@ -24,3 +24,12 @@ def save_last_punch_at(dt: datetime) -> None:
         json.dumps({"last_punch_at": dt.isoformat()}),
         encoding="utf-8",
     )
+
+
+def ensure_initial_state(default: datetime) -> datetime:
+    """If no state file exists, seed it with `default` to skip historical data."""
+    existing = load_last_punch_at()
+    if existing is not None:
+        return existing
+    save_last_punch_at(default)
+    return default

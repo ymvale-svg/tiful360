@@ -19,6 +19,8 @@ FORCE_UDP = os.getenv("FORCE_UDP", "false").strip().lower() in ("1", "true", "ye
 EMPLOYEE_CODE_PREFIX = os.getenv("EMPLOYEE_CODE_PREFIX", "")
 POLL_INTERVAL = int(os.getenv("POLL_INTERVAL", "30"))
 HEARTBEAT_INTERVAL = int(os.getenv("HEARTBEAT_INTERVAL", "60"))
+# Ignore any clock records older than this ISO date. Defaults to "now" on first run.
+MIN_PUNCH_DATE = os.getenv("MIN_PUNCH_DATE", "").strip()
 
 STATE_PATH = BASE_DIR / "state.json"
 LOG_DIR = BASE_DIR / "logs"
