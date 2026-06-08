@@ -10,6 +10,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { openTax101Pdf } from "@/lib/tax101Url";
 
 const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   pending: { label: "ממתין לחתימה", cls: "bg-muted text-muted-foreground" },
@@ -161,12 +162,13 @@ export function Tax101AdminTab() {
                           </Button>
                         )}
                         {f.pdf_url && (
-                          <a href={f.pdf_url} target="_blank" rel="noopener noreferrer">
-                            <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs">
-                              <Download className="w-3 h-3" />
-                              הורד
-                            </Button>
-                          </a>
+                          <Button
+                            size="sm" variant="ghost" className="h-7 gap-1 text-xs"
+                            onClick={() => openTax101Pdf(f.pdf_url)}
+                          >
+                            <Download className="w-3 h-3" />
+                            הורד
+                          </Button>
                         )}
                         <Button
                           size="icon" variant="ghost" className="h-7 w-7"

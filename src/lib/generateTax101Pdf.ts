@@ -114,6 +114,6 @@ export async function generateAndUploadTax101Pdf(
     .upload(path, blob, { contentType: "application/pdf", upsert: true });
   if (error) throw error;
 
-  const { data } = supabase.storage.from("tax-forms-101").getPublicUrl(path);
-  return data.publicUrl;
+  // Store the storage path; consumers fetch a short-lived signed URL on demand.
+  return path;
 }

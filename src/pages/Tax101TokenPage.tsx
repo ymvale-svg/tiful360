@@ -77,9 +77,20 @@ export default function Tax101TokenPage() {
               {error}
             </h1>
             {form?.pdf_url && (
-              <a href={form.pdf_url} target="_blank" rel="noopener noreferrer">
-                <Button variant="outline">הצג טופס חתום</Button>
-              </a>
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  const { data, error: e } = await supabase.functions.invoke(
+                    "tax-form-101-signed-url",
+                    { body: { token } },
+                  );
+                  if (!e && data?.signedUrl) {
+                    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+                  }
+                }}
+              >
+                הצג טופס חתום
+              </Button>
             )}
           </>
         ) : done ? (

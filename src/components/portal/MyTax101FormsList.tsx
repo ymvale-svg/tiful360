@@ -1,5 +1,6 @@
 import { FileText, Download, CheckCircle2, Clock } from "lucide-react";
 import { useMyTax101Forms } from "@/hooks/useTax101";
+import { openTax101Pdf } from "@/lib/tax101Url";
 
 export function MyTax101FormsList({ employeeId }: { employeeId: string | undefined | null }) {
   const { data: forms = [] } = useMyTax101Forms(employeeId);
@@ -25,15 +26,14 @@ export function MyTax101FormsList({ employeeId }: { employeeId: string | undefin
               </p>
             </div>
             {f.pdf_url && (
-              <a
-                href={f.pdf_url}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
+                onClick={() => openTax101Pdf(f.pdf_url)}
                 className="flex items-center gap-1 text-xs text-primary hover:underline shrink-0"
               >
                 <Download className="w-3.5 h-3.5" />
                 הורד
-              </a>
+              </button>
             )}
           </div>
         );

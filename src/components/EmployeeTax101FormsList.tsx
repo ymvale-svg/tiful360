@@ -1,6 +1,7 @@
 import { FileText, Download, CheckCircle2, Clock, Send } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { openTax101Pdf } from "@/lib/tax101Url";
 
 interface Props {
   employeeId: string;
@@ -57,15 +58,15 @@ export function EmployeeTax101FormsList({ employeeId }: Props) {
                 </p>
               </div>
               {f.pdf_url && (
-                <a
-                  href={f.pdf_url}
-                  target="_blank"
-                  rel="noreferrer"
+                <button
+                  type="button"
+                  onClick={() => openTax101Pdf(f.pdf_url)}
                   className="p-2 rounded-lg hover:bg-muted text-primary"
                   title="הורד PDF"
+                  aria-label="הורד PDF"
                 >
                   <Download className="w-4 h-4" />
-                </a>
+                </button>
               )}
             </div>
           );
