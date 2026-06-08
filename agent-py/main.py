@@ -71,9 +71,19 @@ def poll_once():
 def main():
     setup_logging()
     config.validate()
+    # Seed state on first run so we ignore historical clock data.
+    if MIN_PUNCH_DATE:
+        try:
+            cutoff = datetime.fromisoformat(MIN_PUNCH_DATE)
+        except ValueError:
+            log.warning(f"Invalid MIN_PUNCH_DATE={MIN_PUNCH_DATE!r}, falling back to now")
+            cutoff = datetime.now(timezone.utc)
+    else:
+        cutoff = datetime.now(timezone.utc)
+    seeded = ensure_initial_state(cutoff)
     log.info(
         f"Tiful360 Agent v{AGENT_VERSION} starting — clock={CLOCK_IP}:{CLOCK_PORT} "
-        f"(polling every {POLL_INTERVAL}s)"
+        f"(polling every {POLL_INTERVAL}s, cutoff={seeded.isoformat()})"
     )
 
     stop_event = threading.Event()
