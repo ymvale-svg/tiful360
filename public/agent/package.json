@@ -9,6 +9,7 @@
     "raw": "node index.js --raw",
     "once": "node index.js --once",
     "probe": "node probe.js",
+    "repair": "powershell -ExecutionPolicy Bypass -File ./repair-service.ps1",
     "service:install": "node install-service.js",
     "service:uninstall": "node uninstall-service.js"
   },
