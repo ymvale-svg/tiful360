@@ -13,7 +13,7 @@ const path = require("path");
 const net = require("net");
 const os = require("os");
 
-const AGENT_VERSION = "2.4.1";
+const AGENT_VERSION = "2.4.2";
 const HEARTBEAT_INTERVAL_MS = 60000;
 // Watchdog: אם אין מחזור מוצלח / heartbeat במשך הזמן הזה — יוצאים, וה-Service יפעיל מחדש
 const WATCHDOG_TIMEOUT_MS = parseInt(process.env.WATCHDOG_TIMEOUT_MS || String(15 * 60 * 1000), 10);
@@ -71,8 +71,12 @@ const CLOCK_HOST = process.env.CLOCK_HOST || "10.0.0.114";
 const CLOCK_PORT = parseInt(process.env.CLOCK_PORT || "4370", 10);
 const CLOCK_INPORT = parseInt(process.env.CLOCK_INPORT || "5200", 10);
 const CLOCK_TIMEOUT = parseInt(process.env.CLOCK_TIMEOUT || "5500", 10);
-// פרוטוקול: auto (TCP ואז UDP), udp (כפוי — מומלץ ל-U560), tcp (כפוי)
-const CLOCK_PROTOCOL = (process.env.CLOCK_PROTOCOL || "udp").toLowerCase();
+// פרוטוקול: udp (ברירת מחדל קשיחה — U560 לא יציב ב-TCP). רק --allow-tcp או FORCE_TCP=1 יעקפו.
+let CLOCK_PROTOCOL = (process.env.CLOCK_PROTOCOL || "udp").toLowerCase();
+if (CLOCK_PROTOCOL !== "udp" && process.env.FORCE_TCP !== "1") {
+  console.warn(`⚠️  CLOCK_PROTOCOL="${CLOCK_PROTOCOL}" התעלמנו — נכפה UDP (השעון לא יציב ב-TCP). הגדר FORCE_TCP=1 כדי לעקוף.`);
+  CLOCK_PROTOCOL = "udp";
+}
 const POLL_INTERVAL_MS = parseInt(process.env.POLL_INTERVAL_MS || "30000", 10);
 const CYCLE_TIMEOUT_MS = parseInt(process.env.CYCLE_TIMEOUT_MS || String(Math.max(POLL_INTERVAL_MS - 2000, CLOCK_TIMEOUT * 6, 45000)), 10);
 const CLEAR_AFTER_SEND = (process.env.CLEAR_AFTER_SEND || "false").toLowerCase() === "true";
@@ -289,25 +293,55 @@ async function createZkConnection() {
   }
 }
 
+// עוטף promise ב-timeout קשיח, כדי שלא נישאר תקועים על השעון
+function withTimeout(promise, ms, label) {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`${label}_timeout_${ms}ms`)), ms);
+    Promise.resolve(promise).then(
+      (v) => { clearTimeout(t); resolve(v); },
+      (e) => { clearTimeout(t); reject(e); },
+    );
+  });
+}
+
+// סינון לוגים חוזרים — אותה שגיאה לא תודפס יותר מפעם בדקה
+const LAST_LOG_AT = new Map();
+function logThrottled(key, msg, level = "warn", everyMs = 60000) {
+  const now = Date.now();
+  const last = LAST_LOG_AT.get(key) || 0;
+  if (now - last < everyMs) return;
+  LAST_LOG_AT.set(key, now);
+  (console[level] || console.log)(msg);
+}
+
+function shortErr(e) {
+  const m = String(e?.message || e || "");
+  // מסירים stack ארוך של ZKError
+  return m.split("\n")[0].slice(0, 200);
+}
+
 async function runCycle() {
   const ts = new Date().toISOString();
-  console.log(`\n[${ts}] מתחבר ל-${CLOCK_HOST}:${CLOCK_PORT} ...`);
+  console.log(`\n[${ts}] מתחבר ל-${CLOCK_HOST}:${CLOCK_PORT} (${CLOCK_PROTOCOL}) ...`);
 
   let zk;
-  try { zk = await createZkConnection(); } catch (e) {
-    console.error("❌ נכשל החיבור:", e.message || e);
-    HEARTBEAT_STATE.lastError = String(e?.message || e);
+  try {
+    zk = await withTimeout(createZkConnection(), Math.max(CLOCK_TIMEOUT * 2, 10000), "connect");
+  } catch (e) {
+    const msg = shortErr(e);
+    HEARTBEAT_STATE.lastError = msg;
+    logThrottled("connect_fail", `❌ נכשל החיבור לשעון ${CLOCK_HOST}: ${msg}  (בדוק שהשעון דולק וברשת)`, "error");
     return;
   }
 
   try {
-    const info = await zk.getInfo();
+    const info = await withTimeout(zk.getInfo(), 8000, "getInfo");
     console.log(`✅ מחובר. רשומות בשעון: ${info.logCounts ?? "?"} | משתמשים: ${info.userCounts ?? "?"}`);
-  } catch (e) { console.warn("⚠️  getInfo:", e.message || e); }
+  } catch (e) { logThrottled("getinfo_fail", `⚠️  getInfo: ${shortErr(e)}`); }
 
   let logs;
   try {
-    const res = await zk.getAttendances();
+    const res = await withTimeout(zk.getAttendances(), Math.max(CYCLE_TIMEOUT_MS - 5000, 20000), "getAttendances");
     logs = res?.data || [];
     console.log(`📋 נמשכו ${logs.length} רשומות`);
     if (logs.length) {
@@ -319,7 +353,9 @@ async function runCycle() {
       }
     }
   } catch (e) {
-    console.error("❌ getAttendances נכשל:", e.message || e);
+    const msg = shortErr(e);
+    HEARTBEAT_STATE.lastError = msg;
+    logThrottled("getatt_fail", `❌ getAttendances נכשל: ${msg}`, "error");
     try { await zk.disconnect(); } catch {}
     return;
   }
