@@ -2,12 +2,13 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 BASE_DIR = Path(__file__).resolve().parent
 ENV_PATH = BASE_DIR / ".env"
 load_dotenv(ENV_PATH)
 
-AGENT_VERSION = "3.0.0"
+AGENT_VERSION = "3.0.1"
 
 INGEST_URL = os.getenv("INGEST_URL", "").rstrip("/")
 INGEST_TOKEN = os.getenv("INGEST_TOKEN", "")
@@ -16,6 +17,7 @@ CLOCK_IP = os.getenv("CLOCK_IP", "")
 CLOCK_PORT = int(os.getenv("CLOCK_PORT", "4370"))
 CLOCK_PASSWORD = int(os.getenv("CLOCK_PASSWORD", "0") or "0")
 FORCE_UDP = os.getenv("FORCE_UDP", "false").strip().lower() in ("1", "true", "yes")
+CLOCK_TIMEZONE = os.getenv("CLOCK_TIMEZONE", "Asia/Jerusalem").strip() or "Asia/Jerusalem"
 EMPLOYEE_CODE_PREFIX = os.getenv("EMPLOYEE_CODE_PREFIX", "")
 POLL_INTERVAL = int(os.getenv("POLL_INTERVAL", "30"))
 HEARTBEAT_INTERVAL = int(os.getenv("HEARTBEAT_INTERVAL", "60"))
@@ -36,3 +38,7 @@ def validate():
     }.items() if not v]
     if missing:
         raise RuntimeError(f"Missing required env vars: {', '.join(missing)}. Run setup.py.")
+    try:
+        ZoneInfo(CLOCK_TIMEZONE)
+    except ZoneInfoNotFoundError as exc:
+        raise RuntimeError(f"Invalid CLOCK_TIMEZONE={CLOCK_TIMEZONE!r}") from exc
