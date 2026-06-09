@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { AlertCircle } from "lucide-react";
 import { useCreateAttendanceCorrection } from "@/hooks/useAttendanceCorrections";
 import { useToast } from "@/hooks/use-toast";
 
@@ -15,10 +16,14 @@ interface Props {
   initiatedBy: "employee" | "manager";
   initialDate?: string;
   autoApprove?: boolean;
+  tracksAttendance?: boolean;
 }
 
-export function AttendanceCorrectionDialog({ open, onClose, employeeId, managerId, initiatedBy, initialDate, autoApprove }: Props) {
+export function AttendanceCorrectionDialog({ open, onClose, employeeId, managerId, initiatedBy, initialDate, autoApprove, tracksAttendance = true }: Props) {
   const [date, setDate] = useState(initialDate || new Date().toISOString().slice(0, 10));
+  useEffect(() => {
+    if (open && initialDate) setDate(initialDate);
+  }, [open, initialDate]);
   const [origIn, setOrigIn] = useState("");
   const [origOut, setOrigOut] = useState("");
   const [reqIn, setReqIn] = useState("");
