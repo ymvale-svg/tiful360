@@ -1,79 +1,81 @@
+## דוח פערי החתמות + שליחה מרוכזת + תיקונים ישירים לשכר
 
-# מחיקת ה-agent הישן ובנייה מחדש ב-Python
+### חלק 1 — ימי עבודה לעובד
+- `employees.work_days smallint[]` ברירת מחדל `{0,1,2,3,4}` (ראשון–חמישי).
+- ב-`EditEmployeeDialog`: צ׳קבוקסים א׳–שבת — ברירת המחדל א׳–ה׳ אלא אם הוגדר אחרת.
 
-## שלב 1 — מחיקה מלאה של הקוד הישן
+### חלק 2 — חגים
+- מיגרציה: טבלה חדשה `public.company_holidays(id, company_id, holiday_date date, name text)` עם RLS — צפייה לכל מי שיש לו גישה לחברה, עריכה ל-`admin`/`payroll`.
+- Seed ראשוני של חגי ישראל לשנים 2025–2027 (ראש השנה, יום כיפור, סוכות, פסח, יום העצמאות, שבועות).
+- UI ב-`PortalSettingsTab` (או טאב הגדרות חברה): רשימת חגים עם הוספה/מחיקה.
 
-נמחקים:
-- `agent/` — כל ה-Node agent (index.js, updater.js, setup.js, install-service.js, uninstall-service.js, probe.js, repair-service.ps1, package.json, README.md)
-- `public/agent/` — כל הקבצים שמשרתים את ה-agent הישן וה-manifest
-- `scripts/publish-agent.sh` — סקריפט הפרסום של ה-manifest הישן
-- כל reference ב-`package.json` הראשי ל-`publish:agent`
+### חלק 3 — פונקציית DB `get_attendance_gaps(_from date, _to date)`
+מחזירה `(employee_id, full_name, email, gap_date, gap_type, punch_count)` עבור ימים שב-`work_days` של העובד.
+**מסננת החוצה ימים שבהם:**
+- קיים `leave_requests` עם `status='approved'` שטווח `start_date..end_date` כולל את התאריך (כל סוגי החופשה: חופש, מחלה, מילואים וכו').
+- התאריך קיים ב-`company_holidays` של החברה.
 
-**לא נמחקים** (נשארים כמו שהם):
-- `supabase/functions/ingest-attendance-punch/`
-- `supabase/functions/ingest-attendance-heartbeat/`
-- `supabase/functions/list-companies-for-agent/`
-- מסכי השעון/הנוכחות ב-UI
+מסווגת `gap_type`:
+- `empty` — 0 החתמות.
+- `odd` — מספר אי-זוגי.
 
-## שלב 2 — בניית `agent-py/` מאפס
+הרשאות: `payroll` / `admin` / `super_admin`. ספירה לפי `Asia/Jerusalem`, רק עובדים פעילים.
 
-מבנה:
+### חלק 4 — דוח UI `AttendanceGapsReport.tsx`
+סקשן חדש ב-`AttendanceClockTab`:
+- בורר טווח (ברירת מחדל: חודש קלנדרי קודם).
+- טבלה מקובצת לפי עובד עם פירוט תאריכים + סוג פער + שעות קיימות.
+- כפתור "שלח מייל לעובד" לכל שורה.
+- כפתור ראשי "שלח לכל העובדים עם פערים (N)" — דיאלוג אישור + שליחה מרוכזת.
+- ייצוא לאקסל.
 
-```text
-agent-py/
-  main.py              # לולאה ראשית: live_capture + polling fallback + heartbeat
-  zk_client.py         # עטיפה ל-pyzk (TCP בלבד)
-  uploader.py          # POST ל-ingest-attendance-punch + retry/backoff
-  heartbeat.py         # POST ל-ingest-attendance-heartbeat כל דקה
-  state.py             # state.json — last_punch_at למניעת כפילויות
-  config.py            # טעינת .env
-  setup.py             # אשף אינטראקטיבי: token, company_id, clock IP
-  service_windows.py   # התקנה/הסרה כ-Windows Service (pywin32)
-  requirements.txt     # pyzk, requests, python-dotenv, pywin32
-  .env.example
-  README.md
-```
+### חלק 5 — תבנית מייל `attendance-gaps.tsx`
+React Email תחת `supabase/functions/_shared/transactional-email-templates/`:
+- טבלה: תאריך + יום + סוג פער + שעות קיימות.
+- CTA "בקשת תיקון" → `{APP_URL}/portal?tab=attendance&correction=open&date=<first_gap>`.
+- רשומה ב-`registry.ts`. `idempotencyKey: attendance-gaps-{employee_id}-{from}-{to}`.
 
-### תכונות
+### חלק 6 — Edge function `send-attendance-gaps`
+- קלט: `{ from, to, employee_ids?: string[] }`.
+- שולפת מ-`get_attendance_gaps`, מקבצת לפי עובד, ולכל אחד עם email קוראת ל-`send-transactional-email`.
+- מחזירה `{ queued, skipped_no_email }`. מוגנת ב-JWT + role check.
 
-1. **חיבור TCP בלבד** ל-ZKTeco דרך pyzk (מה שהוכח שעובד).
-2. **Live capture** כברירת מחדל — השעון דוחף פאנצ'ים בזמן אמת.
-3. **Polling fallback** כל 30 שניות (`get_attendance` + סינון לפי state).
-4. **שליחה ל-Cloud** — batch של עד 100, retry עם backoff, ה-API לא משתנה בכלל.
-5. **Heartbeat** כל דקה עם `agent_version`, `clock_ip`, `last_punch_at`.
-6. **לוגים** — `logs/agent.log` עם rotation + stdout.
-7. **בלי updater אוטומטי בכלל** — הסיבוך הזה גרם לכל הבעיות. עדכון = הרצת `setup.py` מחדש.
+### חלק 7 — פורטל העובד
+`EmployeePortal.tsx`: בקריאת `correction=open` נפתח `AttendanceCorrectionDialog` אוטומטית עם `date` ממולא מראש.
 
-### הוראות שימוש (שלב ראשון — ידני, לפני אריזה ל-exe)
+---
 
-```powershell
-# הסרת ה-agent הישן
-sc.exe stop  "Tiful360 Attendance Agent"
-sc.exe delete "Tiful360 Attendance Agent"
-Remove-Item C:\attendance-agent -Recurse -Force -ErrorAction SilentlyContinue
+## חלק 8 — תיקוני נוכחות → ישר לשכר
 
-# התקנת החדש
-git clone <repo> tiful-agent
-cd tiful-agent\agent-py
-python -m pip install -r requirements.txt
-python setup.py    # מבקש token, company_id, IP
-python main.py     # בדיקה — אמור להתחיל לשלוח פאנצ'ים
-```
+### 8.1 הגדרת חברה
+- `companies.attendance_corrections_auto_approve boolean default false`.
+- Switch ב-`PortalSettingsTab`: "תיקוני נוכחות עוברים אוטומטית לשכר ללא אישור מנהל".
 
-אחרי שזה עובד מולך → ארוז ל-Service:
-```powershell
-python service_windows.py install
-python service_windows.py start
-```
+### 8.2 שדות חדשים על `attendance_corrections`
+- `applied_at timestamptz null`.
 
-### שלב 3 (עתידי, רק אחרי שאמת)
-אריזה ל-`tiful-agent.exe` בודד עם PyInstaller, כך שאין צורך כלל ב-Python במחשב היעד.
+### 8.3 פונקציית DB `apply_attendance_correction(_correction_id)` — SECURITY DEFINER
+**רק הכיוון המבוקש מוחלף:**
+- `requested_check_in` מולא → מחיקת כל ה-`in` של העובד באותו יום (source != 'portal_remote') + הכנסת punch חדש (`direction='in'`, `source='correction'`, `status='approved'`, `raw_payload={correction_id}`).
+- `requested_check_out` מולא → אותו דבר ל-`out`.
+- שדה לא מולא → לא נוגעים.
+- מסמנת `applied_at = now()`. `dedup_punch_5min` מסנן כפילויות.
 
-## פרטים טכניים
+### 8.4 טריגר על `attendance_corrections` (AFTER INSERT OR UPDATE)
+- INSERT עם חברה ש-`auto_approve=true` → `status='approved'`, `reviewed_at=now()`, ואז `apply_attendance_correction`.
+- UPDATE שבו `status` הפך ל-`approved` ו-`applied_at IS NULL` → `apply_attendance_correction`.
 
-- Python 3.11.
-- `pyzk==0.9` — הסטנדרט בתעשייה לתקשורת עם ZKTeco, מטפלת בפרוטוקול לבד.
-- ה-`.env` יכלול: `INGEST_URL`, `INGEST_TOKEN`, `COMPANY_ID`, `CLOCK_IP`, `CLOCK_PORT=4370`, `EMPLOYEE_CODE_PREFIX` (אופציונלי), `POLL_INTERVAL=30`.
-- שום שינוי ב-edge functions או בסכמת DB.
+### 8.5 שינויי UI
+- `AttendanceCorrectionDialog`: כשבחברה `auto_approve=true`, הודעה: "התיקון הוחל מיידית על דוח הנוכחות".
+- `AttendanceCorrections.tsx`: badge "הוחל על השכר" כשיש `applied_at`.
 
-מאשר שאמחק את `agent/` ו-`public/agent/` ואבנה את `agent-py/`?
+---
+
+### קבצים
+**חדשים:** `AttendanceGapsReport.tsx`, `supabase/functions/_shared/transactional-email-templates/attendance-gaps.tsx`, `supabase/functions/send-attendance-gaps/index.ts`, רכיב ניהול חגים `CompanyHolidaysSection.tsx`, מיגרציה מקיפה.
+**עריכה:** `AttendanceClockTab.tsx`, `EditEmployeeDialog.tsx`, `EmployeePortal.tsx`, `AttendanceCorrectionDialog.tsx`, `AttendanceCorrections.tsx`, `PortalSettingsTab.tsx`, `registry.ts`.
+
+### הערות
+- חגים מותאמים לחברה (לא גלובלי) — מאפשר חברות עם לוח שונה.
+- חופשות/מחלה מזוהות דרך `leave_requests` עם `status='approved'` בלבד; pending לא מסנן.
+- חצי-יום חופש (`total_days < 1`) — לא מטופל בנפרד; אם יש leave מאושר ביום, היום לא נחשב כפער.
