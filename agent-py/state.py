@@ -1,7 +1,11 @@
 """Persist last seen punch to avoid duplicates."""
 import json
-from datetime import datetime, timezone
-from config import STATE_PATH
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from config import STATE_PATH, CLOCK_TIMEZONE
+
+
+CLOCK_TZ = ZoneInfo(CLOCK_TIMEZONE)
 
 
 def load_last_punch_at() -> datetime | None:
@@ -19,7 +23,7 @@ def load_last_punch_at() -> datetime | None:
 
 def save_last_punch_at(dt: datetime) -> None:
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=CLOCK_TZ)
     STATE_PATH.write_text(
         json.dumps({"last_punch_at": dt.isoformat()}),
         encoding="utf-8",
