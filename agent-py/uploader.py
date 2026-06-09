@@ -2,9 +2,11 @@
 import logging
 import time
 import requests
-from config import INGEST_URL, INGEST_TOKEN, COMPANY_ID, EMPLOYEE_CODE_PREFIX, AGENT_VERSION, CLOCK_IP
+from zoneinfo import ZoneInfo
+from config import INGEST_URL, INGEST_TOKEN, COMPANY_ID, EMPLOYEE_CODE_PREFIX, AGENT_VERSION, CLOCK_IP, CLOCK_TIMEZONE
 
 log = logging.getLogger(__name__)
+CLOCK_TZ = ZoneInfo(CLOCK_TIMEZONE)
 
 
 def _format_code(uid) -> str:
@@ -15,8 +17,8 @@ def punch_to_payload(att) -> dict:
     # pyzk Attendance: .user_id, .timestamp (datetime), .status, .punch
     ts = att.timestamp
     if ts.tzinfo is None:
-        # Clock has no tz — treat as local time, send as ISO without tz
-        iso = ts.isoformat()
+        # Clock has no tz — treat as local clock time and include its timezone offset.
+        iso = ts.replace(tzinfo=CLOCK_TZ).isoformat()
     else:
         iso = ts.isoformat()
     direction = "unknown"
@@ -39,6 +41,7 @@ def punch_to_payload(att) -> dict:
             "punch": getattr(att, "punch", None),
             "agent_version": AGENT_VERSION,
             "clock_ip": CLOCK_IP,
+            "clock_timezone": CLOCK_TIMEZONE,
         },
     }
 

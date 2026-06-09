@@ -68,6 +68,7 @@ def main():
 
     ip = ask("Clock IP", existing.get("CLOCK_IP", "192.168.1.201"))
     port = ask("Clock port", existing.get("CLOCK_PORT", "4370"))
+    timezone = ask("Clock timezone", existing.get("CLOCK_TIMEZONE", "Asia/Jerusalem"))
     prefix = ask("Employee code prefix (optional)", existing.get("EMPLOYEE_CODE_PREFIX", ""))
     poll = ask("Poll interval seconds", existing.get("POLL_INTERVAL", "30"))
 
@@ -77,10 +78,11 @@ def main():
         f"COMPANY_ID={company}",
         f"CLOCK_IP={ip}",
         f"CLOCK_PORT={port}",
+        f"CLOCK_TIMEZONE={timezone}",
         f"EMPLOYEE_CODE_PREFIX={prefix}",
         f"POLL_INTERVAL={poll}",
         f"HEARTBEAT_INTERVAL=60",
-        f"AGENT_VERSION=3.0.0",
+        f"AGENT_VERSION=3.0.1",
         "",
     ]
     ENV_PATH.write_text("\n".join(lines), encoding="utf-8")

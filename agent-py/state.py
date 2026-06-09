@@ -1,7 +1,11 @@
 """Persist last seen punch to avoid duplicates."""
 import json
 from datetime import datetime, timezone
-from config import STATE_PATH
+from zoneinfo import ZoneInfo
+from config import STATE_PATH, CLOCK_TIMEZONE
+
+
+CLOCK_TZ = ZoneInfo(CLOCK_TIMEZONE)
 
 
 def load_last_punch_at() -> datetime | None:
@@ -12,14 +16,18 @@ def load_last_punch_at() -> datetime | None:
         v = data.get("last_punch_at")
         if not v:
             return None
-        return datetime.fromisoformat(v)
+        dt = datetime.fromisoformat(v)
+        if dt.tzinfo is not None and dt.utcoffset() == timezone.utc.utcoffset(dt):
+            # v3.0.0 wrote local clock times with a +00:00 offset. Reinterpret those wall-clock values locally.
+            return dt.replace(tzinfo=CLOCK_TZ)
+        return dt
     except Exception:
         return None
 
 
 def save_last_punch_at(dt: datetime) -> None:
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=CLOCK_TZ)
     STATE_PATH.write_text(
         json.dumps({"last_punch_at": dt.isoformat()}),
         encoding="utf-8",
