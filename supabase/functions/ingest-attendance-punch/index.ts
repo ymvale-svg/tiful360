@@ -106,7 +106,9 @@ Deno.serve(async (req) => {
       };
     });
 
-    const { error: insErr } = await supabase.from("attendance_punches").insert(rows);
+    const { error: insErr } = await supabase
+      .from("attendance_punches")
+      .upsert(rows, { onConflict: "company_id,employee_code_raw,punch_at,direction", ignoreDuplicates: true });
     if (insErr) {
       console.error("insert error", insErr);
       return json({ error: "insert_failed", details: insErr.message }, 500);
