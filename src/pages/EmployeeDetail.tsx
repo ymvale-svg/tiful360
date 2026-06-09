@@ -93,6 +93,7 @@ export default function EmployeeDetail() {
   const qc = useQueryClient();
   const canEditRemotePunch = isSuperAdmin || isAdmin || isPayroll || isOperations || isFinance;
   const [savingRemote, setSavingRemote] = useState(false);
+  const [savingAttendance, setSavingAttendance] = useState(false);
 
   const handleToggleRemotePunch = async (value: boolean) => {
     if (!id) return;
@@ -110,6 +111,29 @@ export default function EmployeeDetail() {
     qc.invalidateQueries({ queryKey: ["employee", id] });
     qc.invalidateQueries({ queryKey: ["employees"] });
   };
+
+  const updateAttendanceFields = async (patch: { tracks_attendance?: boolean; work_days?: number[] }) => {
+    if (!id) return;
+    setSavingAttendance(true);
+    const { error } = await supabase.from("employees").update(patch as any).eq("id", id);
+    setSavingAttendance(false);
+    if (error) {
+      toast({ title: "שגיאה בעדכון נוכחות", description: error.message, variant: "destructive" });
+      return;
+    }
+    qc.invalidateQueries({ queryKey: ["employee", id] });
+    qc.invalidateQueries({ queryKey: ["employees"] });
+  };
+
+  const handleToggleTracks = (v: boolean) => updateAttendanceFields({ tracks_attendance: v });
+  const handleToggleWorkDay = (day: number) => {
+    const cur: number[] = Array.isArray((employee as any)?.work_days) ? [...(employee as any).work_days] : [0, 1, 2, 3, 4];
+    const idx = cur.indexOf(day);
+    if (idx >= 0) cur.splice(idx, 1); else cur.push(day);
+    cur.sort((a, b) => a - b);
+    updateAttendanceFields({ work_days: cur });
+  };
+
 
 
   const canSeePayslips =
@@ -343,9 +367,77 @@ export default function EmployeeDetail() {
                 onCheckedChange={canEditRemotePunch ? handleToggleRemotePunch : undefined}
               />
             </div>
+
+            <div className="mt-3 p-3 rounded-lg bg-muted/40 space-y-3">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <Clock className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium flex items-center gap-1.5">
+                      עובד מחתים נוכחות
+                      {!canEditRemotePunch && (
+                        <Lock className="w-3 h-3 text-muted-foreground" aria-label="אין הרשאה לעדכון" />
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      כבה עבור פרילנסרים / בעלים / עובדים שאינם מחתימים. עובדים שאינם מחתימים לא ייכללו בדוח פערי הנוכחות.
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  aria-label="עובד מחתים נוכחות"
+                  checked={(employee as any).tracks_attendance !== false}
+                  disabled={!canEditRemotePunch || savingAttendance}
+                  onCheckedChange={canEditRemotePunch ? handleToggleTracks : undefined}
+                />
+              </div>
+
+              {(employee as any).tracks_attendance !== false && (
+                <div>
+                  <p className="text-sm font-medium mb-1">ימי עבודה</p>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    ברירת מחדל: ראשון–חמישי. סמן את הימים שבהם העובד צפוי לעבוד.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { v: 0, l: "א׳" },
+                      { v: 1, l: "ב׳" },
+                      { v: 2, l: "ג׳" },
+                      { v: 3, l: "ד׳" },
+                      { v: 4, l: "ה׳" },
+                      { v: 5, l: "ו׳" },
+                      { v: 6, l: "ש׳" },
+                    ].map((d) => {
+                      const wd: number[] = Array.isArray((employee as any).work_days) && (employee as any).work_days.length
+                        ? (employee as any).work_days
+                        : [0, 1, 2, 3, 4];
+                      const checked = wd.includes(d.v);
+                      return (
+                        <button
+                          type="button"
+                          key={d.v}
+                          disabled={!canEditRemotePunch || savingAttendance}
+                          onClick={() => handleToggleWorkDay(d.v)}
+                          className={cn(
+                            "px-3 py-1.5 rounded-md border text-sm transition-colors",
+                            checked
+                              ? "bg-primary/10 border-primary/40 text-primary"
+                              : "bg-card border-border text-muted-foreground hover:text-foreground",
+                            (!canEditRemotePunch || savingAttendance) && "opacity-50 cursor-not-allowed",
+                          )}
+                        >
+                          {d.l}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
+
 
       {/* Forms tab */}
       {activeTab === "forms" && (
