@@ -52,10 +52,10 @@ export function AttendanceSettingsSection() {
   const setAuto = useMutation({
     mutationFn: async (v: boolean) => {
       if (!activeCompanyId) return;
-      const { error } = await supabase
-        .from("companies")
-        .update({ attendance_corrections_auto_approve: v } as any)
-        .eq("id", activeCompanyId);
+      const { error } = await supabase.rpc("set_company_attendance_auto_approve" as any, {
+        _company_id: activeCompanyId,
+        _value: v,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
