@@ -62,10 +62,17 @@ def save_last_punch_at(dt: datetime) -> None:
     )
 
 
-def ensure_initial_state(default: datetime) -> datetime:
-    """If no state file exists, seed it with `default` to skip historical data."""
+def ensure_initial_state(default: datetime, force_backfill: bool = False) -> datetime:
+    """Seed state on first run; when requested, move it backwards to backfill older punches."""
     existing = load_last_punch_at()
     if existing is not None:
+        if force_backfill and _as_aware(existing) > _as_aware(default):
+            save_last_punch_at(default)
+            log.warning(
+                f"Backfill requested: moving last_punch_at back from "
+                f"{_as_aware(existing).isoformat()} to {_as_aware(default).isoformat()}"
+            )
+            return default
         return existing
     save_last_punch_at(default)
     return default
@@ -119,7 +126,7 @@ def main():
             cutoff = datetime.now(CLOCK_TZ)
     else:
         cutoff = datetime.now(CLOCK_TZ)
-    seeded = ensure_initial_state(cutoff)
+    seeded = ensure_initial_state(cutoff, force_backfill=bool(MIN_PUNCH_DATE))
     log.info(
         f"Tiful360 Agent v{AGENT_VERSION} starting — clock={CLOCK_IP}:{CLOCK_PORT} "
         f"(polling every {POLL_INTERVAL}s, cutoff={seeded.isoformat()})"

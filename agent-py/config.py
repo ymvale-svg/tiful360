@@ -8,7 +8,7 @@ BASE_DIR = Path(__file__).resolve().parent
 ENV_PATH = BASE_DIR / ".env"
 load_dotenv(ENV_PATH)
 
-AGENT_VERSION = "3.0.1"
+AGENT_VERSION = "3.0.2"
 
 INGEST_URL = os.getenv("INGEST_URL", "").rstrip("/")
 INGEST_TOKEN = os.getenv("INGEST_TOKEN", "")

@@ -52,6 +52,7 @@ python service_windows.py remove
 | `CLOCK_IP` | IP של השעון |
 | `CLOCK_PORT` | ברירת מחדל 4370 |
 | `EMPLOYEE_CODE_PREFIX` | קידומת אופציונלית לקוד עובד |
+| `MIN_PUNCH_DATE` | תאריך/שעה להתחלת backfill, למשל `2026-06-07T00:00:00+03:00` |
 | `POLL_INTERVAL` | שניות בין סיבובי polling fallback (30) |
 | `HEARTBEAT_INTERVAL` | שניות בין heartbeats (60) |
 
@@ -67,4 +68,5 @@ python service_windows.py remove
 
 - שעון לא נגיש → `ping <CLOCK_IP>` ו-`Test-NetConnection <CLOCK_IP> -Port 4370`.
 - 401 מה-ingest → טוקן שגוי, הרץ `python setup.py` שוב.
-- אין פאנצ'ים → מחק את `state.json` כדי לכפות backfill מלא.
+- חסרים פאנצ'ים מתאריך מסוים → עצור את הסוכן, עדכן `.env` עם `MIN_PUNCH_DATE=2026-06-07T00:00:00+03:00`, הפעל שוב `python main.py`. הסוכן יחזיר את `state.json` אחורה וימשוך מחדש; כפילויות נחסמות בענן.
+- אין פאנצ'ים בכלל → בדוק `CLOCK_IP`, טוקן, ולוגים תחת `logs/agent.log`.
