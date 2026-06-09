@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { 
   Package, Clock, Megaphone, BookOpen, Phone, ExternalLink,
   FileText, CalendarDays, AlertCircle, LogOut, Cake, PartyPopper,
@@ -44,7 +44,9 @@ export default function EmployeePortal() {
   const [activeTab, setActiveTab] = useState("assets");
   const [newLeaveOpen, setNewLeaveOpen] = useState(false);
   const [correctionOpen, setCorrectionOpen] = useState(false);
+  const [correctionInitialDate, setCorrectionInitialDate] = useState<string | undefined>(undefined);
   const [punchingDir, setPunchingDir] = useState<"in" | "out" | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, signOut, roles } = useAuth();
   const { data: profile } = useProfile();
   const { activeCompanyId, activeCompany } = useCompany();
@@ -79,6 +81,23 @@ export default function EmployeePortal() {
     },
     enabled: !!activeCompanyId && !!user?.id,
   });
+
+  // Auto-open attendance correction dialog from URL params (e.g. from gap email)
+  useEffect(() => {
+    if (!myEmployee?.id) return;
+    const correction = searchParams.get("correction");
+    const tab = searchParams.get("tab");
+    const date = searchParams.get("date");
+    if (tab === "attendance") setActiveTab("attendance");
+    if (correction === "open") {
+      if (date) setCorrectionInitialDate(date);
+      setCorrectionOpen(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete("correction");
+      next.delete("date");
+      setSearchParams(next, { replace: true });
+    }
+  }, [myEmployee?.id, searchParams, setSearchParams]);
 
   // Prefixes considered "digital" (shown in הרשאות ומערכות section instead of ציוד פיזי)
   const DIGITAL_PREFIXES = ["DACC", "SFT"];
@@ -841,10 +860,12 @@ export default function EmployeePortal() {
           />
           <AttendanceCorrectionDialog
             open={correctionOpen}
-            onClose={() => setCorrectionOpen(false)}
+            onClose={() => { setCorrectionOpen(false); setCorrectionInitialDate(undefined); }}
             employeeId={myEmployee.id}
             managerId={myEmployee.direct_manager_id ?? null}
             initiatedBy="employee"
+            initialDate={correctionInitialDate}
+            tracksAttendance={myEmployee.tracks_attendance !== false}
           />
         </>
       )}

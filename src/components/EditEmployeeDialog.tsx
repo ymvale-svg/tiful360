@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useUpdateEmployee } from "@/hooks/useMutations";
@@ -62,6 +63,10 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
         sub_employer_id: employee.sub_employer_id ?? "",
         exclude_from_contacts: !!employee.exclude_from_contacts,
         can_remote_punch: !!employee.can_remote_punch,
+        tracks_attendance: employee.tracks_attendance ?? true,
+        work_days: Array.isArray(employee.work_days) && employee.work_days.length
+          ? employee.work_days
+          : [0, 1, 2, 3, 4],
         birthday_calendar_preference: employee.birthday_calendar_preference ?? "gregorian",
         hebrew_birth_day: employee.hebrew_birth_day ?? "",
         hebrew_birth_month: employee.hebrew_birth_month ?? "",
@@ -375,6 +380,72 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
           <Label htmlFor="can_remote_punch" className="text-sm cursor-pointer">
             מורשה דיווח נוכחות מרחוק (עובד שטח)
           </Label>
+        </div>
+
+        <div className="mt-4 p-3 rounded-lg border border-border bg-muted/30 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1">
+              <Label htmlFor="tracks_attendance" className="text-sm font-medium cursor-pointer">
+                עובד מחתים נוכחות
+              </Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                כבה עבור פרילנסרים / בעלים / עובדים שאינם מחתימים. עובדים שאינם מחתימים לא ייכללו בדוח פערי הנוכחות.
+              </p>
+            </div>
+            <Switch
+              id="tracks_attendance"
+              checked={form.tracks_attendance !== false}
+              onCheckedChange={(v) => set("tracks_attendance", !!v)}
+            />
+          </div>
+
+          {form.tracks_attendance !== false && (
+            <div>
+              <Label className="text-sm font-medium block mb-2">ימי עבודה</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                ברירת מחדל: ראשון–חמישי. סמן את הימים שבהם העובד צפוי לעבוד.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { v: 0, l: "א׳" },
+                  { v: 1, l: "ב׳" },
+                  { v: 2, l: "ג׳" },
+                  { v: 3, l: "ד׳" },
+                  { v: 4, l: "ה׳" },
+                  { v: 5, l: "ו׳" },
+                  { v: 6, l: "ש׳" },
+                ].map((d) => {
+                  const checked = (form.work_days ?? []).includes(d.v);
+                  return (
+                    <label
+                      key={d.v}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border cursor-pointer text-sm transition-colors ${
+                        checked
+                          ? "bg-primary/10 border-primary/40 text-primary"
+                          : "bg-card border-border text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={(v) => {
+                          const cur: number[] = Array.isArray(form.work_days) ? [...form.work_days] : [];
+                          if (v) {
+                            if (!cur.includes(d.v)) cur.push(d.v);
+                          } else {
+                            const idx = cur.indexOf(d.v);
+                            if (idx >= 0) cur.splice(idx, 1);
+                          }
+                          cur.sort((a, b) => a - b);
+                          set("work_days", cur);
+                        }}
+                      />
+                      <span>{d.l}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2 pt-4">

@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { AlertCircle } from "lucide-react";
 import { useCreateAttendanceCorrection } from "@/hooks/useAttendanceCorrections";
 import { useToast } from "@/hooks/use-toast";
 
@@ -15,10 +16,14 @@ interface Props {
   initiatedBy: "employee" | "manager";
   initialDate?: string;
   autoApprove?: boolean;
+  tracksAttendance?: boolean;
 }
 
-export function AttendanceCorrectionDialog({ open, onClose, employeeId, managerId, initiatedBy, initialDate, autoApprove }: Props) {
+export function AttendanceCorrectionDialog({ open, onClose, employeeId, managerId, initiatedBy, initialDate, autoApprove, tracksAttendance = true }: Props) {
   const [date, setDate] = useState(initialDate || new Date().toISOString().slice(0, 10));
+  useEffect(() => {
+    if (open && initialDate) setDate(initialDate);
+  }, [open, initialDate]);
   const [origIn, setOrigIn] = useState("");
   const [origOut, setOrigOut] = useState("");
   const [reqIn, setReqIn] = useState("");
@@ -60,40 +65,55 @@ export function AttendanceCorrectionDialog({ open, onClose, employeeId, managerI
         <DialogHeader>
           <DialogTitle>בקשת תיקון שעון נוכחות</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
-          <div>
-            <Label>תאריך</Label>
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        {!tracksAttendance ? (
+          <div className="py-6 text-center space-y-3">
+            <AlertCircle className="w-10 h-10 text-muted-foreground mx-auto" />
+            <p className="text-sm font-medium">עובד זה אינו מחתים נוכחות</p>
+            <p className="text-xs text-muted-foreground">
+              לא ניתן לשלוח בקשת תיקון. ניתן לעדכן את ההגדרה בתיק העובד.
+            </p>
+            <DialogFooter className="sm:justify-center">
+              <Button variant="outline" onClick={onClose}>סגירה</Button>
+            </DialogFooter>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>כניסה מקורית</Label>
-              <Input type="time" value={origIn} onChange={(e) => setOrigIn(e.target.value)} />
+        ) : (
+          <>
+            <div className="space-y-4">
+              <div>
+                <Label>תאריך</Label>
+                <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>כניסה מקורית</Label>
+                  <Input type="time" value={origIn} onChange={(e) => setOrigIn(e.target.value)} />
+                </div>
+                <div>
+                  <Label>יציאה מקורית</Label>
+                  <Input type="time" value={origOut} onChange={(e) => setOrigOut(e.target.value)} />
+                </div>
+                <div>
+                  <Label>כניסה מבוקשת</Label>
+                  <Input type="time" value={reqIn} onChange={(e) => setReqIn(e.target.value)} />
+                </div>
+                <div>
+                  <Label>יציאה מבוקשת</Label>
+                  <Input type="time" value={reqOut} onChange={(e) => setReqOut(e.target.value)} />
+                </div>
+              </div>
+              <div>
+                <Label>סיבה</Label>
+                <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="תאר/י בקצרה את הסיבה לתיקון" />
+              </div>
             </div>
-            <div>
-              <Label>יציאה מקורית</Label>
-              <Input type="time" value={origOut} onChange={(e) => setOrigOut(e.target.value)} />
-            </div>
-            <div>
-              <Label>כניסה מבוקשת</Label>
-              <Input type="time" value={reqIn} onChange={(e) => setReqIn(e.target.value)} />
-            </div>
-            <div>
-              <Label>יציאה מבוקשת</Label>
-              <Input type="time" value={reqOut} onChange={(e) => setReqOut(e.target.value)} />
-            </div>
-          </div>
-          <div>
-            <Label>סיבה</Label>
-            <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="תאר/י בקצרה את הסיבה לתיקון" />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>ביטול</Button>
-          <Button onClick={submit} disabled={create.isPending}>
-            {create.isPending ? "שולח..." : "שלח בקשה"}
-          </Button>
-        </DialogFooter>
+            <DialogFooter>
+              <Button variant="outline" onClick={onClose}>ביטול</Button>
+              <Button onClick={submit} disabled={create.isPending}>
+                {create.isPending ? "שולח..." : "שלח בקשה"}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -135,6 +135,11 @@ export default function AttendanceCorrections() {
                   </div>
                   {r.reason && <p className="text-xs text-muted-foreground mt-2 italic">"{r.reason}"</p>}
                   {r.manager_note && <p className="text-xs mt-1">הערת מנהל: {r.manager_note}</p>}
+                  {r.applied_at && (
+                    <span className="inline-flex items-center mt-2 text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                      הוחל על השכר
+                    </span>
+                  )}
                 </div>
                 {r.status === "pending" && canReview ? (
                   <Button size="sm" onClick={() => setReviewing(r)}>סקירה</Button>
