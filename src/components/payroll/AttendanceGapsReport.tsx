@@ -8,8 +8,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useCompany } from "@/hooks/useCompany";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, Send, AlertCircle, FileSpreadsheet } from "lucide-react";
+import { Mail, Send, AlertCircle, FileSpreadsheet, ChevronDown, ChevronUp } from "lucide-react";
 import { exportToExcel } from "@/lib/exportExcel";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const WEEKDAYS = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
 
