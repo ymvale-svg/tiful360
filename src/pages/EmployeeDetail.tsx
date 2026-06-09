@@ -93,6 +93,7 @@ export default function EmployeeDetail() {
   const qc = useQueryClient();
   const canEditRemotePunch = isSuperAdmin || isAdmin || isPayroll || isOperations || isFinance;
   const [savingRemote, setSavingRemote] = useState(false);
+  const [savingAttendance, setSavingAttendance] = useState(false);
 
   const handleToggleRemotePunch = async (value: boolean) => {
     if (!id) return;
@@ -110,6 +111,29 @@ export default function EmployeeDetail() {
     qc.invalidateQueries({ queryKey: ["employee", id] });
     qc.invalidateQueries({ queryKey: ["employees"] });
   };
+
+  const updateAttendanceFields = async (patch: { tracks_attendance?: boolean; work_days?: number[] }) => {
+    if (!id) return;
+    setSavingAttendance(true);
+    const { error } = await supabase.from("employees").update(patch as any).eq("id", id);
+    setSavingAttendance(false);
+    if (error) {
+      toast({ title: "שגיאה בעדכון נוכחות", description: error.message, variant: "destructive" });
+      return;
+    }
+    qc.invalidateQueries({ queryKey: ["employee", id] });
+    qc.invalidateQueries({ queryKey: ["employees"] });
+  };
+
+  const handleToggleTracks = (v: boolean) => updateAttendanceFields({ tracks_attendance: v });
+  const handleToggleWorkDay = (day: number) => {
+    const cur: number[] = Array.isArray((employee as any)?.work_days) ? [...(employee as any).work_days] : [0, 1, 2, 3, 4];
+    const idx = cur.indexOf(day);
+    if (idx >= 0) cur.splice(idx, 1); else cur.push(day);
+    cur.sort((a, b) => a - b);
+    updateAttendanceFields({ work_days: cur });
+  };
+
 
 
   const canSeePayslips =
