@@ -143,111 +143,119 @@ export function AttendanceGapsReport() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-yellow-600" />
-          דוח פערי החתמה
-          {byEmployee.length > 0 && (
-            <Badge variant="outline" className="font-mono">
-              {byEmployee.length} עובדים · {rows.length} ימים
-            </Badge>
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap gap-3 items-end mb-4">
-          <div>
-            <label className="text-xs text-muted-foreground">מתאריך</label>
-            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-40" />
-          </div>
-          <div>
-            <label className="text-xs text-muted-foreground">עד תאריך</label>
-            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-40" />
-          </div>
-          <Button variant="outline" size="sm" onClick={() => refetch()}>רענון</Button>
-          <Button variant="outline" size="sm" onClick={handleExport} disabled={!rows.length}>
-            <FileSpreadsheet className="w-4 h-4 ml-1" />ייצא לאקסל
-          </Button>
-          <div className="flex-1" />
-          <Button size="sm" onClick={sendBulk} disabled={sending || !allWithEmail.length}>
-            <Send className="w-4 h-4 ml-1" />
-            {selected.size
-              ? `שלח ל-${selected.size} עובדים נבחרים`
-              : `שלח לכל העובדים עם פערים (${allWithEmail.length})`}
-          </Button>
-        </div>
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger asChild>
+          <CardHeader className="cursor-pointer hover:bg-accent/30 transition-colors">
+            <CardTitle className="text-base flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-yellow-600" />
+              דוח פערי החתמה
+              {byEmployee.length > 0 && (
+                <Badge variant="outline" className="font-mono">
+                  {byEmployee.length} עובדים · {rows.length} ימים
+                </Badge>
+              )}
+              <div className="flex-1" />
+              {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </CardTitle>
+          </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent>
+            <div className="flex flex-wrap gap-3 items-end mb-4">
+              <div>
+                <label className="text-xs text-muted-foreground">מתאריך</label>
+                <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-40" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">עד תאריך</label>
+                <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-40" />
+              </div>
+              <Button variant="outline" size="sm" onClick={() => refetch()}>רענון</Button>
+              <Button variant="outline" size="sm" onClick={handleExport} disabled={!rows.length}>
+                <FileSpreadsheet className="w-4 h-4 ml-1" />ייצא לאקסל
+              </Button>
+              <div className="flex-1" />
+              <Button size="sm" onClick={sendBulk} disabled={sending || !allWithEmail.length}>
+                <Send className="w-4 h-4 ml-1" />
+                {selected.size
+                  ? `שלח ל-${selected.size} עובדים נבחרים`
+                  : `שלח לכל העובדים עם פערים (${allWithEmail.length})`}
+              </Button>
+            </div>
 
-        {isLoading ? (
-          <div className="py-12 text-center text-muted-foreground">טוען…</div>
-        ) : byEmployee.length === 0 ? (
-          <div className="py-12 text-center text-muted-foreground">
-            לא נמצאו פערי החתמה בטווח הנבחר 🎉
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-xs text-muted-foreground border-b">
-                <tr>
-                  <th className="p-2 text-right w-8">
-                    <Checkbox
-                      checked={selected.size > 0 && selected.size === allWithEmail.length}
-                      onCheckedChange={toggleAll}
-                    />
-                  </th>
-                  <th className="p-2 text-right">עובד</th>
-                  <th className="p-2 text-right">אימייל</th>
-                  <th className="p-2 text-right">ימי פער</th>
-                  <th className="p-2 text-right">פירוט</th>
-                  <th className="p-2 text-right">פעולה</th>
-                </tr>
-              </thead>
-              <tbody>
-                {byEmployee.map(([empId, info]) => (
-                  <tr key={empId} className="border-b align-top hover:bg-muted/30">
-                    <td className="p-2">
-                      <Checkbox
-                        checked={selected.has(empId)}
-                        onCheckedChange={() => toggle(empId)}
-                        disabled={!info.email}
-                      />
-                    </td>
-                    <td className="p-2 font-medium">{info.full_name}</td>
-                    <td className="p-2 text-xs text-muted-foreground">{info.email ?? "—"}</td>
-                    <td className="p-2"><Badge variant="outline">{info.rows.length}</Badge></td>
-                    <td className="p-2">
-                      <div className="flex flex-wrap gap-1">
-                        {info.rows.map((r) => (
-                          <span
-                            key={r.gap_date}
-                            className={`px-2 py-0.5 rounded text-xs font-mono ${
-                              r.gap_type === "empty"
-                                ? "bg-destructive/10 text-destructive"
-                                : "bg-yellow-500/15 text-yellow-700 dark:text-yellow-300"
-                            }`}
-                            title={r.punch_times || "ללא החתמות"}
+            {isLoading ? (
+              <div className="py-12 text-center text-muted-foreground">טוען…</div>
+            ) : byEmployee.length === 0 ? (
+              <div className="py-12 text-center text-muted-foreground">
+                לא נמצאו פערי החתמה בטווח הנבחר 🎉
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-xs text-muted-foreground border-b">
+                    <tr>
+                      <th className="p-2 text-right w-8">
+                        <Checkbox
+                          checked={selected.size > 0 && selected.size === allWithEmail.length}
+                          onCheckedChange={toggleAll}
+                        />
+                      </th>
+                      <th className="p-2 text-right">עובד</th>
+                      <th className="p-2 text-right">אימייל</th>
+                      <th className="p-2 text-right">ימי פער</th>
+                      <th className="p-2 text-right">פירוט</th>
+                      <th className="p-2 text-right">פעולה</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {byEmployee.map(([empId, info]) => (
+                      <tr key={empId} className="border-b align-top hover:bg-muted/30">
+                        <td className="p-2">
+                          <Checkbox
+                            checked={selected.has(empId)}
+                            onCheckedChange={() => toggle(empId)}
+                            disabled={!info.email}
+                          />
+                        </td>
+                        <td className="p-2 font-medium">{info.full_name}</td>
+                        <td className="p-2 text-xs text-muted-foreground">{info.email ?? "—"}</td>
+                        <td className="p-2"><Badge variant="outline">{info.rows.length}</Badge></td>
+                        <td className="p-2">
+                          <div className="flex flex-wrap gap-1">
+                            {info.rows.map((r) => (
+                              <span
+                                key={r.gap_date}
+                                className={`px-2 py-0.5 rounded text-xs font-mono ${
+                                  r.gap_type === "empty"
+                                    ? "bg-destructive/10 text-destructive"
+                                    : "bg-yellow-500/15 text-yellow-700 dark:text-yellow-300"
+                                }`}
+                                title={r.punch_times || "ללא החתמות"}
+                              >
+                                {formatDateIL(r.gap_date)} {WEEKDAYS[new Date(r.gap_date).getDay()]}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="p-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={sending || !info.email}
+                            onClick={() => sendEmails([empId])}
                           >
-                            {formatDateIL(r.gap_date)} {WEEKDAYS[new Date(r.gap_date).getDay()]}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="p-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={sending || !info.email}
-                        onClick={() => sendEmails([empId])}
-                      >
-                        <Mail className="w-4 h-4 ml-1" />שלח
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </CardContent>
+                            <Mail className="w-4 h-4 ml-1" />שלח
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </CollapsibleContent>
+      </Collapsible>
     </Card>
   );
 }
