@@ -2726,6 +2726,10 @@ export type Database = {
           read_ct: number
         }[]
       }
+      set_company_attendance_auto_approve: {
+        Args: { _company_id: string; _value: boolean }
+        Returns: boolean
+      }
       set_employee_remote_punch: {
         Args: { _employee_id: string; _value: boolean }
         Returns: {
