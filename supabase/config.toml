@@ -21,3 +21,13 @@ project_id = "rhzmhiknbcipucfvgkok"
     verify_jwt = false
   [functions.tax-form-101-signed-url]
     verify_jwt = false
+  [functions.send-transactional-email]
+    verify_jwt = true
+  [functions.preview-transactional-email]
+    verify_jwt = false
+  [functions.handle-email-unsubscribe]
+    verify_jwt = false
+  [functions.handle-email-suppression]
+    verify_jwt = false
+  [functions.send-attendance-gaps]
+    verify_jwt = true

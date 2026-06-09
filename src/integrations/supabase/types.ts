@@ -579,6 +579,7 @@ export type Database = {
       }
       attendance_corrections: {
         Row: {
+          applied_at: string | null
           attachment_url: string | null
           attendance_record_id: string | null
           company_id: string
@@ -601,6 +602,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          applied_at?: string | null
           attachment_url?: string | null
           attendance_record_id?: string | null
           company_id: string
@@ -623,6 +625,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          applied_at?: string | null
           attachment_url?: string | null
           attendance_record_id?: string | null
           company_id?: string
@@ -805,6 +808,7 @@ export type Database = {
       }
       companies: {
         Row: {
+          attendance_corrections_auto_approve: boolean
           created_at: string
           created_by: string | null
           expiry_notification_emails: string | null
@@ -826,6 +830,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          attendance_corrections_auto_approve?: boolean
           created_at?: string
           created_by?: string | null
           expiry_notification_emails?: string | null
@@ -847,6 +852,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          attendance_corrections_auto_approve?: boolean
           created_at?: string
           created_by?: string | null
           expiry_notification_emails?: string | null
@@ -901,6 +907,38 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: []
+      }
+      company_holidays: {
+        Row: {
+          company_id: string
+          created_at: string
+          holiday_date: string
+          id: string
+          name: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          holiday_date: string
+          id?: string
+          name: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          holiday_date?: string
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_holidays_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       digital_access: {
         Row: {
@@ -1187,6 +1225,7 @@ export type Database = {
           sub_employer_id: string | null
           updated_at: string
           vacation_balance: number
+          work_days: number[]
         }
         Insert: {
           aliyah_date?: string | null
@@ -1229,6 +1268,7 @@ export type Database = {
           sub_employer_id?: string | null
           updated_at?: string
           vacation_balance?: number
+          work_days?: number[]
         }
         Update: {
           aliyah_date?: string | null
@@ -1271,6 +1311,7 @@ export type Database = {
           sub_employer_id?: string | null
           updated_at?: string
           vacation_balance?: number
+          work_days?: number[]
         }
         Relationships: [
           {
@@ -2376,6 +2417,10 @@ export type Database = {
       }
     }
     Functions: {
+      apply_attendance_correction: {
+        Args: { _correction_id: string }
+        Returns: undefined
+      }
       classify_existing_punches: {
         Args: { _company_id: string }
         Returns: number
@@ -2442,6 +2487,18 @@ export type Database = {
           count_hour: number
           count_today: number
           last_punch_at: string
+        }[]
+      }
+      get_attendance_gaps: {
+        Args: { _company_id: string; _from: string; _to: string }
+        Returns: {
+          email: string
+          employee_id: string
+          full_name: string
+          gap_date: string
+          gap_type: string
+          punch_count: number
+          punch_times: string
         }[]
       }
       get_company_birthdays: {
@@ -2709,6 +2766,7 @@ export type Database = {
           sub_employer_id: string | null
           updated_at: string
           vacation_balance: number
+          work_days: number[]
         }
         SetofOptions: {
           from: "*"
@@ -2863,6 +2921,7 @@ export type Database = {
           sub_employer_id: string | null
           updated_at: string
           vacation_balance: number
+          work_days: number[]
         }
         SetofOptions: {
           from: "*"

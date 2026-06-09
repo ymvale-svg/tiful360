@@ -13,10 +13,12 @@ interface Props {
   employeeId: string;
   managerId?: string | null;
   initiatedBy: "employee" | "manager";
+  initialDate?: string;
+  autoApprove?: boolean;
 }
 
-export function AttendanceCorrectionDialog({ open, onClose, employeeId, managerId, initiatedBy }: Props) {
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+export function AttendanceCorrectionDialog({ open, onClose, employeeId, managerId, initiatedBy, initialDate, autoApprove }: Props) {
+  const [date, setDate] = useState(initialDate || new Date().toISOString().slice(0, 10));
   const [origIn, setOrigIn] = useState("");
   const [origOut, setOrigOut] = useState("");
   const [reqIn, setReqIn] = useState("");
@@ -42,7 +44,9 @@ export function AttendanceCorrectionDialog({ open, onClose, employeeId, managerI
         reason,
         initiated_by: initiatedBy,
       });
-      toast({ title: "בקשת התיקון נשלחה" });
+      toast({
+        title: autoApprove ? "התיקון הוחל מיידית על דוח הנוכחות" : "בקשת התיקון נשלחה",
+      });
       onClose();
       setOrigIn(""); setOrigOut(""); setReqIn(""); setReqOut(""); setReason("");
     } catch (e: any) {
