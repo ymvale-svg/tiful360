@@ -70,6 +70,7 @@ def main():
     port = ask("Clock port", existing.get("CLOCK_PORT", "4370"))
     timezone = ask("Clock timezone", existing.get("CLOCK_TIMEZONE", "Asia/Jerusalem"))
     prefix = ask("Employee code prefix (optional)", existing.get("EMPLOYEE_CODE_PREFIX", ""))
+    min_punch_date = ask("Backfill from date/time (optional, e.g. 2026-06-07T00:00:00+03:00)", existing.get("MIN_PUNCH_DATE", ""))
     poll = ask("Poll interval seconds", existing.get("POLL_INTERVAL", "30"))
 
     lines = [
@@ -80,9 +81,10 @@ def main():
         f"CLOCK_PORT={port}",
         f"CLOCK_TIMEZONE={timezone}",
         f"EMPLOYEE_CODE_PREFIX={prefix}",
+        f"MIN_PUNCH_DATE={min_punch_date}",
         f"POLL_INTERVAL={poll}",
         f"HEARTBEAT_INTERVAL=60",
-        f"AGENT_VERSION=3.0.1",
+        f"AGENT_VERSION=3.0.2",
         "",
     ]
     ENV_PATH.write_text("\n".join(lines), encoding="utf-8")
