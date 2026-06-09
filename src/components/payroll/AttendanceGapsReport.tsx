@@ -46,6 +46,7 @@ export function AttendanceGapsReport() {
   const [to, setTo] = useState(initial.to);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sending, setSending] = useState(false);
+  const [open, setOpen] = useState(false);
 
   const { data: rows = [], isLoading, refetch } = useQuery<GapRow[]>({
     queryKey: ["attendance-gaps", activeCompanyId, from, to],
