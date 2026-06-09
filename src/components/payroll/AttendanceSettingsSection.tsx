@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { useCompany } from "@/hooks/useCompany";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Plus, CalendarDays, Settings } from "lucide-react";
+import { Trash2, Plus, CalendarDays, Settings, ChevronDown, ChevronUp } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 export function AttendanceSettingsSection() {
   const { activeCompanyId } = useCompany();
@@ -16,6 +17,7 @@ export function AttendanceSettingsSection() {
   const qc = useQueryClient();
   const [newDate, setNewDate] = useState("");
   const [newName, setNewName] = useState("");
+  const [holidaysOpen, setHolidaysOpen] = useState(false);
 
   const { data: company } = useQuery({
     queryKey: ["company-settings", activeCompanyId],
@@ -139,35 +141,54 @@ export function AttendanceSettingsSection() {
             </Button>
           </div>
 
-          {holidays.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">אין חגים מוגדרים.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-xs text-muted-foreground border-b">
-                  <tr>
-                    <th className="p-2 text-right">תאריך</th>
-                    <th className="p-2 text-right">שם</th>
-                    <th className="p-2 text-right w-12"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {holidays.map((h) => (
-                    <tr key={h.id} className="border-b">
-                      <td className="p-2 font-mono">{new Date(h.holiday_date).toLocaleDateString("en-GB")}</td>
-                      <td className="p-2">{h.name}</td>
-                      <td className="p-2">
-                        <Button size="icon" variant="ghost"
-                          onClick={() => removeHoliday.mutate(h.id)}>
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          {(() => {
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            const upcoming = holidays.filter((h) => new Date(h.holiday_date) >= today);
+            if (upcoming.length === 0) {
+              return <p className="text-sm text-muted-foreground text-center py-4">אין חגים קרובים מוגדרים.</p>;
+            }
+            return (
+              <Collapsible open={holidaysOpen} onOpenChange={setHolidaysOpen}>
+                <CollapsibleTrigger asChild>
+                  <button className="w-full flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors text-sm">
+                    <span className="flex items-center gap-2">
+                      <CalendarDays className="w-4 h-4 text-muted-foreground" />
+                      <span className="font-medium">חגים קרובים</span>
+                      <span className="text-xs text-muted-foreground">({upcoming.length})</span>
+                    </span>
+                    {holidaysOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-2">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="text-xs text-muted-foreground border-b">
+                        <tr>
+                          <th className="p-2 text-right">תאריך</th>
+                          <th className="p-2 text-right">שם</th>
+                          <th className="p-2 text-right w-12"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {upcoming.map((h) => (
+                          <tr key={h.id} className="border-b">
+                            <td className="p-2 font-mono">{new Date(h.holiday_date).toLocaleDateString("en-GB")}</td>
+                            <td className="p-2">{h.name}</td>
+                            <td className="p-2">
+                              <Button size="icon" variant="ghost"
+                                onClick={() => removeHoliday.mutate(h.id)}>
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            );
+          })()}
         </CardContent>
       </Card>
     </div>
