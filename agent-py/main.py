@@ -5,9 +5,10 @@ import logging.handlers
 import threading
 import time
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 import config
-from config import CLOCK_IP, CLOCK_PORT, POLL_INTERVAL, LOG_DIR, AGENT_VERSION, MIN_PUNCH_DATE, STATE_PATH
+from config import CLOCK_IP, CLOCK_PORT, POLL_INTERVAL, LOG_DIR, AGENT_VERSION, MIN_PUNCH_DATE, STATE_PATH, CLOCK_TIMEZONE
 from uploader import punch_to_payload, send_in_batches
 from heartbeat import start_loop as start_heartbeat
 import zk_client
@@ -24,11 +25,14 @@ def setup_logging():
 
 
 log = logging.getLogger("agent")
+CLOCK_TZ = ZoneInfo(CLOCK_TIMEZONE)
 
 
 def _as_aware(dt: datetime) -> datetime:
     if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
+        # ZKTeco clocks return local wall-clock time without timezone info.
+        # Treat it as the configured clock timezone, not UTC, otherwise Israel time is shifted by 3 hours.
+        return dt.replace(tzinfo=CLOCK_TZ)
     return dt
 
 
@@ -47,7 +51,7 @@ def load_last_punch_at() -> datetime | None:
 
 def save_last_punch_at(dt: datetime) -> None:
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=CLOCK_TZ)
     STATE_PATH.write_text(
         json.dumps({"last_punch_at": dt.isoformat()}),
         encoding="utf-8",
@@ -105,12 +109,12 @@ def main():
     # Seed state on first run so we ignore historical clock data.
     if MIN_PUNCH_DATE:
         try:
-            cutoff = datetime.fromisoformat(MIN_PUNCH_DATE)
+            cutoff = _as_aware(datetime.fromisoformat(MIN_PUNCH_DATE))
         except ValueError:
             log.warning(f"Invalid MIN_PUNCH_DATE={MIN_PUNCH_DATE!r}, falling back to now")
-            cutoff = datetime.now(timezone.utc)
+            cutoff = datetime.now(CLOCK_TZ)
     else:
-        cutoff = datetime.now(timezone.utc)
+        cutoff = datetime.now(CLOCK_TZ)
     seeded = ensure_initial_state(cutoff)
     log.info(
         f"Tiful360 Agent v{AGENT_VERSION} starting — clock={CLOCK_IP}:{CLOCK_PORT} "
