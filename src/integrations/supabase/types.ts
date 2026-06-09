@@ -1223,6 +1223,7 @@ export type Database = {
           status: Database["public"]["Enums"]["employee_status"]
           street: string | null
           sub_employer_id: string | null
+          tracks_attendance: boolean
           updated_at: string
           vacation_balance: number
           work_days: number[]
@@ -1266,6 +1267,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["employee_status"]
           street?: string | null
           sub_employer_id?: string | null
+          tracks_attendance?: boolean
           updated_at?: string
           vacation_balance?: number
           work_days?: number[]
@@ -1309,6 +1311,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["employee_status"]
           street?: string | null
           sub_employer_id?: string | null
+          tracks_attendance?: boolean
           updated_at?: string
           vacation_balance?: number
           work_days?: number[]
@@ -2764,6 +2767,7 @@ export type Database = {
           status: Database["public"]["Enums"]["employee_status"]
           street: string | null
           sub_employer_id: string | null
+          tracks_attendance: boolean
           updated_at: string
           vacation_balance: number
           work_days: number[]
@@ -2919,6 +2923,7 @@ export type Database = {
           status: Database["public"]["Enums"]["employee_status"]
           street: string | null
           sub_employer_id: string | null
+          tracks_attendance: boolean
           updated_at: string
           vacation_balance: number
           work_days: number[]
