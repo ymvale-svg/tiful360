@@ -11,7 +11,9 @@ const ERROR_MAP: { match: (s: string) => boolean; he: string }[] = [
   { match: (s) => /for security purposes.*60 seconds/i.test(s), he: "מטעמי אבטחה ניתן לבקש איפוס פעם ב-60 שניות בלבד" },
   { match: (s) => /too many requests/i.test(s) || /rate limit/i.test(s), he: "יותר מדי בקשות. נסה שוב מאוחר יותר" },
   { match: (s) => /user already registered/i.test(s), he: "משתמש זה כבר רשום במערכת" },
-  { match: (s) => /weak password/i.test(s), he: "הסיסמה חלשה מדי. בחר סיסמה חזקה יותר" },
+  { match: (s) => /weak password|password.*too weak/i.test(s), he: "הסיסמה חלשה מדי. בחר סיסמה חזקה יותר" },
+  { match: (s) => /same.?password|new password should be different|different from the old password/i.test(s), he: "הסיסמה החדשה זהה לסיסמה הקודמת. בחר סיסמה אחרת" },
+  { match: (s) => /pwned|compromised|hibp|has been (?:found|leaked)/i.test(s), he: "הסיסמה הזו דלפה במאגרי סיסמאות פרוצים. בחר סיסמה אחרת" },
   { match: (s) => /signup.*disabled/i.test(s), he: "הרשמה אינה מאופשרת כרגע" },
 
   // Google OAuth
