@@ -2730,6 +2730,10 @@ export type Database = {
         Args: { _company_id: string; _value: boolean }
         Returns: boolean
       }
+      set_company_routing_emails: {
+        Args: { _column: string; _company_id: string; _emails: string }
+        Returns: undefined
+      }
       set_employee_remote_punch: {
         Args: { _employee_id: string; _value: boolean }
         Returns: {
