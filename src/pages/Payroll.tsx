@@ -138,10 +138,11 @@ function PayrollSettingsTab() {
       const invalid = emailsList.filter((e) => !/^\S+@\S+\.\S+$/.test(e));
       if (invalid.length > 0) throw new Error(`כתובות לא תקינות: ${invalid.join(", ")}`);
 
-      const { error } = await supabase
-        .from("companies")
-        .update({ payroll_emails: emailsList.length > 0 ? emailsList.join(",") : null })
-        .eq("id", activeCompanyId);
+      const { error } = await supabase.rpc("set_company_routing_emails", {
+        _company_id: activeCompanyId,
+        _column: "payroll_emails",
+        _emails: emailsList.length > 0 ? emailsList.join(",") : "",
+      });
       if (error) throw error;
     },
     onSuccess: () => {
