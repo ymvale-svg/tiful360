@@ -30,10 +30,11 @@ function EmailsSettings({
   const updateMutation = useMutation({
     mutationFn: async () => {
       if (!activeCompanyId) throw new Error("לא נבחרה חברה");
-      const { error } = await supabase
-        .from("companies")
-        .update({ [columnKey]: emails || null } as any)
-        .eq("id", activeCompanyId);
+      const { error } = await supabase.rpc("set_company_routing_emails", {
+        _company_id: activeCompanyId,
+        _column: columnKey,
+        _emails: emails || "",
+      });
       if (error) throw error;
     },
     onSuccess: () => {
