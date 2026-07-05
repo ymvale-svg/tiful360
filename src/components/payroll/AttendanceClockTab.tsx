@@ -67,10 +67,8 @@ export function AttendanceClockTab() {
       <ReclassifyButton />
 
       {/* Health widget */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <StatCard icon={<Clock4 className="w-4 h-4" />} label="פעימות החודש" value={stats.data?.total ?? 0} />
-        <StatCard icon={<Clock4 className="w-4 h-4" />} label="ממתינות לאישור" value={stats.data?.pending ?? 0} />
-        <StatCard icon={<Check className="w-4 h-4" />} label="אושרו" value={stats.data?.approved ?? 0} />
         <StatCard
           icon={<AlertTriangle className="w-4 h-4" />}
           label="פאנץ' אחרון"
