@@ -17,7 +17,9 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Check, X, Clock4, AlertTriangle, UserPlus2 } from "lucide-react";
+import { Check, X, Clock4, AlertTriangle, UserPlus2, LogIn, LogOut, Pencil, HelpCircle } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
 import { AttendanceFlowIndicator } from "./AttendanceFlowIndicator";
 import { AttendanceGapsReport } from "./AttendanceGapsReport";
 import { AttendanceSettingsSection } from "./AttendanceSettingsSection";
@@ -385,80 +387,112 @@ function PunchChip({ punch }: { punch: AttendancePunch }) {
   const updatePunch = useUpdatePunch();
   const adminEdit = useAdminEditPunchTime();
   const { toast } = useToast();
-  const [editing, setEditing] = useState(false);
+  const [open, setOpen] = useState(false);
   const [timeVal, setTimeVal] = useState("");
+  const [dirVal, setDirVal] = useState<AttendancePunch["direction"]>(punch.direction);
+  const [saving, setSaving] = useState(false);
 
-  const cycleDir = () => {
-    const next = punch.direction === "in" ? "out" : punch.direction === "out" ? "unknown" : "in";
-    updatePunch.mutate({ id: punch.id, patch: { direction: next } });
-  };
-  const color = punch.direction === "in" ? "bg-green-500/15 text-green-700 dark:text-green-300"
-              : punch.direction === "out" ? "bg-red-500/15 text-red-700 dark:text-red-300"
-              : "bg-muted text-muted-foreground";
-  const wasEdited = !!(punch as any).edited_at;
+  const originalTime = new Date(punch.punch_at).toTimeString().slice(0, 5);
 
-  const startEdit = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const d = new Date(punch.punch_at);
-    setTimeVal(d.toTimeString().slice(0, 5));
-    setEditing(true);
+  const openPopover = () => {
+    setTimeVal(originalTime);
+    setDirVal(punch.direction);
+    setOpen(true);
   };
-  const saveEdit = async () => {
-    if (!timeVal) { setEditing(false); return; }
-    const d = new Date(punch.punch_at);
-    const [h, m] = timeVal.split(":").map(Number);
-    d.setHours(h, m, 0, 0);
+
+  const save = async () => {
+    setSaving(true);
     try {
-      await adminEdit.mutateAsync({ id: punch.id, newPunchAt: d.toISOString() });
-      toast({ title: "השעה עודכנה" });
+      const timeChanged = timeVal && timeVal !== originalTime;
+      const dirChanged = dirVal !== punch.direction;
+      if (timeChanged) {
+        const d = new Date(punch.punch_at);
+        const [h, m] = timeVal.split(":").map(Number);
+        d.setHours(h, m, 0, 0);
+        await adminEdit.mutateAsync({ id: punch.id, newPunchAt: d.toISOString() });
+      }
+      if (dirChanged) {
+        await updatePunch.mutateAsync({ id: punch.id, patch: { direction: dirVal } });
+      }
+      if (timeChanged || dirChanged) toast({ title: "הפעימה עודכנה" });
+      setOpen(false);
     } catch (err: any) {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
     }
-    setEditing(false);
   };
 
-  if (editing) {
-    return (
-      <span className={`px-2 py-0.5 rounded text-xs font-mono ${color} inline-flex items-center gap-1`}>
-        <input
-          type="time"
-          autoFocus
-          value={timeVal}
-          onChange={(e) => setTimeVal(e.target.value)}
-          onBlur={saveEdit}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") saveEdit();
-            if (e.key === "Escape") setEditing(false);
-          }}
-          className="bg-transparent w-16 outline-none border-b border-current"
-        />
-        <span>{DIR_LABEL[punch.direction]}</span>
-      </span>
-    );
-  }
+  const color = punch.direction === "in"
+    ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/25"
+    : punch.direction === "out"
+    ? "bg-rose-500/15 text-rose-700 dark:text-rose-300 hover:bg-rose-500/25"
+    : "bg-muted text-muted-foreground hover:bg-muted/80";
+  const DirIcon = punch.direction === "in" ? LogIn : punch.direction === "out" ? LogOut : HelpCircle;
+  const wasEdited = !!(punch as any).edited_at;
 
   return (
-    <span className={`px-2 py-0.5 rounded text-xs font-mono ${color} inline-flex items-center gap-1 group`}>
-      <button
-        type="button"
-        onClick={startEdit}
-        title="לחץ לעריכת שעה"
-        className="hover:underline"
-      >
-        {formatTime(punch.punch_at)}
-      </button>
-      <button
-        type="button"
-        onClick={cycleDir}
-        title="לחץ להחלפת כיוון"
-        className="hover:underline"
-      >
-        {DIR_LABEL[punch.direction]}
-      </button>
-      {wasEdited && <span title="נערך ידנית" className="text-[9px] opacity-70">✎</span>}
-    </span>
+    <Popover open={open} onOpenChange={(o) => (o ? openPopover() : setOpen(false))}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={`px-2 py-0.5 rounded text-xs font-mono inline-flex items-center gap-1 transition-colors ${color}`}
+          title="לחץ לעריכה"
+        >
+          <DirIcon className="w-3 h-3" aria-hidden="true" />
+          <span>{formatTime(punch.punch_at)}</span>
+          {wasEdited && <Pencil className="w-2.5 h-2.5 opacity-60" aria-label="נערך ידנית" />}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 p-3" align="start" dir="rtl">
+        <div className="space-y-3">
+          <div>
+            <label className="text-[11px] text-muted-foreground block mb-1">שעה</label>
+            <Input
+              type="time"
+              value={timeVal}
+              onChange={(e) => setTimeVal(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") save(); }}
+              autoFocus
+              className="h-9"
+            />
+          </div>
+          <div>
+            <label className="text-[11px] text-muted-foreground block mb-1.5">כיוון</label>
+            <div className="grid grid-cols-3 gap-1">
+              {([
+                { v: "in" as const, label: "כניסה", Icon: LogIn, active: "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40" },
+                { v: "out" as const, label: "יציאה", Icon: LogOut, active: "bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/40" },
+                { v: "unknown" as const, label: "לא ידוע", Icon: HelpCircle, active: "bg-muted-foreground/20 text-foreground border-muted-foreground/40" },
+              ] as const).map(({ v, label, Icon, active }) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setDirVal(v)}
+                  className={`h-8 rounded-md border text-[11px] font-medium inline-flex items-center justify-center gap-1 transition-colors ${
+                    dirVal === v ? active : "border-border text-muted-foreground hover:bg-accent"
+                  }`}
+                >
+                  <Icon className="w-3 h-3" />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center justify-end gap-2 pt-1">
+            <Button size="sm" variant="ghost" onClick={() => setOpen(false)} disabled={saving}>
+              <X className="w-3.5 h-3.5 ml-1" /> ביטול
+            </Button>
+            <Button size="sm" onClick={save} disabled={saving}>
+              <Check className="w-3.5 h-3.5 ml-1" /> {saving ? "שומר..." : "שמירה"}
+            </Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
+
 
 function ReclassifyButton() {
   const { activeCompanyId } = useCompany();
