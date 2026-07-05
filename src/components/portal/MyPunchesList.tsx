@@ -59,11 +59,11 @@ export function MyPunchesList({ punches, highlightDate }: Props) {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-2 text-[11px] text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
-        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-        <span>
-          לחץ על השעה לעריכה. תיקון אפשרי עד יום למחרת, ולאחר מכן{" "}
-          <span className="font-semibold text-foreground">{remaining}</span> תיקונים נותרים החודש.
+      <div className="flex items-start gap-2 text-[11px] text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
+        <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+        <span className="leading-relaxed">
+          לחץ על השעה לעריכה — השינוי נשמר <span className="font-semibold text-foreground">מיידית</span>, ללא צורך באישור.
+          {" "}נותרו לך <span className="font-semibold text-foreground">{remaining}</span> תיקונים החודש.
         </span>
       </div>
 
