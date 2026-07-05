@@ -298,7 +298,7 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
                 <th className="text-right p-2">כניסה</th>
                 <th className="text-right p-2">יציאה</th>
                 <th className="text-right p-2">סה"כ</th>
-                <th className="text-right p-2">סטטוס</th>
+                <th className="text-right p-2">מצב</th>
               </tr>
             </thead>
 
@@ -311,11 +311,7 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
                 const hours = firstIn && lastOut
                   ? ((new Date(lastOut).getTime() - new Date(firstIn).getTime()) / 3600000).toFixed(1)
                   : "—";
-                const dayStatus = items.every(p => p.status === "approved") ? "approved"
-                  : items.some(p => p.status === "rejected") ? "rejected"
-                  : "pending";
-
-
+                const missing = !firstIn || !lastOut;
 
                 return (
                   <tr key={day} className="border-t align-top">
@@ -330,7 +326,15 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
                     <td className="p-2 whitespace-nowrap">{firstIn ? formatTime(firstIn) : "—"}</td>
                     <td className="p-2 whitespace-nowrap">{lastOut ? formatTime(lastOut) : "—"}</td>
                     <td className="p-2">{hours}</td>
-                    <td className="p-2"><Badge variant={STATUS_VARIANT[dayStatus]}>{STATUS_LABEL[dayStatus]}</Badge></td>
+                    <td className="p-2">
+                      {missing ? (
+                        <Badge variant="outline" className="border-amber-500/50 text-amber-700 dark:text-amber-300 bg-amber-500/10">
+                          חסרה החתמה
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
