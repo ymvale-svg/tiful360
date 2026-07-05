@@ -17,7 +17,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Check, X, Clock4, AlertTriangle, UserPlus2, LogIn, LogOut, Pencil, HelpCircle } from "lucide-react";
+import { Check, X, Clock4, AlertTriangle, UserPlus2, ArrowRight, ArrowLeft, Pencil, HelpCircle } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 import { AttendanceFlowIndicator } from "./AttendanceFlowIndicator";
