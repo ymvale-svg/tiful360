@@ -340,27 +340,10 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
                     <td className="p-2 whitespace-nowrap">{lastOut ? formatTime(lastOut) : "—"}</td>
                     <td className="p-2">{hours}</td>
                     <td className="p-2"><Badge variant={STATUS_VARIANT[dayStatus]}>{STATUS_LABEL[dayStatus]}</Badge></td>
-                    <td className="p-2">
-                      <div className="flex gap-1">
-                        <Button size="sm" variant="ghost" disabled={pendingDayIds.length === 0}
-                          onClick={async () => {
-                            if (!confirm(`לאשר ${pendingDayIds.length} פעימות ביום זה?`)) return;
-                            await update.mutateAsync({ ids: pendingDayIds, status: "approved" });
-                          }}>
-                          <Check className="w-4 h-4" />
-                        </Button>
-                        <Button size="sm" variant="ghost"
-                          onClick={async () => {
-                            if (!confirm("לדחות את כל הפעימות ביום זה?")) return;
-                            await update.mutateAsync({ ids: dayIds, status: "rejected" });
-                          }}>
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </td>
                   </tr>
                 );
               })}
+
             </tbody>
           </table>
         </div>
