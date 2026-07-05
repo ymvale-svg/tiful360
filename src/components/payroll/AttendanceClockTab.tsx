@@ -290,25 +290,11 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
     );
   }
 
-  const pendingIds = punches.filter(p => p.status === "pending").map(p => p.id);
-
-  const bulkApprove = async () => {
-    if (pendingIds.length === 0) return;
-    if (!confirm(`לאשר ${pendingIds.length} פעימות?`)) return;
-    await update.mutateAsync({ ids: pendingIds, status: "approved" });
-    toast({ title: "הפעימות אושרו" });
-  };
-
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base flex items-center justify-between">
-          <span>פעימות חודשיות — {byDay.length} ימים, {totalHours.toFixed(1)} שעות</span>
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={bulkApprove} disabled={pendingIds.length === 0}>
-              <Check className="w-4 h-4" /> אשר את כל הממתינות ({pendingIds.length})
-            </Button>
-          </div>
+        <CardTitle className="text-base">
+          פעימות חודשיות — {byDay.length} ימים, {totalHours.toFixed(1)} שעות
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -322,9 +308,9 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
                 <th className="text-right p-2">יציאה</th>
                 <th className="text-right p-2">סה"כ</th>
                 <th className="text-right p-2">סטטוס</th>
-                <th className="text-right p-2">פעולות</th>
               </tr>
             </thead>
+
             <tbody>
               {byDay.map(([day, items]) => {
                 const ins = items.filter(p => p.direction === "in");
