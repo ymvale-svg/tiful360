@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, LogIn, LogOut, Pencil, Check, X, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useEditOwnPunchTime, useMySelfEditCount, type AttendancePunch } from "@/hooks/useAttendancePunches";
 import { useToast } from "@/hooks/use-toast";
 
@@ -31,7 +33,6 @@ export function MyPunchesList({ punches, highlightDate }: Props) {
     byDay.get(day)!.push(p);
   }
 
-  // Convert YYYY-MM-DD → DD/MM/YYYY to match the map keys
   const highlightKey = highlightDate
     ? (() => { const [y, m, d] = highlightDate.split("-"); return `${d}/${m}/${y}`; })()
     : undefined;
@@ -41,6 +42,8 @@ export function MyPunchesList({ punches, highlightDate }: Props) {
       highlightRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [highlightKey]);
+
+  const remaining = Math.max(0, 3 - selfEditCount);
 
   const save = async (id: string, iso: string, newTime: string) => {
     const d = new Date(iso);
@@ -56,12 +59,13 @@ export function MyPunchesList({ punches, highlightDate }: Props) {
 
   return (
     <div className="space-y-2">
-      {selfEditCount > 0 && (
-        <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-          <AlertCircle className="w-3 h-3" />
-          ניצלת {selfEditCount} מתוך 3 תיקוני נוכחות עצמיים החודש.
-        </p>
-      )}
+      <div className="flex items-center gap-2 text-[11px] text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
+        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+        <span>
+          לחץ על השעה לעריכה. תיקון אפשרי עד יום למחרת, ולאחר מכן{" "}
+          <span className="font-semibold text-foreground">{remaining}</span> תיקונים נותרים החודש.
+        </span>
+      </div>
 
       {Array.from(byDay.entries()).map(([day, items]) => {
         const sorted = [...items].sort((a, b) => a.punch_at.localeCompare(b.punch_at));
@@ -77,40 +81,66 @@ export function MyPunchesList({ punches, highlightDate }: Props) {
           : "—";
         const isRemote = sorted.some((p) => p.source === "portal_remote");
         const isHighlighted = day === highlightKey;
+        const missingIn = !firstIn;
+        const missingOut = !lastOut;
+        const hasMissing = missingIn || missingOut;
+
         return (
           <div
             key={day}
             ref={isHighlighted ? highlightRef : undefined}
             className={cn(
-              "bg-card rounded-xl border p-3 transition-colors",
-              isHighlighted ? "border-primary ring-2 ring-primary/30" : "border-border/50",
+              "bg-card rounded-xl border p-3 transition-all",
+              isHighlighted && "border-primary ring-2 ring-primary/30 shadow-sm",
+              !isHighlighted && hasMissing && "border-amber-500/40",
+              !isHighlighted && !hasMissing && "border-border/50",
             )}
           >
-
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">{day}</span>
-              <span className={cn(
-                "text-[11px] px-2 py-0.5 rounded-full font-medium",
-                isRemote ? "bg-accent text-accent-foreground" : "bg-primary/10 text-primary"
-              )}>
-                {isRemote ? "מרחוק 🖊️" : "שעון"}
-              </span>
+            <div className="flex items-center justify-between mb-2.5">
+              <span className="text-sm font-semibold">{day}</span>
+              <div className="flex items-center gap-1.5">
+                {hasMissing && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                    חסרה החתמה
+                  </span>
+                )}
+                <span className={cn(
+                  "text-[10px] px-2 py-0.5 rounded-full font-medium",
+                  isRemote ? "bg-accent text-accent-foreground" : "bg-primary/10 text-primary",
+                )}>
+                  {isRemote ? "מרחוק" : "שעון"}
+                </span>
+              </div>
             </div>
-            <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-              <span>
-                כניסה: {firstIn ? (
-                  <EditableTime punch={firstIn} colorClass="text-emerald-600 dark:text-emerald-400" onSave={save} />
-                ) : <span className="font-mono">—</span>}
+
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <PunchSlot
+                icon={<LogIn className="w-3.5 h-3.5" />}
+                label="כניסה"
+                punch={firstIn}
+                accent="emerald"
+                onSave={save}
+                pending={edit.isPending}
+              />
+              <PunchSlot
+                icon={<LogOut className="w-3.5 h-3.5" />}
+                label="יציאה"
+                punch={lastOut}
+                accent="rose"
+                onSave={save}
+                pending={edit.isPending}
+              />
+            </div>
+
+            <div className="flex items-center gap-3 text-[11px] text-muted-foreground border-t border-border/50 pt-2">
+              <span className="inline-flex items-center gap-1 font-medium text-foreground">
+                <Clock className="w-3 h-3" /> {hours} שעות
               </span>
-              <span>
-                יציאה: {lastOut ? (
-                  <EditableTime punch={lastOut} colorClass="text-rose-600 dark:text-rose-400" onSave={save} />
-                ) : <span className="font-mono">—</span>}
-              </span>
-              <span className="font-semibold text-foreground">{hours} שעות</span>
-              <span className="text-[10px]">({sorted.length} פעימות)</span>
+              <span>({sorted.length} פעימות)</span>
               {sorted.some((p: any) => p.edited_at) && (
-                <span className="text-[10px] text-primary" title="נערך ידנית">✎ נערך</span>
+                <span className="inline-flex items-center gap-1 text-primary" title="נערך ידנית">
+                  <Pencil className="w-2.5 h-2.5" /> נערך
+                </span>
               )}
             </div>
           </div>
@@ -120,44 +150,87 @@ export function MyPunchesList({ punches, highlightDate }: Props) {
   );
 }
 
-function EditableTime({
+function PunchSlot({
+  icon,
+  label,
   punch,
-  colorClass,
+  accent,
   onSave,
+  pending,
 }: {
-  punch: AttendancePunch;
-  colorClass: string;
-  onSave: (id: string, iso: string, newTime: string) => void;
+  icon: React.ReactNode;
+  label: string;
+  punch: AttendancePunch | undefined;
+  accent: "emerald" | "rose";
+  onSave: (id: string, iso: string, newTime: string) => Promise<void>;
+  pending: boolean;
 }) {
   const [editing, setEditing] = useState(false);
-  const timeStr = new Date(punch.punch_at).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
+  const timeStr = punch
+    ? new Date(punch.punch_at).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })
+    : "";
   const [val, setVal] = useState(timeStr);
 
-  if (editing) {
-    return (
-      <input
-        type="time"
-        autoFocus
-        value={val}
-        onChange={(e) => setVal(e.target.value)}
-        onBlur={() => { setEditing(false); if (val !== timeStr) onSave(punch.id, punch.punch_at, val); }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") { setEditing(false); if (val !== timeStr) onSave(punch.id, punch.punch_at, val); }
-          if (e.key === "Escape") { setEditing(false); setVal(timeStr); }
-        }}
-        className={cn("font-mono font-semibold bg-transparent border-b border-current outline-none w-16", colorClass)}
-      />
-    );
-  }
+  const accentClasses = accent === "emerald"
+    ? { chip: "bg-emerald-500/10 border-emerald-500/30", text: "text-emerald-700 dark:text-emerald-300", icon: "text-emerald-600 dark:text-emerald-400" }
+    : { chip: "bg-rose-500/10 border-rose-500/30", text: "text-rose-700 dark:text-rose-300", icon: "text-rose-600 dark:text-rose-400" };
+
+  const startEdit = () => {
+    setVal(timeStr || "09:00");
+    setEditing(true);
+  };
+  const cancel = () => { setEditing(false); setVal(timeStr); };
+  const submit = async () => {
+    if (!punch || !val || val === timeStr) { setEditing(false); return; }
+    await onSave(punch.id, punch.punch_at, val);
+    setEditing(false);
+  };
 
   return (
-    <button
-      type="button"
-      onClick={() => { setVal(timeStr); setEditing(true); }}
-      className={cn("font-mono font-semibold hover:underline", colorClass)}
-      title="לחץ לעריכה"
-    >
-      {timeStr}
-    </button>
+    <div className={cn(
+      "rounded-lg border px-2.5 py-2 flex items-center gap-2 min-w-0",
+      punch ? accentClasses.chip : "bg-muted/30 border-dashed border-border",
+    )}>
+      <span className={cn("shrink-0", punch ? accentClasses.icon : "text-muted-foreground")}>{icon}</span>
+      <div className="flex-1 min-w-0">
+        <div className="text-[10px] text-muted-foreground leading-none mb-1">{label}</div>
+        {editing ? (
+          <div className="flex items-center gap-1">
+            <Input
+              type="time"
+              autoFocus
+              value={val}
+              onChange={(e) => setVal(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submit();
+                if (e.key === "Escape") cancel();
+              }}
+              className="h-7 px-1.5 text-xs font-mono w-[92px]"
+            />
+            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={submit} disabled={pending} aria-label="שמור">
+              <Check className="w-3.5 h-3.5 text-emerald-600" />
+            </Button>
+            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={cancel} aria-label="ביטול">
+              <X className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        ) : punch ? (
+          <button
+            type="button"
+            onClick={startEdit}
+            className={cn(
+              "group inline-flex items-center gap-1 font-mono font-semibold text-sm hover:underline underline-offset-2",
+              accentClasses.text,
+            )}
+            title="לחץ לעריכה"
+          >
+            {timeStr}
+            <Pencil className="w-2.5 h-2.5 opacity-0 group-hover:opacity-70 transition-opacity" />
+          </button>
+        ) : (
+          <span className="font-mono text-sm text-muted-foreground">—</span>
+        )}
+      </div>
+    </div>
   );
 }
