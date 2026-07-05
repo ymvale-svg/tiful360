@@ -179,6 +179,48 @@ export function useUpdatePunch() {
   });
 }
 
+/** אדמין/חשב שכר — עריכת שעת פאנץ' דרך RPC (מסמן edited_by, מאושר אוטומטית) */
+export function useAdminEditPunchTime() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, newPunchAt }: { id: string; newPunchAt: string }) => {
+      const { error } = await supabase.rpc("admin_edit_punch_time" as any, {
+        _punch_id: id,
+        _new_punch_at: newPunchAt,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["attendance_punches"] }),
+  });
+}
+
+/** עובד — עריכת פאנץ' עצמי (מוגבל לפי כללי המערכת) */
+export function useEditOwnPunchTime() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, newPunchAt }: { id: string; newPunchAt: string }) => {
+      const { error } = await supabase.rpc("edit_own_punch_time" as any, {
+        _punch_id: id,
+        _new_punch_at: newPunchAt,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["attendance_punches"] }),
+  });
+}
+
+/** כמות תיקוני נוכחות עצמיים שהעובד ניצל החודש (מקסימום 3) */
+export function useMySelfEditCount() {
+  return useQuery({
+    queryKey: ["attendance_punches", "self_edit_count"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("my_self_edit_count_this_month" as any);
+      if (error) throw error;
+      return (data as number) ?? 0;
+    },
+  });
+}
+
 /** הפעימות של העובד הנוכחי (פורטל) */
 export function useMyPunches(employeeId: string | null | undefined, days = 30) {
   return useQuery({

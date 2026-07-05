@@ -7,6 +7,7 @@ import {
   useUpdatePunchStatus,
   useAssignPunchEmployee,
   useUpdatePunch,
+  useAdminEditPunchTime,
   type AttendancePunch,
 } from "@/hooks/useAttendancePunches";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -382,6 +383,11 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
 
 function PunchChip({ punch }: { punch: AttendancePunch }) {
   const updatePunch = useUpdatePunch();
+  const adminEdit = useAdminEditPunchTime();
+  const { toast } = useToast();
+  const [editing, setEditing] = useState(false);
+  const [timeVal, setTimeVal] = useState("");
+
   const cycleDir = () => {
     const next = punch.direction === "in" ? "out" : punch.direction === "out" ? "unknown" : "in";
     updatePunch.mutate({ id: punch.id, patch: { direction: next } });
@@ -389,15 +395,68 @@ function PunchChip({ punch }: { punch: AttendancePunch }) {
   const color = punch.direction === "in" ? "bg-green-500/15 text-green-700 dark:text-green-300"
               : punch.direction === "out" ? "bg-red-500/15 text-red-700 dark:text-red-300"
               : "bg-muted text-muted-foreground";
+  const wasEdited = !!(punch as any).edited_at;
+
+  const startEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const d = new Date(punch.punch_at);
+    setTimeVal(d.toTimeString().slice(0, 5));
+    setEditing(true);
+  };
+  const saveEdit = async () => {
+    if (!timeVal) { setEditing(false); return; }
+    const d = new Date(punch.punch_at);
+    const [h, m] = timeVal.split(":").map(Number);
+    d.setHours(h, m, 0, 0);
+    try {
+      await adminEdit.mutateAsync({ id: punch.id, newPunchAt: d.toISOString() });
+      toast({ title: "השעה עודכנה" });
+    } catch (err: any) {
+      toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+    }
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <span className={`px-2 py-0.5 rounded text-xs font-mono ${color} inline-flex items-center gap-1`}>
+        <input
+          type="time"
+          autoFocus
+          value={timeVal}
+          onChange={(e) => setTimeVal(e.target.value)}
+          onBlur={saveEdit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") saveEdit();
+            if (e.key === "Escape") setEditing(false);
+          }}
+          className="bg-transparent w-16 outline-none border-b border-current"
+        />
+        <span>{DIR_LABEL[punch.direction]}</span>
+      </span>
+    );
+  }
+
   return (
-    <button
-      type="button"
-      onClick={cycleDir}
-      title="לחץ להחלפת כיוון"
-      className={`px-2 py-0.5 rounded text-xs font-mono ${color}`}
-    >
-      {formatTime(punch.punch_at)} {DIR_LABEL[punch.direction]}
-    </button>
+    <span className={`px-2 py-0.5 rounded text-xs font-mono ${color} inline-flex items-center gap-1 group`}>
+      <button
+        type="button"
+        onClick={startEdit}
+        title="לחץ לעריכת שעה"
+        className="hover:underline"
+      >
+        {formatTime(punch.punch_at)}
+      </button>
+      <button
+        type="button"
+        onClick={cycleDir}
+        title="לחץ להחלפת כיוון"
+        className="hover:underline"
+      >
+        {DIR_LABEL[punch.direction]}
+      </button>
+      {wasEdited && <span title="נערך ידנית" className="text-[9px] opacity-70">✎</span>}
+    </span>
   );
 }
 

@@ -24,6 +24,7 @@ import { EmployeePayslipsTab } from "@/components/EmployeePayslipsTab";
 import { Tax101Banner } from "@/components/portal/Tax101Banner";
 import { MyTax101FormsList } from "@/components/portal/MyTax101FormsList";
 import { useMyPunches, useCreateRemotePunch } from "@/hooks/useAttendancePunches";
+import { MyPunchesList } from "@/components/portal/MyPunchesList";
 import { useToast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
 import { InstallAppBanner } from "@/components/InstallAppBanner";
@@ -648,59 +649,14 @@ export default function EmployeePortal() {
 
 
             {myEmployee && myPunches.length > 0 ? (
-              <div className="space-y-2">
-                {(() => {
-                  // Group punches by day
-                  const byDay = new Map<string, typeof myPunches>();
-                  for (const p of myPunches) {
-                    const day = new Date(p.punch_at).toLocaleDateString("en-GB");
-                    if (!byDay.has(day)) byDay.set(day, [] as any);
-                    byDay.get(day)!.push(p);
-                  }
-                  return Array.from(byDay.entries()).map(([day, items]) => {
-                    const sorted = [...items].sort((a, b) => a.punch_at.localeCompare(b.punch_at));
-                    const ins = sorted.filter((p) => p.direction === "in");
-                    const outs = sorted.filter((p) => p.direction === "out");
-                    const firstIn = ins[0]?.punch_at;
-                    const lastOut = outs[outs.length - 1]?.punch_at;
-                    const hours = firstIn && lastOut ? calcHours(
-                      new Date(firstIn).toTimeString().slice(0, 5),
-                      new Date(lastOut).toTimeString().slice(0, 5),
-                    ) : "—";
-                    const isRemote = sorted.some((p) => p.source === "portal_remote");
-                    return (
-                      <div key={day} className="bg-card rounded-xl border border-border/50 p-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium">{day}</span>
-                          <span className={cn(
-                            "text-[11px] px-2 py-0.5 rounded-full font-medium",
-                            isRemote ? "bg-accent text-accent-foreground" : "bg-primary/10 text-primary"
-                          )}>
-                            {isRemote ? "מרחוק 🖊️" : "שעון"}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                          <span>כניסה: <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">
-                            {firstIn ? new Date(firstIn).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" }) : "—"}
-                          </span></span>
-                          <span>יציאה: <span className="font-mono font-semibold text-rose-600 dark:text-rose-400">
-                            {lastOut ? new Date(lastOut).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" }) : "—"}
-                          </span></span>
-                          <span className="font-semibold text-foreground">{hours} שעות</span>
-                          <span className="text-[10px]">({sorted.length} פעימות)</span>
-                        </div>
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
+              <MyPunchesList punches={myPunches} />
             ) : myEmployee ? (
               <p className="text-center text-sm text-muted-foreground py-4">אין רשומות נוכחות</p>
             ) : null}
 
             <p className="text-[11px] text-muted-foreground flex items-center gap-1">
               <AlertCircle className="w-3 h-3" />
-              היומן מתעדכן אוטומטית מהשעון. לתיקון — שלח/י בקשת תיקון.
+              ניתן לתקן שעה ישירות בטבלה עד יום למחרת. בתוך אותו חודש — עד 3 תיקונים נוספים.
             </p>
           </div>
         )}
