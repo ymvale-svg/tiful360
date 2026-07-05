@@ -322,8 +322,8 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
                 const dayStatus = items.every(p => p.status === "approved") ? "approved"
                   : items.some(p => p.status === "rejected") ? "rejected"
                   : "pending";
-                const dayIds = items.map(p => p.id);
-                const pendingDayIds = items.filter(p => p.status === "pending").map(p => p.id);
+
+
 
                 return (
                   <tr key={day} className="border-t align-top">
