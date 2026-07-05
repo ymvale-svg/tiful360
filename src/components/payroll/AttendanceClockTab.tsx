@@ -252,9 +252,8 @@ function OrphansPanel({ punches, employees }: { punches: AttendancePunch[]; empl
 }
 
 function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]; loading: boolean }) {
-  const update = useUpdatePunchStatus();
-  const updatePunch = useUpdatePunch();
-  const { toast } = useToast();
+
+
 
   const byDay = useMemo(() => {
     const map = new Map<string, AttendancePunch[]>();
