@@ -28,12 +28,6 @@ import { supabase } from "@/integrations/supabase/client";
 
 const MONTHS = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
 
-const STATUS_LABEL: Record<string, string> = {
-  pending: "ממתין", approved: "מאושר", rejected: "נדחה",
-};
-const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  pending: "outline", approved: "default", rejected: "destructive",
-};
 const DIR_LABEL: Record<string, string> = { in: "כניסה", out: "יציאה", unknown: "—" };
 
 function formatTime(iso: string) {
