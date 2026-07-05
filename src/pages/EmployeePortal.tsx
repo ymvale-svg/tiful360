@@ -647,7 +647,7 @@ export default function EmployeePortal() {
 
 
             {myEmployee && myPunches.length > 0 ? (
-              <MyPunchesList punches={myPunches} />
+              <MyPunchesList punches={myPunches} highlightDate={searchParams.get("highlight") || undefined} />
             ) : myEmployee ? (
               <p className="text-center text-sm text-muted-foreground py-4">אין רשומות נוכחות</p>
             ) : null}
