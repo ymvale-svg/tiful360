@@ -83,22 +83,20 @@ export default function EmployeePortal() {
     enabled: !!activeCompanyId && !!user?.id,
   });
 
-  // Auto-open attendance correction dialog from URL params (e.g. from gap email)
+  // Handle deep-link from missing-punches email: switch to attendance tab and highlight the date
   useEffect(() => {
     if (!myEmployee?.id) return;
-    const correction = searchParams.get("correction");
     const tab = searchParams.get("tab");
-    const date = searchParams.get("date");
+    const legacyCorrection = searchParams.get("correction");
     if (tab === "attendance") setActiveTab("attendance");
-    if (correction === "open") {
-      if (date) setCorrectionInitialDate(date);
-      setCorrectionOpen(true);
+    // Backward-compat: strip old ?correction=open&date=... params without opening the dialog
+    if (legacyCorrection) {
       const next = new URLSearchParams(searchParams);
       next.delete("correction");
-      next.delete("date");
       setSearchParams(next, { replace: true });
     }
   }, [myEmployee?.id, searchParams, setSearchParams]);
+
 
   // Prefixes considered "digital" (shown in הרשאות ומערכות section instead of ציוד פיזי)
   const DIGITAL_PREFIXES = ["DACC", "SFT"];
@@ -649,7 +647,7 @@ export default function EmployeePortal() {
 
 
             {myEmployee && myPunches.length > 0 ? (
-              <MyPunchesList punches={myPunches} />
+              <MyPunchesList punches={myPunches} highlightDate={searchParams.get("highlight") || undefined} />
             ) : myEmployee ? (
               <p className="text-center text-sm text-muted-foreground py-4">אין רשומות נוכחות</p>
             ) : null}

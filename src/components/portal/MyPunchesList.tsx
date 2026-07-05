@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { AlertCircle } from "lucide-react";
 import { useEditOwnPunchTime, useMySelfEditCount, type AttendancePunch } from "@/hooks/useAttendancePunches";
@@ -14,12 +14,15 @@ function calcHours(inTime: string, outTime: string): string {
 
 interface Props {
   punches: AttendancePunch[];
+  /** YYYY-MM-DD — scrolls to and highlights that day (e.g. from missing-punches email link) */
+  highlightDate?: string;
 }
 
-export function MyPunchesList({ punches }: Props) {
+export function MyPunchesList({ punches, highlightDate }: Props) {
   const { data: selfEditCount = 0 } = useMySelfEditCount();
   const edit = useEditOwnPunchTime();
   const { toast } = useToast();
+  const highlightRef = useRef<HTMLDivElement | null>(null);
 
   const byDay = new Map<string, AttendancePunch[]>();
   for (const p of punches) {
@@ -27,6 +30,17 @@ export function MyPunchesList({ punches }: Props) {
     if (!byDay.has(day)) byDay.set(day, []);
     byDay.get(day)!.push(p);
   }
+
+  // Convert YYYY-MM-DD → DD/MM/YYYY to match the map keys
+  const highlightKey = highlightDate
+    ? (() => { const [y, m, d] = highlightDate.split("-"); return `${d}/${m}/${y}`; })()
+    : undefined;
+
+  useEffect(() => {
+    if (highlightKey && highlightRef.current) {
+      highlightRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [highlightKey]);
 
   const save = async (id: string, iso: string, newTime: string) => {
     const d = new Date(iso);
@@ -48,6 +62,7 @@ export function MyPunchesList({ punches }: Props) {
           ניצלת {selfEditCount} מתוך 3 תיקוני נוכחות עצמיים החודש.
         </p>
       )}
+
       {Array.from(byDay.entries()).map(([day, items]) => {
         const sorted = [...items].sort((a, b) => a.punch_at.localeCompare(b.punch_at));
         const ins = sorted.filter((p) => p.direction === "in");
@@ -61,8 +76,17 @@ export function MyPunchesList({ punches }: Props) {
             )
           : "—";
         const isRemote = sorted.some((p) => p.source === "portal_remote");
+        const isHighlighted = day === highlightKey;
         return (
-          <div key={day} className="bg-card rounded-xl border border-border/50 p-3">
+          <div
+            key={day}
+            ref={isHighlighted ? highlightRef : undefined}
+            className={cn(
+              "bg-card rounded-xl border p-3 transition-colors",
+              isHighlighted ? "border-primary ring-2 ring-primary/30" : "border-border/50",
+            )}
+          >
+
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium">{day}</span>
               <span className={cn(

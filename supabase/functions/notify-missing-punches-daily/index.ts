@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
     })
   }
 
-  const correctionUrl = `${APP_URL}/portal?tab=attendance&correction=open&date=${target}`
+  const correctionUrl = `${APP_URL}/portal?tab=attendance&highlight=${target}`
   let queued = 0
   let skipped_no_email = 0
   const errors: string[] = []
