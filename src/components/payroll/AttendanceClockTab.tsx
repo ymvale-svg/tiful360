@@ -17,7 +17,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Check, X, Clock4, AlertTriangle, UserPlus2, LogIn, LogOut, Pencil, HelpCircle } from "lucide-react";
+import { Check, X, Clock4, AlertTriangle, UserPlus2, ArrowRight, ArrowLeft, Pencil, HelpCircle } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 import { AttendanceFlowIndicator } from "./AttendanceFlowIndicator";
@@ -396,7 +396,7 @@ function PunchChip({ punch }: { punch: AttendancePunch }) {
     : punch.direction === "out"
     ? "bg-rose-500/15 text-rose-700 dark:text-rose-300 hover:bg-rose-500/25"
     : "bg-muted text-muted-foreground hover:bg-muted/80";
-  const DirIcon = punch.direction === "in" ? LogIn : punch.direction === "out" ? LogOut : HelpCircle;
+  const DirIcon = punch.direction === "in" ? ArrowRight : punch.direction === "out" ? ArrowLeft : HelpCircle;
   const wasEdited = !!(punch as any).edited_at;
 
   return (
@@ -429,8 +429,8 @@ function PunchChip({ punch }: { punch: AttendancePunch }) {
             <label className="text-[11px] text-muted-foreground block mb-1.5">כיוון</label>
             <div className="grid grid-cols-3 gap-1">
               {([
-                { v: "in" as const, label: "כניסה", Icon: LogIn, active: "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40" },
-                { v: "out" as const, label: "יציאה", Icon: LogOut, active: "bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/40" },
+                { v: "in" as const, label: "כניסה", Icon: ArrowRight, active: "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40" },
+                { v: "out" as const, label: "יציאה", Icon: ArrowLeft, active: "bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/40" },
                 { v: "unknown" as const, label: "לא ידוע", Icon: HelpCircle, active: "bg-muted-foreground/20 text-foreground border-muted-foreground/40" },
               ] as const).map(({ v, label, Icon, active }) => (
                 <button
