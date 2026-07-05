@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
-import { AlertCircle, LogIn, LogOut, Pencil, Check, X, Clock } from "lucide-react";
+import { AlertCircle, ArrowRight, ArrowLeft, Pencil, Check, X, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useEditOwnPunchTime, useMySelfEditCount, type AttendancePunch } from "@/hooks/useAttendancePunches";
@@ -115,7 +115,7 @@ export function MyPunchesList({ punches, highlightDate }: Props) {
 
             <div className="grid grid-cols-2 gap-2 mb-2">
               <PunchSlot
-                icon={<LogIn className="w-3.5 h-3.5" />}
+                icon={<ArrowRight className="w-3.5 h-3.5" />}
                 label="כניסה"
                 punch={firstIn}
                 accent="emerald"
@@ -123,7 +123,7 @@ export function MyPunchesList({ punches, highlightDate }: Props) {
                 pending={edit.isPending}
               />
               <PunchSlot
-                icon={<LogOut className="w-3.5 h-3.5" />}
+                icon={<ArrowLeft className="w-3.5 h-3.5" />}
                 label="יציאה"
                 punch={lastOut}
                 accent="rose"
