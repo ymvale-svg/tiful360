@@ -252,9 +252,8 @@ function OrphansPanel({ punches, employees }: { punches: AttendancePunch[]; empl
 }
 
 function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]; loading: boolean }) {
-  const update = useUpdatePunchStatus();
-  const updatePunch = useUpdatePunch();
-  const { toast } = useToast();
+
+
 
   const byDay = useMemo(() => {
     const map = new Map<string, AttendancePunch[]>();
@@ -290,25 +289,11 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
     );
   }
 
-  const pendingIds = punches.filter(p => p.status === "pending").map(p => p.id);
-
-  const bulkApprove = async () => {
-    if (pendingIds.length === 0) return;
-    if (!confirm(`לאשר ${pendingIds.length} פעימות?`)) return;
-    await update.mutateAsync({ ids: pendingIds, status: "approved" });
-    toast({ title: "הפעימות אושרו" });
-  };
-
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base flex items-center justify-between">
-          <span>פעימות חודשיות — {byDay.length} ימים, {totalHours.toFixed(1)} שעות</span>
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={bulkApprove} disabled={pendingIds.length === 0}>
-              <Check className="w-4 h-4" /> אשר את כל הממתינות ({pendingIds.length})
-            </Button>
-          </div>
+        <CardTitle className="text-base">
+          פעימות חודשיות — {byDay.length} ימים, {totalHours.toFixed(1)} שעות
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -322,9 +307,9 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
                 <th className="text-right p-2">יציאה</th>
                 <th className="text-right p-2">סה"כ</th>
                 <th className="text-right p-2">סטטוס</th>
-                <th className="text-right p-2">פעולות</th>
               </tr>
             </thead>
+
             <tbody>
               {byDay.map(([day, items]) => {
                 const ins = items.filter(p => p.direction === "in");
@@ -337,8 +322,8 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
                 const dayStatus = items.every(p => p.status === "approved") ? "approved"
                   : items.some(p => p.status === "rejected") ? "rejected"
                   : "pending";
-                const dayIds = items.map(p => p.id);
-                const pendingDayIds = items.filter(p => p.status === "pending").map(p => p.id);
+
+
 
                 return (
                   <tr key={day} className="border-t align-top">
@@ -354,27 +339,10 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
                     <td className="p-2 whitespace-nowrap">{lastOut ? formatTime(lastOut) : "—"}</td>
                     <td className="p-2">{hours}</td>
                     <td className="p-2"><Badge variant={STATUS_VARIANT[dayStatus]}>{STATUS_LABEL[dayStatus]}</Badge></td>
-                    <td className="p-2">
-                      <div className="flex gap-1">
-                        <Button size="sm" variant="ghost" disabled={pendingDayIds.length === 0}
-                          onClick={async () => {
-                            if (!confirm(`לאשר ${pendingDayIds.length} פעימות ביום זה?`)) return;
-                            await update.mutateAsync({ ids: pendingDayIds, status: "approved" });
-                          }}>
-                          <Check className="w-4 h-4" />
-                        </Button>
-                        <Button size="sm" variant="ghost"
-                          onClick={async () => {
-                            if (!confirm("לדחות את כל הפעימות ביום זה?")) return;
-                            await update.mutateAsync({ ids: dayIds, status: "rejected" });
-                          }}>
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </td>
                   </tr>
                 );
               })}
+
             </tbody>
           </table>
         </div>
