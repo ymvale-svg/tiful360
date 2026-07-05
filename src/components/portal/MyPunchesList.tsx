@@ -138,8 +138,8 @@ export function MyPunchesList({ punches, highlightDate }: Props) {
               </span>
               <span>({sorted.length} פעימות)</span>
               {sorted.some((p: any) => p.edited_at) && (
-                <span className="inline-flex items-center gap-1 text-primary" title="נערך ידנית">
-                  <Pencil className="w-2.5 h-2.5" /> נערך
+                <span className="inline-flex items-center gap-1 text-primary font-medium" title="נערך ידנית">
+                  <Pencil className="w-2.5 h-2.5" /> תוקן
                 </span>
               )}
             </div>
