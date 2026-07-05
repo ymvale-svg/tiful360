@@ -51,7 +51,7 @@ export function MyPunchesList({ punches, highlightDate }: Props) {
     d.setHours(h, m, 0, 0);
     try {
       await edit.mutateAsync({ id, newPunchAt: d.toISOString() });
-      toast({ title: "השעה עודכנה" });
+      toast({ title: "נשמר", description: "השעה עודכנה מיידית" });
     } catch (e: any) {
       toast({ title: "לא ניתן לתקן", description: e.message, variant: "destructive" });
     }
