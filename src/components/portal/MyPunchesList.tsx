@@ -76,8 +76,17 @@ export function MyPunchesList({ punches, highlightDate }: Props) {
             )
           : "—";
         const isRemote = sorted.some((p) => p.source === "portal_remote");
+        const isHighlighted = day === highlightKey;
         return (
-          <div key={day} className="bg-card rounded-xl border border-border/50 p-3">
+          <div
+            key={day}
+            ref={isHighlighted ? highlightRef : undefined}
+            className={cn(
+              "bg-card rounded-xl border p-3 transition-colors",
+              isHighlighted ? "border-primary ring-2 ring-primary/30" : "border-border/50",
+            )}
+          >
+
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium">{day}</span>
               <span className={cn(
