@@ -51,7 +51,7 @@ export function MyPunchesList({ punches, highlightDate }: Props) {
     d.setHours(h, m, 0, 0);
     try {
       await edit.mutateAsync({ id, newPunchAt: d.toISOString() });
-      toast({ title: "השעה עודכנה" });
+      toast({ title: "נשמר", description: "השעה עודכנה מיידית" });
     } catch (e: any) {
       toast({ title: "לא ניתן לתקן", description: e.message, variant: "destructive" });
     }
@@ -59,11 +59,11 @@ export function MyPunchesList({ punches, highlightDate }: Props) {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-2 text-[11px] text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
-        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-        <span>
-          לחץ על השעה לעריכה. תיקון אפשרי עד יום למחרת, ולאחר מכן{" "}
-          <span className="font-semibold text-foreground">{remaining}</span> תיקונים נותרים החודש.
+      <div className="flex items-start gap-2 text-[11px] text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
+        <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+        <span className="leading-relaxed">
+          לחץ על השעה לעריכה — השינוי נשמר <span className="font-semibold text-foreground">מיידית</span>, ללא צורך באישור.
+          {" "}נותרו לך <span className="font-semibold text-foreground">{remaining}</span> תיקונים החודש.
         </span>
       </div>
 
@@ -138,8 +138,8 @@ export function MyPunchesList({ punches, highlightDate }: Props) {
               </span>
               <span>({sorted.length} פעימות)</span>
               {sorted.some((p: any) => p.edited_at) && (
-                <span className="inline-flex items-center gap-1 text-primary" title="נערך ידנית">
-                  <Pencil className="w-2.5 h-2.5" /> נערך
+                <span className="inline-flex items-center gap-1 text-primary font-medium" title="נערך ידנית">
+                  <Pencil className="w-2.5 h-2.5" /> תוקן
                 </span>
               )}
             </div>
