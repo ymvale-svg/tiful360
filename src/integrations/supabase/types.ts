@@ -654,6 +654,8 @@ export type Database = {
           company_id: string
           created_at: string
           direction: string
+          edited_at: string | null
+          edited_by: string | null
           employee_code_raw: string
           employee_id: string | null
           id: string
@@ -668,6 +670,8 @@ export type Database = {
           company_id: string
           created_at?: string
           direction?: string
+          edited_at?: string | null
+          edited_by?: string | null
           employee_code_raw: string
           employee_id?: string | null
           id?: string
@@ -682,6 +686,8 @@ export type Database = {
           company_id?: string
           created_at?: string
           direction?: string
+          edited_at?: string | null
+          edited_by?: string | null
           employee_code_raw?: string
           employee_id?: string | null
           id?: string
@@ -2420,6 +2426,31 @@ export type Database = {
       }
     }
     Functions: {
+      admin_edit_punch_time: {
+        Args: { _new_punch_at: string; _punch_id: string }
+        Returns: {
+          company_id: string
+          created_at: string
+          direction: string
+          edited_at: string | null
+          edited_by: string | null
+          employee_code_raw: string
+          employee_id: string | null
+          id: string
+          processed_at: string | null
+          processed_by: string | null
+          punch_at: string
+          raw_payload: Json | null
+          source: string
+          status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "attendance_punches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       apply_attendance_correction: {
         Args: { _correction_id: string }
         Returns: undefined
@@ -2466,6 +2497,31 @@ export type Database = {
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
+      }
+      edit_own_punch_time: {
+        Args: { _new_punch_at: string; _punch_id: string }
+        Returns: {
+          company_id: string
+          created_at: string
+          direction: string
+          edited_at: string | null
+          edited_by: string | null
+          employee_code_raw: string
+          employee_id: string | null
+          id: string
+          processed_at: string | null
+          processed_by: string | null
+          punch_at: string
+          raw_payload: Json | null
+          source: string
+          status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "attendance_punches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       email_queue_dispatch: { Args: never; Returns: undefined }
       enqueue_email: {
@@ -2536,6 +2592,19 @@ export type Database = {
           it_emails: string
           operations_emails: string
           payroll_emails: string
+        }[]
+      }
+      get_daily_missing_punches: {
+        Args: { _target_date: string }
+        Returns: {
+          company_id: string
+          company_name: string
+          email: string
+          employee_id: string
+          full_name: string
+          gap_type: string
+          punch_count: number
+          punch_times: string
         }[]
       }
       get_employee_holdings: {
@@ -2719,6 +2788,7 @@ export type Database = {
         }
         Returns: number
       }
+      my_self_edit_count_this_month: { Args: never; Returns: number }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
