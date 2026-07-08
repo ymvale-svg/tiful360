@@ -853,6 +853,7 @@ export type Database = {
           git_enabled: boolean
           git_password_encrypted: string | null
           git_username: string | null
+          hr_emails: string | null
           id: string
           it_emails: string | null
           logo_url: string | null
@@ -875,6 +876,7 @@ export type Database = {
           git_enabled?: boolean
           git_password_encrypted?: string | null
           git_username?: string | null
+          hr_emails?: string | null
           id?: string
           it_emails?: string | null
           logo_url?: string | null
@@ -897,6 +899,7 @@ export type Database = {
           git_enabled?: boolean
           git_password_encrypted?: string | null
           git_username?: string | null
+          hr_emails?: string | null
           id?: string
           it_emails?: string | null
           logo_url?: string | null
@@ -2621,6 +2624,7 @@ export type Database = {
         Args: { _company_id: string }
         Returns: {
           expiry_notification_emails: string
+          hr_emails: string
           it_emails: string
           operations_emails: string
           payroll_emails: string
