@@ -328,19 +328,19 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
+        {/* Desktop / tablet-large: table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-xs text-muted-foreground">
               <tr>
                 <th className="text-right p-2">תאריך</th>
                 <th className="text-right p-2">פעימות</th>
-                <th className="text-right p-2">כניסה</th>
-                <th className="text-right p-2">יציאה</th>
+                <th className="text-right p-2 hidden lg:table-cell">כניסה</th>
+                <th className="text-right p-2 hidden lg:table-cell">יציאה</th>
                 <th className="text-right p-2">סה"כ</th>
                 <th className="text-right p-2">מצב</th>
               </tr>
             </thead>
-
             <tbody>
               {byDay.map(([day, items]) => {
                 const ins = items.filter(p => p.direction === "in");
@@ -351,23 +351,20 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
                   ? ((new Date(lastOut).getTime() - new Date(firstIn).getTime()) / 3600000).toFixed(1)
                   : "—";
                 const missing = !firstIn || !lastOut;
-
                 return (
                   <tr key={day} className="border-t align-top">
                     <td className="p-2 whitespace-nowrap">{new Date(day).toLocaleDateString("he-IL", { weekday: "short", day: "2-digit", month: "2-digit" })}</td>
                     <td className="p-2">
                       <div className="flex flex-wrap gap-1">
-                        {items.map(p => (
-                          <PunchChip key={p.id} punch={p} />
-                        ))}
+                        {items.map(p => (<PunchChip key={p.id} punch={p} />))}
                       </div>
                     </td>
-                    <td className="p-2 whitespace-nowrap">{firstIn ? formatTime(firstIn) : "—"}</td>
-                    <td className="p-2 whitespace-nowrap">{lastOut ? formatTime(lastOut) : "—"}</td>
-                    <td className="p-2">{hours}</td>
+                    <td className="p-2 whitespace-nowrap hidden lg:table-cell">{firstIn ? formatTime(firstIn) : "—"}</td>
+                    <td className="p-2 whitespace-nowrap hidden lg:table-cell">{lastOut ? formatTime(lastOut) : "—"}</td>
+                    <td className="p-2 whitespace-nowrap">{hours}</td>
                     <td className="p-2">
                       {missing ? (
-                        <Badge variant="outline" className="border-amber-500/50 text-amber-700 dark:text-amber-300 bg-amber-500/10">
+                        <Badge variant="outline" className="border-amber-500/50 text-amber-700 dark:text-amber-300 bg-amber-500/10 whitespace-nowrap">
                           חסרה החתמה
                         </Badge>
                       ) : (
@@ -377,9 +374,46 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
                   </tr>
                 );
               })}
-
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile: card list */}
+        <div className="md:hidden space-y-2">
+          {byDay.map(([day, items]) => {
+            const ins = items.filter(p => p.direction === "in");
+            const outs = items.filter(p => p.direction === "out");
+            const firstIn = ins[0]?.punch_at;
+            const lastOut = outs[outs.length - 1]?.punch_at;
+            const hours = firstIn && lastOut
+              ? ((new Date(lastOut).getTime() - new Date(firstIn).getTime()) / 3600000).toFixed(1)
+              : "—";
+            const missing = !firstIn || !lastOut;
+            return (
+              <div key={day} className="border rounded-lg p-3 bg-card space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold">
+                    {new Date(day).toLocaleDateString("he-IL", { weekday: "short", day: "2-digit", month: "2-digit" })}
+                  </span>
+                  {missing ? (
+                    <Badge variant="outline" className="border-amber-500/50 text-amber-700 dark:text-amber-300 bg-amber-500/10 text-[10px]">
+                      חסרה החתמה
+                    </Badge>
+                  ) : (
+                    <span className="text-xs font-medium">{hours} שעות</span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {items.map(p => (<PunchChip key={p.id} punch={p} />))}
+                </div>
+                {!missing && (
+                  <div className="text-[11px] text-muted-foreground pt-1 border-t border-border/50">
+                    {formatTime(firstIn!)} → {formatTime(lastOut!)} · {hours} שעות
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </CardContent>
     </Card>
