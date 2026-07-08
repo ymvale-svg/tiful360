@@ -572,36 +572,9 @@ export default function EmployeePortal() {
           <div role="tabpanel" id="portal-tabpanel-attendance" aria-labelledby="portal-tab-attendance" className="animate-fade-in space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="font-semibold text-sm">נוכחות</h2>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1 text-[11px]"
-                disabled={!myEmployee}
-                onClick={() => setCorrectionOpen(true)}
-              >
-                <AlertCircle className="w-3 h-3" />
-                בקשת תיקון
-              </Button>
             </div>
 
-            {myCorrections.length > 0 && (
-              <div className="bg-card rounded-xl border border-border/50 p-3 space-y-2">
-                <p className="text-xs font-semibold text-muted-foreground">בקשות תיקון אחרונות</p>
-                {myCorrections.slice(0, 3).map((c: any) => (
-                  <div key={c.id} className="flex items-center justify-between text-xs">
-                    <span>{new Date(c.correction_date).toLocaleDateString("en-GB")}</span>
-                    <span className={cn("px-2 py-0.5 rounded-full",
-                      c.status === "approved" ? "bg-success/15 text-success" :
-                      c.status === "rejected" ? "bg-destructive/15 text-destructive" :
-                      c.status === "pending" ? "bg-warning/15 text-warning" :
-                      "bg-muted text-muted-foreground"
-                    )}>
-                      {{ pending: "ממתין", approved: "אושר", rejected: "נדחה", cancelled: "בוטל" }[c.status as string]}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+
 
             {!myEmployee && (
               <p className="text-center text-sm text-muted-foreground py-4">
