@@ -109,3 +109,5 @@ const th = { textAlign: 'right' as const, padding: '10px 12px', backgroundColor:
 const td = { textAlign: 'right' as const, padding: '10px 12px', color: 'hsl(215, 15%, 30%)', borderBottom: '1px solid #f0f2f5' }
 const footer = { fontSize: '13px', color: '#888', margin: '0', textAlign: 'center' as const }
 const bottomFooter = { fontSize: '12px', color: '#b0b0b0', textAlign: 'center' as const, margin: '16px 0 0' }
+const buttonSection = { textAlign: 'center' as const, margin: '18px 0 8px' }
+const button = { backgroundColor: 'hsl(215, 90%, 42%)', color: '#ffffff', fontSize: '15px', fontWeight: '600' as const, borderRadius: '12px', padding: '12px 28px', textDecoration: 'none', display: 'inline-block' }
