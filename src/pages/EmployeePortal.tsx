@@ -781,15 +781,6 @@ export default function EmployeePortal() {
             employeeId={myEmployee.id}
             managerId={myEmployee.direct_manager_id ?? null}
           />
-          <AttendanceCorrectionDialog
-            open={correctionOpen}
-            onClose={() => { setCorrectionOpen(false); setCorrectionInitialDate(undefined); }}
-            employeeId={myEmployee.id}
-            managerId={myEmployee.direct_manager_id ?? null}
-            initiatedBy="employee"
-            initialDate={correctionInitialDate}
-            tracksAttendance={myEmployee.tracks_attendance !== false}
-          />
         </>
       )}
     </div>
