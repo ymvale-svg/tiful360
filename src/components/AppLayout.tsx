@@ -116,7 +116,7 @@ export function AppLayout() {
           </div>
         </header>
 
-        <main id="main-content" tabIndex={-1} className="p-3 sm:p-4 lg:p-6 focus:outline-none pb-24">
+        <main id="main-content" tabIndex={-1} className="p-3 sm:p-4 lg:p-6 focus:outline-none pb-24 max-w-full overflow-x-hidden">
           <Suspense fallback={null}>
             <Outlet />
           </Suspense>
