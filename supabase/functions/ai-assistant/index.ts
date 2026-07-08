@@ -54,7 +54,14 @@ const SCHEMA: TableDef[] = [
       { name: "is_israeli_resident", type: "boolean", desc: "תושב ישראל" },
       { name: "health_fund_member", type: "boolean", desc: "חבר קופ\"ח" },
     ],
-    writable: ["full_name", "email", "phone", "department", "role", "id_number", "employee_code", "start_date"],
+    writable: [
+      "full_name", "email", "phone", "department", "role", "id_number", "employee_code",
+      "start_date", "end_date", "status", "direct_manager_id", "sub_employer_id",
+      "birth_date", "gender", "city", "street", "house_number", "marital_status",
+      "is_israeli_resident", "health_fund_member", "vacation_balance", "sick_balance",
+      "tracks_attendance", "attendance_notifications_disabled", "can_remote_punch",
+      "exclude_from_contacts", "work_days",
+    ],
   },
   {
     table: "assets",
