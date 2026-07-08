@@ -758,6 +758,35 @@ export type Database = {
           },
         ]
       }
+      attendance_unmatched_alerts: {
+        Row: {
+          alert_date: string
+          company_id: string
+          employee_code_raw: string
+          sent_at: string
+        }
+        Insert: {
+          alert_date: string
+          company_id: string
+          employee_code_raw: string
+          sent_at?: string
+        }
+        Update: {
+          alert_date?: string
+          company_id?: string
+          employee_code_raw?: string
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_unmatched_alerts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       category_fields: {
         Row: {
           category_id: string
