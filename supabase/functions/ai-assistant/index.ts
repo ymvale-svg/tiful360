@@ -738,6 +738,17 @@ async function executeTool(name: string, args: any, supabase: any, companyId: st
       return error ? { error: error.message } : { success: true, row: data };
     }
 
+    if (name === "delete_row") {
+      const def = getTableDef(args?.table);
+      if (!def?.writable?.length) return { error: `אין הרשאה למחוק בטבלה ${args?.table}` };
+      if (!args?.id) return { error: "חסר id" };
+      let q = supabase.from(def.table).delete().eq("id", args.id);
+      if (def.requireCompany && companyId) q = q.eq("company_id", companyId);
+      const { error } = await q;
+      return error ? { error: error.message } : { success: true, id: args.id };
+    }
+
+
     if (name === "get_document_url") {
       const docId = String(args?.document_id ?? "").trim();
       if (!docId) return { error: "חסר document_id" };
