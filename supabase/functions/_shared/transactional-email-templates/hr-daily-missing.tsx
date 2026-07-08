@@ -17,7 +17,7 @@ interface Props {
   downloadUrl?: string
 }
 
-const Email = ({ recipientName = 'שלום', reportDate = '', employees = [], companyName }: Props) => (
+const Email = ({ recipientName = 'שלום', reportDate = '', employees = [], companyName, downloadUrl }: Props) => (
   <Html lang="he" dir="rtl">
     <Head><meta charSet="utf-8" /></Head>
     <Preview>דוח יומי — {employees.length} עובדים לא החתימו נוכחות היום</Preview>
