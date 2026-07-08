@@ -3086,6 +3086,7 @@ export type Database = {
         | "operations"
         | "finance"
         | "legal"
+        | "hr"
       asset_status: "in_use" | "in_stock" | "in_repair" | "lost"
       birthday_calendar_pref: "gregorian" | "hebrew"
       employee_status: "active" | "onboarding" | "leaving" | "inactive"
@@ -3244,6 +3245,7 @@ export const Constants = {
         "operations",
         "finance",
         "legal",
+        "hr",
       ],
       asset_status: ["in_use", "in_stock", "in_repair", "lost"],
       birthday_calendar_pref: ["gregorian", "hebrew"],

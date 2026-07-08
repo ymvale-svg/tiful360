@@ -70,8 +70,8 @@ const App = () => (
                   </ProtectedRoute>
                 }>
                   <Route path="/" element={<Dashboard />} />
-                  <Route path="/employees" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations", "payroll", "finance"]}><Employees /></ProtectedRoute>} />
-                  <Route path="/employees/:id" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations", "direct_manager", "payroll", "finance"]}><EmployeeDetail /></ProtectedRoute>} />
+                  <Route path="/employees" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations", "payroll", "hr", "finance"]}><Employees /></ProtectedRoute>} />
+                  <Route path="/employees/:id" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations", "direct_manager", "payroll", "hr", "finance"]}><EmployeeDetail /></ProtectedRoute>} />
                   <Route path="/assets" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin", "operations", "finance", "legal"]}><Assets /></ProtectedRoute>} />
                   <Route path="/assets/:domain/:itemId?" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin", "operations", "finance", "legal"]}><AssetsDomainPage /></ProtectedRoute>} />
 
@@ -80,10 +80,10 @@ const App = () => (
                   <Route path="/alerts" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin"]}><Alerts /></ProtectedRoute>} />
                   <Route path="/user-management" element={<Navigate to="/employees?tab=users" replace />} />
                   <Route path="/companies" element={<ProtectedRoute requiredRoles={["super_admin"]}><Companies /></ProtectedRoute>} />
-                  <Route path="/leave-requests" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "direct_manager", "payroll"]}><LeaveRequests /></ProtectedRoute>} />
-                  <Route path="/attendance-corrections" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "direct_manager", "payroll"]}><AttendanceCorrections /></ProtectedRoute>} />
-                  <Route path="/payroll" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "payroll", "finance"]}><Payroll /></ProtectedRoute>} />
-                  <Route path="/attendance-map" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "payroll", "direct_manager"]}><AttendanceMap /></ProtectedRoute>} />
+                  <Route path="/leave-requests" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "direct_manager", "payroll", "hr"]}><LeaveRequests /></ProtectedRoute>} />
+                  <Route path="/attendance-corrections" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "direct_manager", "payroll", "hr"]}><AttendanceCorrections /></ProtectedRoute>} />
+                  <Route path="/payroll" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "payroll", "hr", "finance"]}><Payroll /></ProtectedRoute>} />
+                  <Route path="/attendance-map" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "payroll", "hr", "direct_manager"]}><AttendanceMap /></ProtectedRoute>} />
                   <Route path="/settings" element={<ProtectedRoute requiredRoles={["admin", "super_admin"]}><Settings /></ProtectedRoute>} />
                 </Route>
                 <Route path="*" element={<NotFound />} />

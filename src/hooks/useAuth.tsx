@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode, useCallback 
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-export type AppRole = "admin" | "it_manager" | "employee" | "super_admin" | "direct_manager" | "payroll" | "operations" | "finance" | "legal";
+export type AppRole = "admin" | "it_manager" | "employee" | "super_admin" | "direct_manager" | "payroll" | "hr" | "operations" | "finance" | "legal";
 
 interface AuthContextType {
   session: Session | null;
@@ -16,6 +16,7 @@ interface AuthContextType {
   isSuperAdmin: boolean;
   isDirectManager: boolean;
   isPayroll: boolean;
+  isHR: boolean;
   isOperations: boolean;
   isFinance: boolean;
   isLegal: boolean;
@@ -34,6 +35,7 @@ const AuthContext = createContext<AuthContextType>({
   isSuperAdmin: false,
   isDirectManager: false,
   isPayroll: false,
+  isHR: false,
   isOperations: false,
   isFinance: false,
   isLegal: false,
@@ -97,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isSuperAdmin,
         isDirectManager: isSuperAdmin || roles.includes("direct_manager"),
         isPayroll: isSuperAdmin || roles.includes("payroll"),
+        isHR: isSuperAdmin || roles.includes("hr"),
         isOperations: isSuperAdmin || roles.includes("operations"),
         isFinance: isSuperAdmin || roles.includes("finance"),
         isLegal: isSuperAdmin || roles.includes("legal"),

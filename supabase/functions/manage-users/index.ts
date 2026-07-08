@@ -289,7 +289,7 @@ Deno.serve(async (req) => {
       const role: string = body.role;
       const company_ids: string[] = Array.isArray(body.company_ids) ? body.company_ids : [];
 
-      const allowedRoles = new Set(["admin", "it_manager", "payroll", "operations", "direct_manager", "finance", "legal"]);
+      const allowedRoles = new Set(["admin", "it_manager", "payroll", "hr", "operations", "direct_manager", "finance", "legal"]);
       if (!email || !role || !allowedRoles.has(role) || company_ids.length === 0) {
         return new Response(JSON.stringify({ error: "email, valid role, and at least one company required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
