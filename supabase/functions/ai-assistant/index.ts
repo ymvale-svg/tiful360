@@ -794,7 +794,26 @@ async function executeTool(name: string, args: any, supabase: any, companyId: st
       };
     }
 
+    if (name === "find_birthdays") {
+      if (!companyId) return { error: "לא נבחרה חברה" };
+      const fm = Number(args?.from_month), fd = Number(args?.from_day);
+      const tm = Number(args?.to_month), td = Number(args?.to_day);
+      if (![fm, fd, tm, td].every((n) => Number.isInteger(n))) {
+        return { error: "יש לספק from_month/from_day/to_month/to_day כמספרים שלמים" };
+      }
+      const { data, error } = await supabase.rpc("find_birthdays_by_range", {
+        _company_id: companyId,
+        _from_month: fm,
+        _from_day: fd,
+        _to_month: tm,
+        _to_day: td,
+      });
+      if (error) return { error: error.message };
+      return { count: data?.length ?? 0, results: data };
+    }
+
     return { error: `כלי לא ידוע: ${name}` };
+
 
   } catch (e: any) {
     return { error: e?.message ?? String(e) };
