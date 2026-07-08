@@ -35,6 +35,7 @@ const AuthContext = createContext<AuthContextType>({
   isSuperAdmin: false,
   isDirectManager: false,
   isPayroll: false,
+  isHR: false,
   isOperations: false,
   isFinance: false,
   isLegal: false,
