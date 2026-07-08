@@ -36,7 +36,7 @@ const ROLE_LABELS: Record<string, string> = {
   it_manager: "מנהל IT",
   operations: "עובד תפעול",
   direct_manager: "מנהל ישיר",
-  payroll: "חשב/ת שכר",
+  payroll: "משאבי אנוש / חשב/ת שכר",
   finance: "כספים",
   legal: "מחלקה משפטית",
   employee: "עובד",

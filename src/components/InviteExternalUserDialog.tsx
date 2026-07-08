@@ -19,7 +19,7 @@ interface Props {
 const ROLE_OPTIONS = [
   { value: "admin", label: "מנהל מערכת" },
   { value: "it_manager", label: "מנהל IT" },
-  { value: "payroll", label: "חשב/ת שכר" },
+  { value: "payroll", label: "משאבי אנוש / חשב/ת שכר" },
   { value: "operations", label: "עובד תפעול" },
   { value: "direct_manager", label: "מנהל ישיר" },
   { value: "finance", label: "כספים" },
