@@ -185,6 +185,7 @@ const SCHEMA: TableDef[] = [
       { name: "is_resolved", type: "boolean", desc: "האם טופל" },
       { name: "created_at", type: "timestamptz", desc: "מתי נוצרה" },
     ],
+    writable: ["title", "category", "severity", "target_date", "related_asset_id", "related_employee_id", "is_resolved"],
   },
   {
     table: "asset_documents",
