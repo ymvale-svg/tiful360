@@ -160,31 +160,73 @@ function PayrollSettingsTab() {
     return <div className="text-center py-8 text-muted-foreground">לא נבחרה חברה</div>;
   }
 
+  const runHrReport = async (fn: "send-hr-daily-missing" | "send-hr-weekly-gaps") => {
+    if (!activeCompanyId) return;
+    try {
+      const { data, error } = await supabase.functions.invoke(fn, {
+        body: { company_id: activeCompanyId },
+      });
+      if (error) throw error;
+      toast({
+        title: "הדוח נשלח",
+        description: `נשלחו ${data?.queued ?? 0} מיילים לנמעני משאבי אנוש.`,
+      });
+    } catch (e: any) {
+      toast({ title: "שגיאה בשליחת הדוח", description: e.message, variant: "destructive" });
+    }
+  };
+
   return (
-    <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 space-y-4 max-w-xl">
-      <div className="flex items-center gap-3 mb-2">
-        <Mail className="w-5 h-5 text-primary" />
-        <h3 className="font-semibold">כתובות אימייל מחלקת שכר</h3>
+    <div className="space-y-4 max-w-xl">
+      <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 space-y-4">
+        <div className="flex items-center gap-3 mb-2">
+          <Mail className="w-5 h-5 text-primary" />
+          <h3 className="font-semibold">כתובות אימייל משאבי אנוש</h3>
+        </div>
+        <div>
+          <label htmlFor="payroll-emails" className="text-sm font-medium mb-1.5 block">כתובות אימייל</label>
+          <input
+            id="payroll-emails"
+            type="text"
+            value={payrollEmails}
+            onChange={(e) => setPayrollEmails(e.target.value)}
+            placeholder="hr@company.com, payroll@company.com"
+            className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 font-mono"
+            dir="ltr"
+          />
+          <p className="text-[11px] text-muted-foreground mt-1">
+            ניתן להזין מספר כתובות מופרדות בפסיק. אישורי בקשות חופשה ומחלה יישלחו אוטומטית לכתובות אלו.
+          </p>
+        </div>
+        <Button className="gap-1.5" onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>
+          <Save className="w-4 h-4" />
+          {updateMutation.isPending ? "שומר..." : "שמור שינויים"}
+        </Button>
       </div>
-      <div>
-        <label htmlFor="payroll-emails" className="text-sm font-medium mb-1.5 block">כתובות אימייל</label>
-        <input
-          id="payroll-emails"
-          type="text"
-          value={payrollEmails}
-          onChange={(e) => setPayrollEmails(e.target.value)}
-          placeholder="payroll@company.com, hr@company.com"
-          className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 font-mono"
-          dir="ltr"
-        />
-        <p className="text-[11px] text-muted-foreground mt-1">
-          ניתן להזין מספר כתובות מופרדות בפסיק. אישורי בקשות חופשה ומחלה יישלחו אוטומטית לכתובות אלו.
+
+      <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 space-y-3">
+        <div className="flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-primary" />
+          <h3 className="font-semibold">דוחות משאבי אנוש</h3>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          דוחות אוטומטיים שנשלחים למשתמשי משאבי אנוש/חשבות שכר של החברה:
         </p>
+        <ul className="text-sm text-muted-foreground list-disc pr-5 space-y-1">
+          <li>יומי בשעה 12:00 — עובדים שלא החתימו היום ולא הגישו חופשה/מחלה מאושרת.</li>
+          <li>יום חמישי בשעה 14:00 — דוח אקסל של כלל החוסרים ב-7 הימים האחרונים.</li>
+        </ul>
+        <div className="flex flex-wrap gap-2 pt-2">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => runHrReport("send-hr-daily-missing")}>
+            <Mail className="w-4 h-4" />
+            שלח דוח יומי עכשיו
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => runHrReport("send-hr-weekly-gaps")}>
+            <FileText className="w-4 h-4" />
+            שלח דוח שבועי (אקסל) עכשיו
+          </Button>
+        </div>
       </div>
-      <Button className="gap-1.5" onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>
-        <Save className="w-4 h-4" />
-        {updateMutation.isPending ? "שומר..." : "שמור שינויים"}
-      </Button>
     </div>
   );
 }
