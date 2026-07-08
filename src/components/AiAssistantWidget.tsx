@@ -328,15 +328,27 @@ export function AiAssistantWidget() {
       {viewer && (
         <div
           dir="rtl"
-          style={{ left: viewerDrag.pos.x, top: viewerDrag.pos.y, width: VIEWER_W, height: VIEWER_H }}
-          className="fixed z-50 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-1rem)] bg-card border border-border rounded-xl shadow-2xl flex flex-col overflow-hidden"
+          style={
+            isMobile
+              ? undefined
+              : { left: viewerDrag.pos.x, top: viewerDrag.pos.y, width: VIEWER_W, height: VIEWER_H }
+          }
+          className={cn(
+            "fixed z-50 bg-card border border-border shadow-2xl flex flex-col overflow-hidden",
+            isMobile
+              ? "inset-2 rounded-2xl"
+              : "rounded-xl max-w-[calc(100vw-1rem)] max-h-[calc(100vh-1rem)]"
+          )}
         >
           <header
-            {...viewerDrag.handlers}
-            className="flex items-center justify-between px-3 py-2 border-b border-border bg-muted/40 cursor-move select-none touch-none"
+            {...(isMobile ? {} : viewerDrag.handlers)}
+            className={cn(
+              "flex items-center justify-between px-3 py-2 border-b border-border bg-muted/40 select-none",
+              isMobile ? "" : "cursor-move touch-none"
+            )}
           >
             <div className="flex items-center gap-2 min-w-0">
-              <GripHorizontal className="w-4 h-4 text-muted-foreground shrink-0" />
+              {!isMobile && <GripHorizontal className="w-4 h-4 text-muted-foreground shrink-0" />}
               <p className="text-sm font-semibold truncate">{viewer.name}</p>
             </div>
             <div className="flex items-center gap-1 shrink-0">
