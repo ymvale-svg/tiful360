@@ -251,6 +251,7 @@ function PayrollSettingsTab() {
           <li><strong>למשאבי אנוש</strong> — יומי בשעה 12:00: עובדים שלא החתימו היום ולא הגישו חופשה/מחלה (כולל קובץ Excel).</li>
           <li><strong>למשאבי אנוש</strong> — יום חמישי בשעה 14:00: קובץ Excel של כלל החוסרים ב-7 הימים האחרונים.</li>
           <li><strong>לחשבות שכר</strong> — יום חמישי בשעה 14:00: החתמות ללא שיוך לכרטיס עובד (מרוכז לכלל השבוע).</li>
+          <li><strong>לחשבות שכר</strong> — 1 בכל חודש בבוקר: קובץ Excel של כלל חוסרי ההחתמה של החודש הקודם.</li>
         </ul>
         <div className="flex flex-wrap gap-2 pt-2">
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => runReport("send-hr-daily-missing")}>
@@ -265,7 +266,12 @@ function PayrollSettingsTab() {
             <AlertCircle className="w-4 h-4" />
             שלח דוח החתמות ללא שיוך
           </Button>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => runReport("send-payroll-monthly-gaps")}>
+            <FileText className="w-4 h-4" />
+            שלח דוח חודשי לחשבות שכר
+          </Button>
         </div>
+
       </div>
     </div>
   );
