@@ -20,6 +20,7 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'hr-weekly-gaps': hrWeeklyGaps,
   'unmatched-punches': unmatchedPunches,
   'unmatched-punches-weekly': unmatchedPunchesWeekly,
+  'payroll-monthly-gaps': payrollMonthlyGaps,
 }
 
 
