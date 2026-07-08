@@ -57,7 +57,7 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 // Roles that operations users cannot grant or revoke
-const OPERATIONS_RESTRICTED_ROLES = new Set(["super_admin", "admin", "payroll"]);
+const OPERATIONS_RESTRICTED_ROLES = new Set(["super_admin", "admin", "payroll", "hr"]);
 
 async function fetchUsers(companyId: string | null): Promise<ManagedUser[]> {
   const { data: { session } } = await supabase.auth.getSession();
