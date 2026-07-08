@@ -168,6 +168,7 @@ const SCHEMA: TableDef[] = [
       { name: "reviewed_at", type: "timestamptz", desc: "מתי אושר/נדחה" },
       { name: "created_at", type: "timestamptz", desc: "מתי נוצרה הבקשה" },
     ],
+    writable: ["employee_id", "request_type", "start_date", "end_date", "total_days", "reason", "status", "manager_note"],
   },
   {
     table: "alerts",
