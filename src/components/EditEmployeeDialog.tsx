@@ -447,6 +447,24 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
               </div>
             </div>
           )}
+
+          {form.tracks_attendance !== false && (
+            <div className="flex items-center justify-between gap-3 pt-2 border-t border-border/60">
+              <div className="flex-1">
+                <Label htmlFor="attendance_notifications_disabled" className="text-sm font-medium cursor-pointer">
+                  השבת התראות אי-החתמה
+                </Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  הפעל עבור עובדים המחתימים באפליקציה חיצונית / מרחוק — לא יקבלו מייל יומי על החתמות חסרות.
+                </p>
+              </div>
+              <Switch
+                id="attendance_notifications_disabled"
+                checked={!!form.attendance_notifications_disabled}
+                onCheckedChange={(v) => set("attendance_notifications_disabled", !!v)}
+              />
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2 pt-4">
