@@ -170,7 +170,7 @@ function PayrollSettingsTab() {
     return <div className="text-center py-8 text-muted-foreground">לא נבחרה חברה</div>;
   }
 
-  const runReport = async (fn: "send-hr-daily-missing" | "send-hr-weekly-gaps" | "send-unmatched-weekly") => {
+  const runReport = async (fn: "send-hr-daily-missing" | "send-hr-weekly-gaps" | "send-unmatched-weekly" | "send-payroll-monthly-gaps") => {
     if (!activeCompanyId) return;
     try {
       const { data, error } = await supabase.functions.invoke(fn, {
@@ -205,8 +205,9 @@ function PayrollSettingsTab() {
             dir="ltr"
           />
           <p className="text-[11px] text-muted-foreground mt-1">
-            הדוחות היומי והשבועי של החתמות נוכחות יישלחו לכתובות אלו. אם אין ערך — הדוחות יישלחו לכתובות חשבות השכר.
+            הדוחות היומי והשבועי של החתמות נוכחות יישלחו לכתובות אלו בלבד. משאבי אנוש וחשבות שכר הם משתמשים נפרדים.
           </p>
+
         </div>
         <Button className="gap-1.5" onClick={() => updateHrMutation.mutate()} disabled={updateHrMutation.isPending}>
           <Save className="w-4 h-4" />
@@ -231,8 +232,9 @@ function PayrollSettingsTab() {
             dir="ltr"
           />
           <p className="text-[11px] text-muted-foreground mt-1">
-            אישורי חופשה/מחלה, טפסי 101 והדוח השבועי של החתמות ללא שיוך יישלחו לכתובות אלו.
+            אישורי חופשה/מחלה, טפסי 101, הדוח השבועי של החתמות ללא שיוך והדוח החודשי של כלל החוסרים יישלחו לכתובות אלו.
           </p>
+
         </div>
         <Button className="gap-1.5" onClick={() => updatePayrollMutation.mutate()} disabled={updatePayrollMutation.isPending}>
           <Save className="w-4 h-4" />
@@ -249,6 +251,7 @@ function PayrollSettingsTab() {
           <li><strong>למשאבי אנוש</strong> — יומי בשעה 12:00: עובדים שלא החתימו היום ולא הגישו חופשה/מחלה (כולל קובץ Excel).</li>
           <li><strong>למשאבי אנוש</strong> — יום חמישי בשעה 14:00: קובץ Excel של כלל החוסרים ב-7 הימים האחרונים.</li>
           <li><strong>לחשבות שכר</strong> — יום חמישי בשעה 14:00: החתמות ללא שיוך לכרטיס עובד (מרוכז לכלל השבוע).</li>
+          <li><strong>לחשבות שכר</strong> — 1 בכל חודש בבוקר: קובץ Excel של כלל חוסרי ההחתמה של החודש הקודם.</li>
         </ul>
         <div className="flex flex-wrap gap-2 pt-2">
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => runReport("send-hr-daily-missing")}>
@@ -263,7 +266,12 @@ function PayrollSettingsTab() {
             <AlertCircle className="w-4 h-4" />
             שלח דוח החתמות ללא שיוך
           </Button>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => runReport("send-payroll-monthly-gaps")}>
+            <FileText className="w-4 h-4" />
+            שלח דוח חודשי לחשבות שכר
+          </Button>
         </div>
+
       </div>
     </div>
   );

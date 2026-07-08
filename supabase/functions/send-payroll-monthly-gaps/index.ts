@@ -1,7 +1,7 @@
-// Weekly HR Excel report: for each company, generate an XLSX of all attendance
-// gaps in the past 7 days (missing punches, excluding approved leave/holidays),
-// upload to storage, and email a download link to HR/payroll users.
-// Scheduled by pg_cron every Thursday at 14:00 Asia/Jerusalem.
+// Monthly payroll Excel report: for each company, generate an XLSX of all attendance
+// gaps in the previous calendar month (missing punches, excluding approved leave/holidays),
+// upload to storage, and email a download link to payroll accountants (companies.payroll_emails).
+// Scheduled by pg_cron on the 1st of each month at 08:00 Asia/Jerusalem.
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import * as XLSX from 'npm:xlsx@0.18.5'
@@ -34,11 +34,15 @@ Deno.serve(async (req) => {
   try { body = req.method === 'POST' ? await req.json() : {} } catch {}
 
   const today = todayIL()
-  const from = body?.from
-    ? String(body.from)
-    : toISO(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6))
-  const to = body?.to ? String(body.to) : toISO(today)
+  // Default: previous calendar month, in Asia/Jerusalem
+  const firstOfCurrent = new Date(today.getFullYear(), today.getMonth(), 1)
+  const lastOfPrev = new Date(firstOfCurrent.getTime() - 24 * 60 * 60 * 1000)
+  const firstOfPrev = new Date(lastOfPrev.getFullYear(), lastOfPrev.getMonth(), 1)
+
+  const from = body?.from ? String(body.from) : toISO(firstOfPrev)
+  const to = body?.to ? String(body.to) : toISO(lastOfPrev)
   const requestedCompany: string | undefined = body?.company_id
+  const monthLabel = `${String(lastOfPrev.getMonth() + 1).padStart(2, '0')}/${lastOfPrev.getFullYear()}`
 
   // Enumerate dates in [from, to]
   const dates: string[] = []
@@ -50,7 +54,7 @@ Deno.serve(async (req) => {
     }
   }
 
-  // Aggregate gaps per (company_id, day)
+  // Aggregate gaps per company
   const perCompany = new Map<string, { name: string; rows: any[] }>()
   for (const day of dates) {
     const { data, error } = await admin.rpc('get_daily_missing_punches', { _target_date: day })
@@ -74,11 +78,10 @@ Deno.serve(async (req) => {
     if (info.rows.length === 0) continue
     companies_with_data++
 
-    // Build XLSX
+    // Build XLSX (RTL)
     const aoa: any[][] = [
-      ['שם עובד', 'תאריך', 'יום', 'סוג פער', 'מס\' החתמות', 'החתמות שבוצעו'],
+      ['שם עובד', 'תאריך', 'יום', 'סוג פער', "מס' החתמות", 'החתמות שבוצעו'],
     ]
-    // Sort by name then date
     info.rows.sort((a: any, b: any) =>
       String(a.full_name).localeCompare(String(b.full_name), 'he') || a.day.localeCompare(b.day)
     )
@@ -101,7 +104,7 @@ Deno.serve(async (req) => {
     XLSX.utils.book_append_sheet(wb, ws, 'חוסרים')
     const arr = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer
 
-    const filename = `hr-reports/${companyId}/${from}_${to}_${crypto.randomUUID().slice(0, 8)}.xlsx`
+    const filename = `payroll-reports/${companyId}/${from}_${to}_${crypto.randomUUID().slice(0, 8)}.xlsx`
     const { error: upErr } = await admin.storage.from('email-assets').upload(
       filename, new Uint8Array(arr), {
         contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -111,10 +114,10 @@ Deno.serve(async (req) => {
     const { data: urlData } = admin.storage.from('email-assets').getPublicUrl(filename)
     const downloadUrl = urlData.publicUrl
 
-    // Recipients: HR only (payroll is a separate role and receives its own reports)
+    // Recipients: payroll_emails only
     const { data: comp } = await admin
       .from('companies')
-      .select('hr_emails')
+      .select('payroll_emails')
       .eq('id', companyId)
       .maybeSingle()
     const parseList = (raw: any): string[] =>
@@ -122,21 +125,21 @@ Deno.serve(async (req) => {
         .split(/[,;\s]+/)
         .map((s) => s.trim())
         .filter((s) => /^\S+@\S+\.\S+$/.test(s))
-    const recipients = parseList((comp as any)?.hr_emails)
+    const recipients = parseList((comp as any)?.payroll_emails)
     if (recipients.length === 0) continue
-
 
     for (const email of recipients) {
       const templateData = {
         recipientName: 'שלום',
         companyName: info.name,
+        monthLabel,
         fromDate: fromLabel,
         toDate: toLabel,
         gapCount: info.rows.length,
         employeeCount: empSet.size,
         downloadUrl,
       }
-      const idempotencyKey = `hr-weekly-gaps-${companyId}-${email}-${from}-${to}`
+      const idempotencyKey = `payroll-monthly-gaps-${companyId}-${email}-${from}-${to}`
       const resp = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
         method: 'POST',
         headers: {
@@ -145,7 +148,7 @@ Deno.serve(async (req) => {
           apikey: serviceKey,
         },
         body: JSON.stringify({
-          templateName: 'hr-weekly-gaps',
+          templateName: 'payroll-monthly-gaps',
           recipientEmail: email,
           idempotencyKey,
           templateData,
@@ -156,10 +159,8 @@ Deno.serve(async (req) => {
     }
   }
 
-
-
   return new Response(JSON.stringify({
-    from, to, companies_with_data, queued, errors,
+    from, to, monthLabel, companies_with_data, queued, errors,
   }), {
     status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
