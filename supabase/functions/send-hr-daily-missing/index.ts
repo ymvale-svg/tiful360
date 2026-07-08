@@ -1,8 +1,12 @@
 // Daily HR report: list of employees who did not punch today and did not
-// have an approved leave/sick request. Sent to HR / payroll users per company.
-// Scheduled by pg_cron at 12:00 Asia/Jerusalem; also invokable on-demand from UI.
+// have an approved leave/sick request. Sent by default to the HR user
+// (companies.hr_emails), with fallback to payroll_emails, and also includes
+// an XLSX (RTL) download link like the weekly report.
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
+import * as XLSX from 'npm:xlsx@0.18.5'
+
+const WEEKDAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת']
 
 function todayIL(): string {
   const now = new Date()
@@ -18,6 +22,14 @@ function formatDateIL(iso: string) {
   return `${d}/${m}/${y}`
 }
 
+function parseEmailList(raw: string | null | undefined): string[] {
+  if (!raw) return []
+  return String(raw)
+    .split(/[,;\s]+/)
+    .map((s) => s.trim())
+    .filter((s) => /^\S+@\S+\.\S+$/.test(s))
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
 
@@ -30,7 +42,6 @@ Deno.serve(async (req) => {
   const target: string = body?.date || todayIL()
   const requestedCompany: string | undefined = body?.company_id
 
-  // Fetch missing punches across companies
   const { data: rows, error } = await admin.rpc('get_daily_missing_punches', { _target_date: target })
   if (error) {
     return new Response(JSON.stringify({ error: error.message }), {
@@ -38,7 +49,6 @@ Deno.serve(async (req) => {
     })
   }
 
-  // Group by company
   const byCompany = new Map<string, { company_name: string; rows: any[] }>()
   for (const r of rows ?? []) {
     if (requestedCompany && r.company_id !== requestedCompany) continue
@@ -47,12 +57,9 @@ Deno.serve(async (req) => {
     byCompany.set(r.company_id, cur)
   }
 
-  // Ensure we also send "all clear" for requested company even if no gaps
   if (requestedCompany && !byCompany.has(requestedCompany)) {
     const { data: c } = await admin.from('companies').select('name').eq('id', requestedCompany).single()
     byCompany.set(requestedCompany, { company_name: c?.name ?? '', rows: [] })
-  } else if (!requestedCompany) {
-    // For cron: also include companies with active tracking employees but 0 gaps? Skip — no need to notify when nothing to report.
   }
 
   const reportDate = formatDateIL(target)
@@ -61,45 +68,61 @@ Deno.serve(async (req) => {
   const errors: string[] = []
 
   for (const [companyId, info] of byCompany.entries()) {
-    // Find HR recipients: users with role payroll/admin/super_admin who have access to this company.
-    // super_admin has global access; others via user_company_access.
-    const { data: accessRows } = await admin
-      .from('user_company_access')
-      .select('user_id, role')
-      .eq('company_id', companyId)
-      .in('role', ['payroll', 'admin'])
+    // Recipients: hr_emails first (fallback to payroll_emails)
+    const { data: comp } = await admin
+      .from('companies')
+      .select('hr_emails, payroll_emails')
+      .eq('id', companyId)
+      .maybeSingle()
+    const hrList = parseEmailList((comp as any)?.hr_emails)
+    const fallbackList = hrList.length ? [] : parseEmailList((comp as any)?.payroll_emails)
+    const recipients = hrList.length ? hrList : fallbackList
+    if (recipients.length === 0) { skipped_no_recipients++; continue }
 
-    const userIds = new Set<string>((accessRows ?? []).map((a: any) => a.user_id))
+    // Build XLSX (RTL) if there are any gaps
+    let downloadUrl: string | undefined
+    if (info.rows.length > 0) {
+      const aoa: any[][] = [
+        ['שם עובד', 'תאריך', 'יום', 'סוג פער', "מס' החתמות", 'החתמות שבוצעו'],
+      ]
+      info.rows.sort((a: any, b: any) =>
+        String(a.full_name).localeCompare(String(b.full_name), 'he')
+      )
+      for (const r of info.rows) {
+        aoa.push([
+          r.full_name,
+          reportDate,
+          WEEKDAYS[new Date(target).getDay()],
+          r.gap_type === 'empty' ? 'יום ללא החתמות' : 'החתמה אי-זוגית',
+          r.punch_count ?? 0,
+          r.punch_times ?? '',
+        ])
+      }
+      const ws = XLSX.utils.aoa_to_sheet(aoa)
+      ws['!cols'] = [{ wch: 22 }, { wch: 14 }, { wch: 10 }, { wch: 20 }, { wch: 12 }, { wch: 40 }]
+      const wb = XLSX.utils.book_new()
+      wb.Workbook = { Views: [{ RTL: true }] }
+      XLSX.utils.book_append_sheet(wb, ws, 'החתמות חסרות')
+      const arr = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer
+      const filename = `hr-reports/${companyId}/daily_${target}_${crypto.randomUUID().slice(0, 8)}.xlsx`
+      const { error: upErr } = await admin.storage.from('email-assets').upload(
+        filename, new Uint8Array(arr), {
+          contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          upsert: false,
+        })
+      if (upErr) errors.push(`upload ${companyId}: ${upErr.message}`)
+      else {
+        const { data: urlData } = admin.storage.from('email-assets').getPublicUrl(filename)
+        downloadUrl = urlData.publicUrl
+      }
+    }
 
-    // Also include super_admins (global)
-    const { data: superAdmins } = await admin
-      .from('user_roles').select('user_id').eq('role', 'super_admin')
-    for (const s of superAdmins ?? []) userIds.add(s.user_id)
-
-    if (userIds.size === 0) { skipped_no_recipients++; continue }
-
-    // Verify each user actually has payroll or admin role (user_roles) — filter
-    const { data: userRoleRows } = await admin
-      .from('user_roles').select('user_id, role')
-      .in('user_id', Array.from(userIds))
-    const eligible = new Set<string>(
-      (userRoleRows ?? [])
-        .filter((r: any) => ['payroll', 'admin', 'super_admin'].includes(r.role))
-        .map((r: any) => r.user_id)
-    )
-    if (eligible.size === 0) { skipped_no_recipients++; continue }
-
-    // Get their emails from profiles
-    const { data: profs } = await admin
-      .from('profiles').select('id, email, full_name')
-      .in('id', Array.from(eligible))
-
-    for (const p of profs ?? []) {
-      if (!p.email) continue
+    for (const email of recipients) {
       const templateData = {
-        recipientName: p.full_name || 'שלום',
+        recipientName: 'שלום',
         reportDate,
         companyName: info.company_name,
+        downloadUrl,
         employees: info.rows.map((r: any) => ({
           full_name: r.full_name,
           company_name: r.company_name,
@@ -107,7 +130,7 @@ Deno.serve(async (req) => {
           punches: r.punch_times ?? '',
         })),
       }
-      const idempotencyKey = `hr-daily-missing-${companyId}-${p.id}-${target}`
+      const idempotencyKey = `hr-daily-missing-${companyId}-${email}-${target}`
       const resp = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
         method: 'POST',
         headers: {
@@ -117,13 +140,13 @@ Deno.serve(async (req) => {
         },
         body: JSON.stringify({
           templateName: 'hr-daily-missing',
-          recipientEmail: p.email,
+          recipientEmail: email,
           idempotencyKey,
           templateData,
         }),
       })
       if (resp.ok) queued++
-      else errors.push(`${p.email}: ${resp.status} ${await resp.text().catch(() => '')}`)
+      else errors.push(`${email}: ${resp.status} ${await resp.text().catch(() => '')}`)
     }
   }
 
