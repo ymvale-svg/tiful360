@@ -17,9 +17,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PendingHandoverForms } from "@/components/PendingHandoverForms";
 import { NewLeaveRequestDialog } from "@/components/NewLeaveRequestDialog";
 import { LeaveRequestsList } from "@/components/LeaveRequestsList";
-import { AttendanceCorrectionDialog } from "@/components/AttendanceCorrectionDialog";
 import { useMyLeaveRequests } from "@/hooks/useLeaveRequests";
-import { useMyAttendanceCorrections } from "@/hooks/useAttendanceCorrections";
 import { EmployeePayslipsTab } from "@/components/EmployeePayslipsTab";
 import { Tax101Banner } from "@/components/portal/Tax101Banner";
 import { MyTax101FormsList } from "@/components/portal/MyTax101FormsList";
@@ -44,8 +42,6 @@ const portalTabs = [
 export default function EmployeePortal() {
   const [activeTab, setActiveTab] = useState("assets");
   const [newLeaveOpen, setNewLeaveOpen] = useState(false);
-  const [correctionOpen, setCorrectionOpen] = useState(false);
-  const [correctionInitialDate, setCorrectionInitialDate] = useState<string | undefined>(undefined);
   const [punchingDir, setPunchingDir] = useState<"in" | "out" | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, signOut, roles } = useAuth();
@@ -230,7 +226,7 @@ export default function EmployeePortal() {
   });
 
   const { data: myLeaveRequests = [] } = useMyLeaveRequests(myEmployee?.id);
-  const { data: myCorrections = [] } = useMyAttendanceCorrections(myEmployee?.id);
+  
 
   // Helper: calculate hours between check_in and check_out
   const calcHours = (checkIn: string | null, checkOut: string | null) => {
@@ -576,36 +572,9 @@ export default function EmployeePortal() {
           <div role="tabpanel" id="portal-tabpanel-attendance" aria-labelledby="portal-tab-attendance" className="animate-fade-in space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="font-semibold text-sm">נוכחות</h2>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1 text-[11px]"
-                disabled={!myEmployee}
-                onClick={() => setCorrectionOpen(true)}
-              >
-                <AlertCircle className="w-3 h-3" />
-                בקשת תיקון
-              </Button>
             </div>
 
-            {myCorrections.length > 0 && (
-              <div className="bg-card rounded-xl border border-border/50 p-3 space-y-2">
-                <p className="text-xs font-semibold text-muted-foreground">בקשות תיקון אחרונות</p>
-                {myCorrections.slice(0, 3).map((c: any) => (
-                  <div key={c.id} className="flex items-center justify-between text-xs">
-                    <span>{new Date(c.correction_date).toLocaleDateString("en-GB")}</span>
-                    <span className={cn("px-2 py-0.5 rounded-full",
-                      c.status === "approved" ? "bg-success/15 text-success" :
-                      c.status === "rejected" ? "bg-destructive/15 text-destructive" :
-                      c.status === "pending" ? "bg-warning/15 text-warning" :
-                      "bg-muted text-muted-foreground"
-                    )}>
-                      {{ pending: "ממתין", approved: "אושר", rejected: "נדחה", cancelled: "בוטל" }[c.status as string]}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+
 
             {!myEmployee && (
               <p className="text-center text-sm text-muted-foreground py-4">
@@ -811,15 +780,6 @@ export default function EmployeePortal() {
             onOpenChange={setNewLeaveOpen}
             employeeId={myEmployee.id}
             managerId={myEmployee.direct_manager_id ?? null}
-          />
-          <AttendanceCorrectionDialog
-            open={correctionOpen}
-            onClose={() => { setCorrectionOpen(false); setCorrectionInitialDate(undefined); }}
-            employeeId={myEmployee.id}
-            managerId={myEmployee.direct_manager_id ?? null}
-            initiatedBy="employee"
-            initialDate={correctionInitialDate}
-            tracksAttendance={myEmployee.tracks_attendance !== false}
           />
         </>
       )}
