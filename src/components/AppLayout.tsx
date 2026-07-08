@@ -96,12 +96,12 @@ export function AppLayout() {
               <span className="absolute top-1.5 left-1.5 w-2 h-2 bg-destructive rounded-full animate-pulse-dot" aria-hidden="true" />
             </button>
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center" aria-hidden="true">
+              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0" aria-hidden="true">
                 <span className="text-xs font-bold text-primary-foreground">{initials}</span>
               </div>
-              <div className="text-right">
-                <p className="text-sm font-medium">{profile?.display_name || user?.email}</p>
-                <p className="text-[11px] text-muted-foreground">{roleLabel}</p>
+              <div className="text-right hidden sm:block max-w-[140px]">
+                <p className="text-sm font-medium truncate">{profile?.display_name || user?.email}</p>
+                <p className="text-[11px] text-muted-foreground truncate">{roleLabel}</p>
               </div>
             </div>
             <button
