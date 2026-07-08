@@ -348,7 +348,26 @@ const tools = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "find_birthdays",
+      description:
+        "מחזיר עובדים פעילים שיום ההולדת שלהם (יום/חודש בלבד, ללא תלות בשנת הלידה) חל בטווח נתון. תמיד השתמש בכלי זה לשאלות על ימי הולדת (\"מי חוגג היום\", \"ימי הולדת החודש\", \"בשבוע הקרוב\") — לעולם אל תשווה את birth_date כתאריך מלא.",
+      parameters: {
+        type: "object",
+        required: ["from_month", "from_day", "to_month", "to_day"],
+        properties: {
+          from_month: { type: "integer", description: "חודש התחלה 1-12" },
+          from_day: { type: "integer", description: "יום התחלה 1-31" },
+          to_month: { type: "integer", description: "חודש סיום 1-12" },
+          to_day: { type: "integer", description: "יום סיום 1-31" },
+        },
+      },
+    },
+  },
 ];
+
 
 const WRITE_ACTIONS = new Set(["insert_row", "update_row", "delete_row"]);
 
@@ -438,6 +457,13 @@ function baseSystemPrompt(catalog: string): string {
 - מספר השורות בתשובה = בדיוק מספר השורות מהכלי.
 - **איסור מוחלט על "רשימות הצעות/דוגמאות"**: אם הכלי החזיר 0 שורות, אסור בתכלית האיסור להציג רשימה של שמות אפשריים, פוליסות לדוגמה, חברות, ערים, או כל ערך אחר שלא הוחזר מהכלי. אל תוסיף "המסמכים שהיו בחיפוש הקודם" או "שמות שאולי תכוונת אליהם" אלא אם הם הופיעו *בתוצאה אמיתית של query_table באותה שיחה*. ידע כללי מהאימון של המודל (שמות חברות בישראל, ערים, מותגים) — **אסור** להופיע בתשובה.
 - אם אתה מרגיש שאתה כותב רשימה של שמות בלי שהרצת query_table שמחזיר אותם — עצור ומחק. במקום זה כתוב: "לא נמצאו תוצאות עבור X. ניסיתי: <השאילתות>."
+
+## ימי הולדת — חובה להשתמש ב-\`find_birthdays\`
+- לשאלות על ימי הולדת ("מי חוגג היום/מחר/החודש/בשבוע הקרוב", "ימי הולדת ביולי", "מי נולד ב-15/8" וכו') — **חובה** להפעיל את \`find_birthdays\` עם טווח יום/חודש בלבד. אל תשווה \`birth_date\` כתאריך מלא ב-\`query_table\` — זה יחזיר 0 כי השנה שונה משנת הלידה.
+- דוגמאות:
+  - "מי חוגג היום" → \`find_birthdays\` עם from=to=החודש והיום של היום.
+  - "ימי הולדת החודש" → from=(חודש_נוכחי,1), to=(חודש_נוכחי, 31).
+  - "בשבוע הקרוב" → from=היום, to=היום+7 (חצה חודש? הפונקציה תומכת בטווחים חוצי-שנה).
 
 ## כלל קריטי — אל תשאל, חפש
 - **אסור** לשאול את המשתמש שאלת הבהרה על מיפוי בין מילה בעברית לעמודה/קטגוריה. **הקטלוג של החברה למטה — חפש שם.**
@@ -775,7 +801,26 @@ async function executeTool(name: string, args: any, supabase: any, companyId: st
       };
     }
 
+    if (name === "find_birthdays") {
+      if (!companyId) return { error: "לא נבחרה חברה" };
+      const fm = Number(args?.from_month), fd = Number(args?.from_day);
+      const tm = Number(args?.to_month), td = Number(args?.to_day);
+      if (![fm, fd, tm, td].every((n) => Number.isInteger(n))) {
+        return { error: "יש לספק from_month/from_day/to_month/to_day כמספרים שלמים" };
+      }
+      const { data, error } = await supabase.rpc("find_birthdays_by_range", {
+        _company_id: companyId,
+        _from_month: fm,
+        _from_day: fd,
+        _to_month: tm,
+        _to_day: td,
+      });
+      if (error) return { error: error.message };
+      return { count: data?.length ?? 0, results: data };
+    }
+
     return { error: `כלי לא ידוע: ${name}` };
+
 
   } catch (e: any) {
     return { error: e?.message ?? String(e) };
