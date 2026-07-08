@@ -2563,6 +2563,25 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      find_birthdays_by_range: {
+        Args: {
+          _company_id: string
+          _from_day: number
+          _from_month: number
+          _to_day: number
+          _to_month: number
+        }
+        Returns: {
+          birth_date: string
+          birth_day: number
+          birth_month: number
+          department: string
+          employee_code: string
+          full_name: string
+          id: string
+          role: string
+        }[]
+      }
       get_attendance_agent_status: {
         Args: { _company_id: string }
         Returns: {
