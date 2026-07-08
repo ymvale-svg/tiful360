@@ -114,6 +114,7 @@ function PayrollSettingsTab() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [payrollEmails, setPayrollEmails] = useState("");
+  const [hrEmails, setHrEmails] = useState("");
   const [loaded, setLoaded] = useState(false);
 
   const { data: companyFull } = useQuery({
@@ -129,38 +130,47 @@ function PayrollSettingsTab() {
   useEffect(() => {
     if (companyFull && !loaded) {
       setPayrollEmails((companyFull as any).payroll_emails ?? "");
+      setHrEmails((companyFull as any).hr_emails ?? "");
       setLoaded(true);
     }
   }, [companyFull, loaded]);
 
-  const updateMutation = useMutation({
-    mutationFn: async () => {
-      if (!activeCompanyId) throw new Error("לא נבחרה חברה");
-      const emailsList = payrollEmails.split(",").map((s) => s.trim()).filter(Boolean);
-      const invalid = emailsList.filter((e) => !/^\S+@\S+\.\S+$/.test(e));
-      if (invalid.length > 0) throw new Error(`כתובות לא תקינות: ${invalid.join(", ")}`);
+  const saveEmails = async (column: "payroll_emails" | "hr_emails", value: string) => {
+    if (!activeCompanyId) throw new Error("לא נבחרה חברה");
+    const emailsList = value.split(",").map((s) => s.trim()).filter(Boolean);
+    const invalid = emailsList.filter((e) => !/^\S+@\S+\.\S+$/.test(e));
+    if (invalid.length > 0) throw new Error(`כתובות לא תקינות: ${invalid.join(", ")}`);
+    const { error } = await supabase.rpc("set_company_routing_emails", {
+      _company_id: activeCompanyId,
+      _column: column,
+      _emails: emailsList.length > 0 ? emailsList.join(",") : "",
+    });
+    if (error) throw error;
+  };
 
-      const { error } = await supabase.rpc("set_company_routing_emails", {
-        _company_id: activeCompanyId,
-        _column: "payroll_emails",
-        _emails: emailsList.length > 0 ? emailsList.join(",") : "",
-      });
-      if (error) throw error;
-    },
+  const updatePayrollMutation = useMutation({
+    mutationFn: () => saveEmails("payroll_emails", payrollEmails),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["company-full"] });
-      toast({ title: "הגדרות שכר נשמרו בהצלחה" });
+      toast({ title: "כתובות חשבות שכר נשמרו" });
     },
-    onError: (err: any) => {
-      toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+    onError: (err: any) => toast({ title: "שגיאה", description: err.message, variant: "destructive" }),
+  });
+
+  const updateHrMutation = useMutation({
+    mutationFn: () => saveEmails("hr_emails", hrEmails),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["company-full"] });
+      toast({ title: "כתובות משאבי אנוש נשמרו" });
     },
+    onError: (err: any) => toast({ title: "שגיאה", description: err.message, variant: "destructive" }),
   });
 
   if (!activeCompanyId) {
     return <div className="text-center py-8 text-muted-foreground">לא נבחרה חברה</div>;
   }
 
-  const runHrReport = async (fn: "send-hr-daily-missing" | "send-hr-weekly-gaps") => {
+  const runReport = async (fn: "send-hr-daily-missing" | "send-hr-weekly-gaps" | "send-unmatched-weekly") => {
     if (!activeCompanyId) return;
     try {
       const { data, error } = await supabase.functions.invoke(fn, {
@@ -169,7 +179,7 @@ function PayrollSettingsTab() {
       if (error) throw error;
       toast({
         title: "הדוח נשלח",
-        description: `נשלחו ${data?.queued ?? 0} מיילים לנמעני משאבי אנוש.`,
+        description: `נשלחו ${data?.queued ?? 0} מיילים.`,
       });
     } catch (e: any) {
       toast({ title: "שגיאה בשליחת הדוח", description: e.message, variant: "destructive" });
