@@ -149,7 +149,7 @@ const SCHEMA: TableDef[] = [
       { name: "resolved_at", type: "timestamptz", desc: "מתי נסגרה" },
       { name: "created_at", type: "timestamptz", desc: "מתי נוצרה" },
     ],
-    writable: ["title", "ticket_type", "priority", "employee_id"],
+    writable: ["title", "description", "ticket_type", "priority", "status", "employee_id", "assigned_to", "resolution_notes"],
   },
   {
     table: "leave_requests",
