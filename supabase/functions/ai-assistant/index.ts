@@ -348,7 +348,26 @@ const tools = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "find_birthdays",
+      description:
+        "מחזיר עובדים פעילים שיום ההולדת שלהם (יום/חודש בלבד, ללא תלות בשנת הלידה) חל בטווח נתון. תמיד השתמש בכלי זה לשאלות על ימי הולדת (\"מי חוגג היום\", \"ימי הולדת החודש\", \"בשבוע הקרוב\") — לעולם אל תשווה את birth_date כתאריך מלא.",
+      parameters: {
+        type: "object",
+        required: ["from_month", "from_day", "to_month", "to_day"],
+        properties: {
+          from_month: { type: "integer", description: "חודש התחלה 1-12" },
+          from_day: { type: "integer", description: "יום התחלה 1-31" },
+          to_month: { type: "integer", description: "חודש סיום 1-12" },
+          to_day: { type: "integer", description: "יום סיום 1-31" },
+        },
+      },
+    },
+  },
 ];
+
 
 const WRITE_ACTIONS = new Set(["insert_row", "update_row", "delete_row"]);
 
