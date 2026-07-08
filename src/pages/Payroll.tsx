@@ -205,8 +205,9 @@ function PayrollSettingsTab() {
             dir="ltr"
           />
           <p className="text-[11px] text-muted-foreground mt-1">
-            הדוחות היומי והשבועי של החתמות נוכחות יישלחו לכתובות אלו. אם אין ערך — הדוחות יישלחו לכתובות חשבות השכר.
+            הדוחות היומי והשבועי של החתמות נוכחות יישלחו לכתובות אלו בלבד. משאבי אנוש וחשבות שכר הם משתמשים נפרדים.
           </p>
+
         </div>
         <Button className="gap-1.5" onClick={() => updateHrMutation.mutate()} disabled={updateHrMutation.isPending}>
           <Save className="w-4 h-4" />
