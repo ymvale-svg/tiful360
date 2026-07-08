@@ -176,68 +176,107 @@ function OrphansPanel({ punches, employees }: { punches: AttendancePunch[]; empl
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-xs text-muted-foreground">
-              <tr>
-                <th className="text-right p-2">תאריך/שעה</th>
-                <th className="text-right p-2">קוד עובד מהשעון</th>
-                <th className="text-right p-2">כיוון</th>
-                <th className="text-right p-2">שיוך לעובד</th>
-                <th className="text-right p-2">פעולות</th>
-              </tr>
-            </thead>
-            <tbody>
-              {punches.map((p) => (
-                <tr key={p.id} className="border-t">
-                  <td className="p-2 whitespace-nowrap">{formatDate(p.punch_at)} {formatTime(p.punch_at)}</td>
-                  <td className="p-2 font-mono">{p.employee_code_raw}</td>
-                  <td className="p-2">{DIR_LABEL[p.direction]}</td>
-                  <td className="p-2 min-w-[220px]">
+        {(() => {
+          const handleAssign = async (p: AttendancePunch, v: string) => {
+            if (!v) return;
+            try {
+              const res: any = await assign.mutateAsync({ punchId: p.id, employeeId: v });
+              const count = res?.count ?? 1;
+              toast({
+                title: count > 1 ? `שויכו ${count} פעימות` : "הפעימה שויכה",
+                description: count > 1 && res?.code
+                  ? `כל הפעימות עם קוד ${res.code} שויכו אוטומטית, והקוד נשמר על העובד להמשך.`
+                  : undefined,
+              });
+            } catch (e: any) {
+              toast({ title: "שגיאה", description: e.message, variant: "destructive" });
+            }
+          };
+          const handleReject = async (p: AttendancePunch) => {
+            try {
+              await update.mutateAsync({ ids: [p.id], status: "rejected" });
+              toast({ title: "הפעימה נדחתה", description: "הוסרה מרשימת הפעימות הלא משויכות." });
+            } catch (e: any) {
+              toast({ title: "שגיאה בדחייה", description: e?.message ?? String(e), variant: "destructive" });
+            }
+          };
+          return (
+            <>
+              {/* Desktop table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-xs text-muted-foreground">
+                    <tr>
+                      <th className="text-right p-2">תאריך/שעה</th>
+                      <th className="text-right p-2">קוד עובד מהשעון</th>
+                      <th className="text-right p-2">כיוון</th>
+                      <th className="text-right p-2">שיוך לעובד</th>
+                      <th className="text-right p-2">פעולות</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {punches.map((p) => (
+                      <tr key={p.id} className="border-t">
+                        <td className="p-2 whitespace-nowrap">{formatDate(p.punch_at)} {formatTime(p.punch_at)}</td>
+                        <td className="p-2 font-mono">{p.employee_code_raw}</td>
+                        <td className="p-2">{DIR_LABEL[p.direction]}</td>
+                        <td className="p-2 min-w-[220px]">
+                          <SearchableSelect
+                            options={opts}
+                            value=""
+                            onChange={(v) => handleAssign(p, v)}
+                            placeholder="בחר/י עובד…"
+                          />
+                        </td>
+                        <td className="p-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-destructive border-destructive/40 hover:bg-destructive hover:text-destructive-foreground"
+                            disabled={update.isPending}
+                            onClick={() => handleReject(p)}
+                          >
+                            <X className="w-4 h-4 ml-1" /> דחה
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile card list */}
+              <div className="md:hidden space-y-2">
+                {punches.map((p) => (
+                  <div key={p.id} className="border rounded-lg p-3 space-y-2 bg-card">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">{formatDate(p.punch_at)} {formatTime(p.punch_at)}</span>
+                      <Badge variant="outline" className="text-xs">{DIR_LABEL[p.direction]}</Badge>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      קוד: <span className="font-mono text-foreground">{p.employee_code_raw}</span>
+                    </div>
                     <SearchableSelect
                       options={opts}
                       value=""
-                      onChange={async (v) => {
-                        if (!v) return;
-                        try {
-                          const res: any = await assign.mutateAsync({ punchId: p.id, employeeId: v });
-                          const count = res?.count ?? 1;
-                          toast({
-                            title: count > 1 ? `שויכו ${count} פעימות` : "הפעימה שויכה",
-                            description: count > 1 && res?.code
-                              ? `כל הפעימות עם קוד ${res.code} שויכו אוטומטית, והקוד נשמר על העובד להמשך.`
-                              : undefined,
-                          });
-                        } catch (e: any) {
-                          toast({ title: "שגיאה", description: e.message, variant: "destructive" });
-                        }
-                      }}
+                      onChange={(v) => handleAssign(p, v)}
                       placeholder="בחר/י עובד…"
                     />
-                  </td>
-                  <td className="p-2">
                     <Button
                       size="sm"
                       variant="outline"
-                      className="text-destructive border-destructive/40 hover:bg-destructive hover:text-destructive-foreground"
+                      className="w-full text-destructive border-destructive/40 hover:bg-destructive hover:text-destructive-foreground"
                       disabled={update.isPending}
-                      onClick={async () => {
-                        try {
-                          await update.mutateAsync({ ids: [p.id], status: "rejected" });
-                          toast({ title: "הפעימה נדחתה", description: "הוסרה מרשימת הפעימות הלא משויכות." });
-                        } catch (e: any) {
-                          toast({ title: "שגיאה בדחייה", description: e?.message ?? String(e), variant: "destructive" });
-                        }
-                      }}
+                      onClick={() => handleReject(p)}
                     >
-                      <X className="w-4 h-4 ml-1" /> דחה
+                      <X className="w-4 h-4 ml-1" /> דחה פעימה
                     </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          );
+        })()}
       </CardContent>
     </Card>
   );
