@@ -31,3 +31,7 @@ project_id = "rhzmhiknbcipucfvgkok"
     verify_jwt = false
   [functions.send-attendance-gaps]
     verify_jwt = true
+  [functions.send-hr-daily-missing]
+    verify_jwt = false
+  [functions.send-hr-weekly-gaps]
+    verify_jwt = false

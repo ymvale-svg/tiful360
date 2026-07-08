@@ -43,9 +43,9 @@ export default function Payroll() {
       <div className="page-header">
         <h1 className="page-title flex items-center gap-2">
           <Wallet className="w-5 h-5 text-primary" />
-          שכר ותלושים
+          משאבי אנוש
         </h1>
-        <p className="page-subtitle">דשבורד חשבות שכר — {MONTHS[currentMonth - 1]} {currentYear}</p>
+        <p className="page-subtitle">דשבורד משאבי אנוש וחשבות שכר — {MONTHS[currentMonth - 1]} {currentYear}</p>
       </div>
 
       <Tabs value={tab} onValueChange={setTab} dir="rtl">
