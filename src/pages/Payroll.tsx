@@ -170,7 +170,7 @@ function PayrollSettingsTab() {
     return <div className="text-center py-8 text-muted-foreground">לא נבחרה חברה</div>;
   }
 
-  const runReport = async (fn: "send-hr-daily-missing" | "send-hr-weekly-gaps" | "send-unmatched-weekly") => {
+  const runReport = async (fn: "send-hr-daily-missing" | "send-hr-weekly-gaps" | "send-unmatched-weekly" | "send-payroll-monthly-gaps") => {
     if (!activeCompanyId) return;
     try {
       const { data, error } = await supabase.functions.invoke(fn, {
