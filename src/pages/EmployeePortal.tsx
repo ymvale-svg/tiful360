@@ -42,8 +42,6 @@ const portalTabs = [
 export default function EmployeePortal() {
   const [activeTab, setActiveTab] = useState("assets");
   const [newLeaveOpen, setNewLeaveOpen] = useState(false);
-  const [correctionOpen, setCorrectionOpen] = useState(false);
-  const [correctionInitialDate, setCorrectionInitialDate] = useState<string | undefined>(undefined);
   const [punchingDir, setPunchingDir] = useState<"in" | "out" | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, signOut, roles } = useAuth();
