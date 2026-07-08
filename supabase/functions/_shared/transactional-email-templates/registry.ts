@@ -18,5 +18,7 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'hr-daily-missing': hrDailyMissing,
   'hr-weekly-gaps': hrWeeklyGaps,
   'unmatched-punches': unmatchedPunches,
+  'unmatched-punches-weekly': unmatchedPunchesWeekly,
 }
+
 
