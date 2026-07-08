@@ -321,6 +321,21 @@ const tools = [
   {
     type: "function",
     function: {
+      name: "delete_row",
+      description: "מחיקת שורה לפי id. דורש אישור משתמש. פועל רק על טבלאות עם writable מוגדר.",
+      parameters: {
+        type: "object",
+        required: ["table", "id"],
+        properties: {
+          table: { type: "string" },
+          id: { type: "string" },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "get_document_url",
       description:
         "מייצר קישור חתום זמני (10 דקות) להורדה/צפייה במסמך מתוך asset_documents לפי id. השתמש בו אחרי שמצאת מסמך עם query_table על asset_documents.",
@@ -335,7 +350,7 @@ const tools = [
   },
 ];
 
-const WRITE_ACTIONS = new Set(["insert_row", "update_row"]);
+const WRITE_ACTIONS = new Set(["insert_row", "update_row", "delete_row"]);
 
 
 // ============================================================
