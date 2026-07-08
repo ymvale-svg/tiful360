@@ -176,68 +176,107 @@ function OrphansPanel({ punches, employees }: { punches: AttendancePunch[]; empl
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-xs text-muted-foreground">
-              <tr>
-                <th className="text-right p-2">תאריך/שעה</th>
-                <th className="text-right p-2">קוד עובד מהשעון</th>
-                <th className="text-right p-2">כיוון</th>
-                <th className="text-right p-2">שיוך לעובד</th>
-                <th className="text-right p-2">פעולות</th>
-              </tr>
-            </thead>
-            <tbody>
-              {punches.map((p) => (
-                <tr key={p.id} className="border-t">
-                  <td className="p-2 whitespace-nowrap">{formatDate(p.punch_at)} {formatTime(p.punch_at)}</td>
-                  <td className="p-2 font-mono">{p.employee_code_raw}</td>
-                  <td className="p-2">{DIR_LABEL[p.direction]}</td>
-                  <td className="p-2 min-w-[220px]">
+        {(() => {
+          const handleAssign = async (p: AttendancePunch, v: string) => {
+            if (!v) return;
+            try {
+              const res: any = await assign.mutateAsync({ punchId: p.id, employeeId: v });
+              const count = res?.count ?? 1;
+              toast({
+                title: count > 1 ? `שויכו ${count} פעימות` : "הפעימה שויכה",
+                description: count > 1 && res?.code
+                  ? `כל הפעימות עם קוד ${res.code} שויכו אוטומטית, והקוד נשמר על העובד להמשך.`
+                  : undefined,
+              });
+            } catch (e: any) {
+              toast({ title: "שגיאה", description: e.message, variant: "destructive" });
+            }
+          };
+          const handleReject = async (p: AttendancePunch) => {
+            try {
+              await update.mutateAsync({ ids: [p.id], status: "rejected" });
+              toast({ title: "הפעימה נדחתה", description: "הוסרה מרשימת הפעימות הלא משויכות." });
+            } catch (e: any) {
+              toast({ title: "שגיאה בדחייה", description: e?.message ?? String(e), variant: "destructive" });
+            }
+          };
+          return (
+            <>
+              {/* Desktop table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-xs text-muted-foreground">
+                    <tr>
+                      <th className="text-right p-2">תאריך/שעה</th>
+                      <th className="text-right p-2">קוד עובד מהשעון</th>
+                      <th className="text-right p-2">כיוון</th>
+                      <th className="text-right p-2">שיוך לעובד</th>
+                      <th className="text-right p-2">פעולות</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {punches.map((p) => (
+                      <tr key={p.id} className="border-t">
+                        <td className="p-2 whitespace-nowrap">{formatDate(p.punch_at)} {formatTime(p.punch_at)}</td>
+                        <td className="p-2 font-mono">{p.employee_code_raw}</td>
+                        <td className="p-2">{DIR_LABEL[p.direction]}</td>
+                        <td className="p-2 min-w-[220px]">
+                          <SearchableSelect
+                            options={opts}
+                            value=""
+                            onChange={(v) => handleAssign(p, v)}
+                            placeholder="בחר/י עובד…"
+                          />
+                        </td>
+                        <td className="p-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-destructive border-destructive/40 hover:bg-destructive hover:text-destructive-foreground"
+                            disabled={update.isPending}
+                            onClick={() => handleReject(p)}
+                          >
+                            <X className="w-4 h-4 ml-1" /> דחה
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile card list */}
+              <div className="md:hidden space-y-2">
+                {punches.map((p) => (
+                  <div key={p.id} className="border rounded-lg p-3 space-y-2 bg-card">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">{formatDate(p.punch_at)} {formatTime(p.punch_at)}</span>
+                      <Badge variant="outline" className="text-xs">{DIR_LABEL[p.direction]}</Badge>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      קוד: <span className="font-mono text-foreground">{p.employee_code_raw}</span>
+                    </div>
                     <SearchableSelect
                       options={opts}
                       value=""
-                      onChange={async (v) => {
-                        if (!v) return;
-                        try {
-                          const res: any = await assign.mutateAsync({ punchId: p.id, employeeId: v });
-                          const count = res?.count ?? 1;
-                          toast({
-                            title: count > 1 ? `שויכו ${count} פעימות` : "הפעימה שויכה",
-                            description: count > 1 && res?.code
-                              ? `כל הפעימות עם קוד ${res.code} שויכו אוטומטית, והקוד נשמר על העובד להמשך.`
-                              : undefined,
-                          });
-                        } catch (e: any) {
-                          toast({ title: "שגיאה", description: e.message, variant: "destructive" });
-                        }
-                      }}
+                      onChange={(v) => handleAssign(p, v)}
                       placeholder="בחר/י עובד…"
                     />
-                  </td>
-                  <td className="p-2">
                     <Button
                       size="sm"
                       variant="outline"
-                      className="text-destructive border-destructive/40 hover:bg-destructive hover:text-destructive-foreground"
+                      className="w-full text-destructive border-destructive/40 hover:bg-destructive hover:text-destructive-foreground"
                       disabled={update.isPending}
-                      onClick={async () => {
-                        try {
-                          await update.mutateAsync({ ids: [p.id], status: "rejected" });
-                          toast({ title: "הפעימה נדחתה", description: "הוסרה מרשימת הפעימות הלא משויכות." });
-                        } catch (e: any) {
-                          toast({ title: "שגיאה בדחייה", description: e?.message ?? String(e), variant: "destructive" });
-                        }
-                      }}
+                      onClick={() => handleReject(p)}
                     >
-                      <X className="w-4 h-4 ml-1" /> דחה
+                      <X className="w-4 h-4 ml-1" /> דחה פעימה
                     </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          );
+        })()}
       </CardContent>
     </Card>
   );
@@ -289,19 +328,19 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
+        {/* Desktop / tablet-large: table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-xs text-muted-foreground">
               <tr>
                 <th className="text-right p-2">תאריך</th>
                 <th className="text-right p-2">פעימות</th>
-                <th className="text-right p-2">כניסה</th>
-                <th className="text-right p-2">יציאה</th>
+                <th className="text-right p-2 hidden lg:table-cell">כניסה</th>
+                <th className="text-right p-2 hidden lg:table-cell">יציאה</th>
                 <th className="text-right p-2">סה"כ</th>
                 <th className="text-right p-2">מצב</th>
               </tr>
             </thead>
-
             <tbody>
               {byDay.map(([day, items]) => {
                 const ins = items.filter(p => p.direction === "in");
@@ -312,23 +351,20 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
                   ? ((new Date(lastOut).getTime() - new Date(firstIn).getTime()) / 3600000).toFixed(1)
                   : "—";
                 const missing = !firstIn || !lastOut;
-
                 return (
                   <tr key={day} className="border-t align-top">
                     <td className="p-2 whitespace-nowrap">{new Date(day).toLocaleDateString("he-IL", { weekday: "short", day: "2-digit", month: "2-digit" })}</td>
                     <td className="p-2">
                       <div className="flex flex-wrap gap-1">
-                        {items.map(p => (
-                          <PunchChip key={p.id} punch={p} />
-                        ))}
+                        {items.map(p => (<PunchChip key={p.id} punch={p} />))}
                       </div>
                     </td>
-                    <td className="p-2 whitespace-nowrap">{firstIn ? formatTime(firstIn) : "—"}</td>
-                    <td className="p-2 whitespace-nowrap">{lastOut ? formatTime(lastOut) : "—"}</td>
-                    <td className="p-2">{hours}</td>
+                    <td className="p-2 whitespace-nowrap hidden lg:table-cell">{firstIn ? formatTime(firstIn) : "—"}</td>
+                    <td className="p-2 whitespace-nowrap hidden lg:table-cell">{lastOut ? formatTime(lastOut) : "—"}</td>
+                    <td className="p-2 whitespace-nowrap">{hours}</td>
                     <td className="p-2">
                       {missing ? (
-                        <Badge variant="outline" className="border-amber-500/50 text-amber-700 dark:text-amber-300 bg-amber-500/10">
+                        <Badge variant="outline" className="border-amber-500/50 text-amber-700 dark:text-amber-300 bg-amber-500/10 whitespace-nowrap">
                           חסרה החתמה
                         </Badge>
                       ) : (
@@ -338,9 +374,46 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
                   </tr>
                 );
               })}
-
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile: card list */}
+        <div className="md:hidden space-y-2">
+          {byDay.map(([day, items]) => {
+            const ins = items.filter(p => p.direction === "in");
+            const outs = items.filter(p => p.direction === "out");
+            const firstIn = ins[0]?.punch_at;
+            const lastOut = outs[outs.length - 1]?.punch_at;
+            const hours = firstIn && lastOut
+              ? ((new Date(lastOut).getTime() - new Date(firstIn).getTime()) / 3600000).toFixed(1)
+              : "—";
+            const missing = !firstIn || !lastOut;
+            return (
+              <div key={day} className="border rounded-lg p-3 bg-card space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold">
+                    {new Date(day).toLocaleDateString("he-IL", { weekday: "short", day: "2-digit", month: "2-digit" })}
+                  </span>
+                  {missing ? (
+                    <Badge variant="outline" className="border-amber-500/50 text-amber-700 dark:text-amber-300 bg-amber-500/10 text-[10px]">
+                      חסרה החתמה
+                    </Badge>
+                  ) : (
+                    <span className="text-xs font-medium">{hours} שעות</span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {items.map(p => (<PunchChip key={p.id} punch={p} />))}
+                </div>
+                {!missing && (
+                  <div className="text-[11px] text-muted-foreground pt-1 border-t border-border/50">
+                    {formatTime(firstIn!)} → {formatTime(lastOut!)} · {hours} שעות
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </CardContent>
     </Card>
