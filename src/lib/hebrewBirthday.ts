@@ -242,7 +242,8 @@ export function processBirthdaysForCurrentMonth(
       eff = hebrewBirthdayGregorianThisYear(
         r.hebrew_birth_day, r.hebrew_birth_month, r.hebrew_birth_year
       );
-      label = formatHebrewBirthGematriya(
+      // Show only day + month (no year) — the year is arbitrary.
+      label = formatHebrewBirthDayMonth(
         r.hebrew_birth_day, r.hebrew_birth_month, r.hebrew_birth_year
       );
       isHebrew = true;
