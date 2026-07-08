@@ -53,7 +53,7 @@ export function AppLayout() {
       <SkipLink />
       <AppSidebar />
       
-      <div className="mr-[240px] min-h-screen">
+      <div className="min-h-screen transition-[margin] duration-300" style={{ marginRight: "var(--sidebar-width, 240px)" }}>
         <header role="banner" className="sticky top-0 z-30 h-16 bg-card/80 backdrop-blur-md border-b border-border flex items-center justify-between px-6">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3 bg-muted rounded-lg px-3 py-2 w-80">
