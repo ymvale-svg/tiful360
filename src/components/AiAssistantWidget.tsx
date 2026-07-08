@@ -53,9 +53,20 @@ export function AiAssistantWidget() {
   const [loading, setLoading] = useState(false);
   const [pending, setPending] = useState<PendingAction>(null);
   const [viewer, setViewer] = useState<DocViewer>(null);
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth < 1024 : false
+  );
   const { activeCompanyId } = useCompany();
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mql = window.matchMedia("(max-width: 1023px)");
+    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
 
   const panel = useDraggable(
     { x: 24, y: typeof window !== "undefined" ? Math.max(24, window.innerHeight - PANEL_H - 96) : 100 },
