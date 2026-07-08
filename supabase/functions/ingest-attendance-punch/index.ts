@@ -115,7 +115,15 @@ Deno.serve(async (req) => {
     }
 
     const matched = rows.filter((r) => r.employee_id).length;
-    return json({ ok: true, received: rows.length, matched, unmatched: rows.length - matched, blocked });
+    const unmatched = rows.filter((r) => !r.employee_id);
+
+    // Alert payroll about unmatched punches — at most once per day per (company, employee_code).
+    if (unmatched.length > 0) {
+      try { await notifyUnmatched(supabase, unmatched); }
+      catch (e) { console.error("unmatched alert failed", e); }
+    }
+
+    return json({ ok: true, received: rows.length, matched, unmatched: unmatched.length, blocked });
   } catch (e) {
     console.error("unhandled", e);
     return json({ error: "internal_error", details: String(e) }, 500);
@@ -127,4 +135,108 @@ function json(data: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+function formatDateTimeIL(iso: string): string {
+  try {
+    const d = new Date(iso);
+    const s = d.toLocaleString("he-IL", {
+      timeZone: "Asia/Jerusalem",
+      day: "2-digit", month: "2-digit", year: "numeric",
+      hour: "2-digit", minute: "2-digit",
+    });
+    return s;
+  } catch { return iso; }
+}
+
+function todayILDate(): string {
+  const now = new Date();
+  const il = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Jerusalem" }));
+  const y = il.getFullYear();
+  const m = String(il.getMonth() + 1).padStart(2, "0");
+  const d = String(il.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+async function notifyUnmatched(
+  supabase: ReturnType<typeof createClient>,
+  unmatched: Array<{ company_id: string; employee_code_raw: string; punch_at: string }>,
+) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const alertDate = todayILDate();
+
+  // Group by (company_id, employee_code_raw)
+  const groups = new Map<string, { company_id: string; employee_code: string; punches: string[] }>();
+  for (const u of unmatched) {
+    const k = `${u.company_id}::${u.employee_code_raw}`;
+    const g = groups.get(k) ?? { company_id: u.company_id, employee_code: u.employee_code_raw, punches: [] };
+    g.punches.push(u.punch_at);
+    groups.set(k, g);
+  }
+
+  // Try to reserve one alert per (company, code, day). Only newly-inserted rows trigger email.
+  const newlyAlerting: typeof groups extends Map<string, infer V> ? V[] : never = [] as any;
+  for (const g of groups.values()) {
+    const { data, error } = await supabase
+      .from("attendance_unmatched_alerts")
+      .insert({ company_id: g.company_id, employee_code_raw: g.employee_code, alert_date: alertDate })
+      .select("company_id")
+      .maybeSingle();
+    if (!error && data) newlyAlerting.push(g);
+  }
+  if (newlyAlerting.length === 0) return;
+
+  // Aggregate by company for a single email per company
+  const byCompany = new Map<string, typeof newlyAlerting>();
+  for (const g of newlyAlerting) {
+    const arr = byCompany.get(g.company_id) ?? [];
+    arr.push(g);
+    byCompany.set(g.company_id, arr);
+  }
+
+  for (const [companyId, groupList] of byCompany.entries()) {
+    // Fetch company name + payroll emails
+    const { data: company } = await supabase
+      .from("companies")
+      .select("name, payroll_emails")
+      .eq("id", companyId)
+      .single();
+    const recipientsRaw: string = (company as any)?.payroll_emails ?? "";
+    const recipients = recipientsRaw.split(",").map((s: string) => s.trim()).filter(Boolean);
+    if (recipients.length === 0) {
+      console.warn("no payroll_emails configured for company", companyId);
+      continue;
+    }
+
+    const entries = groupList.map((g) => {
+      const sorted = [...g.punches].sort();
+      return {
+        employee_code: g.employee_code,
+        punch_count: g.punches.length,
+        first_punch_at: formatDateTimeIL(sorted[0]),
+      };
+    });
+
+    for (const to of recipients) {
+      const idempotencyKey = `unmatched-punches-${companyId}-${to}-${alertDate}`;
+      const resp = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${serviceKey}`,
+          apikey: serviceKey,
+        },
+        body: JSON.stringify({
+          templateName: "unmatched-punches",
+          recipientEmail: to,
+          idempotencyKey,
+          templateData: { companyName: (company as any)?.name ?? "", entries },
+        }),
+      });
+      if (!resp.ok) {
+        console.error("send failed", to, resp.status, await resp.text().catch(() => ""));
+      }
+    }
+  }
 }
