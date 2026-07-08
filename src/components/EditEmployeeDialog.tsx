@@ -64,6 +64,7 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
         exclude_from_contacts: !!employee.exclude_from_contacts,
         can_remote_punch: !!employee.can_remote_punch,
         tracks_attendance: employee.tracks_attendance ?? true,
+        attendance_notifications_disabled: !!employee.attendance_notifications_disabled,
         work_days: Array.isArray(employee.work_days) && employee.work_days.length
           ? employee.work_days
           : [0, 1, 2, 3, 4],
