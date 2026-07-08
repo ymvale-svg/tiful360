@@ -54,7 +54,14 @@ const SCHEMA: TableDef[] = [
       { name: "is_israeli_resident", type: "boolean", desc: "תושב ישראל" },
       { name: "health_fund_member", type: "boolean", desc: "חבר קופ\"ח" },
     ],
-    writable: ["full_name", "email", "phone", "department", "role", "id_number", "employee_code", "start_date"],
+    writable: [
+      "full_name", "email", "phone", "department", "role", "id_number", "employee_code",
+      "start_date", "end_date", "status", "direct_manager_id", "sub_employer_id",
+      "birth_date", "gender", "city", "street", "house_number", "marital_status",
+      "is_israeli_resident", "health_fund_member", "vacation_balance", "sick_balance",
+      "tracks_attendance", "attendance_notifications_disabled", "can_remote_punch",
+      "exclude_from_contacts", "work_days",
+    ],
   },
   {
     table: "assets",
@@ -142,7 +149,7 @@ const SCHEMA: TableDef[] = [
       { name: "resolved_at", type: "timestamptz", desc: "מתי נסגרה" },
       { name: "created_at", type: "timestamptz", desc: "מתי נוצרה" },
     ],
-    writable: ["title", "ticket_type", "priority", "employee_id"],
+    writable: ["title", "description", "ticket_type", "priority", "status", "employee_id", "assigned_to", "resolution_notes"],
   },
   {
     table: "leave_requests",
@@ -161,6 +168,7 @@ const SCHEMA: TableDef[] = [
       { name: "reviewed_at", type: "timestamptz", desc: "מתי אושר/נדחה" },
       { name: "created_at", type: "timestamptz", desc: "מתי נוצרה הבקשה" },
     ],
+    writable: ["employee_id", "request_type", "start_date", "end_date", "total_days", "reason", "status", "manager_note"],
   },
   {
     table: "alerts",
@@ -177,6 +185,7 @@ const SCHEMA: TableDef[] = [
       { name: "is_resolved", type: "boolean", desc: "האם טופל" },
       { name: "created_at", type: "timestamptz", desc: "מתי נוצרה" },
     ],
+    writable: ["title", "category", "severity", "target_date", "related_asset_id", "related_employee_id", "is_resolved"],
   },
   {
     table: "asset_documents",
@@ -312,6 +321,21 @@ const tools = [
   {
     type: "function",
     function: {
+      name: "delete_row",
+      description: "מחיקת שורה לפי id. דורש אישור משתמש. פועל רק על טבלאות עם writable מוגדר.",
+      parameters: {
+        type: "object",
+        required: ["table", "id"],
+        properties: {
+          table: { type: "string" },
+          id: { type: "string" },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "get_document_url",
       description:
         "מייצר קישור חתום זמני (10 דקות) להורדה/צפייה במסמך מתוך asset_documents לפי id. השתמש בו אחרי שמצאת מסמך עם query_table על asset_documents.",
@@ -326,7 +350,7 @@ const tools = [
   },
 ];
 
-const WRITE_ACTIONS = new Set(["insert_row", "update_row"]);
+const WRITE_ACTIONS = new Set(["insert_row", "update_row", "delete_row"]);
 
 
 // ============================================================
@@ -480,8 +504,13 @@ function baseSystemPrompt(catalog: string): string {
 - אותו כלל לחיפוש לפי שם משפחה בלבד, שם פרטי בלבד, או שם עם שגיאת כתיב קלה (נסה שורש מקוצר של 3-4 אותיות).
 - describe_table — רק לעמודות שאינן בקטלוג למטה.
 
-## פעולות כתיבה
-- insert_row / update_row — תאר בקצרה ועצור לאישור.
+## פעולות כתיבה — יש לך הרשאה מלאה בגבולות ההרשאות של המשתמש
+- אתה יכול לבצע כל פעולה במערכת (insert_row / update_row / delete_row) כל עוד המשתמש עצמו רשאי לבצע אותה. הבקשות רצות עם ה-JWT של המשתמש, ו-RLS של Supabase יאכוף אוטומטית מה מותר. אם משהו לא מותר — תקבל שגיאת הרשאה מהמסד, לא תרמה את המשתמש.
+- **אל תסרב מראש** בגלל "אני רק עוזר לקריאה" — אתה לא. נסה לבצע. אם RLS יחזיר "permission denied" או שגיאה דומה — רק אז אמור למשתמש שאין לו הרשאה לפעולה הזו.
+- לפני כל פעולת כתיבה: תאר בשפה טבעית מה עומד לקרות (טבלה, שדות שישתנו, מזהה), הצג ערכי לפני/אחרי כשרלוונטי, ועצור לאישור. כרטיס האישור בצד הלקוח יוצג אוטומטית.
+- מחיקה: תמיד תבקש אישור מפורש עם שם/מזהה השורה. אל תמחק שורות מרובות בבקשה אחת — פרק לפעולות נפרדות.
+- דוגמאות למה שאתה יכול לעשות: עדכן פרטי עובד, שנה סטטוס בקשת חופשה ל-approved/rejected, פתח/סגור פנייה IT, סמן התראה כטופלה, עדכן פרטי נכס, שייך נכס לעובד (current_owner_id), עדכן ימי עבודה, השבת התראות אי-החתמה לעובד.
+
 
 ${catalog}
 
@@ -713,6 +742,17 @@ async function executeTool(name: string, args: any, supabase: any, companyId: st
       const { data, error } = await supabase.from(def.table).update(values).eq("id", args.id).select().single();
       return error ? { error: error.message } : { success: true, row: data };
     }
+
+    if (name === "delete_row") {
+      const def = getTableDef(args?.table);
+      if (!def?.writable?.length) return { error: `אין הרשאה למחוק בטבלה ${args?.table}` };
+      if (!args?.id) return { error: "חסר id" };
+      let q = supabase.from(def.table).delete().eq("id", args.id);
+      if (def.requireCompany && companyId) q = q.eq("company_id", companyId);
+      const { error } = await q;
+      return error ? { error: error.message } : { success: true, id: args.id };
+    }
+
 
     if (name === "get_document_url") {
       const docId = String(args?.document_id ?? "").trim();

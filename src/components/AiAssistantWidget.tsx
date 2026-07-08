@@ -15,6 +15,9 @@ const ACTION_LABELS: Record<string, string> = {
   create_it_ticket: "פתיחת פניית IT",
   approve_leave_request: "עדכון סטטוס בקשת חופשה",
   close_it_ticket: "סגירת פניית IT",
+  insert_row: "יצירת רשומה",
+  update_row: "עדכון רשומה",
+  delete_row: "מחיקת רשומה",
 };
 
 const PANEL_W = 400;
