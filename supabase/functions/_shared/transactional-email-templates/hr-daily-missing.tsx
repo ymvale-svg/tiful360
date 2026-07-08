@@ -1,7 +1,7 @@
 /// <reference types="npm:@types/react@18.3.1" />
 import * as React from 'npm:react@18.3.1'
 import {
-  Body, Container, Head, Heading, Hr, Html, Img, Link, Preview, Section, Text,
+  Body, Button, Container, Head, Heading, Hr, Html, Img, Link, Preview, Section, Text,
 } from 'npm:@react-email/components@0.0.22'
 import type { TemplateEntry } from './registry.ts'
 
@@ -14,9 +14,10 @@ interface Props {
   reportDate?: string
   employees?: Row[]
   companyName?: string
+  downloadUrl?: string
 }
 
-const Email = ({ recipientName = 'שלום', reportDate = '', employees = [], companyName }: Props) => (
+const Email = ({ recipientName = 'שלום', reportDate = '', employees = [], companyName, downloadUrl }: Props) => (
   <Html lang="he" dir="rtl">
     <Head><meta charSet="utf-8" /></Head>
     <Preview>דוח יומי — {employees.length} עובדים לא החתימו נוכחות היום</Preview>
@@ -63,6 +64,11 @@ const Email = ({ recipientName = 'שלום', reportDate = '', employees = [], co
               </table>
             </Section>
           )}
+          {downloadUrl && employees.length > 0 && (
+            <Section style={buttonSection}>
+              <Button style={button} href={downloadUrl}>הורדת קובץ Excel</Button>
+            </Section>
+          )}
           <Hr style={divider} />
           <Text style={footer}>דוח זה נשלח באופן אוטומטי בכל יום בשעה 12:00.</Text>
         </Section>
@@ -103,3 +109,5 @@ const th = { textAlign: 'right' as const, padding: '10px 12px', backgroundColor:
 const td = { textAlign: 'right' as const, padding: '10px 12px', color: 'hsl(215, 15%, 30%)', borderBottom: '1px solid #f0f2f5' }
 const footer = { fontSize: '13px', color: '#888', margin: '0', textAlign: 'center' as const }
 const bottomFooter = { fontSize: '12px', color: '#b0b0b0', textAlign: 'center' as const, margin: '16px 0 0' }
+const buttonSection = { textAlign: 'center' as const, margin: '18px 0 8px' }
+const button = { backgroundColor: 'hsl(215, 90%, 42%)', color: '#ffffff', fontSize: '15px', fontWeight: '600' as const, borderRadius: '12px', padding: '12px 28px', textDecoration: 'none', display: 'inline-block' }

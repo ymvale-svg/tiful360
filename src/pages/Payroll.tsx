@@ -114,6 +114,7 @@ function PayrollSettingsTab() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [payrollEmails, setPayrollEmails] = useState("");
+  const [hrEmails, setHrEmails] = useState("");
   const [loaded, setLoaded] = useState(false);
 
   const { data: companyFull } = useQuery({
@@ -129,38 +130,47 @@ function PayrollSettingsTab() {
   useEffect(() => {
     if (companyFull && !loaded) {
       setPayrollEmails((companyFull as any).payroll_emails ?? "");
+      setHrEmails((companyFull as any).hr_emails ?? "");
       setLoaded(true);
     }
   }, [companyFull, loaded]);
 
-  const updateMutation = useMutation({
-    mutationFn: async () => {
-      if (!activeCompanyId) throw new Error("לא נבחרה חברה");
-      const emailsList = payrollEmails.split(",").map((s) => s.trim()).filter(Boolean);
-      const invalid = emailsList.filter((e) => !/^\S+@\S+\.\S+$/.test(e));
-      if (invalid.length > 0) throw new Error(`כתובות לא תקינות: ${invalid.join(", ")}`);
+  const saveEmails = async (column: "payroll_emails" | "hr_emails", value: string) => {
+    if (!activeCompanyId) throw new Error("לא נבחרה חברה");
+    const emailsList = value.split(",").map((s) => s.trim()).filter(Boolean);
+    const invalid = emailsList.filter((e) => !/^\S+@\S+\.\S+$/.test(e));
+    if (invalid.length > 0) throw new Error(`כתובות לא תקינות: ${invalid.join(", ")}`);
+    const { error } = await supabase.rpc("set_company_routing_emails", {
+      _company_id: activeCompanyId,
+      _column: column,
+      _emails: emailsList.length > 0 ? emailsList.join(",") : "",
+    });
+    if (error) throw error;
+  };
 
-      const { error } = await supabase.rpc("set_company_routing_emails", {
-        _company_id: activeCompanyId,
-        _column: "payroll_emails",
-        _emails: emailsList.length > 0 ? emailsList.join(",") : "",
-      });
-      if (error) throw error;
-    },
+  const updatePayrollMutation = useMutation({
+    mutationFn: () => saveEmails("payroll_emails", payrollEmails),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["company-full"] });
-      toast({ title: "הגדרות שכר נשמרו בהצלחה" });
+      toast({ title: "כתובות חשבות שכר נשמרו" });
     },
-    onError: (err: any) => {
-      toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+    onError: (err: any) => toast({ title: "שגיאה", description: err.message, variant: "destructive" }),
+  });
+
+  const updateHrMutation = useMutation({
+    mutationFn: () => saveEmails("hr_emails", hrEmails),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["company-full"] });
+      toast({ title: "כתובות משאבי אנוש נשמרו" });
     },
+    onError: (err: any) => toast({ title: "שגיאה", description: err.message, variant: "destructive" }),
   });
 
   if (!activeCompanyId) {
     return <div className="text-center py-8 text-muted-foreground">לא נבחרה חברה</div>;
   }
 
-  const runHrReport = async (fn: "send-hr-daily-missing" | "send-hr-weekly-gaps") => {
+  const runReport = async (fn: "send-hr-daily-missing" | "send-hr-weekly-gaps" | "send-unmatched-weekly") => {
     if (!activeCompanyId) return;
     try {
       const { data, error } = await supabase.functions.invoke(fn, {
@@ -169,7 +179,7 @@ function PayrollSettingsTab() {
       if (error) throw error;
       toast({
         title: "הדוח נשלח",
-        description: `נשלחו ${data?.queued ?? 0} מיילים לנמעני משאבי אנוש.`,
+        description: `נשלחו ${data?.queued ?? 0} מיילים.`,
       });
     } catch (e: any) {
       toast({ title: "שגיאה בשליחת הדוח", description: e.message, variant: "destructive" });
@@ -184,46 +194,74 @@ function PayrollSettingsTab() {
           <h3 className="font-semibold">כתובות אימייל משאבי אנוש</h3>
         </div>
         <div>
+          <label htmlFor="hr-emails" className="text-sm font-medium mb-1.5 block">כתובות אימייל</label>
+          <input
+            id="hr-emails"
+            type="text"
+            value={hrEmails}
+            onChange={(e) => setHrEmails(e.target.value)}
+            placeholder="hr@company.com"
+            className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 font-mono"
+            dir="ltr"
+          />
+          <p className="text-[11px] text-muted-foreground mt-1">
+            הדוחות היומי והשבועי של החתמות נוכחות יישלחו לכתובות אלו. אם אין ערך — הדוחות יישלחו לכתובות חשבות השכר.
+          </p>
+        </div>
+        <Button className="gap-1.5" onClick={() => updateHrMutation.mutate()} disabled={updateHrMutation.isPending}>
+          <Save className="w-4 h-4" />
+          {updateHrMutation.isPending ? "שומר..." : "שמור שינויים"}
+        </Button>
+      </div>
+
+      <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 space-y-4">
+        <div className="flex items-center gap-3 mb-2">
+          <Mail className="w-5 h-5 text-primary" />
+          <h3 className="font-semibold">כתובות אימייל חשבות שכר</h3>
+        </div>
+        <div>
           <label htmlFor="payroll-emails" className="text-sm font-medium mb-1.5 block">כתובות אימייל</label>
           <input
             id="payroll-emails"
             type="text"
             value={payrollEmails}
             onChange={(e) => setPayrollEmails(e.target.value)}
-            placeholder="hr@company.com, payroll@company.com"
+            placeholder="payroll@company.com"
             className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 font-mono"
             dir="ltr"
           />
           <p className="text-[11px] text-muted-foreground mt-1">
-            ניתן להזין מספר כתובות מופרדות בפסיק. אישורי בקשות חופשה ומחלה יישלחו אוטומטית לכתובות אלו.
+            אישורי חופשה/מחלה, טפסי 101 והדוח השבועי של החתמות ללא שיוך יישלחו לכתובות אלו.
           </p>
         </div>
-        <Button className="gap-1.5" onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>
+        <Button className="gap-1.5" onClick={() => updatePayrollMutation.mutate()} disabled={updatePayrollMutation.isPending}>
           <Save className="w-4 h-4" />
-          {updateMutation.isPending ? "שומר..." : "שמור שינויים"}
+          {updatePayrollMutation.isPending ? "שומר..." : "שמור שינויים"}
         </Button>
       </div>
 
       <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 space-y-3">
         <div className="flex items-center gap-3">
           <AlertCircle className="w-5 h-5 text-primary" />
-          <h3 className="font-semibold">דוחות משאבי אנוש</h3>
+          <h3 className="font-semibold">דוחות אוטומטיים</h3>
         </div>
-        <p className="text-sm text-muted-foreground">
-          דוחות אוטומטיים שנשלחים למשתמשי משאבי אנוש/חשבות שכר של החברה:
-        </p>
         <ul className="text-sm text-muted-foreground list-disc pr-5 space-y-1">
-          <li>יומי בשעה 12:00 — עובדים שלא החתימו היום ולא הגישו חופשה/מחלה מאושרת.</li>
-          <li>יום חמישי בשעה 14:00 — דוח אקסל של כלל החוסרים ב-7 הימים האחרונים.</li>
+          <li><strong>למשאבי אנוש</strong> — יומי בשעה 12:00: עובדים שלא החתימו היום ולא הגישו חופשה/מחלה (כולל קובץ Excel).</li>
+          <li><strong>למשאבי אנוש</strong> — יום חמישי בשעה 14:00: קובץ Excel של כלל החוסרים ב-7 הימים האחרונים.</li>
+          <li><strong>לחשבות שכר</strong> — יום חמישי בשעה 14:00: החתמות ללא שיוך לכרטיס עובד (מרוכז לכלל השבוע).</li>
         </ul>
         <div className="flex flex-wrap gap-2 pt-2">
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => runHrReport("send-hr-daily-missing")}>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => runReport("send-hr-daily-missing")}>
             <Mail className="w-4 h-4" />
             שלח דוח יומי עכשיו
           </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => runHrReport("send-hr-weekly-gaps")}>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => runReport("send-hr-weekly-gaps")}>
             <FileText className="w-4 h-4" />
             שלח דוח שבועי (אקסל) עכשיו
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => runReport("send-unmatched-weekly")}>
+            <AlertCircle className="w-4 h-4" />
+            שלח דוח החתמות ללא שיוך
           </Button>
         </div>
       </div>

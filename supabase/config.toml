@@ -35,3 +35,5 @@ project_id = "rhzmhiknbcipucfvgkok"
     verify_jwt = false
   [functions.send-hr-weekly-gaps]
     verify_jwt = false
+  [functions.send-unmatched-weekly]
+    verify_jwt = false

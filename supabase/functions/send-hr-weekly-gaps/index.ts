@@ -111,29 +111,24 @@ Deno.serve(async (req) => {
     const { data: urlData } = admin.storage.from('email-assets').getPublicUrl(filename)
     const downloadUrl = urlData.publicUrl
 
-    // Find recipients (same logic as daily)
-    const { data: accessRows } = await admin
-      .from('user_company_access').select('user_id, role')
-      .eq('company_id', companyId).in('role', ['payroll', 'admin'])
-    const userIds = new Set<string>((accessRows ?? []).map((a: any) => a.user_id))
-    const { data: superAdmins } = await admin
-      .from('user_roles').select('user_id').eq('role', 'super_admin')
-    for (const s of superAdmins ?? []) userIds.add(s.user_id)
-    if (userIds.size === 0) continue
-    const { data: userRoleRows } = await admin
-      .from('user_roles').select('user_id, role').in('user_id', Array.from(userIds))
-    const eligible = new Set<string>(
-      (userRoleRows ?? [])
-        .filter((r: any) => ['payroll', 'admin', 'super_admin'].includes(r.role))
-        .map((r: any) => r.user_id))
-    if (eligible.size === 0) continue
-    const { data: profs } = await admin
-      .from('profiles').select('id, email, full_name').in('id', Array.from(eligible))
+    // Recipients: hr_emails first (fallback to payroll_emails)
+    const { data: comp } = await admin
+      .from('companies')
+      .select('hr_emails, payroll_emails')
+      .eq('id', companyId)
+      .maybeSingle()
+    const parseList = (raw: any): string[] =>
+      String(raw ?? '')
+        .split(/[,;\s]+/)
+        .map((s) => s.trim())
+        .filter((s) => /^\S+@\S+\.\S+$/.test(s))
+    const hrList = parseList((comp as any)?.hr_emails)
+    const recipients = hrList.length ? hrList : parseList((comp as any)?.payroll_emails)
+    if (recipients.length === 0) continue
 
-    for (const p of profs ?? []) {
-      if (!p.email) continue
+    for (const email of recipients) {
       const templateData = {
-        recipientName: p.full_name || 'שלום',
+        recipientName: 'שלום',
         companyName: info.name,
         fromDate: fromLabel,
         toDate: toLabel,
@@ -141,7 +136,7 @@ Deno.serve(async (req) => {
         employeeCount: empSet.size,
         downloadUrl,
       }
-      const idempotencyKey = `hr-weekly-gaps-${companyId}-${p.id}-${from}-${to}`
+      const idempotencyKey = `hr-weekly-gaps-${companyId}-${email}-${from}-${to}`
       const resp = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
         method: 'POST',
         headers: {
@@ -151,15 +146,17 @@ Deno.serve(async (req) => {
         },
         body: JSON.stringify({
           templateName: 'hr-weekly-gaps',
-          recipientEmail: p.email,
+          recipientEmail: email,
           idempotencyKey,
           templateData,
         }),
       })
       if (resp.ok) queued++
-      else errors.push(`${p.email}: ${resp.status} ${await resp.text().catch(() => '')}`)
+      else errors.push(`${email}: ${resp.status} ${await resp.text().catch(() => '')}`)
     }
   }
+
+
 
   return new Response(JSON.stringify({
     from, to, companies_with_data, queued, errors,

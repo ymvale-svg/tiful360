@@ -117,11 +117,10 @@ Deno.serve(async (req) => {
     const matched = rows.filter((r) => r.employee_id).length;
     const unmatched = rows.filter((r) => !r.employee_id);
 
-    // Alert payroll about unmatched punches — at most once per day per (company, employee_code).
-    if (unmatched.length > 0) {
-      try { await notifyUnmatched(supabase, unmatched); }
-      catch (e) { console.error("unmatched alert failed", e); }
-    }
+    // Unmatched punches are now reported in a weekly aggregated email
+    // (see send-unmatched-weekly, scheduled every Thursday). We no longer
+    // send an immediate per-day alert to avoid noise.
+    void notifyUnmatched; // keep helper for future manual triggers
 
     return json({ ok: true, received: rows.length, matched, unmatched: unmatched.length, blocked });
   } catch (e) {

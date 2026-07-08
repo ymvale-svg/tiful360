@@ -3,6 +3,7 @@ import { template as attendanceGaps } from './attendance-gaps.tsx'
 import { template as hrDailyMissing } from './hr-daily-missing.tsx'
 import { template as hrWeeklyGaps } from './hr-weekly-gaps.tsx'
 import { template as unmatchedPunches } from './unmatched-punches.tsx'
+import { template as unmatchedPunchesWeekly } from './unmatched-punches-weekly.tsx'
 
 export interface TemplateEntry {
   component: ComponentType<any>
@@ -17,5 +18,7 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'hr-daily-missing': hrDailyMissing,
   'hr-weekly-gaps': hrWeeklyGaps,
   'unmatched-punches': unmatchedPunches,
+  'unmatched-punches-weekly': unmatchedPunchesWeekly,
 }
+
 
