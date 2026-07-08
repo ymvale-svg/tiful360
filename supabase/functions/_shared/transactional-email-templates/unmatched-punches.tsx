@@ -1,0 +1,102 @@
+/// <reference types="npm:@types/react@18.3.1" />
+import * as React from 'npm:react@18.3.1'
+import {
+  Body, Container, Head, Heading, Hr, Html, Img, Link, Preview, Section, Text,
+} from 'npm:@react-email/components@0.0.22'
+import type { TemplateEntry } from './registry.ts'
+
+const LOGO_URL = 'https://rhzmhiknbcipucfvgkok.supabase.co/storage/v1/object/public/email-assets/logo.png'
+const SYSTEM_NAME = 'Tiful360'
+
+interface UnmatchedEntry {
+  employee_code: string
+  first_punch_at: string
+  punch_count: number
+}
+
+interface Props {
+  companyName?: string
+  entries?: UnmatchedEntry[]
+}
+
+const Email = ({ companyName = '', entries = [] }: Props) => (
+  <Html lang="he" dir="rtl">
+    <Head><meta charSet="utf-8" /></Head>
+    <Preview>נמצאו החתמות נוכחות ללא כרטיס עובד תואם — נדרשת פתיחת עובד במערכת</Preview>
+    <Body style={main}>
+      <Container style={container}>
+        <Section style={card}>
+          <Section style={logoSection}>
+            <Link href="https://tiful360.com" style={logoLink}>
+              <Img src={LOGO_URL} width="48" height="48" alt={SYSTEM_NAME} style={logo} />
+              <Text style={brandName}>{SYSTEM_NAME}</Text>
+            </Link>
+          </Section>
+          <Hr style={divider} />
+          <Heading style={h1}>החתמות נוכחות ללא שיוך לעובד</Heading>
+          <Text style={text}>שלום,</Text>
+          <Text style={text}>
+            במערכת התקבלו החתמות נוכחות{companyName ? ` ב${companyName}` : ''} עבור <strong>קודי עובד שלא קיימים במערכת תפעול 360</strong>.
+            סימן שקיים עובד המחתים בשעון הנוכחות ללא כרטיס עובד פתוח במערכת.
+          </Text>
+          <Text style={text}>
+            נא לפתוח כרטיס עובד עם קוד העובד המתאים כדי שההחתמות יזוהו וישויכו אוטומטית.
+          </Text>
+          <Section style={tableWrap}>
+            <table style={tableStyle as any} cellPadding={0} cellSpacing={0}>
+              <thead>
+                <tr>
+                  <th style={th as any}>קוד עובד בשעון</th>
+                  <th style={th as any}>מס' החתמות</th>
+                  <th style={th as any}>החתמה ראשונה</th>
+                </tr>
+              </thead>
+              <tbody>
+                {entries.map((e, i) => (
+                  <tr key={i} style={{ backgroundColor: i % 2 ? '#fafbfc' : '#ffffff' }}>
+                    <td style={td as any}><strong>{e.employee_code}</strong></td>
+                    <td style={td as any}>{e.punch_count}</td>
+                    <td style={td as any}>{e.first_punch_at}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Section>
+          <Hr style={divider} />
+          <Text style={footer}>מייל זה נשלח פעם אחת ביום לכל קוד עובד לא מוכר.</Text>
+        </Section>
+        <Text style={bottomFooter}>© {new Date().getFullYear()} {SYSTEM_NAME}.</Text>
+      </Container>
+    </Body>
+  </Html>
+)
+
+export const template = {
+  component: Email,
+  subject: (d: Props) => `החתמות ללא שיוך לעובד${d?.entries?.length ? ` (${d.entries.length} קודים)` : ''} — נדרשת התייחסות`,
+  displayName: 'התראה — החתמות ללא כרטיס עובד',
+  previewData: {
+    companyName: 'חברת דוגמה',
+    entries: [
+      { employee_code: '1042', punch_count: 2, first_punch_at: '08/07/2026 08:12' },
+      { employee_code: '9910', punch_count: 1, first_punch_at: '08/07/2026 09:03' },
+    ],
+  },
+} satisfies TemplateEntry
+
+const main = { backgroundColor: '#ffffff', fontFamily: "'Heebo', Arial, sans-serif", padding: '20px 0' }
+const container = { maxWidth: '640px', margin: '0 auto' }
+const card = { backgroundColor: '#ffffff', borderRadius: '16px', padding: '40px 32px 32px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '1px solid #e8ecf1' }
+const logoSection = { textAlign: 'center' as const, marginBottom: '8px' }
+const logoLink = { textDecoration: 'none', display: 'inline-block' }
+const logo = { margin: '0 auto', borderRadius: '12px' }
+const brandName = { fontSize: '18px', fontWeight: '700' as const, color: 'hsl(220, 25%, 10%)', margin: '12px 0 0', textAlign: 'center' as const }
+const divider = { borderColor: '#e8ecf1', margin: '24px 0' }
+const h1 = { fontSize: '22px', fontWeight: 'bold' as const, color: 'hsl(220, 25%, 10%)', margin: '0 0 16px', textAlign: 'center' as const }
+const text = { fontSize: '15px', color: 'hsl(215, 15%, 30%)', lineHeight: '1.7', margin: '0 0 12px' }
+const tableWrap = { margin: '16px 0' }
+const tableStyle = { width: '100%', borderCollapse: 'collapse' as const, fontSize: '14px', border: '1px solid #e8ecf1', borderRadius: '8px', overflow: 'hidden' }
+const th = { textAlign: 'right' as const, padding: '10px 12px', backgroundColor: '#f4f6f9', color: 'hsl(220, 25%, 10%)', fontWeight: '600' as const, borderBottom: '1px solid #e8ecf1' }
+const td = { textAlign: 'right' as const, padding: '10px 12px', color: 'hsl(215, 15%, 30%)', borderBottom: '1px solid #f0f2f5' }
+const footer = { fontSize: '13px', color: '#888', margin: '0', textAlign: 'center' as const }
+const bottomFooter = { fontSize: '12px', color: '#b0b0b0', textAlign: 'center' as const, margin: '16px 0 0' }
