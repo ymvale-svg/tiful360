@@ -88,6 +88,33 @@ export function AiAssistantWidget() {
     if (open) setTimeout(() => inputRef.current?.focus(), 100);
   }, [open]);
 
+  // While the chat is open, redirect keystrokes into the textarea even if focus
+  // is elsewhere — so the user can just start typing without clicking the field.
+  useEffect(() => {
+    if (!open || pending) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      const ta = inputRef.current;
+      if (!ta) return;
+      if (document.activeElement === ta) return;
+      const target = e.target as HTMLElement | null;
+      // Don't hijack keys aimed at other editable fields
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      // Only printable single characters (letters, digits, punctuation, space) — not Tab/Escape/Arrow/etc.
+      if (e.key.length !== 1) return;
+      e.preventDefault();
+      const next = input + e.key;
+      setInput(next);
+      ta.focus();
+      // Place caret at end after React updates the value
+      requestAnimationFrame(() => {
+        try { ta.setSelectionRange(next.length, next.length); } catch { /* noop */ }
+      });
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, pending, input]);
+
   async function callAssistant(history: Msg[], approvedAction: PendingAction = null) {
     setLoading(true);
     try {
