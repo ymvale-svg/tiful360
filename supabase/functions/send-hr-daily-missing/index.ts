@@ -68,16 +68,15 @@ Deno.serve(async (req) => {
   const errors: string[] = []
 
   for (const [companyId, info] of byCompany.entries()) {
-    // Recipients: hr_emails first (fallback to payroll_emails)
+    // Recipients: HR only (payroll is a separate role with its own reports)
     const { data: comp } = await admin
       .from('companies')
-      .select('hr_emails, payroll_emails')
+      .select('hr_emails')
       .eq('id', companyId)
       .maybeSingle()
-    const hrList = parseEmailList((comp as any)?.hr_emails)
-    const fallbackList = hrList.length ? [] : parseEmailList((comp as any)?.payroll_emails)
-    const recipients = hrList.length ? hrList : fallbackList
+    const recipients = parseEmailList((comp as any)?.hr_emails)
     if (recipients.length === 0) { skipped_no_recipients++; continue }
+
 
     // Build XLSX (RTL) if there are any gaps
     let downloadUrl: string | undefined
