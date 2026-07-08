@@ -1192,6 +1192,7 @@ export type Database = {
       employees: {
         Row: {
           aliyah_date: string | null
+          attendance_notifications_disabled: boolean
           balances_source: string | null
           balances_updated_at: string | null
           birth_date: string | null
@@ -1236,6 +1237,7 @@ export type Database = {
         }
         Insert: {
           aliyah_date?: string | null
+          attendance_notifications_disabled?: boolean
           balances_source?: string | null
           balances_updated_at?: string | null
           birth_date?: string | null
@@ -1280,6 +1282,7 @@ export type Database = {
         }
         Update: {
           aliyah_date?: string | null
+          attendance_notifications_disabled?: boolean
           balances_source?: string | null
           balances_updated_at?: string | null
           birth_date?: string | null
@@ -2809,6 +2812,7 @@ export type Database = {
         Args: { _employee_id: string; _value: boolean }
         Returns: {
           aliyah_date: string | null
+          attendance_notifications_disabled: boolean
           balances_source: string | null
           balances_updated_at: string | null
           birth_date: string | null
@@ -2965,6 +2969,7 @@ export type Database = {
         }
         Returns: {
           aliyah_date: string | null
+          attendance_notifications_disabled: boolean
           balances_source: string | null
           balances_updated_at: string | null
           birth_date: string | null
