@@ -729,6 +729,33 @@ Deno.serve(async (req) => {
     const SENDER_DOMAIN = 'notify.tiful360.com';
     const FROM_DOMAIN = 'tiful360.com';
 
+    const generateUnsubToken = () => {
+      const bytes = new Uint8Array(32);
+      crypto.getRandomValues(bytes);
+      return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+    };
+
+    const getOrCreateUnsubscribeToken = async (email: string): Promise<string | null> => {
+      const normalized = email.toLowerCase();
+      const { data: existing } = await admin
+        .from('email_unsubscribe_tokens')
+        .select('token, used_at')
+        .eq('email', normalized)
+        .maybeSingle();
+      if (existing && !existing.used_at) return existing.token;
+      if (existing && existing.used_at) return null; // suppressed
+      const token = generateUnsubToken();
+      await admin
+        .from('email_unsubscribe_tokens')
+        .upsert({ token, email: normalized }, { onConflict: 'email', ignoreDuplicates: true });
+      const { data: stored } = await admin
+        .from('email_unsubscribe_tokens')
+        .select('token')
+        .eq('email', normalized)
+        .maybeSingle();
+      return stored?.token ?? token;
+    };
+
     for (const n of payslipNotifications) {
       const periodLabel = `${monthNames[n.period_month - 1] ?? n.period_month}/${n.period_year}`;
       const vars = {
@@ -760,6 +787,12 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        const unsubscribeToken = await getOrCreateUnsubscribeToken(n.to);
+        if (!unsubscribeToken) {
+          console.log('payslip email skipped, no unsubscribe token', n.to);
+          continue;
+        }
+
         const messageId = crypto.randomUUID();
         const idempotencyKey = `payslip-${batchId}-${n.employee_id}`;
 
@@ -783,6 +816,7 @@ Deno.serve(async (req) => {
             purpose: 'transactional',
             label: 'payslip-available',
             idempotency_key: idempotencyKey,
+            unsubscribe_token: unsubscribeToken,
             queued_at: new Date().toISOString(),
             metadata: { employee_id: n.employee_id, period_year: n.period_year, period_month: n.period_month, batch_id: batchId },
           },
