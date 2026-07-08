@@ -99,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isSuperAdmin,
         isDirectManager: isSuperAdmin || roles.includes("direct_manager"),
         isPayroll: isSuperAdmin || roles.includes("payroll"),
+        isHR: isSuperAdmin || roles.includes("hr"),
         isOperations: isSuperAdmin || roles.includes("operations"),
         isFinance: isSuperAdmin || roles.includes("finance"),
         isLegal: isSuperAdmin || roles.includes("legal"),
