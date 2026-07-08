@@ -226,7 +226,7 @@ export default function EmployeePortal() {
   });
 
   const { data: myLeaveRequests = [] } = useMyLeaveRequests(myEmployee?.id);
-  const { data: myCorrections = [] } = useMyAttendanceCorrections(myEmployee?.id);
+  
 
   // Helper: calculate hours between check_in and check_out
   const calcHours = (checkIn: string | null, checkOut: string | null) => {
