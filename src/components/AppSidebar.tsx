@@ -65,7 +65,26 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const [isPending, startTransition] = useTransition();
   const [pendingPath, setPendingPath] = useState<string | null>(null);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth < 1024 : false
+  );
+
+  // Auto-collapse when viewport shrinks below lg; auto-expand on desktop
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mql = window.matchMedia("(max-width: 1023px)");
+    const onChange = (e: MediaQueryListEvent) => setCollapsed(e.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
+
+  // Broadcast width so layout can adjust its right margin
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--sidebar-width",
+      collapsed ? "68px" : "240px"
+    );
+  }, [collapsed]);
   const { roles, signOut, user, isSuperAdmin } = useAuth();
 
   const canSee = (item: NavItem) => {
