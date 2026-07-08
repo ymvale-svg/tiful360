@@ -16,6 +16,7 @@ interface AuthContextType {
   isSuperAdmin: boolean;
   isDirectManager: boolean;
   isPayroll: boolean;
+  isHR: boolean;
   isOperations: boolean;
   isFinance: boolean;
   isLegal: boolean;
