@@ -71,7 +71,7 @@ export function AppLayout() {
             <CompanySelector />
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             {hasDualAccess(roles) && (
               <button
                 type="button"
