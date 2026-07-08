@@ -111,10 +111,10 @@ Deno.serve(async (req) => {
     const { data: urlData } = admin.storage.from('email-assets').getPublicUrl(filename)
     const downloadUrl = urlData.publicUrl
 
-    // Recipients: hr_emails first (fallback to payroll_emails)
+    // Recipients: HR only (payroll is a separate role and receives its own reports)
     const { data: comp } = await admin
       .from('companies')
-      .select('hr_emails, payroll_emails')
+      .select('hr_emails')
       .eq('id', companyId)
       .maybeSingle()
     const parseList = (raw: any): string[] =>
@@ -122,9 +122,9 @@ Deno.serve(async (req) => {
         .split(/[,;\s]+/)
         .map((s) => s.trim())
         .filter((s) => /^\S+@\S+\.\S+$/.test(s))
-    const hrList = parseList((comp as any)?.hr_emails)
-    const recipients = hrList.length ? hrList : parseList((comp as any)?.payroll_emails)
+    const recipients = parseList((comp as any)?.hr_emails)
     if (recipients.length === 0) continue
+
 
     for (const email of recipients) {
       const templateData = {
