@@ -232,8 +232,9 @@ function PayrollSettingsTab() {
             dir="ltr"
           />
           <p className="text-[11px] text-muted-foreground mt-1">
-            אישורי חופשה/מחלה, טפסי 101 והדוח השבועי של החתמות ללא שיוך יישלחו לכתובות אלו.
+            אישורי חופשה/מחלה, טפסי 101, הדוח השבועי של החתמות ללא שיוך והדוח החודשי של כלל החוסרים יישלחו לכתובות אלו.
           </p>
+
         </div>
         <Button className="gap-1.5" onClick={() => updatePayrollMutation.mutate()} disabled={updatePayrollMutation.isPending}>
           <Save className="w-4 h-4" />
