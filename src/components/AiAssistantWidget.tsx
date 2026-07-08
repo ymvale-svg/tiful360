@@ -186,23 +186,34 @@ export function AiAssistantWidget() {
               isMobile ? "" : "cursor-move touch-none"
             )}
           >
-            <div className="flex items-center gap-2">
-              <GripHorizontal className="w-4 h-4 text-muted-foreground" />
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+            <div className="flex items-center gap-2 min-w-0">
+              {!isMobile && <GripHorizontal className="w-4 h-4 text-muted-foreground" />}
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                 <Bot className="w-4 h-4 text-primary" />
               </div>
-              <div>
-                <p className="text-sm font-semibold">תפעול AI</p>
-                <p className="text-[11px] text-muted-foreground">עוזר חכם • Lovable AI</p>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold truncate">תפעול AI</p>
+                <p className="text-[11px] text-muted-foreground truncate">עוזר חכם • Lovable AI</p>
               </div>
             </div>
-            <button
-              onClick={reset}
-              className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-muted"
-              title="שיחה חדשה"
-            >
-              נקה
-            </button>
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={reset}
+                className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-muted"
+                title="שיחה חדשה"
+              >
+                נקה
+              </button>
+              {isMobile && (
+                <button
+                  onClick={() => setOpen(false)}
+                  className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                  aria-label="סגור"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </header>
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
