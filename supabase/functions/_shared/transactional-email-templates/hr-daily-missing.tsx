@@ -64,6 +64,11 @@ const Email = ({ recipientName = 'שלום', reportDate = '', employees = [], co
               </table>
             </Section>
           )}
+          {downloadUrl && employees.length > 0 && (
+            <Section style={buttonSection}>
+              <Button style={button} href={downloadUrl}>הורדת קובץ Excel</Button>
+            </Section>
+          )}
           <Hr style={divider} />
           <Text style={footer}>דוח זה נשלח באופן אוטומטי בכל יום בשעה 12:00.</Text>
         </Section>
