@@ -67,6 +67,22 @@ export function formatHebrewBirthGematriya(
   }
 }
 
+// Format only day + month in Hebrew gematriya (no year), e.g. "ט״ו ניסן".
+// A reference Hebrew year is required to resolve leap-year variants of Adar.
+export function formatHebrewBirthDayMonth(
+  day: number,
+  month: number,
+  refYear: number
+): string {
+  const full = formatHebrewBirthGematriya(day, month, refYear);
+  if (!full) return "";
+  // Drop the trailing year token (last whitespace-separated part)
+  const parts = full.trim().split(/\s+/);
+  if (parts.length <= 2) return full;
+  return parts.slice(0, -1).join(" ");
+}
+
+
 // Today's date as Hebrew gematriya string
 export function formatTodayHebrewGematriya(): string {
   try {
