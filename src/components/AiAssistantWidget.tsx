@@ -53,9 +53,20 @@ export function AiAssistantWidget() {
   const [loading, setLoading] = useState(false);
   const [pending, setPending] = useState<PendingAction>(null);
   const [viewer, setViewer] = useState<DocViewer>(null);
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth < 1024 : false
+  );
   const { activeCompanyId } = useCompany();
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mql = window.matchMedia("(max-width: 1023px)");
+    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
 
   const panel = useDraggable(
     { x: 24, y: typeof window !== "undefined" ? Math.max(24, window.innerHeight - PANEL_H - 96) : 100 },
@@ -141,41 +152,68 @@ export function AiAssistantWidget() {
         onClick={() => setOpen((o) => !o)}
         aria-label={open ? "סגור עוזר AI" : "פתח עוזר AI"}
         className={cn(
-          "fixed bottom-6 left-6 z-40 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all",
-          "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          "fixed z-50 rounded-full shadow-xl flex items-center justify-center transition-all",
+          "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground hover:scale-105 active:scale-95",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          // Mobile/tablet: larger, more prominent, above safe-area
+          "bottom-4 left-4 w-16 h-16 lg:bottom-6 lg:left-6 lg:w-14 lg:h-14",
+          "ring-4 ring-primary/20 lg:ring-0",
         )}
       >
-        {open ? <X className="w-6 h-6" /> : <Bot className="w-6 h-6" />}
+        {open ? <X className="w-7 h-7 lg:w-6 lg:h-6" /> : <Bot className="w-7 h-7 lg:w-6 lg:h-6" />}
       </button>
 
       {/* Chat panel */}
       {open && (
         <div
           dir="rtl"
-          style={{ left: panel.pos.x, top: panel.pos.y, width: PANEL_W, height: PANEL_H }}
-          className="fixed z-40 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-1rem)] bg-card border border-border rounded-xl shadow-2xl flex flex-col overflow-hidden"
+          style={
+            isMobile
+              ? undefined
+              : { left: panel.pos.x, top: panel.pos.y, width: PANEL_W, height: PANEL_H }
+          }
+          className={cn(
+            "fixed z-50 bg-card border border-border shadow-2xl flex flex-col overflow-hidden",
+            isMobile
+              ? "inset-x-2 bottom-24 top-4 rounded-2xl"
+              : "rounded-xl max-w-[calc(100vw-1rem)] max-h-[calc(100vh-1rem)]"
+          )}
         >
           <header
-            {...panel.handlers}
-            className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/40 cursor-move select-none touch-none"
+            {...(isMobile ? {} : panel.handlers)}
+            className={cn(
+              "flex items-center justify-between px-4 py-3 border-b border-border bg-muted/40 select-none",
+              isMobile ? "" : "cursor-move touch-none"
+            )}
           >
-            <div className="flex items-center gap-2">
-              <GripHorizontal className="w-4 h-4 text-muted-foreground" />
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+            <div className="flex items-center gap-2 min-w-0">
+              {!isMobile && <GripHorizontal className="w-4 h-4 text-muted-foreground" />}
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                 <Bot className="w-4 h-4 text-primary" />
               </div>
-              <div>
-                <p className="text-sm font-semibold">תפעול AI</p>
-                <p className="text-[11px] text-muted-foreground">עוזר חכם • Lovable AI</p>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold truncate">תפעול AI</p>
+                <p className="text-[11px] text-muted-foreground truncate">עוזר חכם • Lovable AI</p>
               </div>
             </div>
-            <button
-              onClick={reset}
-              className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-muted"
-              title="שיחה חדשה"
-            >
-              נקה
-            </button>
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={reset}
+                className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-muted"
+                title="שיחה חדשה"
+              >
+                נקה
+              </button>
+              {isMobile && (
+                <button
+                  onClick={() => setOpen(false)}
+                  className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                  aria-label="סגור"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </header>
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -290,15 +328,27 @@ export function AiAssistantWidget() {
       {viewer && (
         <div
           dir="rtl"
-          style={{ left: viewerDrag.pos.x, top: viewerDrag.pos.y, width: VIEWER_W, height: VIEWER_H }}
-          className="fixed z-50 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-1rem)] bg-card border border-border rounded-xl shadow-2xl flex flex-col overflow-hidden"
+          style={
+            isMobile
+              ? undefined
+              : { left: viewerDrag.pos.x, top: viewerDrag.pos.y, width: VIEWER_W, height: VIEWER_H }
+          }
+          className={cn(
+            "fixed z-50 bg-card border border-border shadow-2xl flex flex-col overflow-hidden",
+            isMobile
+              ? "inset-2 rounded-2xl"
+              : "rounded-xl max-w-[calc(100vw-1rem)] max-h-[calc(100vh-1rem)]"
+          )}
         >
           <header
-            {...viewerDrag.handlers}
-            className="flex items-center justify-between px-3 py-2 border-b border-border bg-muted/40 cursor-move select-none touch-none"
+            {...(isMobile ? {} : viewerDrag.handlers)}
+            className={cn(
+              "flex items-center justify-between px-3 py-2 border-b border-border bg-muted/40 select-none",
+              isMobile ? "" : "cursor-move touch-none"
+            )}
           >
             <div className="flex items-center gap-2 min-w-0">
-              <GripHorizontal className="w-4 h-4 text-muted-foreground shrink-0" />
+              {!isMobile && <GripHorizontal className="w-4 h-4 text-muted-foreground shrink-0" />}
               <p className="text-sm font-semibold truncate">{viewer.name}</p>
             </div>
             <div className="flex items-center gap-1 shrink-0">

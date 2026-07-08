@@ -53,10 +53,10 @@ export function AppLayout() {
       <SkipLink />
       <AppSidebar />
       
-      <div className="mr-[240px] min-h-screen">
-        <header role="banner" className="sticky top-0 z-30 h-16 bg-card/80 backdrop-blur-md border-b border-border flex items-center justify-between px-6">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3 bg-muted rounded-lg px-3 py-2 w-80">
+      <div className="min-h-screen transition-[margin] duration-300" style={{ marginRight: "var(--sidebar-width, 240px)" }}>
+        <header role="banner" className="sticky top-0 z-30 h-16 bg-card/80 backdrop-blur-md border-b border-border flex items-center justify-between px-3 sm:px-6 gap-2">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+            <div className="hidden md:flex items-center gap-3 bg-muted rounded-lg px-3 py-2 w-56 lg:w-80">
               <Search className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
               <label htmlFor="global-search" className="sr-only">חיפוש כללי</label>
               <input
@@ -71,7 +71,7 @@ export function AppLayout() {
             <CompanySelector />
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             {hasDualAccess(roles) && (
               <button
                 type="button"
@@ -96,12 +96,12 @@ export function AppLayout() {
               <span className="absolute top-1.5 left-1.5 w-2 h-2 bg-destructive rounded-full animate-pulse-dot" aria-hidden="true" />
             </button>
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center" aria-hidden="true">
+              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0" aria-hidden="true">
                 <span className="text-xs font-bold text-primary-foreground">{initials}</span>
               </div>
-              <div className="text-right">
-                <p className="text-sm font-medium">{profile?.display_name || user?.email}</p>
-                <p className="text-[11px] text-muted-foreground">{roleLabel}</p>
+              <div className="text-right hidden sm:block max-w-[140px]">
+                <p className="text-sm font-medium truncate">{profile?.display_name || user?.email}</p>
+                <p className="text-[11px] text-muted-foreground truncate">{roleLabel}</p>
               </div>
             </div>
             <button
@@ -116,7 +116,7 @@ export function AppLayout() {
           </div>
         </header>
 
-        <main id="main-content" tabIndex={-1} className="p-6 focus:outline-none">
+        <main id="main-content" tabIndex={-1} className="p-3 sm:p-4 lg:p-6 focus:outline-none pb-24">
           <Suspense fallback={null}>
             <Outlet />
           </Suspense>
