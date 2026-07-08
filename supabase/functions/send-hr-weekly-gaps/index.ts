@@ -156,36 +156,7 @@ Deno.serve(async (req) => {
     }
   }
 
-    for (const p of profs ?? []) {
-      if (!p.email) continue
-      const templateData = {
-        recipientName: p.full_name || 'שלום',
-        companyName: info.name,
-        fromDate: fromLabel,
-        toDate: toLabel,
-        gapCount: info.rows.length,
-        employeeCount: empSet.size,
-        downloadUrl,
-      }
-      const idempotencyKey = `hr-weekly-gaps-${companyId}-${p.id}-${from}-${to}`
-      const resp = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${serviceKey}`,
-          apikey: serviceKey,
-        },
-        body: JSON.stringify({
-          templateName: 'hr-weekly-gaps',
-          recipientEmail: p.email,
-          idempotencyKey,
-          templateData,
-        }),
-      })
-      if (resp.ok) queued++
-      else errors.push(`${p.email}: ${resp.status} ${await resp.text().catch(() => '')}`)
-    }
-  }
+
 
   return new Response(JSON.stringify({
     from, to, companies_with_data, queued, errors,
