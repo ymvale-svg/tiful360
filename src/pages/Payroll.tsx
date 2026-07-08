@@ -49,32 +49,34 @@ export default function Payroll() {
       </div>
 
       <Tabs value={tab} onValueChange={setTab} dir="rtl">
-        <TabsList className="mb-4">
-          <TabsTrigger value="overview" className="gap-1.5">
-            <LayoutDashboard className="w-4 h-4" />
-            סקירה
-          </TabsTrigger>
-          <TabsTrigger value="batches" className="gap-1.5">
-            <FolderOpen className="w-4 h-4" />
-            ניהול תלושים
-          </TabsTrigger>
-          <TabsTrigger value="employee" className="gap-1.5">
-            <UserSearch className="w-4 h-4" />
-            תלושי עובד
-          </TabsTrigger>
-          <TabsTrigger value="tax101" className="gap-1.5">
-            <FileText className="w-4 h-4" />
-            טפסי עובדים
-          </TabsTrigger>
-          <TabsTrigger value="attendance" className="gap-1.5">
-            <Clock4 className="w-4 h-4" />
-            שעוני נוכחות
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="gap-1.5">
-            <SettingsIcon className="w-4 h-4" />
-            הגדרות שכר
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0 mb-4">
+          <TabsList className="inline-flex w-max min-w-full">
+            <TabsTrigger value="overview" className="gap-1.5 whitespace-nowrap">
+              <LayoutDashboard className="w-4 h-4" />
+              סקירה
+            </TabsTrigger>
+            <TabsTrigger value="batches" className="gap-1.5 whitespace-nowrap">
+              <FolderOpen className="w-4 h-4" />
+              ניהול תלושים
+            </TabsTrigger>
+            <TabsTrigger value="employee" className="gap-1.5 whitespace-nowrap">
+              <UserSearch className="w-4 h-4" />
+              תלושי עובד
+            </TabsTrigger>
+            <TabsTrigger value="tax101" className="gap-1.5 whitespace-nowrap">
+              <FileText className="w-4 h-4" />
+              טפסי עובדים
+            </TabsTrigger>
+            <TabsTrigger value="attendance" className="gap-1.5 whitespace-nowrap">
+              <Clock4 className="w-4 h-4" />
+              שעוני נוכחות
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="gap-1.5 whitespace-nowrap">
+              <SettingsIcon className="w-4 h-4" />
+              הגדרות שכר
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="overview">
           <OverviewTab />
