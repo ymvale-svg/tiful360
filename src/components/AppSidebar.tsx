@@ -14,7 +14,7 @@ import {
   Wallet,
   MapPin,
 } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import logoImg from "@/assets/logo.png";
