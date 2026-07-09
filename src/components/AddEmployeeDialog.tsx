@@ -106,9 +106,9 @@ export function AddEmployeeDialog({ open, onOpenChange }: Props) {
   // Operations users cannot grant elevated roles (unless they're also admin/super_admin)
   const allowedSystemRoles = useMemo(() => {
     if (isAdmin || isSuperAdmin) return ALL_ROLES.filter(r => r.value !== "super_admin" || isSuperAdmin);
-    if (isOperations) return ALL_ROLES.filter(r => !OPERATIONS_BLOCKED.includes(r.value));
+    if (isOperations || isHR || isPayroll) return ALL_ROLES.filter(r => !OPERATIONS_BLOCKED.includes(r.value));
     return ALL_ROLES.filter(r => r.value === "employee");
-  }, [isAdmin, isSuperAdmin, isOperations]);
+  }, [isAdmin, isSuperAdmin, isOperations, isHR, isPayroll]);
 
   const fullEmployeeCode = form.employee_number.trim() ? `EMP-${form.employee_number.trim()}` : "";
 
