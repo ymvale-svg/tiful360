@@ -77,7 +77,7 @@ export function AddEmployeeDialog({ open, onOpenChange }: Props) {
   const mutation = useCreateEmployee();
   const { data: existingEmployees } = useEmployees();
   const { toast } = useToast();
-  const { isOperations, isAdmin, isSuperAdmin } = useAuth();
+  const { isOperations, isAdmin, isSuperAdmin, isHR, isPayroll } = useAuth();
   const { activeCompanyId, activeCompany } = useCompany();
   const { data: subEmployers = [] } = useSubEmployers(true);
 
