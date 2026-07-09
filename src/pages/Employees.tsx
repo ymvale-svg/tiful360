@@ -70,8 +70,8 @@ export default function Employees() {
   const queryClient = useQueryClient();
   const updateEmployee = useUpdateEmployee();
   const navigate = useNavigate();
-  const { isAdmin, isSuperAdmin } = useAuth();
-  const canManageUsers = isAdmin || isSuperAdmin;
+  const { isAdmin, isSuperAdmin, isHR, isPayroll } = useAuth();
+  const canManageUsers = isAdmin || isSuperAdmin || isHR || isPayroll;
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = searchParams.get("tab") === "users" && canManageUsers ? "users" : "employees";
   const [tab, setTab] = useState<"employees" | "users">(initialTab);

@@ -77,7 +77,7 @@ export function AddEmployeeDialog({ open, onOpenChange }: Props) {
   const mutation = useCreateEmployee();
   const { data: existingEmployees } = useEmployees();
   const { toast } = useToast();
-  const { isOperations, isAdmin, isSuperAdmin } = useAuth();
+  const { isOperations, isAdmin, isSuperAdmin, isHR, isPayroll } = useAuth();
   const { activeCompanyId, activeCompany } = useCompany();
   const { data: subEmployers = [] } = useSubEmployers(true);
 
@@ -106,9 +106,9 @@ export function AddEmployeeDialog({ open, onOpenChange }: Props) {
   // Operations users cannot grant elevated roles (unless they're also admin/super_admin)
   const allowedSystemRoles = useMemo(() => {
     if (isAdmin || isSuperAdmin) return ALL_ROLES.filter(r => r.value !== "super_admin" || isSuperAdmin);
-    if (isOperations) return ALL_ROLES.filter(r => !OPERATIONS_BLOCKED.includes(r.value));
+    if (isOperations || isHR || isPayroll) return ALL_ROLES.filter(r => !OPERATIONS_BLOCKED.includes(r.value));
     return ALL_ROLES.filter(r => r.value === "employee");
-  }, [isAdmin, isSuperAdmin, isOperations]);
+  }, [isAdmin, isSuperAdmin, isOperations, isHR, isPayroll]);
 
   const fullEmployeeCode = form.employee_number.trim() ? `EMP-${form.employee_number.trim()}` : "";
 
@@ -133,7 +133,7 @@ export function AddEmployeeDialog({ open, onOpenChange }: Props) {
 
     if (form.phone && !isValidPhone(form.phone)) e.phone = "פורמט טלפון לא תקין";
 
-    if (isOperations && !isAdmin && !isSuperAdmin && OPERATIONS_BLOCKED.includes(form.system_role)) {
+    if ((isOperations || isHR || isPayroll) && !isAdmin && !isSuperAdmin && OPERATIONS_BLOCKED.includes(form.system_role)) {
       e.system_role = "אין לך הרשאה לתפקיד זה";
     }
 

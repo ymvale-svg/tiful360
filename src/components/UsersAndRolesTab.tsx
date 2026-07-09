@@ -82,7 +82,7 @@ async function fetchUsers(companyId: string | null): Promise<ManagedUser[]> {
 
 export function UsersAndRolesTab() {
   const { toast } = useToast();
-  const { user: currentUser, isAdmin, isSuperAdmin, isOperations } = useAuth();
+  const { user: currentUser, isAdmin, isSuperAdmin, isOperations, isHR, isPayroll } = useAuth();
   const { activeCompanyId } = useCompany();
   const queryClient = useQueryClient();
   const [importOpen, setImportOpen] = useState(false);
@@ -172,7 +172,7 @@ export function UsersAndRolesTab() {
           <p className="text-sm text-muted-foreground">צפייה, שינוי תפקידים והשהיית חשבונות</p>
         </div>
         <div className="flex items-center gap-2">
-          {(isAdmin || isSuperAdmin) && (
+          {(isAdmin || isSuperAdmin || isHR || isPayroll) && (
             <Button onClick={() => setInviteExternalOpen(true)} className="gap-2">
               <UserPlus className="w-4 h-4" />
               הזמן משתמש חיצוני

@@ -30,8 +30,11 @@ Deno.serve(async (req) => {
     const { data: callerRoles } = await anonClient.from("user_roles").select("role").eq("user_id", caller.id);
     const callerIsSuperAdmin = callerRoles?.some((r: any) => r.role === "super_admin");
     const isAdmin = callerRoles?.some((r: any) => r.role === "admin" || r.role === "super_admin");
-    if (!isAdmin) {
-      return new Response(JSON.stringify({ error: "Forbidden: admin only" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const canManage = callerRoles?.some((r: any) =>
+      ["admin", "super_admin", "hr", "payroll"].includes(r.role)
+    );
+    if (!canManage) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
