@@ -133,7 +133,7 @@ export function AddEmployeeDialog({ open, onOpenChange }: Props) {
 
     if (form.phone && !isValidPhone(form.phone)) e.phone = "פורמט טלפון לא תקין";
 
-    if (isOperations && !isAdmin && !isSuperAdmin && OPERATIONS_BLOCKED.includes(form.system_role)) {
+    if ((isOperations || isHR || isPayroll) && !isAdmin && !isSuperAdmin && OPERATIONS_BLOCKED.includes(form.system_role)) {
       e.system_role = "אין לך הרשאה לתפקיד זה";
     }
 
