@@ -172,7 +172,7 @@ export function UsersAndRolesTab() {
           <p className="text-sm text-muted-foreground">צפייה, שינוי תפקידים והשהיית חשבונות</p>
         </div>
         <div className="flex items-center gap-2">
-          {(isAdmin || isSuperAdmin) && (
+          {(isAdmin || isSuperAdmin || isHR || isPayroll) && (
             <Button onClick={() => setInviteExternalOpen(true)} className="gap-2">
               <UserPlus className="w-4 h-4" />
               הזמן משתמש חיצוני
