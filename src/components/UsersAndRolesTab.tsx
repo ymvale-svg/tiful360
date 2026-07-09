@@ -82,7 +82,7 @@ async function fetchUsers(companyId: string | null): Promise<ManagedUser[]> {
 
 export function UsersAndRolesTab() {
   const { toast } = useToast();
-  const { user: currentUser, isAdmin, isSuperAdmin, isOperations } = useAuth();
+  const { user: currentUser, isAdmin, isSuperAdmin, isOperations, isHR, isPayroll } = useAuth();
   const { activeCompanyId } = useCompany();
   const queryClient = useQueryClient();
   const [importOpen, setImportOpen] = useState(false);
