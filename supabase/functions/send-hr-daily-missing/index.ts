@@ -169,7 +169,7 @@ Deno.serve(async (req) => {
   }
 
   return new Response(JSON.stringify({
-    date: target, companies: byCompany.size, queued, skipped_no_recipients, errors,
+    date: target, companies: byCompany.size, queued, skipped_no_recipients, skipped_agent_down, errors,
   }), {
     status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
