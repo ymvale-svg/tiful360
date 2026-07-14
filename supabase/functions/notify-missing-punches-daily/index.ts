@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
     else errors.push(`${r.email}: ${resp.status} ${await resp.text().catch(() => '')}`)
   }
 
-  return new Response(JSON.stringify({ date: target, total: rows?.length ?? 0, queued, skipped_no_email, errors }), {
+  return new Response(JSON.stringify({ date: target, total: rows?.length ?? 0, queued, skipped_no_email, skipped_agent_down, errors }), {
     status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
 })
