@@ -65,9 +65,28 @@ Deno.serve(async (req) => {
   const reportDate = formatDateIL(target)
   let queued = 0
   let skipped_no_recipients = 0
+  let skipped_agent_down = 0
   const errors: string[] = []
 
+  // Skip companies where the attendance agent didn't record any punches on
+  // the target date (clock software wasn't reading — avoid false alarms).
+  const dayStartIL = `${target}T00:00:00+03:00`
+  const dayEndIL = `${target}T23:59:59+03:00`
+  const companyIds = [...byCompany.keys()]
+  const companyHasPunches = new Set<string>()
+  if (companyIds.length > 0) {
+    const { data: punchRows } = await admin
+      .from('attendance_punches')
+      .select('company_id')
+      .in('company_id', companyIds)
+      .gte('punch_at', dayStartIL)
+      .lte('punch_at', dayEndIL)
+      .limit(5000)
+    for (const p of punchRows ?? []) companyHasPunches.add((p as any).company_id)
+  }
+
   for (const [companyId, info] of byCompany.entries()) {
+    if (!companyHasPunches.has(companyId)) { skipped_agent_down++; continue }
     // Recipients: HR only (payroll is a separate role with its own reports)
     const { data: comp } = await admin
       .from('companies')
@@ -150,7 +169,7 @@ Deno.serve(async (req) => {
   }
 
   return new Response(JSON.stringify({
-    date: target, companies: byCompany.size, queued, skipped_no_recipients, errors,
+    date: target, companies: byCompany.size, queued, skipped_no_recipients, skipped_agent_down, errors,
   }), {
     status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
