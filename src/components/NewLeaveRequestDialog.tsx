@@ -68,9 +68,7 @@ export function NewLeaveRequestDialog({ open, onOpenChange, employeeId, managerI
       });
       toast({
         title: "הבקשה נשלחה",
-        description: isSick && !end
-          ? "המנהל הישיר ומשאבי אנוש קיבלו עדכון. ניתן לעדכן תאריך סיום ואישור מחלה בהמשך"
-          : isSick
+        description: isSick
           ? "המנהל הישיר, משאבי אנוש וחשבות שכר קיבלו עדכון"
           : "המנהל הישיר קיבל אימייל",
       });
