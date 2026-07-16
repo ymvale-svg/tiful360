@@ -409,7 +409,7 @@ Deno.serve(async (req) => {
         );
         const subj = `✅ ${employee?.full_name} — בקשת ${typeLabel} אושרה`;
         for (const to of infoRecipients) {
-          await enqueueEmail(supabase, to, subj, html);
+          await enqueueEmail(supabase, to, subj, html, "leave-approved-info", `leave-approved-info-${request.id}-${to}`);
         }
       }
 
