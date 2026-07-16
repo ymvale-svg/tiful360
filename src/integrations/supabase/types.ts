@@ -1597,7 +1597,7 @@ export type Database = {
           company_id: string
           created_at: string
           employee_id: string
-          end_date: string
+          end_date: string | null
           id: string
           manager_id: string | null
           manager_note: string | null
@@ -1610,7 +1610,7 @@ export type Database = {
           signed_pdf_url: string | null
           start_date: string
           status: Database["public"]["Enums"]["leave_request_status"]
-          total_days: number
+          total_days: number | null
           updated_at: string
         }
         Insert: {
@@ -1618,7 +1618,7 @@ export type Database = {
           company_id: string
           created_at?: string
           employee_id: string
-          end_date: string
+          end_date?: string | null
           id?: string
           manager_id?: string | null
           manager_note?: string | null
@@ -1631,7 +1631,7 @@ export type Database = {
           signed_pdf_url?: string | null
           start_date: string
           status?: Database["public"]["Enums"]["leave_request_status"]
-          total_days?: number
+          total_days?: number | null
           updated_at?: string
         }
         Update: {
@@ -1639,7 +1639,7 @@ export type Database = {
           company_id?: string
           created_at?: string
           employee_id?: string
-          end_date?: string
+          end_date?: string | null
           id?: string
           manager_id?: string | null
           manager_note?: string | null
@@ -1652,7 +1652,7 @@ export type Database = {
           signed_pdf_url?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["leave_request_status"]
-          total_days?: number
+          total_days?: number | null
           updated_at?: string
         }
         Relationships: [
