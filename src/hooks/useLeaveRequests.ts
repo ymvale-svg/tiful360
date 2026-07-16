@@ -72,7 +72,7 @@ interface CreateInput {
   manager_id: string | null;
   request_type: LeaveRequestType;
   start_date: string;
-  end_date: string;
+  end_date: string | null;
   total_days: number;
   reason?: string;
   attachment_file?: File | null;
