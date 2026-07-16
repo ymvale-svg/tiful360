@@ -307,6 +307,8 @@ Deno.serve(async (req) => {
           manager.email,
           `🔔 בקשת ${typeLabel} חדשה לאישור — ${employee?.full_name}`,
           html,
+          "leave-request-submitted",
+          `leave-request-submitted-${request.id}`,
         );
       }
       await supabase
