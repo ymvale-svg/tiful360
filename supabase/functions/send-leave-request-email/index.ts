@@ -182,8 +182,9 @@ Deno.serve(async (req) => {
     }
 
     const typeLabel = TYPE_LABELS[request.request_type] ?? request.request_type;
-    const dateRange =
-      request.start_date === request.end_date
+    const dateRange = !request.end_date
+      ? `${fmtDate(request.start_date)} – טרם עודכן`
+      : request.start_date === request.end_date
         ? fmtDate(request.start_date)
         : `${fmtDate(request.start_date)} – ${fmtDate(request.end_date)}`;
     const baseDetails: Array<[string, string]> = [
