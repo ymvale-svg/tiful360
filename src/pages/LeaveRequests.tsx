@@ -127,8 +127,9 @@ export default function LeaveRequests() {
                   <p className="font-semibold text-sm">{r.employee?.full_name}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {r.employee?.department} • {TYPE_LABELS[r.request_type as string]} •{" "}
-                    {r.total_days} ימים •{" "}
-                    {new Date(r.start_date).toLocaleDateString("en-GB")} – {new Date(r.end_date).toLocaleDateString("en-GB")}
+                    {r.end_date ? `${r.total_days} ימים • ` : ""}
+                    {new Date(r.start_date).toLocaleDateString("en-GB")} –{" "}
+                    {r.end_date ? new Date(r.end_date).toLocaleDateString("en-GB") : <span className="text-warning">טרם עודכן</span>}
                   </p>
                   {r.reason && <p className="text-xs text-muted-foreground mt-1">{r.reason}</p>}
                   {r.attachment_url && (
