@@ -72,7 +72,7 @@ interface CreateInput {
   manager_id: string | null;
   request_type: LeaveRequestType;
   start_date: string;
-  end_date: string;
+  end_date: string | null;
   total_days: number;
   reason?: string;
   attachment_file?: File | null;
@@ -128,8 +128,9 @@ export function useCreateLeaveRequest() {
         console.warn("send-leave-request-email failed", e);
       }
 
-      // Sick leaves auto-approve and notify payroll directly
-      if (input.request_type === "sick") {
+      // Sick leaves with an end_date already set → notify payroll now.
+      // Otherwise payroll is only notified when the sick leave is closed later.
+      if (input.request_type === "sick" && input.end_date) {
         try {
           await supabase.functions.invoke("notify-payroll-sick-leave", {
             body: { request_id: inserted.id },
@@ -245,3 +246,74 @@ export function useCancelLeaveRequest() {
     },
   });
 }
+
+interface UpdateSickInput {
+  request_id: string;
+  employee_id: string;
+  end_date?: string | null;
+  total_days?: number | null;
+  attachment_file?: File | null;
+}
+
+/** Employee updates their sick leave: add end date and/or upload sick note. */
+export function useUpdateSickLeaveRequest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: UpdateSickInput) => {
+      const patch: Record<string, unknown> = {};
+
+      if (input.attachment_file) {
+        const ext = input.attachment_file.name.split(".").pop() || "bin";
+        const path = `${input.employee_id}/${crypto.randomUUID()}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from("leave-attachments")
+          .upload(path, input.attachment_file, { upsert: false });
+        if (upErr) throw upErr;
+        const { data } = await supabase.storage
+          .from("leave-attachments")
+          .createSignedUrl(path, 60 * 60 * 24 * 365);
+        patch.attachment_url = data?.signedUrl ?? path;
+      }
+
+      const wasClosed = input.end_date != null;
+      if (wasClosed) {
+        patch.end_date = input.end_date;
+        if (input.total_days != null) patch.total_days = input.total_days;
+      }
+
+      if (Object.keys(patch).length === 0) return { request_id: input.request_id };
+
+      const { error } = await supabase
+        .from("leave_requests")
+        .update(patch as any)
+        .eq("id", input.request_id);
+      if (error) throw error;
+
+      // If sick leave was just closed → notify payroll + refresh info to manager & HR
+      if (wasClosed) {
+        try {
+          await supabase.functions.invoke("notify-payroll-sick-leave", {
+            body: { request_id: input.request_id },
+          });
+        } catch (e) {
+          console.warn("notify-payroll-sick-leave failed", e);
+        }
+        try {
+          await supabase.functions.invoke("send-leave-request-email", {
+            body: { request_id: input.request_id, event: "sick-closed" },
+          });
+        } catch (e) {
+          console.warn("send-leave-request-email failed", e);
+        }
+      }
+
+      return { request_id: input.request_id };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-leave-requests"] });
+      qc.invalidateQueries({ queryKey: ["team-leave-requests"] });
+      qc.invalidateQueries({ queryKey: ["employee-leave-requests"] });
+    },
+  });
+}
+

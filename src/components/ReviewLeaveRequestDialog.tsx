@@ -59,9 +59,11 @@ export function ReviewLeaveRequestDialog({ request, onClose }: Props) {
             <div className="flex items-center gap-2">
               <Calendar className="w-3 h-3 text-muted-foreground" />
               <span>
-                {request.start_date === request.end_date
-                  ? fmt(request.start_date)
-                  : `${fmt(request.start_date)} – ${fmt(request.end_date)}`}
+                {!request.end_date
+                  ? `${fmt(request.start_date)} – טרם עודכן`
+                  : request.start_date === request.end_date
+                    ? fmt(request.start_date)
+                    : `${fmt(request.start_date)} – ${fmt(request.end_date)}`}
               </span>
               <span className="text-muted-foreground">({request.total_days} ימים)</span>
             </div>
