@@ -379,7 +379,7 @@ Deno.serve(async (req) => {
            ${detailsTable(baseDetails)}
            ${request.manager_note ? `<p><strong>הערת מנהל:</strong> ${escapeHtml(request.manager_note)}</p>` : ""}`,
         );
-        await enqueueEmail(supabase, employee.email, `✅ בקשת ${typeLabel} אושרה`, html);
+        await enqueueEmail(supabase, employee.email, `✅ בקשת ${typeLabel} אושרה`, html, "leave-approved-employee", `leave-approved-emp-${request.id}`);
       }
 
       // Notify HR (info + calendar CTA) — exclude the reviewer if HR approved
