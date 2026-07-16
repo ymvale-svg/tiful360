@@ -12,7 +12,7 @@ const TYPE_LABELS: Record<string, string> = { vacation: "חופשה", sick: "מ�
 const STATUS_LABELS: Record<string, string> = { approved: "מאושר", rejected: "נדחה", cancelled: "בוטל", pending: "ממתין" };
 
 export default function LeaveRequests() {
-  const { isPayroll, isAdmin, isDirectManager } = useAuth();
+  const { isPayroll, isAdmin, isDirectManager, isHR } = useAuth();
   const { data: requests = [], isLoading } = useTeamLeaveRequests();
   const [reviewing, setReviewing] = useState<any | null>(null);
 
