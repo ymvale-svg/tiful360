@@ -285,7 +285,7 @@ export function useUpdateSickLeaveRequest() {
 
       const { error } = await supabase
         .from("leave_requests")
-        .update(patch)
+        .update(patch as any)
         .eq("id", input.request_id);
       if (error) throw error;
 
