@@ -3,8 +3,9 @@ import { useTeamLeaveRequests } from "@/hooks/useLeaveRequests";
 import { ReviewLeaveRequestDialog } from "@/components/ReviewLeaveRequestDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, Stethoscope, Paperclip } from "lucide-react";
+import { CalendarDays, Stethoscope, Paperclip, CalendarPlus } from "lucide-react";
 import { ExportExcelButton } from "@/components/ExcelActionButtons";
+import { buildGoogleCalendarUrl } from "@/lib/googleCalendar";
 import { exportToExcel } from "@/lib/exportExcel";
 
 const TYPE_LABELS: Record<string, string> = { vacation: "חופשה", sick: "מחלה", personal: "יום אישי", other: "אחר" };
