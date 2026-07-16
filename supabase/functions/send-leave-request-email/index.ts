@@ -449,7 +449,7 @@ Deno.serve(async (req) => {
            }`,
         );
         for (const to of payrollList) {
-          await enqueueEmail(supabase, to, `📑 אישור ${typeLabel} — ${employee?.full_name}`, html);
+          await enqueueEmail(supabase, to, `📑 אישור ${typeLabel} — ${employee?.full_name}`, html, "leave-approved-payroll", `leave-approved-payroll-${request.id}-${to}`);
         }
         await supabase
           .from("leave_requests")
