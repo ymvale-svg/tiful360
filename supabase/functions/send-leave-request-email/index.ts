@@ -469,7 +469,7 @@ Deno.serve(async (req) => {
            ${detailsTable(baseDetails)}
            ${request.manager_note ? `<p><strong>סיבת דחייה:</strong> ${escapeHtml(request.manager_note)}</p>` : ""}`,
         );
-        await enqueueEmail(supabase, employee.email, `❌ בקשת ${typeLabel} נדחתה`, html);
+        await enqueueEmail(supabase, employee.email, `❌ בקשת ${typeLabel} נדחתה`, html, "leave-rejected", `leave-rejected-${request.id}`);
       }
     }
 
