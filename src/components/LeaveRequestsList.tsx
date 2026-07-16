@@ -29,14 +29,20 @@ interface Props {
 export function LeaveRequestsList({ requests, showEmployee, allowCancel }: Props) {
   const cancel = useCancelLeaveRequest();
   const { toast } = useToast();
+  const [editingSick, setEditingSick] = useState<any | null>(null);
 
   if (!requests || requests.length === 0) {
     return <p className="text-center text-sm text-muted-foreground py-6">אין בקשות</p>;
   }
 
   return (
+    <>
     <div className="space-y-2">
-      {requests.map((r: any) => (
+      {requests.map((r: any) => {
+        const isSick = r.request_type === "sick";
+        const sickOpen = isSick && !r.end_date;
+        const canEditSick = allowCancel && isSick && r.status !== "cancelled" && (sickOpen || !r.attachment_url);
+        return (
         <div key={r.id} className="bg-card rounded-xl border border-border/50 p-3 space-y-2">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
@@ -45,11 +51,19 @@ export function LeaveRequestsList({ requests, showEmployee, allowCancel }: Props
               )}
               <p className="text-sm">
                 <span className="font-medium">{TYPE_LABELS[r.request_type]}</span>
-                <span className="text-muted-foreground"> • {r.total_days} ימים</span>
+                {r.end_date ? (
+                  <span className="text-muted-foreground"> • {r.total_days} ימים</span>
+                ) : (
+                  <span className="text-warning"> • טרם עודכן תאריך סיום</span>
+                )}
               </p>
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
                 <Calendar className="w-3 h-3" />
-                {r.start_date === r.end_date ? fmt(r.start_date) : `${fmt(r.start_date)} – ${fmt(r.end_date)}`}
+                {!r.end_date
+                  ? `${fmt(r.start_date)} – ?`
+                  : r.start_date === r.end_date
+                    ? fmt(r.start_date)
+                    : `${fmt(r.start_date)} – ${fmt(r.end_date)}`}
               </div>
             </div>
             <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium shrink-0 ${STATUS_CLASS[r.status]}`}>
@@ -81,6 +95,17 @@ export function LeaveRequestsList({ requests, showEmployee, allowCancel }: Props
                 </Button>
               </a>
             )}
+            {canEditSick && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs gap-1"
+                onClick={() => setEditingSick(r)}
+              >
+                <Pencil className="w-3 h-3" />
+                {sickOpen ? "סגור מחלה / הוסף אישור" : "הוסף אישור מחלה"}
+              </Button>
+            )}
             {allowCancel && r.status === "pending" && (
               <Button
                 variant="ghost"
@@ -102,7 +127,10 @@ export function LeaveRequestsList({ requests, showEmployee, allowCancel }: Props
             )}
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
+    <EditSickLeaveDialog request={editingSick} onClose={() => setEditingSick(null)} />
+    </>
   );
 }
