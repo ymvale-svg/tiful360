@@ -159,9 +159,17 @@ Deno.serve(async (req) => {
 
     const { data: company } = await supabase
       .from("companies")
-      .select("id, name, payroll_emails")
+      .select("id, name, payroll_emails, hr_emails")
       .eq("id", request.company_id)
       .single();
+
+    const parseEmailList = (raw: unknown): string[] =>
+      String(raw ?? "")
+        .split(/[,;\n]/)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0 && /^\S+@\S+\.\S+$/.test(s));
+
+    const hrList = parseEmailList((company as any)?.hr_emails);
 
     let manager: any = null;
     if (employee?.direct_manager_id) {
