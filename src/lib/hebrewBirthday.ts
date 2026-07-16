@@ -229,32 +229,41 @@ export function processBirthdaysForCurrentMonth(
   today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
-  const month = today.getMonth();
+  const gregMonth = today.getMonth();
+  const todayHDate = new HDate(today);
+  const currentHMonth = todayHDate.getMonth();
+  const currentHYear = todayHDate.getFullYear();
 
   const out: ProcessedBirthday[] = [];
   for (const r of rows) {
     let eff: Date | null = null;
     let label = "";
     let isHebrew = false;
+    let inMonth = false;
 
     if (r.birthday_calendar_preference === "hebrew"
         && r.hebrew_birth_day && r.hebrew_birth_month && r.hebrew_birth_year) {
       eff = hebrewBirthdayGregorianThisYear(
         r.hebrew_birth_day, r.hebrew_birth_month, r.hebrew_birth_year
       );
-      // Show only day + month (no year) — the year is arbitrary.
       label = formatHebrewBirthDayMonth(
         r.hebrew_birth_day, r.hebrew_birth_month, r.hebrew_birth_year
       );
       isHebrew = true;
+      // Include if birthday's Hebrew month matches the current Hebrew month
+      if (eff) {
+        const bHMonth = toHebcalMonth(r.hebrew_birth_month, currentHYear);
+        inMonth = bHMonth === currentHMonth;
+      }
     } else if (r.birth_date) {
       const bd = new Date(r.birth_date);
       eff = new Date(today.getFullYear(), bd.getMonth(), bd.getDate());
       label = formatGregorianBirthday(eff);
+      inMonth = eff.getMonth() === gregMonth;
     }
 
     if (!eff) continue;
-    if (eff.getMonth() !== month) continue;
+    if (!inMonth) continue;
 
     const effMid = new Date(eff);
     effMid.setHours(0, 0, 0, 0);
