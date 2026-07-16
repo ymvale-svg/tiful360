@@ -142,18 +142,37 @@ export default function LeaveRequests() {
                     </a>
                   )}
                 </div>
-                {r.status === "pending" && canReview && r.request_type !== "sick" ? (
-                  <Button size="sm" onClick={() => setReviewing(r)}>סקירה</Button>
-                ) : (
-                  <span className={`text-[11px] px-2 py-1 rounded-full font-medium ${
-                    r.status === "approved" ? "bg-success/15 text-success" :
-                    r.status === "rejected" ? "bg-destructive/15 text-destructive" :
-                    r.status === "pending" ? "bg-warning/15 text-warning" :
-                    "bg-muted text-muted-foreground"
-                  }`}>
-                    {STATUS_LABELS[r.status as string]}
-                  </span>
-                )}
+                <div className="flex items-center gap-2 shrink-0">
+                  {r.status === "approved" && r.request_type !== "sick" && r.end_date && (isAdmin || isDirectManager || isHR) && (
+                    <a
+                      href={buildGoogleCalendarUrl({
+                        title: `${r.employee?.full_name ?? "עובד"} בחופש`,
+                        startDate: r.start_date,
+                        endDate: r.end_date,
+                        details: `${TYPE_LABELS[r.request_type] ?? r.request_type}${r.reason ? ` — ${r.reason}` : ""}`,
+                      })}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
+                        <CalendarPlus className="w-3 h-3" />
+                        הוסף ליומן
+                      </Button>
+                    </a>
+                  )}
+                  {r.status === "pending" && canReview && r.request_type !== "sick" ? (
+                    <Button size="sm" onClick={() => setReviewing(r)}>סקירה</Button>
+                  ) : (
+                    <span className={`text-[11px] px-2 py-1 rounded-full font-medium ${
+                      r.status === "approved" ? "bg-success/15 text-success" :
+                      r.status === "rejected" ? "bg-destructive/15 text-destructive" :
+                      r.status === "pending" ? "bg-warning/15 text-warning" :
+                      "bg-muted text-muted-foreground"
+                    }`}>
+                      {STATUS_LABELS[r.status as string]}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           ))}
