@@ -136,8 +136,8 @@ export function NewLeaveRequestDialog({ open, onOpenChange, employeeId, managerI
                 <Input id="leave-start" type="date" value={start} onChange={(e) => setStart(e.target.value)} required aria-required="true" />
               </div>
               <div>
-                <Label htmlFor="leave-end">עד תאריך</Label>
-                <Input id="leave-end" type="date" value={end} onChange={(e) => setEnd(e.target.value)} required aria-required="true" />
+                <Label htmlFor="leave-end">עד תאריך {type !== "vacation" && "(אופציונלי)"}</Label>
+                <Input id="leave-end" type="date" value={end} onChange={(e) => setEnd(e.target.value)} required={type === "vacation"} aria-required={type === "vacation"} />
               </div>
             </div>
 
