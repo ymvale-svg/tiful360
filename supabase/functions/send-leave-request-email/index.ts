@@ -319,10 +319,19 @@ Deno.serve(async (req) => {
         await enqueueEmail(supabase, employee.email, `✅ בקשת ${typeLabel} אושרה`, html);
       }
 
-      // Notify direct manager + HR (info + calendar CTA)
+      // Notify HR (info + calendar CTA) — exclude the reviewer if HR approved
+      let reviewerEmail: string | null = null;
+      if (request.reviewed_by) {
+        try {
+          const { data: ru } = await supabase.auth.admin.getUserById(request.reviewed_by);
+          reviewerEmail = ru?.user?.email?.toLowerCase() ?? null;
+        } catch (_) { /* ignore */ }
+      }
       const infoRecipients = new Set<string>();
-      if (manager?.email) infoRecipients.add(manager.email);
-      for (const e of hrList) infoRecipients.add(e);
+      for (const e of hrList) {
+        if (reviewerEmail && e.toLowerCase() === reviewerEmail) continue;
+        infoRecipients.add(e);
+      }
       if (infoRecipients.size > 0) {
         const html = baseLayout(
           "עדכון: בקשת חופשה אושרה",
