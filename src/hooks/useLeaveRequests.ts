@@ -128,8 +128,9 @@ export function useCreateLeaveRequest() {
         console.warn("send-leave-request-email failed", e);
       }
 
-      // Sick leaves auto-approve and notify payroll directly
-      if (input.request_type === "sick") {
+      // Sick leaves with an end_date already set → notify payroll now.
+      // Otherwise payroll is only notified when the sick leave is closed later.
+      if (input.request_type === "sick" && input.end_date) {
         try {
           await supabase.functions.invoke("notify-payroll-sick-leave", {
             body: { request_id: inserted.id },
