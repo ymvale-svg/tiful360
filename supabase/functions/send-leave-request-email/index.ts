@@ -286,7 +286,7 @@ Deno.serve(async (req) => {
         if (manager?.email) recipients.add(manager.email);
         for (const e of hrList) recipients.add(e);
         for (const to of recipients) {
-          await enqueueEmail(supabase, to, subj, html);
+          await enqueueEmail(supabase, to, subj, html, "leave-sick-submitted", `leave-sick-submitted-${request.id}-${to}`);
         }
       } else {
         if (!manager?.email) {
