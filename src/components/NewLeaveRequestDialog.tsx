@@ -81,11 +81,15 @@ export function NewLeaveRequestDialog({ open, onOpenChange, employeeId, managerI
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!start || !end) {
-      toast({ title: "יש לבחור תאריך התחלה וסיום", variant: "destructive" });
+    if (!start) {
+      toast({ title: "יש לבחור תאריך התחלה", variant: "destructive" });
       return;
     }
-    if (days <= 0) {
+    if (type === "vacation" && !end) {
+      toast({ title: "יש לבחור תאריך סיום לחופשה", variant: "destructive" });
+      return;
+    }
+    if (end && days <= 0) {
       toast({ title: "תאריכים לא תקינים", variant: "destructive" });
       return;
     }
