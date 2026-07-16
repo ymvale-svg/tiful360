@@ -328,6 +328,9 @@ Deno.serve(async (req) => {
         } catch (_) { /* ignore */ }
       }
       const infoRecipients = new Set<string>();
+      if (manager?.email && (!reviewerEmail || manager.email.toLowerCase() !== reviewerEmail)) {
+        infoRecipients.add(manager.email);
+      }
       for (const e of hrList) {
         if (reviewerEmail && e.toLowerCase() === reviewerEmail) continue;
         infoRecipients.add(e);
