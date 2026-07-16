@@ -134,22 +134,14 @@ export function NewLeaveRequestDialog({ open, onOpenChange, employeeId, managerI
               </div>
             </fieldset>
 
-            {isSick && (
-              <p className="text-xs bg-info/10 border border-info/20 rounded-lg p-2 text-muted-foreground">
-                ניתן להזין רק תאריך התחלה. בהמשך תוכל/י להיכנס שוב לבקשה ולעדכן תאריך סיום ולהעלות אישור מחלה.
-              </p>
-            )}
-
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label htmlFor="leave-start">מתאריך</Label>
                 <Input id="leave-start" type="date" value={start} onChange={(e) => setStart(e.target.value)} required aria-required="true" />
               </div>
               <div>
-                <Label htmlFor="leave-end">
-                  עד תאריך {isSick && <span className="text-muted-foreground text-xs">(אופציונלי)</span>}
-                </Label>
-                <Input id="leave-end" type="date" value={end} onChange={(e) => setEnd(e.target.value)} required={!isSick} aria-required={!isSick} />
+                <Label htmlFor="leave-end">עד תאריך</Label>
+                <Input id="leave-end" type="date" value={end} onChange={(e) => setEnd(e.target.value)} required aria-required="true" />
               </div>
             </div>
 
