@@ -81,11 +81,15 @@ export function NewLeaveRequestDialog({ open, onOpenChange, employeeId, managerI
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!start || !end) {
-      toast({ title: "יש לבחור תאריך התחלה וסיום", variant: "destructive" });
+    if (!start) {
+      toast({ title: "יש לבחור תאריך התחלה", variant: "destructive" });
       return;
     }
-    if (days <= 0) {
+    if (type === "vacation" && !end) {
+      toast({ title: "יש לבחור תאריך סיום לחופשה", variant: "destructive" });
+      return;
+    }
+    if (end && days <= 0) {
       toast({ title: "תאריכים לא תקינים", variant: "destructive" });
       return;
     }
@@ -132,8 +136,8 @@ export function NewLeaveRequestDialog({ open, onOpenChange, employeeId, managerI
                 <Input id="leave-start" type="date" value={start} onChange={(e) => setStart(e.target.value)} required aria-required="true" />
               </div>
               <div>
-                <Label htmlFor="leave-end">עד תאריך</Label>
-                <Input id="leave-end" type="date" value={end} onChange={(e) => setEnd(e.target.value)} required aria-required="true" />
+                <Label htmlFor="leave-end">עד תאריך {type !== "vacation" && "(אופציונלי)"}</Label>
+                <Input id="leave-end" type="date" value={end} onChange={(e) => setEnd(e.target.value)} required={type === "vacation"} aria-required={type === "vacation"} />
               </div>
             </div>
 
