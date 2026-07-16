@@ -84,29 +84,90 @@ function ctaButton(href: string, label: string) {
   </p>`;
 }
 
+function generateToken(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function getOrCreateUnsubscribeToken(supabase: any, email: string): Promise<string | null> {
+  const normalized = email.toLowerCase();
+  const { data: existing } = await supabase
+    .from("email_unsubscribe_tokens")
+    .select("token, used_at")
+    .eq("email", normalized)
+    .maybeSingle();
+  if (existing && !existing.used_at) return existing.token;
+  if (existing && existing.used_at) return null; // suppressed
+  const token = generateToken();
+  await supabase
+    .from("email_unsubscribe_tokens")
+    .upsert({ token, email: normalized }, { onConflict: "email", ignoreDuplicates: true });
+  const { data: stored } = await supabase
+    .from("email_unsubscribe_tokens")
+    .select("token")
+    .eq("email", normalized)
+    .maybeSingle();
+  return stored?.token ?? token;
+}
+
 async function enqueueEmail(
   supabase: any,
   to: string,
   subject: string,
   html: string,
-  attachments?: Array<{ filename: string; url: string }>,
+  label: string,
+  idempotencyKey: string,
 ) {
-  const payload: Record<string, unknown> = {
-    from: `${FROM_NAME} <${FROM_EMAIL}>`,
-    to: [to],
-    subject,
-    html,
-    sender_domain: SENDER_DOMAIN,
-  };
-  if (attachments && attachments.length > 0) {
-    payload.attachments = attachments;
+  const normalized = to.toLowerCase();
+  // Suppression check
+  const { data: suppressed } = await supabase
+    .from("suppressed_emails")
+    .select("id")
+    .eq("email", normalized)
+    .maybeSingle();
+  const messageId = crypto.randomUUID();
+  if (suppressed) {
+    await supabase.from("email_send_log").insert({
+      message_id: messageId, template_name: label, recipient_email: to, status: "suppressed",
+    });
+    return false;
   }
+  const unsubscribe_token = await getOrCreateUnsubscribeToken(supabase, to);
+  if (!unsubscribe_token) {
+    await supabase.from("email_send_log").insert({
+      message_id: messageId, template_name: label, recipient_email: to, status: "suppressed",
+    });
+    return false;
+  }
+  await supabase.from("email_send_log").insert({
+    message_id: messageId, template_name: label, recipient_email: to, status: "pending",
+  });
   const { error } = await supabase.rpc("enqueue_email", {
     queue_name: "transactional_emails",
-    payload,
+    payload: {
+      message_id: messageId,
+      to,
+      from: `${FROM_NAME} <${FROM_EMAIL}>`,
+      sender_domain: SENDER_DOMAIN,
+      subject,
+      html,
+      purpose: "transactional",
+      label,
+      idempotency_key: idempotencyKey,
+      unsubscribe_token,
+      queued_at: new Date().toISOString(),
+    },
   });
-  if (error) console.error("enqueue error", to, error);
-  return !error;
+  if (error) {
+    console.error("enqueue error", to, error);
+    await supabase.from("email_send_log").insert({
+      message_id: messageId, template_name: label, recipient_email: to,
+      status: "failed", error_message: "Failed to enqueue",
+    });
+    return false;
+  }
+  return true;
 }
 
 Deno.serve(async (req) => {
@@ -225,7 +286,7 @@ Deno.serve(async (req) => {
         if (manager?.email) recipients.add(manager.email);
         for (const e of hrList) recipients.add(e);
         for (const to of recipients) {
-          await enqueueEmail(supabase, to, subj, html);
+          await enqueueEmail(supabase, to, subj, html, "leave-sick-submitted", `leave-sick-submitted-${request.id}-${to}`);
         }
       } else {
         if (!manager?.email) {
@@ -246,6 +307,8 @@ Deno.serve(async (req) => {
           manager.email,
           `🔔 בקשת ${typeLabel} חדשה לאישור — ${employee?.full_name}`,
           html,
+          "leave-request-submitted",
+          `leave-request-submitted-${request.id}`,
         );
       }
       await supabase
@@ -271,9 +334,9 @@ Deno.serve(async (req) => {
       if (manager?.email) recipients.add(manager.email);
       for (const e of hrList) recipients.add(e);
       const subj = `📋 סגירת מחלה — ${employee?.full_name}`;
-      for (const to of recipients) {
-        await enqueueEmail(supabase, to, subj, html);
-      }
+        for (const to of recipients) {
+          await enqueueEmail(supabase, to, subj, html, "leave-sick-closed", `leave-sick-closed-${request.id}-${to}`);
+        }
     }
 
 
@@ -316,7 +379,7 @@ Deno.serve(async (req) => {
            ${detailsTable(baseDetails)}
            ${request.manager_note ? `<p><strong>הערת מנהל:</strong> ${escapeHtml(request.manager_note)}</p>` : ""}`,
         );
-        await enqueueEmail(supabase, employee.email, `✅ בקשת ${typeLabel} אושרה`, html);
+        await enqueueEmail(supabase, employee.email, `✅ בקשת ${typeLabel} אושרה`, html, "leave-approved-employee", `leave-approved-emp-${request.id}`);
       }
 
       // Notify HR (info + calendar CTA) — exclude the reviewer if HR approved
@@ -346,7 +409,7 @@ Deno.serve(async (req) => {
         );
         const subj = `✅ ${employee?.full_name} — בקשת ${typeLabel} אושרה`;
         for (const to of infoRecipients) {
-          await enqueueEmail(supabase, to, subj, html);
+          await enqueueEmail(supabase, to, subj, html, "leave-approved-info", `leave-approved-info-${request.id}-${to}`);
         }
       }
 
@@ -386,7 +449,7 @@ Deno.serve(async (req) => {
            }`,
         );
         for (const to of payrollList) {
-          await enqueueEmail(supabase, to, `📑 אישור ${typeLabel} — ${employee?.full_name}`, html);
+          await enqueueEmail(supabase, to, `📑 אישור ${typeLabel} — ${employee?.full_name}`, html, "leave-approved-payroll", `leave-approved-payroll-${request.id}-${to}`);
         }
         await supabase
           .from("leave_requests")
@@ -406,7 +469,7 @@ Deno.serve(async (req) => {
            ${detailsTable(baseDetails)}
            ${request.manager_note ? `<p><strong>סיבת דחייה:</strong> ${escapeHtml(request.manager_note)}</p>` : ""}`,
         );
-        await enqueueEmail(supabase, employee.email, `❌ בקשת ${typeLabel} נדחתה`, html);
+        await enqueueEmail(supabase, employee.email, `❌ בקשת ${typeLabel} נדחתה`, html, "leave-rejected", `leave-rejected-${request.id}`);
       }
     }
 
