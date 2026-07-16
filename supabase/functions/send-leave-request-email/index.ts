@@ -334,9 +334,9 @@ Deno.serve(async (req) => {
       if (manager?.email) recipients.add(manager.email);
       for (const e of hrList) recipients.add(e);
       const subj = `📋 סגירת מחלה — ${employee?.full_name}`;
-      for (const to of recipients) {
-        await enqueueEmail(supabase, to, subj, html);
-      }
+        for (const to of recipients) {
+          await enqueueEmail(supabase, to, subj, html, "leave-sick-closed", `leave-sick-closed-${request.id}-${to}`);
+        }
     }
 
 
