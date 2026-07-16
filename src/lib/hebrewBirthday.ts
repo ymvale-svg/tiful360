@@ -278,6 +278,6 @@ export function processBirthdaysForCurrentMonth(
     });
   }
 
-  out.sort((a, b) => a.effectiveDate.getDate() - b.effectiveDate.getDate());
+  out.sort((a, b) => a.effectiveDate.getTime() - b.effectiveDate.getTime());
   return out;
 }
