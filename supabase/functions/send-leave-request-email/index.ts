@@ -203,32 +203,37 @@ Deno.serve(async (req) => {
 
     // ------- SUBMITTED -------
     if (event === "submitted") {
-      if (!manager?.email) {
-        return new Response(
-          JSON.stringify({ ok: true, warning: "manager has no email" }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
       if (request.request_type === "sick") {
-        // informational
+        // informational — to manager + HR
         const attachLine = request.attachment_url
           ? `<p>אישור מחלה צורף ע"י העובד.</p>`
-          : `<p style="color:#b45309;">לא הועלה אישור מחלה. זיכוי הימים מותנה בהמצאת אישור.</p>`;
+          : `<p style="color:#b45309;">לא הועלה אישור מחלה. ניתן להעלות אישור בהמשך מתוך הבקשה בפורטל.</p>`;
+        const endLine = !request.end_date
+          ? `<p style="color:#475569;font-size:13px;">תאריך סיום המחלה טרם עודכן. העובד/ת יעדכן/תעדכן בסיום ההיעדרות.</p>`
+          : "";
         const html = baseLayout(
           "עדכון: דיווח מחלה",
           `<h2 style="margin:0 0 8px;font-size:18px;">עדכון — דיווח מחלה</h2>
            <p style="color:#475569;font-size:14px;">${escapeHtml(employee?.full_name ?? "עובד")} דיווח/ה על ימי מחלה. אין צורך באישור — זוהי הודעת עדכון בלבד.</p>
            ${detailsTable(baseDetails)}
+           ${endLine}
            ${attachLine}
            ${ctaButton(reviewUrl, "צפייה בבקשה")}`,
         );
-        await enqueueEmail(
-          supabase,
-          manager.email,
-          `📋 עדכון: ${employee?.full_name} דיווח/ה על ימי מחלה`,
-          html,
-        );
+        const subj = `📋 עדכון: ${employee?.full_name} דיווח/ה על ימי מחלה`;
+        const recipients = new Set<string>();
+        if (manager?.email) recipients.add(manager.email);
+        for (const e of hrList) recipients.add(e);
+        for (const to of recipients) {
+          await enqueueEmail(supabase, to, subj, html);
+        }
       } else {
+        if (!manager?.email) {
+          return new Response(
+            JSON.stringify({ ok: true, warning: "manager has no email" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
         const html = baseLayout(
           "בקשה חדשה לאישור",
           `<h2 style="margin:0 0 8px;font-size:18px;">בקשה חדשה לאישור</h2>
@@ -248,6 +253,29 @@ Deno.serve(async (req) => {
         .update({ manager_notified_at: new Date().toISOString() })
         .eq("id", request.id);
     }
+
+    // ------- SICK CLOSED (end_date + optionally attachment added later) -------
+    if (event === "sick-closed") {
+      const attachLine = request.attachment_url
+        ? `<p>אישור מחלה מצורף.</p>`
+        : `<p style="color:#b45309;">לא צורף אישור מחלה. זיכוי הימים מותנה בהמצאת אישור.</p>`;
+      const html = baseLayout(
+        "סגירת דיווח מחלה",
+        `<h2 style="margin:0 0 8px;font-size:18px;">סגירת דיווח מחלה</h2>
+         <p style="color:#475569;font-size:14px;">${escapeHtml(employee?.full_name ?? "עובד")} עדכן/ה את סיום ימי המחלה.</p>
+         ${detailsTable(baseDetails)}
+         ${attachLine}
+         ${ctaButton(reviewUrl, "צפייה בבקשה")}`,
+      );
+      const recipients = new Set<string>();
+      if (manager?.email) recipients.add(manager.email);
+      for (const e of hrList) recipients.add(e);
+      const subj = `📋 סגירת מחלה — ${employee?.full_name}`;
+      for (const to of recipients) {
+        await enqueueEmail(supabase, to, subj, html);
+      }
+    }
+
 
     // ------- APPROVED -------
     if (event === "approved") {
