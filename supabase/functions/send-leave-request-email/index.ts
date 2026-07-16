@@ -279,6 +279,33 @@ Deno.serve(async (req) => {
 
     // ------- APPROVED -------
     if (event === "approved") {
+      // Build Google Calendar link (all-day event)
+      const buildGcalUrl = () => {
+        if (!request.end_date) return null;
+        const toYmd = (s: string) => {
+          const d = new Date(s);
+          return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+        };
+        const endEx = new Date(request.end_date);
+        endEx.setDate(endEx.getDate() + 1);
+        const endYmd = `${endEx.getFullYear()}${String(endEx.getMonth() + 1).padStart(2, "0")}${String(endEx.getDate()).padStart(2, "0")}`;
+        const title = `${employee?.full_name ?? "עובד"} בחופש`;
+        const details = `${typeLabel}${request.reason ? ` — ${request.reason}` : ""}`;
+        const p = new URLSearchParams({
+          action: "TEMPLATE",
+          text: title,
+          dates: `${toYmd(request.start_date)}/${endYmd}`,
+          details,
+        });
+        return `https://calendar.google.com/calendar/render?${p.toString()}`;
+      };
+      const gcalUrl = buildGcalUrl();
+      const gcalButton = gcalUrl
+        ? `<p style="margin:18px 0;">
+             <a href="${gcalUrl}" style="display:inline-block;background:#16a34a;color:#fff;text-decoration:none;padding:11px 22px;border-radius:8px;font-weight:600;font-size:14px;">📅 הוסף ליומן Google</a>
+           </p>`
+        : "";
+
       // Notify employee
       if (employee?.email) {
         const html = baseLayout(
@@ -290,6 +317,25 @@ Deno.serve(async (req) => {
            ${request.manager_note ? `<p><strong>הערת מנהל:</strong> ${escapeHtml(request.manager_note)}</p>` : ""}`,
         );
         await enqueueEmail(supabase, employee.email, `✅ בקשת ${typeLabel} אושרה`, html);
+      }
+
+      // Notify direct manager + HR (info + calendar CTA)
+      const infoRecipients = new Set<string>();
+      if (manager?.email) infoRecipients.add(manager.email);
+      for (const e of hrList) infoRecipients.add(e);
+      if (infoRecipients.size > 0) {
+        const html = baseLayout(
+          "עדכון: בקשת חופשה אושרה",
+          `<h2 style="margin:0 0 8px;font-size:18px;">✅ בקשת ${escapeHtml(typeLabel)} אושרה</h2>
+           <p style="color:#475569;font-size:14px;">בקשתו/ה של ${escapeHtml(employee?.full_name ?? "עובד")} אושרה. ניתן להוסיף את החופשה ליומן Google.</p>
+           ${detailsTable(baseDetails)}
+           ${gcalButton}
+           ${ctaButton(reviewUrl, "צפייה בבקשה")}`,
+        );
+        const subj = `✅ ${employee?.full_name} — בקשת ${typeLabel} אושרה`;
+        for (const to of infoRecipients) {
+          await enqueueEmail(supabase, to, subj, html);
+        }
       }
 
       // Notify payroll
