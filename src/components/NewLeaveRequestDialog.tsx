@@ -83,21 +83,15 @@ export function NewLeaveRequestDialog({ open, onOpenChange, employeeId, managerI
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!start) {
-      toast({ title: "יש לבחור תאריך התחלה", variant: "destructive" });
+    if (!start || !end) {
+      toast({ title: "יש לבחור תאריך התחלה וסיום", variant: "destructive" });
       return;
     }
-    if (!isSick) {
-      if (!end || days <= 0) {
-        toast({ title: "תאריכים לא תקינים", variant: "destructive" });
-        return;
-      }
-    } else if (end && days <= 0) {
+    if (days <= 0) {
       toast({ title: "תאריכים לא תקינים", variant: "destructive" });
       return;
     }
-    if (isSick && !file && end) {
-      // finalized sick without attachment
+    if (isSick && !file) {
       setConfirmSickOpen(true);
       return;
     }
