@@ -68,10 +68,10 @@ Deno.serve(async (req) => {
   let skipped_agent_down = 0
   const errors: string[] = []
 
-  // Skip companies where the attendance agent didn't record any punches on
-  // the target date (clock software wasn't reading — avoid false alarms).
-  const dayStartIL = `${target}T00:00:00+03:00`
-  const dayEndIL = `${target}T23:59:59+03:00`
+  // Skip companies whose attendance agent is currently silent: require at
+  // least one punch in the last 3 hours before this run. A single stale
+  // punch earlier in the day should NOT keep the "agent alive" flag on.
+  const freshnessCutoff = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString()
   const companyIds = [...byCompany.keys()]
   const companyHasPunches = new Set<string>()
   if (companyIds.length > 0) {
@@ -79,8 +79,7 @@ Deno.serve(async (req) => {
       .from('attendance_punches')
       .select('company_id')
       .in('company_id', companyIds)
-      .gte('punch_at', dayStartIL)
-      .lte('punch_at', dayEndIL)
+      .gte('punch_at', freshnessCutoff)
       .limit(5000)
     for (const p of punchRows ?? []) companyHasPunches.add((p as any).company_id)
   }
