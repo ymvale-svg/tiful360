@@ -48,20 +48,20 @@ Deno.serve(async (req) => {
   let skipped_agent_down = 0
   const errors: string[] = []
 
-  // Determine per-company whether the attendance agent read any punches on
-  // the target date. If a company received zero punches that day, the clock
-  // software wasn't reading — skip missing-punch alerts to avoid false alarms.
+  // Determine per-company whether the attendance agent is currently alive.
+  // We consider the agent "alive" if the company has at least one punch in
+  // the last 3 hours before this run. This prevents false alarms when the
+  // agent stopped reading the clock hours ago even if it delivered some
+  // punches earlier during the target day.
   const companyIds = [...new Set((rows ?? []).map((r: any) => r.company_id).filter(Boolean))]
-  const dayStartIL = `${target}T00:00:00+03:00`
-  const dayEndIL = `${target}T23:59:59+03:00`
+  const freshnessCutoff = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString()
   const companyHasPunches = new Set<string>()
   if (companyIds.length > 0) {
     const { data: punchRows } = await admin
       .from('attendance_punches')
       .select('company_id')
       .in('company_id', companyIds)
-      .gte('punch_at', dayStartIL)
-      .lte('punch_at', dayEndIL)
+      .gte('punch_at', freshnessCutoff)
       .limit(5000)
     for (const p of punchRows ?? []) companyHasPunches.add((p as any).company_id)
   }
