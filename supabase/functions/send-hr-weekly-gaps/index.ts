@@ -50,6 +50,41 @@ Deno.serve(async (req) => {
     }
   }
 
+  // Determine which (company_id, day) actually had punches. Days where the
+  // attendance agent was silent (zero punches for that company on that day)
+  // are excluded — otherwise we'd report every employee as "missing" for a
+  // day the clock software wasn't reading at all.
+  const rangeStartIso = `${from}T00:00:00+00:00`
+  const rangeEndIso = `${to}T23:59:59+00:00`
+  const activeDays = new Map<string, Set<string>>() // company_id -> Set<'YYYY-MM-DD'>
+  {
+    let cursor: string | null = rangeStartIso
+    // Paginate to be safe on large ranges
+    while (cursor) {
+      const q = admin
+        .from('attendance_punches')
+        .select('company_id, punch_at')
+        .gte('punch_at', cursor)
+        .lte('punch_at', rangeEndIso)
+        .order('punch_at', { ascending: true })
+        .limit(10000)
+      const { data, error } = await q
+      if (error) break
+      for (const p of data ?? []) {
+        const cid = (p as any).company_id as string
+        const iso = new Date((p as any).punch_at).toLocaleString('en-CA', {
+          timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit',
+        }).slice(0, 10)
+        if (!activeDays.has(cid)) activeDays.set(cid, new Set())
+        activeDays.get(cid)!.add(iso)
+      }
+      if (!data || data.length < 10000) break
+      const last = data[data.length - 1] as any
+      // advance cursor 1ms past last punch to avoid infinite loop
+      cursor = new Date(new Date(last.punch_at).getTime() + 1).toISOString()
+    }
+  }
+
   // Aggregate gaps per (company_id, day)
   const perCompany = new Map<string, { name: string; rows: any[] }>()
   for (const day of dates) {
@@ -57,6 +92,8 @@ Deno.serve(async (req) => {
     if (error) continue
     for (const r of data ?? []) {
       if (requestedCompany && r.company_id !== requestedCompany) continue
+      // Skip days where the agent was down for this company (no punches at all).
+      if (!activeDays.get(r.company_id)?.has(day)) continue
       const cur = perCompany.get(r.company_id) ?? { name: r.company_name, rows: [] }
       cur.rows.push({ ...r, day })
       perCompany.set(r.company_id, cur)
