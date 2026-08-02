@@ -23,12 +23,14 @@ export function LeaveStatusCard() {
   const { data: requests = [], isLoading } = useTeamLeaveRequests();
 
   const recent = [...requests]
+    .filter((r: any) => r.status === "approved" || r.status === "pending")
     .sort(
       (a: any, b: any) =>
         new Date(b.reviewed_at ?? b.created_at).getTime() -
         new Date(a.reviewed_at ?? a.created_at).getTime()
     )
     .slice(0, 8);
+
 
 
   return (
