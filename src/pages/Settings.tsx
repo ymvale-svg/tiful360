@@ -14,6 +14,7 @@ import { PortalSettingsTab } from "@/components/PortalSettingsTab";
 import { SubEmployersTab } from "@/components/SubEmployersTab";
 import { EmailTemplatesTab } from "@/components/EmailTemplatesTab";
 import { ProtocolTemplatesTab } from "@/components/settings/ProtocolTemplatesTab";
+import { GoogleCalendarSyncCard } from "@/components/settings/GoogleCalendarSyncCard";
 import { Mail } from "lucide-react";
 
 // ============================
