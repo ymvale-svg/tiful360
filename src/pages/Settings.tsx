@@ -118,8 +118,12 @@ export default function Settings() {
         </TabsList>
 
         <TabsContent value="general">
-          <GeneralSettings />
+          <div className="space-y-6">
+            <GeneralSettings />
+            <GoogleCalendarSyncCard />
+          </div>
         </TabsContent>
+
 
         <TabsContent value="sub_employers">
           <SubEmployersTab />
