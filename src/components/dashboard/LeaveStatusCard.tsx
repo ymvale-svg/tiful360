@@ -22,14 +22,22 @@ const fmt = (d: string) => new Date(d).toLocaleDateString("en-GB");
 export function LeaveStatusCard() {
   const { data: requests = [], isLoading } = useTeamLeaveRequests();
 
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   const recent = [...requests]
     .filter((r: any) => r.status === "approved" || r.status === "pending")
+    .filter((r: any) => {
+      const last = new Date(r.end_date ?? r.start_date);
+      last.setHours(0, 0, 0, 0);
+      return last.getTime() >= today.getTime();
+    })
     .sort(
       (a: any, b: any) =>
-        new Date(b.reviewed_at ?? b.created_at).getTime() -
-        new Date(a.reviewed_at ?? a.created_at).getTime()
+        new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
     )
     .slice(0, 8);
+
 
 
 
