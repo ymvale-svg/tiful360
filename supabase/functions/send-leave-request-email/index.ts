@@ -152,6 +152,7 @@ async function enqueueEmail(
       sender_domain: SENDER_DOMAIN,
       subject,
       html,
+      text: htmlToText(html) || subject,
       purpose: "transactional",
       label,
       idempotency_key: idempotencyKey,
