@@ -104,6 +104,9 @@ export default function Dashboard() {
 
         {/* Sidebar */}
         <div className="space-y-6">
+          {/* Leave requests */}
+          <LeaveStatusCard />
+
           {/* Upcoming alerts */}
           <div className="bg-card rounded-xl border border-border/50 shadow-card">
             <div className="p-5 border-b border-border/50 flex items-center justify-between">
