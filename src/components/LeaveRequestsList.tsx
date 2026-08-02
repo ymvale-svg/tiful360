@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Calendar, FileDown, Paperclip, Pencil, X } from "lucide-react";
+import { Calendar, CalendarPlus, FileDown, Paperclip, Pencil, X } from "lucide-react";
 import { useCancelLeaveRequest } from "@/hooks/useLeaveRequests";
 import { useToast } from "@/hooks/use-toast";
 import { EditSickLeaveDialog } from "@/components/EditSickLeaveDialog";
+import { buildGoogleCalendarUrl } from "@/lib/googleCalendar";
 
 const TYPE_LABELS: Record<string, string> = {
   vacation: "חופשה", sick: "מחלה", personal: "יום אישי", other: "אחר",
