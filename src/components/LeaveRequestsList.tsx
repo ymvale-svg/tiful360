@@ -80,6 +80,23 @@ export function LeaveRequestsList({ requests, showEmployee, allowCancel }: Props
           )}
 
           <div className="flex items-center gap-2 flex-wrap">
+            {r.status === "approved" && r.end_date && (
+              <a
+                href={buildGoogleCalendarUrl({
+                  title: `${r.employee?.full_name ?? "עובד"} ${r.request_type === "sick" ? "במחלה" : "בחופש"}`,
+                  startDate: r.start_date,
+                  endDate: r.end_date,
+                  details: `${TYPE_LABELS[r.request_type] ?? r.request_type}${r.reason ? ` — ${r.reason}` : ""}`,
+                })}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
+                  <CalendarPlus className="w-3 h-3" />
+                  הוסף ליומן
+                </Button>
+              </a>
+            )}
             {r.attachment_url && (
               <a href={r.attachment_url} target="_blank" rel="noopener noreferrer">
                 <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
@@ -88,6 +105,7 @@ export function LeaveRequestsList({ requests, showEmployee, allowCancel }: Props
                 </Button>
               </a>
             )}
+
             {r.signed_pdf_url && (
               <a href={r.signed_pdf_url} target="_blank" rel="noopener noreferrer">
                 <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
