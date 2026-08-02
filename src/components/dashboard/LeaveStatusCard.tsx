@@ -23,12 +23,13 @@ export function LeaveStatusCard() {
   const { data: requests = [], isLoading } = useTeamLeaveRequests();
 
   const recent = [...requests]
-    .sort((a: any, b: any) => {
-      const rank = (r: any) => (r.status === "pending" ? 0 : 1);
-      if (rank(a) !== rank(b)) return rank(a) - rank(b);
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    })
-    .slice(0, 6);
+    .sort(
+      (a: any, b: any) =>
+        new Date(b.reviewed_at ?? b.created_at).getTime() -
+        new Date(a.reviewed_at ?? a.created_at).getTime()
+    )
+    .slice(0, 8);
+
 
   return (
     <div className="bg-card rounded-xl border border-border/50 shadow-card">
