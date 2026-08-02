@@ -14,6 +14,7 @@ import { PortalSettingsTab } from "@/components/PortalSettingsTab";
 import { SubEmployersTab } from "@/components/SubEmployersTab";
 import { EmailTemplatesTab } from "@/components/EmailTemplatesTab";
 import { ProtocolTemplatesTab } from "@/components/settings/ProtocolTemplatesTab";
+import { GoogleCalendarSyncCard } from "@/components/settings/GoogleCalendarSyncCard";
 import { Mail } from "lucide-react";
 
 // ============================
@@ -118,8 +119,12 @@ export default function Settings() {
         </TabsList>
 
         <TabsContent value="general">
-          <GeneralSettings />
+          <div className="space-y-6">
+            <GeneralSettings />
+            <GoogleCalendarSyncCard />
+          </div>
         </TabsContent>
+
 
         <TabsContent value="sub_employers">
           <SubEmployersTab />
