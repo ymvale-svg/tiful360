@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
 import { useTeamLeaveRequests } from "@/hooks/useLeaveRequests";
-import { ReviewLeaveRequestDialog } from "@/components/ReviewLeaveRequestDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { CalendarDays, Stethoscope, Paperclip, CalendarPlus } from "lucide-react";
@@ -14,24 +13,20 @@ const STATUS_LABELS: Record<string, string> = { approved: "מאושר", rejected
 export default function LeaveRequests() {
   const { isPayroll, isAdmin, isDirectManager, isHR } = useAuth();
   const { data: requests = [], isLoading } = useTeamLeaveRequests();
-  const [reviewing, setReviewing] = useState<any | null>(null);
 
   // Tabs vary by role
   const tabs = useMemo(() => {
     const list: { id: string; label: string; icon?: any }[] = [];
-    if (isAdmin || isDirectManager) list.push({ id: "pending", label: "ממתינות לאישור", icon: CalendarDays });
+    list.push({ id: "approved", label: "חופשות מדווחות", icon: CalendarDays });
     list.push({ id: "sick", label: "הצהרות מחלה", icon: Stethoscope });
-    if (isAdmin || isPayroll) list.push({ id: "approved", label: "מאושרות (לשכר)" });
     list.push({ id: "archive", label: "ארכיון" });
     return list;
-  }, [isAdmin, isDirectManager, isPayroll]);
+  }, []);
 
-  const [tab, setTab] = useState(tabs[0]?.id ?? "sick");
+  const [tab, setTab] = useState(tabs[0]?.id ?? "approved");
 
   const filtered = useMemo(() => {
     switch (tab) {
-      case "pending":
-        return requests.filter((r: any) => r.status === "pending" && r.request_type !== "sick");
       case "sick":
         return requests.filter((r: any) => r.request_type === "sick");
       case "approved":
@@ -43,7 +38,7 @@ export default function LeaveRequests() {
     }
   }, [requests, tab]);
 
-  const canReview = isAdmin || isDirectManager;
+
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -54,9 +49,7 @@ export default function LeaveRequests() {
             בקשות חופשה ומחלה
           </h1>
           <p className="page-subtitle">
-            {isPayroll && !canReview
-              ? "צפייה בבקשות מאושרות והצהרות מחלה לטיפול שכר"
-              : "ניהול ואישור בקשות של עובדים"}
+            צפייה בדיווחי חופשה ומחלה של עובדים (ללא צורך באישור מנהל)
           </p>
         </div>
         <ExportExcelButton
@@ -108,7 +101,7 @@ export default function LeaveRequests() {
 
       {tab === "sick" && (
         <p className="text-xs text-muted-foreground bg-info/10 border border-info/20 rounded-lg p-3">
-          הצהרות מחלה מאושרות אוטומטית ונשלחות לחשבות שכר. {canReview ? "מוצג כאן לידיעה בלבד." : ""}
+          הצהרות מחלה נקלטות אוטומטית ונשלחות לידיעת המנהל הישיר וחשבות השכר.
         </p>
       )}
 
@@ -143,7 +136,7 @@ export default function LeaveRequests() {
                   )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {r.status === "approved" && r.request_type !== "sick" && r.end_date && (isAdmin || isDirectManager || isHR) && (
+                  {r.status === "approved" && r.end_date && (isAdmin || isDirectManager || isHR || isPayroll) && (
                     <a
                       href={buildGoogleCalendarUrl({
                         title: `${r.employee?.full_name ?? "עובד"} בחופש`,
@@ -160,9 +153,7 @@ export default function LeaveRequests() {
                       </Button>
                     </a>
                   )}
-                  {r.status === "pending" && canReview && r.request_type !== "sick" ? (
-                    <Button size="sm" onClick={() => setReviewing(r)}>סקירה</Button>
-                  ) : (
+                  {(
                     <span className={`text-[11px] px-2 py-1 rounded-full font-medium ${
                       r.status === "approved" ? "bg-success/15 text-success" :
                       r.status === "rejected" ? "bg-destructive/15 text-destructive" :
@@ -179,7 +170,6 @@ export default function LeaveRequests() {
         </div>
       )}
 
-      <ReviewLeaveRequestDialog request={reviewing} onClose={() => setReviewing(null)} />
     </div>
   );
 }

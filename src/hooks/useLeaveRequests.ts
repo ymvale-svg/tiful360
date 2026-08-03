@@ -120,20 +120,20 @@ export function useCreateLeaveRequest() {
       if (error) throw error;
 
       // Fire emails (non-blocking on error).
-      // Requests auto-approved by the DB (sick, or employee without a direct manager)
-      // skip the "waiting for approval" email and send the approval notice instead.
-      const autoApproved =
-        inserted.status === "approved" && input.request_type !== "sick";
+      // Manager approval was removed — every request is auto-approved by the DB.
+      // Sick reports use the informational "submitted" template; all other
+      // request types send the approval notice (employee + manager + HR + payroll).
       try {
         await supabase.functions.invoke("send-leave-request-email", {
           body: {
             request_id: inserted.id,
-            event: autoApproved ? "approved" : "submitted",
+            event: input.request_type === "sick" ? "submitted" : "approved",
           },
         });
       } catch (e) {
         console.warn("send-leave-request-email failed", e);
       }
+
 
 
       // Sick leaves with an end_date already set → notify payroll now.
