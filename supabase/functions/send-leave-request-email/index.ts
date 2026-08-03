@@ -390,46 +390,34 @@ Deno.serve(async (req) => {
       // Notify employee
       if (employee?.email) {
         const html = baseLayout(
-          "הבקשה אושרה",
-          `<h2 style="margin:0 0 8px;font-size:18px;color:#16a34a;">✅ הבקשה אושרה</h2>
+          "הבקשה נקלטה",
+          `<h2 style="margin:0 0 8px;font-size:18px;color:#16a34a;">✅ הדיווח נקלט</h2>
            <p>שלום ${escapeHtml(employee.full_name)},</p>
-           <p>בקשת ה${escapeHtml(typeLabel)} שלך אושרה.</p>
-           ${detailsTable(baseDetails)}
-           ${request.manager_note ? `<p><strong>הערת מנהל:</strong> ${escapeHtml(request.manager_note)}</p>` : ""}`,
+           <p>דיווח ה${escapeHtml(typeLabel)} שלך נקלט במערכת ונשלח לידיעת המנהל הישיר וחשבות השכר.</p>
+           ${detailsTable(baseDetails)}`,
         );
-        await enqueueEmail(supabase, employee.email, `✅ בקשת ${typeLabel} אושרה`, html, "leave-approved-employee", `leave-approved-emp-${request.id}`);
+        await enqueueEmail(supabase, employee.email, `✅ דיווח ${typeLabel} נקלט`, html, "leave-approved-employee", `leave-approved-emp-${request.id}`);
       }
 
-      // Notify HR (info + calendar CTA) — exclude the reviewer if HR approved
-      let reviewerEmail: string | null = null;
-      if (request.reviewed_by) {
-        try {
-          const { data: ru } = await supabase.auth.admin.getUserById(request.reviewed_by);
-          reviewerEmail = ru?.user?.email?.toLowerCase() ?? null;
-        } catch (_) { /* ignore */ }
-      }
+      // Informational notice (manager + HR) with calendar CTA
       const infoRecipients = new Set<string>();
-      if (manager?.email && (!reviewerEmail || manager.email.toLowerCase() !== reviewerEmail)) {
-        infoRecipients.add(manager.email);
-      }
-      for (const e of hrList) {
-        if (reviewerEmail && e.toLowerCase() === reviewerEmail) continue;
-        infoRecipients.add(e);
-      }
+      if (manager?.email) infoRecipients.add(manager.email);
+      for (const e of hrList) infoRecipients.add(e);
       if (infoRecipients.size > 0) {
         const html = baseLayout(
-          "עדכון: בקשת חופשה אושרה",
-          `<h2 style="margin:0 0 8px;font-size:18px;">✅ בקשת ${escapeHtml(typeLabel)} אושרה</h2>
-           <p style="color:#475569;font-size:14px;">בקשתו/ה של ${escapeHtml(employee?.full_name ?? "עובד")} אושרה. ניתן להוסיף את החופשה ליומן Google.</p>
+          "עדכון: דיווח חופשה/מחלה",
+          `<h2 style="margin:0 0 8px;font-size:18px;">📋 דיווח ${escapeHtml(typeLabel)} — לידיעה</h2>
+           <p style="color:#475569;font-size:14px;">${escapeHtml(employee?.full_name ?? "עובד")} דיווח/ה על ${escapeHtml(typeLabel)}. אין צורך באישור — הודעת עדכון בלבד. ניתן להוסיף את המועד ליומן Google.</p>
            ${detailsTable(baseDetails)}
            ${gcalButton}
-           ${ctaButton(reviewUrl, "צפייה בבקשה")}`,
+           ${ctaButton(reviewUrl, "צפייה בדיווח")}`,
         );
-        const subj = `✅ ${employee?.full_name} — בקשת ${typeLabel} אושרה`;
+        const subj = `📋 ${employee?.full_name} — דיווח ${typeLabel}`;
         for (const to of infoRecipients) {
           await enqueueEmail(supabase, to, subj, html, "leave-approved-info", `leave-approved-info-${request.id}-${to}`);
         }
       }
+
 
       // Notify payroll
       const payrollList = (company?.payroll_emails ?? "")
