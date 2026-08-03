@@ -23,13 +23,6 @@ const TYPE_LABELS: Record<string, string> = {
   other: "אחר",
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  pending: "ממתין לאישור",
-  approved: "מאושר",
-  rejected: "נדחה",
-  cancelled: "בוטל",
-};
-
 function fmtDate(d: string) {
   try {
     return new Date(d).toLocaleDateString("he-IL");
