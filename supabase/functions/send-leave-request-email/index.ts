@@ -464,8 +464,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ------- REJECTED -------
-
     return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
