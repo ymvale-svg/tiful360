@@ -1,5 +1,5 @@
 // Edge Function: send-leave-request-email
-// Receives { request_id, event } where event is 'submitted' | 'approved' | 'rejected'.
+// Receives { request_id, event } where event is 'submitted' | 'approved' | 'sick-closed'.
 // Enqueues the appropriate emails into the auth_emails / transactional_emails pgmq queue
 // using the existing Lovable email infrastructure.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.103.0";
@@ -426,8 +426,6 @@ Deno.serve(async (req) => {
         .filter((s: string) => s.length > 0 && /^\S+@\S+\.\S+$/.test(s));
       if (payrollList.length > 0) {
         const attachments: Array<{ filename: string; url: string }> = [];
-        if (request.signed_pdf_url)
-          attachments.push({ filename: "טופס_חתום.pdf", url: request.signed_pdf_url });
         if (request.attachment_url)
           attachments.push({ filename: "אישור_מחלה", url: request.attachment_url });
 
@@ -467,19 +465,6 @@ Deno.serve(async (req) => {
     }
 
     // ------- REJECTED -------
-    if (event === "rejected") {
-      if (employee?.email) {
-        const html = baseLayout(
-          "הבקשה נדחתה",
-          `<h2 style="margin:0 0 8px;font-size:18px;color:#dc2626;">❌ הבקשה נדחתה</h2>
-           <p>שלום ${escapeHtml(employee.full_name)},</p>
-           <p>בקשת ה${escapeHtml(typeLabel)} שלך נדחתה.</p>
-           ${detailsTable(baseDetails)}
-           ${request.manager_note ? `<p><strong>סיבת דחייה:</strong> ${escapeHtml(request.manager_note)}</p>` : ""}`,
-        );
-        await enqueueEmail(supabase, employee.email, `❌ בקשת ${typeLabel} נדחתה`, html, "leave-rejected", `leave-rejected-${request.id}`);
-      }
-    }
 
     return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
