@@ -38,7 +38,6 @@ export default function LeaveRequests() {
     }
   }, [requests, tab]);
 
-  const canReview = false;
 
 
   return (
