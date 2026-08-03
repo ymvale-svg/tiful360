@@ -446,15 +446,16 @@ Deno.serve(async (req) => {
         const detailsForPayroll: Array<[string, string]> = [
           ...baseDetails,
           ["ת.ז.", employee?.id_number ?? "—"],
-          ["מאושר ע\"י", manager?.full_name ?? "מנהל מערכת"],
-          ["תאריך אישור", fmtDate(request.reviewed_at ?? new Date().toISOString())],
+          ["מנהל ישיר", manager?.full_name ?? "—"],
+          ["תאריך דיווח", fmtDate(request.reviewed_at ?? new Date().toISOString())],
         ];
 
         const html = baseLayout(
-          "אישור בקשת חופשה/מחלה — לעדכון בשכר",
-          `<h2 style="margin:0 0 8px;font-size:18px;">אישור בקשת ${escapeHtml(typeLabel)} — לעדכון בשכר</h2>
-           <p>חברת ${escapeHtml(company?.name ?? "")} — נשלח אוטומטית עם אישור הבקשה.</p>
+          "דיווח חופשה/מחלה — לעדכון בשכר",
+          `<h2 style="margin:0 0 8px;font-size:18px;">דיווח ${escapeHtml(typeLabel)} — לעדכון בשכר</h2>
+           <p>חברת ${escapeHtml(company?.name ?? "")} — נשלח אוטומטית עם קליטת הדיווח (ללא צורך באישור מנהל).</p>
            ${detailsTable(detailsForPayroll)}
+           ${gcalButton}
            ${
              attachments.length > 0
                ? `<p style="font-size:13px;color:#475569;">קישורים מצורפים:</p><ul style="font-size:13px;">${attachments
@@ -466,6 +467,7 @@ Deno.serve(async (req) => {
                : ""
            }`,
         );
+
         for (const to of payrollList) {
           await enqueueEmail(supabase, to, `📑 אישור ${typeLabel} — ${employee?.full_name}`, html, "leave-approved-payroll", `leave-approved-payroll-${request.id}-${to}`);
         }
