@@ -19,19 +19,16 @@ export default function LeaveRequests() {
   // Tabs vary by role
   const tabs = useMemo(() => {
     const list: { id: string; label: string; icon?: any }[] = [];
-    if (isAdmin || isDirectManager) list.push({ id: "pending", label: "ממתינות לאישור", icon: CalendarDays });
+    list.push({ id: "approved", label: "חופשות מדווחות", icon: CalendarDays });
     list.push({ id: "sick", label: "הצהרות מחלה", icon: Stethoscope });
-    if (isAdmin || isPayroll) list.push({ id: "approved", label: "מאושרות (לשכר)" });
     list.push({ id: "archive", label: "ארכיון" });
     return list;
-  }, [isAdmin, isDirectManager, isPayroll]);
+  }, []);
 
-  const [tab, setTab] = useState(tabs[0]?.id ?? "sick");
+  const [tab, setTab] = useState(tabs[0]?.id ?? "approved");
 
   const filtered = useMemo(() => {
     switch (tab) {
-      case "pending":
-        return requests.filter((r: any) => r.status === "pending" && r.request_type !== "sick");
       case "sick":
         return requests.filter((r: any) => r.request_type === "sick");
       case "approved":
@@ -43,7 +40,8 @@ export default function LeaveRequests() {
     }
   }, [requests, tab]);
 
-  const canReview = isAdmin || isDirectManager;
+  const canReview = false;
+
 
   return (
     <div className="space-y-6 animate-fade-in">
