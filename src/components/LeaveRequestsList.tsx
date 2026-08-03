@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Calendar, CalendarPlus, FileDown, Paperclip, Pencil, X } from "lucide-react";
+import { Calendar, CalendarPlus, Paperclip, Pencil, X } from "lucide-react";
 import { useCancelLeaveRequest } from "@/hooks/useLeaveRequests";
 import { useToast } from "@/hooks/use-toast";
 import { EditSickLeaveDialog } from "@/components/EditSickLeaveDialog";
@@ -73,11 +73,6 @@ export function LeaveRequestsList({ requests, showEmployee, allowCancel }: Props
           </div>
 
           {r.reason && <p className="text-xs text-muted-foreground">{r.reason}</p>}
-          {r.manager_note && (
-            <p className="text-xs bg-muted/50 rounded p-2">
-              <strong>הערת מנהל:</strong> {r.manager_note}
-            </p>
-          )}
 
           <div className="flex items-center gap-2 flex-wrap">
             {r.status === "approved" && r.end_date && (
@@ -106,14 +101,6 @@ export function LeaveRequestsList({ requests, showEmployee, allowCancel }: Props
               </a>
             )}
 
-            {r.signed_pdf_url && (
-              <a href={r.signed_pdf_url} target="_blank" rel="noopener noreferrer">
-                <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
-                  <FileDown className="w-3 h-3" />
-                  טופס חתום
-                </Button>
-              </a>
-            )}
             {canEditSick && (
               <Button
                 variant="outline"
@@ -125,7 +112,7 @@ export function LeaveRequestsList({ requests, showEmployee, allowCancel }: Props
                 {sickOpen ? "סגור מחלה / הוסף אישור" : "הוסף אישור מחלה"}
               </Button>
             )}
-            {allowCancel && r.status === "pending" && (
+            {allowCancel && (r.status === "pending" || (r.status === "approved" && new Date(r.start_date) > new Date())) && (
               <Button
                 variant="ghost"
                 size="sm"
