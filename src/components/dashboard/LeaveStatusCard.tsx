@@ -23,7 +23,7 @@ export function LeaveStatusCard() {
   today.setHours(0, 0, 0, 0);
 
   const recent = [...requests]
-    .filter((r: any) => r.status === "approved" || r.status === "pending")
+    .filter((r: any) => r.status === "approved")
     .filter((r: any) => {
       const last = new Date(r.end_date ?? r.start_date);
       last.setHours(0, 0, 0, 0);
