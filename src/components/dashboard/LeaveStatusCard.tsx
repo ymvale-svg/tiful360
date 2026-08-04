@@ -8,13 +8,10 @@ const TYPE_LABELS: Record<string, string> = {
   vacation: "חופשה", sick: "מחלה", personal: "יום אישי", other: "אחר",
 };
 const STATUS_LABELS: Record<string, string> = {
-  pending: "ממתין", approved: "מאושר", rejected: "נדחה", cancelled: "בוטל",
+  approved: "מאושר",
 };
 const STATUS_CLASS: Record<string, string> = {
-  pending: "bg-warning/15 text-warning",
   approved: "bg-success/15 text-success",
-  rejected: "bg-destructive/15 text-destructive",
-  cancelled: "bg-muted text-muted-foreground",
 };
 
 const fmt = (d: string) => new Date(d).toLocaleDateString("en-GB");
@@ -26,7 +23,7 @@ export function LeaveStatusCard() {
   today.setHours(0, 0, 0, 0);
 
   const recent = [...requests]
-    .filter((r: any) => r.status === "approved" || r.status === "pending")
+    .filter((r: any) => r.status === "approved")
     .filter((r: any) => {
       const last = new Date(r.end_date ?? r.start_date);
       last.setHours(0, 0, 0, 0);
@@ -70,7 +67,7 @@ export function LeaveStatusCard() {
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              {r.status === "approved" && r.end_date && (
+              {r.end_date && (
                 <a
                   href={buildGoogleCalendarUrl({
                     title: `${r.employee?.full_name ?? "עובד"} ${r.request_type === "sick" ? "במחלה" : "בחופש"}`,
