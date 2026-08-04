@@ -67,7 +67,7 @@ export function LeaveStatusCard() {
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              {r.status === "approved" && r.end_date && (
+              {r.end_date && (
                 <a
                   href={buildGoogleCalendarUrl({
                     title: `${r.employee?.full_name ?? "עובד"} ${r.request_type === "sick" ? "במחלה" : "בחופש"}`,
