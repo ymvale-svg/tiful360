@@ -8,13 +8,10 @@ const TYPE_LABELS: Record<string, string> = {
   vacation: "חופשה", sick: "מחלה", personal: "יום אישי", other: "אחר",
 };
 const STATUS_LABELS: Record<string, string> = {
-  pending: "ממתין", approved: "מאושר", rejected: "נדחה", cancelled: "בוטל",
+  approved: "מאושר",
 };
 const STATUS_CLASS: Record<string, string> = {
-  pending: "bg-warning/15 text-warning",
   approved: "bg-success/15 text-success",
-  rejected: "bg-destructive/15 text-destructive",
-  cancelled: "bg-muted text-muted-foreground",
 };
 
 const fmt = (d: string) => new Date(d).toLocaleDateString("en-GB");
