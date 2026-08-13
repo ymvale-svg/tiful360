@@ -178,6 +178,8 @@ function PunchSlot({
   punch,
   accent,
   onSave,
+  onAdd,
+  defaultTime,
   pending,
 }: {
   icon: React.ReactNode;
@@ -185,6 +187,8 @@ function PunchSlot({
   punch: AttendancePunch | undefined;
   accent: "emerald" | "rose";
   onSave: (id: string, iso: string, newTime: string) => Promise<void>;
+  onAdd: (newTime: string) => Promise<void>;
+  defaultTime: string;
   pending: boolean;
 }) {
   const [editing, setEditing] = useState(false);
@@ -198,15 +202,22 @@ function PunchSlot({
     : { chip: "bg-rose-500/10 border-rose-500/30", text: "text-rose-700 dark:text-rose-300", icon: "text-rose-600 dark:text-rose-400" };
 
   const startEdit = () => {
-    setVal(timeStr || "09:00");
+    setVal(timeStr || defaultTime);
     setEditing(true);
   };
   const cancel = () => { setEditing(false); setVal(timeStr); };
   const submit = async () => {
-    if (!punch || !val || val === timeStr) { setEditing(false); return; }
+    if (!val) { setEditing(false); return; }
+    if (!punch) {
+      await onAdd(val);
+      setEditing(false);
+      return;
+    }
+    if (val === timeStr) { setEditing(false); return; }
     await onSave(punch.id, punch.punch_at, val);
     setEditing(false);
   };
+
 
   return (
     <div className={cn(
