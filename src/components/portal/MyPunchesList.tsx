@@ -261,8 +261,16 @@ function PunchSlot({
             <Pencil className="w-2.5 h-2.5 opacity-0 group-hover:opacity-70 transition-opacity" />
           </button>
         ) : (
-          <span className="font-mono text-sm text-muted-foreground">—</span>
+          <button
+            type="button"
+            onClick={startEdit}
+            className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline underline-offset-2"
+            title="הוסף החתמה שנשכחה"
+          >
+            <Plus className="w-3 h-3" /> הוסף
+          </button>
         )}
+
       </div>
     </div>
   );
