@@ -209,6 +209,23 @@ export function useEditOwnPunchTime() {
   });
 }
 
+/** הוספת החתמה שנשכחה (כניסה/יציאה) על ידי העובד עצמו */
+export function useAddOwnPunch() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ punchAt, direction }: { punchAt: string; direction: "in" | "out" }) => {
+      const { error } = await supabase.rpc("add_own_punch" as any, {
+        _punch_at: punchAt,
+        _direction: direction,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["attendance_punches"] }),
+  });
+}
+
+
+
 /** כמות תיקוני נוכחות עצמיים שהעובד ניצל החודש (מקסימום 3) */
 export function useMySelfEditCount() {
   return useQuery({
