@@ -137,7 +137,9 @@ export function MyPunchesList({ punches, highlightDate }: Props) {
                 punch={firstIn}
                 accent="emerald"
                 onSave={save}
-                pending={edit.isPending}
+                onAdd={(t) => addPunch(day, "in", t)}
+                defaultTime="09:00"
+                pending={edit.isPending || add.isPending}
               />
               <PunchSlot
                 icon={<ArrowLeft className="w-3.5 h-3.5" />}
@@ -145,9 +147,12 @@ export function MyPunchesList({ punches, highlightDate }: Props) {
                 punch={lastOut}
                 accent="rose"
                 onSave={save}
-                pending={edit.isPending}
+                onAdd={(t) => addPunch(day, "out", t)}
+                defaultTime="17:00"
+                pending={edit.isPending || add.isPending}
               />
             </div>
+
 
             <div className="flex items-center gap-3 text-[11px] text-muted-foreground border-t border-border/50 pt-2">
               <span className="inline-flex items-center gap-1 font-medium text-foreground">
