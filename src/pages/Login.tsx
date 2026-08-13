@@ -24,15 +24,14 @@ export default function Login() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const verifyActiveEmployee = async (userId: string, userEmail: string | null | undefined) => {
-    const { data: emp } = await supabase
-      .from("employees")
-      .select("id, linked_user_id")
-      .ilike("email", userEmail ?? "")
-      .eq("status", "active")
-      .maybeSingle();
-    return emp && emp.linked_user_id === userId;
+  const verifyActiveEmployee = async (_userId: string, _userEmail: string | null | undefined) => {
+    // Links the signed-in account to its active employee card (by email) and
+    // returns whether the account is authorized to use the system.
+    const { data, error } = await supabase.rpc("claim_employee_for_current_user");
+    if (error) return false;
+    return data === true;
   };
+
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
