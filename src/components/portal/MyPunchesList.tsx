@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
-import { AlertCircle, ArrowRight, ArrowLeft, Pencil, Check, X, Clock } from "lucide-react";
+import { AlertCircle, ArrowRight, ArrowLeft, Pencil, Check, X, Clock, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useEditOwnPunchTime, useMySelfEditCount, type AttendancePunch } from "@/hooks/useAttendancePunches";
+import { useEditOwnPunchTime, useAddOwnPunch, useMySelfEditCount, type AttendancePunch } from "@/hooks/useAttendancePunches";
+
 import { useToast } from "@/hooks/use-toast";
 
 function calcHours(inTime: string, outTime: string): string {
