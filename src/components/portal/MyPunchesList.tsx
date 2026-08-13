@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
-import { AlertCircle, ArrowRight, ArrowLeft, Pencil, Check, X, Clock } from "lucide-react";
+import { AlertCircle, ArrowRight, ArrowLeft, Pencil, Check, X, Clock, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useEditOwnPunchTime, useMySelfEditCount, type AttendancePunch } from "@/hooks/useAttendancePunches";
+import { useEditOwnPunchTime, useAddOwnPunch, useMySelfEditCount, type AttendancePunch } from "@/hooks/useAttendancePunches";
+
 import { useToast } from "@/hooks/use-toast";
 
 function calcHours(inTime: string, outTime: string): string {
@@ -23,7 +24,9 @@ interface Props {
 export function MyPunchesList({ punches, highlightDate }: Props) {
   const { data: selfEditCount = 0 } = useMySelfEditCount();
   const edit = useEditOwnPunchTime();
+  const add = useAddOwnPunch();
   const { toast } = useToast();
+
   const highlightRef = useRef<HTMLDivElement | null>(null);
 
   const byDay = new Map<string, AttendancePunch[]>();
@@ -57,15 +60,29 @@ export function MyPunchesList({ punches, highlightDate }: Props) {
     }
   };
 
+  /** dayKey is DD/MM/YYYY */
+  const addPunch = async (dayKey: string, direction: "in" | "out", newTime: string) => {
+    const [dd, mm, yyyy] = dayKey.split("/").map(Number);
+    const [h, m] = newTime.split(":").map(Number);
+    const d = new Date(yyyy, mm - 1, dd, h, m, 0, 0);
+    try {
+      await add.mutateAsync({ punchAt: d.toISOString(), direction });
+      toast({ title: "נוספה החתמה", description: "ההחתמה נשמרה מיידית" });
+    } catch (e: any) {
+      toast({ title: "לא ניתן להוסיף", description: e.message, variant: "destructive" });
+    }
+  };
+
   return (
     <div className="space-y-2">
       <div className="flex items-start gap-2 text-[11px] text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
         <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
         <span className="leading-relaxed">
-          לחץ על השעה לעריכה — השינוי נשמר <span className="font-semibold text-foreground">מיידית</span>, ללא צורך באישור.
+          לחץ על השעה לעריכה, ועל <span className="font-semibold text-foreground">＋ הוסף</span> להשלמת החתמה שנשכחה — השינוי נשמר <span className="font-semibold text-foreground">מיידית</span>, ללא צורך באישור.
           {" "}נותרו לך <span className="font-semibold text-foreground">{remaining}</span> תיקונים החודש.
         </span>
       </div>
+
 
       {Array.from(byDay.entries()).map(([day, items]) => {
         const sorted = [...items].sort((a, b) => a.punch_at.localeCompare(b.punch_at));
@@ -120,7 +137,9 @@ export function MyPunchesList({ punches, highlightDate }: Props) {
                 punch={firstIn}
                 accent="emerald"
                 onSave={save}
-                pending={edit.isPending}
+                onAdd={(t) => addPunch(day, "in", t)}
+                defaultTime="09:00"
+                pending={edit.isPending || add.isPending}
               />
               <PunchSlot
                 icon={<ArrowLeft className="w-3.5 h-3.5" />}
@@ -128,9 +147,12 @@ export function MyPunchesList({ punches, highlightDate }: Props) {
                 punch={lastOut}
                 accent="rose"
                 onSave={save}
-                pending={edit.isPending}
+                onAdd={(t) => addPunch(day, "out", t)}
+                defaultTime="17:00"
+                pending={edit.isPending || add.isPending}
               />
             </div>
+
 
             <div className="flex items-center gap-3 text-[11px] text-muted-foreground border-t border-border/50 pt-2">
               <span className="inline-flex items-center gap-1 font-medium text-foreground">
@@ -156,6 +178,8 @@ function PunchSlot({
   punch,
   accent,
   onSave,
+  onAdd,
+  defaultTime,
   pending,
 }: {
   icon: React.ReactNode;
@@ -163,6 +187,8 @@ function PunchSlot({
   punch: AttendancePunch | undefined;
   accent: "emerald" | "rose";
   onSave: (id: string, iso: string, newTime: string) => Promise<void>;
+  onAdd: (newTime: string) => Promise<void>;
+  defaultTime: string;
   pending: boolean;
 }) {
   const [editing, setEditing] = useState(false);
@@ -176,15 +202,22 @@ function PunchSlot({
     : { chip: "bg-rose-500/10 border-rose-500/30", text: "text-rose-700 dark:text-rose-300", icon: "text-rose-600 dark:text-rose-400" };
 
   const startEdit = () => {
-    setVal(timeStr || "09:00");
+    setVal(timeStr || defaultTime);
     setEditing(true);
   };
   const cancel = () => { setEditing(false); setVal(timeStr); };
   const submit = async () => {
-    if (!punch || !val || val === timeStr) { setEditing(false); return; }
+    if (!val) { setEditing(false); return; }
+    if (!punch) {
+      await onAdd(val);
+      setEditing(false);
+      return;
+    }
+    if (val === timeStr) { setEditing(false); return; }
     await onSave(punch.id, punch.punch_at, val);
     setEditing(false);
   };
+
 
   return (
     <div className={cn(
@@ -228,8 +261,16 @@ function PunchSlot({
             <Pencil className="w-2.5 h-2.5 opacity-0 group-hover:opacity-70 transition-opacity" />
           </button>
         ) : (
-          <span className="font-mono text-sm text-muted-foreground">—</span>
+          <button
+            type="button"
+            onClick={startEdit}
+            className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline underline-offset-2"
+            title="הוסף החתמה שנשכחה"
+          >
+            <Plus className="w-3 h-3" /> הוסף
+          </button>
         )}
+
       </div>
     </div>
   );
