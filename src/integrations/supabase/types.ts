@@ -2490,6 +2490,7 @@ export type Database = {
         Args: { _correction_id: string }
         Returns: undefined
       }
+      claim_employee_for_current_user: { Args: never; Returns: boolean }
       classify_existing_punches: {
         Args: { _company_id: string }
         Returns: number
