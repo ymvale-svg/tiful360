@@ -60,15 +60,29 @@ export function MyPunchesList({ punches, highlightDate }: Props) {
     }
   };
 
+  /** dayKey is DD/MM/YYYY */
+  const addPunch = async (dayKey: string, direction: "in" | "out", newTime: string) => {
+    const [dd, mm, yyyy] = dayKey.split("/").map(Number);
+    const [h, m] = newTime.split(":").map(Number);
+    const d = new Date(yyyy, mm - 1, dd, h, m, 0, 0);
+    try {
+      await add.mutateAsync({ punchAt: d.toISOString(), direction });
+      toast({ title: "נוספה החתמה", description: "ההחתמה נשמרה מיידית" });
+    } catch (e: any) {
+      toast({ title: "לא ניתן להוסיף", description: e.message, variant: "destructive" });
+    }
+  };
+
   return (
     <div className="space-y-2">
       <div className="flex items-start gap-2 text-[11px] text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
         <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
         <span className="leading-relaxed">
-          לחץ על השעה לעריכה — השינוי נשמר <span className="font-semibold text-foreground">מיידית</span>, ללא צורך באישור.
+          לחץ על השעה לעריכה, ועל <span className="font-semibold text-foreground">＋ הוסף</span> להשלמת החתמה שנשכחה — השינוי נשמר <span className="font-semibold text-foreground">מיידית</span>, ללא צורך באישור.
           {" "}נותרו לך <span className="font-semibold text-foreground">{remaining}</span> תיקונים החודש.
         </span>
       </div>
+
 
       {Array.from(byDay.entries()).map(([day, items]) => {
         const sorted = [...items].sort((a, b) => a.punch_at.localeCompare(b.punch_at));
