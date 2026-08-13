@@ -2461,6 +2461,31 @@ export type Database = {
       }
     }
     Functions: {
+      add_own_punch: {
+        Args: { _direction: string; _punch_at: string }
+        Returns: {
+          company_id: string
+          created_at: string
+          direction: string
+          edited_at: string | null
+          edited_by: string | null
+          employee_code_raw: string
+          employee_id: string | null
+          id: string
+          processed_at: string | null
+          processed_by: string | null
+          punch_at: string
+          raw_payload: Json | null
+          source: string
+          status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "attendance_punches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_edit_punch_time: {
         Args: { _new_punch_at: string; _punch_id: string }
         Returns: {
