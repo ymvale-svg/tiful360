@@ -24,7 +24,9 @@ interface Props {
 export function MyPunchesList({ punches, highlightDate }: Props) {
   const { data: selfEditCount = 0 } = useMySelfEditCount();
   const edit = useEditOwnPunchTime();
+  const add = useAddOwnPunch();
   const { toast } = useToast();
+
   const highlightRef = useRef<HTMLDivElement | null>(null);
 
   const byDay = new Map<string, AttendancePunch[]>();
