@@ -147,6 +147,44 @@ export function OffboardingProtocolCard({ employee }: Props) {
           </p>
         )}
       </div>
+
+      <div>
+        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+          <Package className="w-3.5 h-3.5" />
+          היסטוריית משאבים שהוקצו לעובד
+        </p>
+        {history && history.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-muted-foreground text-[10px]">
+                  <th className="text-right font-medium pb-1">משאב</th>
+                  <th className="text-right font-medium pb-1">קטגוריה</th>
+                  <th className="text-right font-medium pb-1">מועד הזנה</th>
+                  <th className="text-right font-medium pb-1">מועד ניתוק</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.map((h, i) => (
+                  <tr key={i} className="border-t border-border/40">
+                    <td className="py-1 font-medium">
+                      {h.assetName} {h.assetCode && <span className="text-muted-foreground">{h.assetCode}</span>}
+                    </td>
+                    <td className="py-1 text-muted-foreground">{h.category || "—"}</td>
+                    <td className="py-1">{fmtDate(h.assignedAt)}</td>
+                    <td className="py-1">
+                      {h.releasedAt ? fmtDate(h.releasedAt) : h.stillAssigned ? "משויך" : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">לא נמצאה היסטוריית הקצאות עבור העובד.</p>
+        )}
+      </div>
+
     </div>
   );
 }
