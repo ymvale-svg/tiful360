@@ -16,12 +16,12 @@ import { useEmployeeLeaveRequests } from "@/hooks/useLeaveRequests";
 import { useToast } from "@/hooks/use-toast";
 import { OffboardingDialog } from "@/components/OffboardingDialog";
 import { TransferAssetDialog } from "@/components/TransferAssetDialog";
-import { HandoverFormsList } from "@/components/HandoverFormsList";
 import { EmployeeTax101FormsList } from "@/components/EmployeeTax101FormsList";
 import { LeaveRequestsList } from "@/components/LeaveRequestsList";
 import { EditEmployeeDialog } from "@/components/EditEmployeeDialog";
 
-import { UploadSignedFormDialog } from "@/components/UploadSignedFormDialog";
+import { EmployeeDocumentsSection } from "@/components/EmployeeDocumentsSection";
+import { OffboardingProtocolCard } from "@/components/OffboardingProtocolCard";
 import { AssignAssetWithFormDialog } from "@/components/AssignAssetWithFormDialog";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -31,7 +31,7 @@ import { useAuth } from "@/hooks/useAuth";
 const allTabs = [
   { id: "personal", label: "פרטים אישיים", icon: User },
   { id: "assets", label: "ציוד וגישות", icon: Package },
-  { id: "forms", label: "טפסים חתומים", icon: FileText },
+  { id: "documents", label: "מסמכים", icon: FileText },
   { id: "leave", label: "חופשה ומחלה", icon: CalendarDays },
   { id: "payslips", label: "תלושי שכר", icon: FileText },
   { id: "history", label: "היסטוריית פעילות", icon: Clock },
@@ -72,7 +72,6 @@ export default function EmployeeDetail() {
   const [offboardingOpen, setOffboardingOpen] = useState(false);
   const [transferAsset, setTransferAsset] = useState<any>(null);
   const [editEmployeeOpen, setEditEmployeeOpen] = useState(false);
-  const [uploadFormOpen, setUploadFormOpen] = useState(false);
   const [assignAssetOpen, setAssignAssetOpen] = useState(false);
   const [pickAssetId, setPickAssetId] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -439,16 +438,10 @@ export default function EmployeeDetail() {
       )}
 
 
-      {/* Forms tab */}
-      {activeTab === "forms" && (
+      {/* Documents tab */}
+      {activeTab === "documents" && (
         <div className="space-y-4 animate-fade-in">
-          <div className="flex justify-end">
-            <Button size="sm" className="gap-1.5" onClick={() => setUploadFormOpen(true)}>
-              <Upload className="w-4 h-4" />
-              העלה טופס חתום
-            </Button>
-          </div>
-          <HandoverFormsList employeeId={id!} />
+          <EmployeeDocumentsSection employeeId={id!} />
           <EmployeeTax101FormsList employeeId={id!} />
         </div>
       )}
@@ -538,13 +531,6 @@ export default function EmployeeDetail() {
       />
 
       {/* Digital access dialog removed - managed via Asset dialog (DACC category) */}
-
-      {/* Upload signed form */}
-      <UploadSignedFormDialog
-        open={uploadFormOpen}
-        onOpenChange={setUploadFormOpen}
-        employeeId={id!}
-      />
 
       {/* Pick available asset to assign */}
       <Dialog open={pickerOpen} onOpenChange={(o) => { setPickerOpen(o); if (!o) setPickAssetId(""); }}>
