@@ -30,7 +30,9 @@ function fmtDate(d?: string | null) {
 function fmtDateTime(d?: string | null) {
   if (!d) return "—";
   try {
-    return new Date(d).toLocaleString("en-GB", { dateStyle: "short", timeStyle: "short" });
+    const dt = new Date(d);
+    const time = dt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+    return `${dt.toLocaleDateString("en-GB")} ${time}`;
   } catch {
     return "—";
   }
