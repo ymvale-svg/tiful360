@@ -220,7 +220,7 @@ export async function buildOffboardingProtocolPdf(data: OffboardingProtocolData)
   y -= 16;
   if (y < MARGIN + 90) newPage();
   const noteLines = wrapTextLines(
-    "מסמך זה הופק אוטומטית ממערכת תפעול 360 לצורכי ביקורת. הנתונים משקפים את מצב השיוכים והגישות של העובד במועד ניתוקו מהמערכת.",
+    "מסמך זה הופק אוטומטית ממערכת תפעול לצורכי ביקורת. הנתונים משקפים את מצב השיוכים והגישות של העובד במועד ניתוקו מהמערכת.",
     regular,
     9,
     RIGHT - MARGIN
