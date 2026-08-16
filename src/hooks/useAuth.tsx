@@ -20,6 +20,7 @@ interface AuthContextType {
   isOperations: boolean;
   isFinance: boolean;
   isLegal: boolean;
+  accessBlocked: boolean;
   signOut: () => Promise<void>;
 }
 
@@ -39,6 +40,7 @@ const AuthContext = createContext<AuthContextType>({
   isOperations: false,
   isFinance: false,
   isLegal: false,
+  accessBlocked: false,
   signOut: async () => {},
 });
 
@@ -46,6 +48,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [roles, setRoles] = useState<AppRole[]>([]);
+  const [accessBlocked, setAccessBlocked] = useState(false);
+
+  const checkAccess = useCallback(async () => {
+    const { data, error } = await supabase.rpc("my_access_blocked" as any);
+    if (!error) setAccessBlocked(!!data);
+  }, []);
 
   const fetchRoles = useCallback(async (userId: string) => {
     const { data } = await supabase
@@ -59,9 +67,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session?.user) {
-        setTimeout(() => fetchRoles(session.user.id), 0);
+        setTimeout(() => { fetchRoles(session.user.id); checkAccess(); }, 0);
       } else {
         setRoles([]);
+        setAccessBlocked(false);
       }
       setLoading(false);
     });
@@ -70,17 +79,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       if (session?.user) {
         fetchRoles(session.user.id);
+        checkAccess();
       }
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, [fetchRoles]);
+  }, [fetchRoles, checkAccess]);
 
   const hasRole = useCallback((role: AppRole) => roles.includes(role) || roles.includes("super_admin"), [roles]);
   const signOut = async () => {
     await supabase.auth.signOut();
     setRoles([]);
+    setAccessBlocked(false);
   };
 
   const isSuperAdmin = roles.includes("super_admin");
@@ -103,6 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isOperations: isSuperAdmin || roles.includes("operations"),
         isFinance: isSuperAdmin || roles.includes("finance"),
         isLegal: isSuperAdmin || roles.includes("legal"),
+        accessBlocked,
         signOut,
       }}
     >

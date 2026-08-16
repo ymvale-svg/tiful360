@@ -1221,8 +1221,54 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_documents: {
+        Row: {
+          company_id: string
+          document_label: string | null
+          document_type: string
+          employee_id: string
+          expiry_date: string | null
+          file_name: string
+          file_size_bytes: number | null
+          file_url: string
+          id: string
+          notes: string | null
+          uploaded_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          company_id: string
+          document_label?: string | null
+          document_type?: string
+          employee_id: string
+          expiry_date?: string | null
+          file_name: string
+          file_size_bytes?: number | null
+          file_url: string
+          id?: string
+          notes?: string | null
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          document_label?: string | null
+          document_type?: string
+          employee_id?: string
+          expiry_date?: string | null
+          file_name?: string
+          file_size_bytes?: number | null
+          file_url?: string
+          id?: string
+          notes?: string | null
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
       employees: {
         Row: {
+          access_revoked_at: string | null
           aliyah_date: string | null
           attendance_notifications_disabled: boolean
           balances_source: string | null
@@ -1240,6 +1286,7 @@ export type Database = {
           email: string | null
           employee_code: string
           end_date: string | null
+          end_date_recorded_at: string | null
           exclude_from_contacts: boolean
           full_name: string
           gender: string | null
@@ -1253,6 +1300,7 @@ export type Database = {
           is_israeli_resident: boolean | null
           linked_user_id: string | null
           marital_status: string | null
+          offboarding_snapshot: Json | null
           phone: string | null
           po_box: string | null
           postal_code: string | null
@@ -1268,6 +1316,7 @@ export type Database = {
           work_days: number[]
         }
         Insert: {
+          access_revoked_at?: string | null
           aliyah_date?: string | null
           attendance_notifications_disabled?: boolean
           balances_source?: string | null
@@ -1285,6 +1334,7 @@ export type Database = {
           email?: string | null
           employee_code: string
           end_date?: string | null
+          end_date_recorded_at?: string | null
           exclude_from_contacts?: boolean
           full_name: string
           gender?: string | null
@@ -1298,6 +1348,7 @@ export type Database = {
           is_israeli_resident?: boolean | null
           linked_user_id?: string | null
           marital_status?: string | null
+          offboarding_snapshot?: Json | null
           phone?: string | null
           po_box?: string | null
           postal_code?: string | null
@@ -1313,6 +1364,7 @@ export type Database = {
           work_days?: number[]
         }
         Update: {
+          access_revoked_at?: string | null
           aliyah_date?: string | null
           attendance_notifications_disabled?: boolean
           balances_source?: string | null
@@ -1330,6 +1382,7 @@ export type Database = {
           email?: string | null
           employee_code?: string
           end_date?: string | null
+          end_date_recorded_at?: string | null
           exclude_from_contacts?: boolean
           full_name?: string
           gender?: string | null
@@ -1343,6 +1396,7 @@ export type Database = {
           is_israeli_resident?: boolean | null
           linked_user_id?: string | null
           marital_status?: string | null
+          offboarding_snapshot?: Json | null
           phone?: string | null
           po_box?: string | null
           postal_code?: string | null
@@ -2589,6 +2643,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      finalize_expired_offboarding: { Args: never; Returns: number }
       find_birthdays_by_range: {
         Args: {
           _company_id: string
@@ -2869,6 +2924,7 @@ export type Database = {
         }
         Returns: number
       }
+      my_access_blocked: { Args: never; Returns: boolean }
       my_self_edit_count_this_month: { Args: never; Returns: number }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
@@ -2889,6 +2945,7 @@ export type Database = {
       set_employee_remote_punch: {
         Args: { _employee_id: string; _value: boolean }
         Returns: {
+          access_revoked_at: string | null
           aliyah_date: string | null
           attendance_notifications_disabled: boolean
           balances_source: string | null
@@ -2906,6 +2963,7 @@ export type Database = {
           email: string | null
           employee_code: string
           end_date: string | null
+          end_date_recorded_at: string | null
           exclude_from_contacts: boolean
           full_name: string
           gender: string | null
@@ -2919,6 +2977,7 @@ export type Database = {
           is_israeli_resident: boolean | null
           linked_user_id: string | null
           marital_status: string | null
+          offboarding_snapshot: Json | null
           phone: string | null
           po_box: string | null
           postal_code: string | null
@@ -3046,6 +3105,7 @@ export type Database = {
           _preference: Database["public"]["Enums"]["birthday_calendar_pref"]
         }
         Returns: {
+          access_revoked_at: string | null
           aliyah_date: string | null
           attendance_notifications_disabled: boolean
           balances_source: string | null
@@ -3063,6 +3123,7 @@ export type Database = {
           email: string | null
           employee_code: string
           end_date: string | null
+          end_date_recorded_at: string | null
           exclude_from_contacts: boolean
           full_name: string
           gender: string | null
@@ -3076,6 +3137,7 @@ export type Database = {
           is_israeli_resident: boolean | null
           linked_user_id: string | null
           marital_status: string | null
+          offboarding_snapshot: Json | null
           phone: string | null
           po_box: string | null
           postal_code: string | null
