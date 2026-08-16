@@ -39,7 +39,7 @@ export function useStartOffboarding() {
         if (daccCat?.id) {
           const { error: accessError } = await supabase
             .from("assets")
-            .update({ status: "in_repair" })
+            .update({ status: "in_stock", current_owner_id: null })
             .eq("current_owner_id", params.employeeId)
             .eq("category_id", daccCat.id);
           if (accessError) throw accessError;
