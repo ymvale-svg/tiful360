@@ -1,4 +1,9 @@
-import { UserMinus, ShieldOff, Package, Calendar, CheckCircle2 } from "lucide-react";
+import { useState } from "react";
+import { UserMinus, ShieldOff, Package, Calendar, CheckCircle2, Download, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useCompany } from "@/hooks/useCompany";
+import { useToast } from "@/hooks/use-toast";
+import { buildOffboardingProtocolPdf } from "@/lib/pdf/buildOffboardingProtocolPdf";
 
 interface Props {
   employee: any;
@@ -15,18 +20,59 @@ function fmtDateTime(d?: string | null) {
 }
 
 export function OffboardingProtocolCard({ employee }: Props) {
+  const { activeCompany } = useCompany();
+  const { toast } = useToast();
+  const [downloading, setDownloading] = useState(false);
+
   if (!employee?.end_date) return null;
 
   const snapshot = employee.offboarding_snapshot as { assets?: any[]; revoked_at?: string } | null;
   const revoked = !!employee.access_revoked_at;
   const endPassed = new Date(employee.end_date) < new Date(new Date().toDateString());
 
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      const blob = await buildOffboardingProtocolPdf({
+        companyName: activeCompany?.name ?? "",
+        companyLogoUrl: activeCompany?.logo_url ?? activeCompany?.portal_logo_url ?? null,
+        employeeName: employee.full_name,
+        employeeCode: employee.employee_code,
+        idNumber: employee.id_number,
+        department: employee.department,
+        role: employee.role,
+        startDate: employee.start_date,
+        endDate: employee.end_date,
+        endDateRecordedAt: employee.end_date_recorded_at,
+        accessRevokedAt: employee.access_revoked_at,
+        status: employee.status,
+        assets: snapshot?.assets ?? [],
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `offboarding-${employee.employee_code || employee.id}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      toast({ title: "שגיאה בהפקת הפרוטוקול", description: e.message, variant: "destructive" });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <div className="bg-card rounded-xl border border-border/50 shadow-card p-4 sm:p-6 space-y-4">
-      <h2 className="text-base font-semibold flex items-center gap-2">
-        <UserMinus className="w-4 h-4 text-destructive" />
-        פרוטוקול עזיבה
-      </h2>
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <h2 className="text-base font-semibold flex items-center gap-2">
+          <UserMinus className="w-4 h-4 text-destructive" />
+          פרוטוקול עזיבה
+        </h2>
+        <Button size="sm" variant="outline" className="gap-2" onClick={handleDownload} disabled={downloading}>
+          {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+          הורדת פרוטוקול לביקורת (PDF)
+        </Button>
+      </div>
 
       <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
         <div className="flex items-start gap-2">
