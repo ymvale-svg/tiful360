@@ -438,7 +438,9 @@ export default function EmployeeDetail() {
             </div>
           </div>
         </div>
+        </div>
       )}
+
 
 
       {/* Documents tab */}
