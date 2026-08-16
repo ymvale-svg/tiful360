@@ -1,5 +1,54 @@
-import { rgb } from "pdf-lib";
-import { createHebrewDoc, drawRtlText, drawCenteredRtlText, drawLtrText, embedLogo, wrapTextLines } from "./hebrewPdf";
+import { rgb, PDFFont, PDFPage } from "pdf-lib";
+import { createHebrewDoc, drawLtrText, embedLogo } from "./hebrewPdf";
+
+type Color = { r: number; g: number; b: number };
+
+/**
+ * pdf-lib + fontkit already lays Hebrew out right-to-left, so the text is
+ * drawn in logical order and only the anchor point is right-aligned.
+ */
+function drawRtlText(o: { page: PDFPage; text: string; font: PDFFont; size: number; rightX: number; y: number; color?: Color }) {
+  const t = o.text ?? "";
+  if (!t) return;
+  const w = o.font.widthOfTextAtSize(t, o.size);
+  o.page.drawText(t, {
+    x: o.rightX - w,
+    y: o.y,
+    size: o.size,
+    font: o.font,
+    color: rgb(o.color?.r ?? 0, o.color?.g ?? 0, o.color?.b ?? 0),
+  });
+}
+
+function drawCenteredRtlText(o: { page: PDFPage; text: string; font: PDFFont; size: number; centerX: number; y: number; color?: Color }) {
+  const t = o.text ?? "";
+  if (!t) return;
+  const w = o.font.widthOfTextAtSize(t, o.size);
+  o.page.drawText(t, {
+    x: o.centerX - w / 2,
+    y: o.y,
+    size: o.size,
+    font: o.font,
+    color: rgb(o.color?.r ?? 0, o.color?.g ?? 0, o.color?.b ?? 0),
+  });
+}
+
+function wrapTextLines(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
+  if (!text) return [];
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let current = "";
+  for (const w of words) {
+    const trial = current ? `${current} ${w}` : w;
+    if (font.widthOfTextAtSize(trial, size) <= maxWidth) current = trial;
+    else {
+      if (current) lines.push(current);
+      current = w;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
 
 export interface OffboardingProtocolData {
   companyName: string;
@@ -171,7 +220,7 @@ export async function buildOffboardingProtocolPdf(data: OffboardingProtocolData)
   y -= 16;
   if (y < MARGIN + 90) newPage();
   const noteLines = wrapTextLines(
-    "מסמך זה הופק אוטומטית ממערכת תפעול 360 לצורכי ביקורת. הנתונים משקפים את מצב השיוכים והגישות של העובד במועד ניתוקו מהמערכת.",
+    "מסמך זה הופק אוטומטית ממערכת תפעול לצורכי ביקורת. הנתונים משקפים את מצב השיוכים והגישות של העובד במועד ניתוקו מהמערכת.",
     regular,
     9,
     RIGHT - MARGIN
