@@ -301,7 +301,10 @@ export default function EmployeeDetail() {
 
       {/* Personal info tab */}
       {activeTab === "personal" && (
-        <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 animate-fade-in">
+        <div className="space-y-4 animate-fade-in">
+        <OffboardingProtocolCard employee={employee} />
+        <div className="bg-card rounded-xl border border-border/50 shadow-card p-6">
+
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base font-semibold flex items-center gap-2">
               <User className="w-4 h-4 text-primary" />
