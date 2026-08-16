@@ -64,7 +64,17 @@ export interface OffboardingProtocolData {
   accessRevokedAt?: string | null;
   status?: string | null;
   assets: Array<{ asset_name?: string; asset_code?: string; category?: string; domain?: string }>;
+  history?: Array<{
+    assetName: string;
+    assetCode: string;
+    category: string;
+    domain?: string | null;
+    assignedAt: string | null;
+    releasedAt: string | null;
+    stillAssigned: boolean;
+  }>;
   generatedBy?: string | null;
+
 }
 
 function fmtDate(d?: string | null) {
