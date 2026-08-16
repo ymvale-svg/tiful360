@@ -185,5 +185,5 @@ export async function buildOffboardingProtocolPdf(data: OffboardingProtocolData)
   drawRtlText({ page, text: "תאריך: ______________________", font: regular, size: 10, rightX: RIGHT, y, color: dark });
 
   const bytes = await pdf.save();
-  return new Blob([bytes], { type: "application/pdf" });
+  return new Blob([new Uint8Array(bytes)], { type: "application/pdf" });
 }
