@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useCompany } from "@/hooks/useCompany";
 import { useToast } from "@/hooks/use-toast";
 import { buildOffboardingProtocolPdf } from "@/lib/pdf/buildOffboardingProtocolPdf";
+import { useEmployeeResourceHistory } from "@/hooks/useEmployeeResourceHistory";
 
 interface Props {
   employee: any;
@@ -24,11 +25,16 @@ export function OffboardingProtocolCard({ employee }: Props) {
   const { toast } = useToast();
   const [downloading, setDownloading] = useState(false);
 
-  if (!employee?.end_date) return null;
-
   const snapshot = employee.offboarding_snapshot as { assets?: any[]; revoked_at?: string } | null;
+  const { data: history } = useEmployeeResourceHistory(
+    employee.id,
+    snapshot?.assets ?? [],
+    employee.access_revoked_at ?? snapshot?.revoked_at ?? null
+  );
   const revoked = !!employee.access_revoked_at;
   const endPassed = new Date(employee.end_date) < new Date(new Date().toDateString());
+
+  if (!employee?.end_date) return null;
 
   const handleDownload = async () => {
     setDownloading(true);
@@ -47,6 +53,7 @@ export function OffboardingProtocolCard({ employee }: Props) {
         accessRevokedAt: employee.access_revoked_at,
         status: employee.status,
         assets: snapshot?.assets ?? [],
+        history: history ?? [],
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
