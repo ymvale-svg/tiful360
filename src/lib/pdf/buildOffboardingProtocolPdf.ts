@@ -1,5 +1,5 @@
 import { rgb } from "pdf-lib";
-import { createHebrewDoc, drawRtlText, drawCenteredRtlText, embedLogo, wrapTextLines } from "./hebrewPdf";
+import { createHebrewDoc, drawRtlText, drawCenteredRtlText, drawLtrText, embedLogo, wrapTextLines } from "./hebrewPdf";
 
 export interface OffboardingProtocolData {
   companyName: string;
@@ -70,12 +70,13 @@ export async function buildOffboardingProtocolPdf(data: OffboardingProtocolData)
 
   drawCenteredRtlText({ page, text: "פרוטוקול סיום העסקה", font: bold, size: 20, centerX: PAGE_W / 2, y, color: dark });
   y -= 18;
-  drawCenteredRtlText({
+  drawRtlText({ page, text: "הופק בתאריך:", font: regular, size: 9, rightX: RIGHT, y, color: gray });
+  drawLtrText({
     page,
-    text: `הופק בתאריך ${fmtDateTime(new Date().toISOString())}`,
+    text: fmtDateTime(new Date().toISOString()),
     font: regular,
     size: 9,
-    centerX: PAGE_W / 2,
+    x: MARGIN,
     y,
     color: gray,
   });
