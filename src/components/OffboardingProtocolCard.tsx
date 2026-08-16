@@ -25,14 +25,15 @@ export function OffboardingProtocolCard({ employee }: Props) {
   const { toast } = useToast();
   const [downloading, setDownloading] = useState(false);
 
-  const snapshot = employee.offboarding_snapshot as { assets?: any[]; revoked_at?: string } | null;
+  const snapshot = (employee?.offboarding_snapshot ?? null) as { assets?: any[]; revoked_at?: string } | null;
   const { data: history } = useEmployeeResourceHistory(
-    employee.id,
+    employee?.end_date ? employee?.id : undefined,
     snapshot?.assets ?? [],
-    employee.access_revoked_at ?? snapshot?.revoked_at ?? null
+    employee?.access_revoked_at ?? snapshot?.revoked_at ?? null
   );
-  const revoked = !!employee.access_revoked_at;
-  const endPassed = new Date(employee.end_date) < new Date(new Date().toDateString());
+  const revoked = !!employee?.access_revoked_at;
+  const endPassed = employee?.end_date ? new Date(employee.end_date) < new Date(new Date().toDateString()) : false;
+
 
   if (!employee?.end_date) return null;
 
