@@ -64,7 +64,17 @@ export interface OffboardingProtocolData {
   accessRevokedAt?: string | null;
   status?: string | null;
   assets: Array<{ asset_name?: string; asset_code?: string; category?: string; domain?: string }>;
+  history?: Array<{
+    assetName: string;
+    assetCode: string;
+    category: string;
+    domain?: string | null;
+    assignedAt: string | null;
+    releasedAt: string | null;
+    stillAssigned: boolean;
+  }>;
   generatedBy?: string | null;
+
 }
 
 function fmtDate(d?: string | null) {
@@ -216,6 +226,56 @@ export async function buildOffboardingProtocolPdf(data: OffboardingProtocolData)
       y -= 15;
     }
   }
+
+  y -= 18;
+  section("היסטוריית משאבים שהוקצו לעובד");
+  if (!data.history?.length) {
+    drawRtlText({
+      page,
+      text: "לא נמצאה היסטוריית הקצאות עבור העובד.",
+      font: regular,
+      size: 10,
+      rightX: RIGHT,
+      y,
+      color: gray,
+    });
+    y -= 18;
+  } else {
+    const hName = RIGHT;
+    const hCat = RIGHT - 190;
+    const hFrom = RIGHT - 290;
+    const hTo = RIGHT - 380;
+    drawRtlText({ page, text: "משאב", font: bold, size: 9, rightX: hName, y, color: gray });
+    drawRtlText({ page, text: "קטגוריה", font: bold, size: 9, rightX: hCat, y, color: gray });
+    drawRtlText({ page, text: "מועד הזנה", font: bold, size: 9, rightX: hFrom, y, color: gray });
+    drawRtlText({ page, text: "מועד ניתוק", font: bold, size: 9, rightX: hTo, y, color: gray });
+    y -= 6;
+    page.drawLine({ start: { x: MARGIN, y }, end: { x: RIGHT, y }, thickness: 0.6, color: rgb(0.85, 0.87, 0.9) });
+    y -= 14;
+
+    for (const h of data.history) {
+      if (y < MARGIN + 60) {
+        newPage();
+        y -= 4;
+      }
+      const nameText = h.assetCode ? `${h.assetName} (${h.assetCode})` : h.assetName;
+      drawRtlText({ page, text: nameText || "—", font: regular, size: 9.5, rightX: hName, y, color: dark });
+      drawRtlText({ page, text: h.category || "—", font: regular, size: 9.5, rightX: hCat, y, color: dark });
+      drawRtlText({ page, text: fmtDate(h.assignedAt), font: regular, size: 9.5, rightX: hFrom, y, color: dark });
+      drawRtlText({
+        page,
+        text: h.releasedAt ? fmtDate(h.releasedAt) : h.stillAssigned ? "משויך" : "—",
+        font: regular,
+        size: 9.5,
+        rightX: hTo,
+        y,
+        color: dark,
+      });
+      y -= 15;
+    }
+  }
+
+
 
   y -= 16;
   if (y < MARGIN + 90) newPage();

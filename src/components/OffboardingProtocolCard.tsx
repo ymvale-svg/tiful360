@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useCompany } from "@/hooks/useCompany";
 import { useToast } from "@/hooks/use-toast";
 import { buildOffboardingProtocolPdf } from "@/lib/pdf/buildOffboardingProtocolPdf";
+import { useEmployeeResourceHistory } from "@/hooks/useEmployeeResourceHistory";
 
 interface Props {
   employee: any;
@@ -24,11 +25,17 @@ export function OffboardingProtocolCard({ employee }: Props) {
   const { toast } = useToast();
   const [downloading, setDownloading] = useState(false);
 
-  if (!employee?.end_date) return null;
+  const snapshot = (employee?.offboarding_snapshot ?? null) as { assets?: any[]; revoked_at?: string } | null;
+  const { data: history } = useEmployeeResourceHistory(
+    employee?.end_date ? employee?.id : undefined,
+    snapshot?.assets ?? [],
+    employee?.access_revoked_at ?? snapshot?.revoked_at ?? null
+  );
+  const revoked = !!employee?.access_revoked_at;
+  const endPassed = employee?.end_date ? new Date(employee.end_date) < new Date(new Date().toDateString()) : false;
 
-  const snapshot = employee.offboarding_snapshot as { assets?: any[]; revoked_at?: string } | null;
-  const revoked = !!employee.access_revoked_at;
-  const endPassed = new Date(employee.end_date) < new Date(new Date().toDateString());
+
+  if (!employee?.end_date) return null;
 
   const handleDownload = async () => {
     setDownloading(true);
@@ -47,6 +54,7 @@ export function OffboardingProtocolCard({ employee }: Props) {
         accessRevokedAt: employee.access_revoked_at,
         status: employee.status,
         assets: snapshot?.assets ?? [],
+        history: history ?? [],
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -139,6 +147,44 @@ export function OffboardingProtocolCard({ employee }: Props) {
           </p>
         )}
       </div>
+
+      <div>
+        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+          <Package className="w-3.5 h-3.5" />
+          היסטוריית משאבים שהוקצו לעובד
+        </p>
+        {history && history.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-muted-foreground text-[10px]">
+                  <th className="text-right font-medium pb-1">משאב</th>
+                  <th className="text-right font-medium pb-1">קטגוריה</th>
+                  <th className="text-right font-medium pb-1">מועד הזנה</th>
+                  <th className="text-right font-medium pb-1">מועד ניתוק</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.map((h, i) => (
+                  <tr key={i} className="border-t border-border/40">
+                    <td className="py-1 font-medium">
+                      {h.assetName} {h.assetCode && <span className="text-muted-foreground">{h.assetCode}</span>}
+                    </td>
+                    <td className="py-1 text-muted-foreground">{h.category || "—"}</td>
+                    <td className="py-1">{fmtDate(h.assignedAt)}</td>
+                    <td className="py-1">
+                      {h.releasedAt ? fmtDate(h.releasedAt) : h.stillAssigned ? "משויך" : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">לא נמצאה היסטוריית הקצאות עבור העובד.</p>
+        )}
+      </div>
+
     </div>
   );
 }
