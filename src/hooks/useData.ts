@@ -234,21 +234,24 @@ export function useDashboardStats() {
   return useQuery({
     queryKey: ["dashboard-stats", activeCompanyId],
     queryFn: async () => {
-      let empQ = supabase.from("employees").select("status", { count: "exact" });
+      let empQ = supabase.from("employees").select("status", { count: "exact" }).eq("status", "active");
+      let onbQ = supabase.from("employees").select("status", { count: "exact" }).eq("status", "onboarding");
       let assetQ = supabase.from("assets").select("status", { count: "exact" });
       let alertQ = supabase.from("alerts").select("id", { count: "exact" }).eq("is_resolved", false);
       let ticketQ = supabase.from("it_tickets").select("id", { count: "exact" }).neq("status", "done");
 
       if (activeCompanyId) {
         empQ = empQ.eq("company_id", activeCompanyId);
+        onbQ = onbQ.eq("company_id", activeCompanyId);
         assetQ = assetQ.eq("company_id", activeCompanyId);
         alertQ = alertQ.eq("company_id", activeCompanyId);
         ticketQ = ticketQ.eq("company_id", activeCompanyId);
       }
 
-      const [employees, assets, alerts, tickets] = await Promise.all([empQ, assetQ, alertQ, ticketQ]);
+      const [employees, onboarding, assets, alerts, tickets] = await Promise.all([empQ, onbQ, assetQ, alertQ, ticketQ]);
       return {
         activeEmployees: employees.count ?? 0,
+        onboardingEmployees: onboarding.count ?? 0,
         totalAssets: assets.count ?? 0,
         openAlerts: alerts.count ?? 0,
         openTickets: tickets.count ?? 0,
