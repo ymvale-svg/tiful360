@@ -7,6 +7,7 @@ import { useDashboardStats, useAlerts, useEmployees, useActivityLog } from "@/ho
 import { useAuth } from "@/hooks/useAuth";
 import { ExpiringAssetsCard } from "@/components/ExpiringAssetsCard";
 import { LeaveStatusCard } from "@/components/dashboard/LeaveStatusCard";
+import { OnboardingCard } from "@/components/dashboard/OnboardingCard";
 import { hasDualAccess } from "@/lib/dualAccess";
 
 export default function Dashboard() {
@@ -104,6 +105,8 @@ export default function Dashboard() {
 
         {/* Sidebar */}
         <div className="space-y-6">
+          <OnboardingCard />
+
           {/* Leave requests */}
           <LeaveStatusCard />
 

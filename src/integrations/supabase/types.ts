@@ -192,6 +192,7 @@ export type Database = {
           icon: string | null
           id: string
           is_assignable: boolean
+          onboarding_form_group: string | null
           prefix: string
           protocol_type: Database["public"]["Enums"]["protocol_domain"]
           signing_protocol: string | null
@@ -209,6 +210,7 @@ export type Database = {
           icon?: string | null
           id?: string
           is_assignable?: boolean
+          onboarding_form_group?: string | null
           prefix: string
           protocol_type?: Database["public"]["Enums"]["protocol_domain"]
           signing_protocol?: string | null
@@ -226,6 +228,7 @@ export type Database = {
           icon?: string | null
           id?: string
           is_assignable?: boolean
+          onboarding_form_group?: string | null
           prefix?: string
           protocol_type?: Database["public"]["Enums"]["protocol_domain"]
           signing_protocol?: string | null
@@ -1900,6 +1903,144 @@ export type Database = {
         }
         Relationships: []
       }
+      onboarding_items: {
+        Row: {
+          asset_id: string | null
+          catalog_ref_id: string | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          fulfillment_type: string | null
+          id: string
+          item_type: string
+          notes: string | null
+          owner_role: string
+          process_id: string
+          selected_group_id: string | null
+          status: string
+          title: string
+        }
+        Insert: {
+          asset_id?: string | null
+          catalog_ref_id?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          fulfillment_type?: string | null
+          id?: string
+          item_type?: string
+          notes?: string | null
+          owner_role?: string
+          process_id: string
+          selected_group_id?: string | null
+          status?: string
+          title: string
+        }
+        Update: {
+          asset_id?: string | null
+          catalog_ref_id?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          fulfillment_type?: string | null
+          id?: string
+          item_type?: string
+          notes?: string | null
+          owner_role?: string
+          process_id?: string
+          selected_group_id?: string | null
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_items_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_items_catalog_ref_id_fkey"
+            columns: ["catalog_ref_id"]
+            isOneToOne: false
+            referencedRelation: "asset_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_items_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_items_selected_group_id_fkey"
+            columns: ["selected_group_id"]
+            isOneToOne: false
+            referencedRelation: "asset_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onboarding_processes: {
+        Row: {
+          company_id: string
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          id: string
+          pdf_url: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          employee_id: string
+          id?: string
+          pdf_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string
+          id?: string
+          pdf_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_processes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_processes_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_processes_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payslip_batches: {
         Row: {
           company_id: string
@@ -2165,6 +2306,47 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      role_templates: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          default_items: Json
+          department: string | null
+          id: string
+          role_name: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          default_items?: Json
+          department?: string | null
+          id?: string
+          role_name: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          default_items?: Json
+          department?: string | null
+          id?: string
+          role_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_templates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       signed_documents: {
         Row: {
@@ -3193,7 +3375,12 @@ export type Database = {
       system_role: "admin" | "it" | "employee"
       ticket_priority: "critical" | "high" | "medium" | "low"
       ticket_status: "open" | "in_progress" | "done"
-      ticket_type: "offboarding" | "access" | "software" | "hardware"
+      ticket_type:
+        | "offboarding"
+        | "access"
+        | "software"
+        | "hardware"
+        | "onboarding"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3354,7 +3541,13 @@ export const Constants = {
       system_role: ["admin", "it", "employee"],
       ticket_priority: ["critical", "high", "medium", "low"],
       ticket_status: ["open", "in_progress", "done"],
-      ticket_type: ["offboarding", "access", "software", "hardware"],
+      ticket_type: [
+        "offboarding",
+        "access",
+        "software",
+        "hardware",
+        "onboarding",
+      ],
     },
   },
 } as const
