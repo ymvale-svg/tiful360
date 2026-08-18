@@ -347,6 +347,7 @@ function QuickCategoryEdit({
         category_id: category.id,
         name: trimmed,
         default_owner_role: category.default_owner_role ?? null,
+        company_id: category.company_id ?? null,
       });
       setNewSubName("");
       toast({ title: "תת-הקטגוריה נוצרה" });
