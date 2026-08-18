@@ -18,6 +18,8 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { DOMAIN_ORDER, DOMAIN_META, DOMAIN_DEFAULTS, getDomain, type DomainKey } from "@/lib/assetDomains";
+import { OWNER_ROLE_OPTIONS } from "@/lib/domainConfig";
+import { useCreateAssetGroup } from "@/hooks/useAssetGroups";
 
 type FieldType = "text" | "number" | "date" | "list" | "list_multi";
 
@@ -61,8 +63,11 @@ export default function CategoryManager() {
   const [newCatDomain, setNewCatDomain] = useState<DomainKey | null>(null);
   const [openDomains, setOpenDomains] = useState<Set<DomainKey>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; assetCount: number } | null>(null);
+  const [quickEditId, setQuickEditId] = useState<string | null>(null);
   const { toast } = useToast();
   const deleteMutation = useDeleteCategory();
+  const updateCategoryMutation = useUpdateCategory();
+  const createGroupMutation = useCreateAssetGroup();
 
   // Group categories by domain
   const byDomain = useMemo(() => {
@@ -161,28 +166,48 @@ export default function CategoryManager() {
                       {cats.map((cat: any) => {
                         const assetCount = cat.assets?.[0]?.count ?? 0;
                         const active = selectedId === cat.id;
+                        const quickEditing = quickEditId === cat.id;
                         return (
-                          <div
-                            key={cat.id}
-                            onClick={() => setSelectedId(active ? null : cat.id)}
-                            className={cn(
-                              "w-full text-right rounded-lg px-3 py-2 transition-all cursor-pointer group flex items-center gap-2",
-                              active ? "ring-2 ring-primary bg-primary/5" : "hover:bg-muted/50"
-                            )}
-                          >
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm">{cat.category_name}</p>
-                              <p className="text-[11px] text-muted-foreground">
-                                <span className="font-mono">{cat.prefix}</span> · {assetCount} פריטים
-                              </p>
-                            </div>
-                            <button
-                              onClick={(e) => handleDeleteClick(e, cat)}
-                              title="מחק תת-קטגוריה"
-                              className="text-muted-foreground/40 hover:text-destructive transition-colors shrink-0 opacity-0 group-hover:opacity-100"
+                          <div key={cat.id}>
+                            <div
+                              onClick={() => setSelectedId(active ? null : cat.id)}
+                              className={cn(
+                                "w-full text-right rounded-lg px-3 py-2 transition-all cursor-pointer group flex items-center gap-2",
+                                active ? "ring-2 ring-primary bg-primary/5" : "hover:bg-muted/50"
+                              )}
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm">{cat.category_name}</p>
+                                <p className="text-[11px] text-muted-foreground">
+                                  <span className="font-mono">{cat.prefix}</span> · {assetCount} פריטים
+                                </p>
+                              </div>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setQuickEditId(quickEditing ? null : cat.id); }}
+                                title="עריכה מהירה"
+                                className={cn(
+                                  "text-muted-foreground/40 hover:text-primary transition-colors shrink-0",
+                                  quickEditing ? "opacity-100 text-primary" : "opacity-0 group-hover:opacity-100"
+                                )}
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={(e) => handleDeleteClick(e, cat)}
+                                title="מחק תת-קטגוריה"
+                                className="text-muted-foreground/40 hover:text-destructive transition-colors shrink-0 opacity-0 group-hover:opacity-100"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                            {quickEditing && (
+                              <QuickCategoryEdit
+                                category={cat}
+                                onClose={() => setQuickEditId(null)}
+                                updateMutation={updateCategoryMutation}
+                                createGroupMutation={createGroupMutation}
+                              />
+                            )}
                           </div>
                         );
                       })}
@@ -267,6 +292,141 @@ export default function CategoryManager() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+// ============================
+// Quick inline category edit (from accordion row)
+// ============================
+function QuickCategoryEdit({
+  category,
+  onClose,
+  updateMutation,
+  createGroupMutation,
+}: {
+  category: any;
+  onClose: () => void;
+  updateMutation: ReturnType<typeof useUpdateCategory>;
+  createGroupMutation: ReturnType<typeof useCreateAssetGroup>;
+}) {
+  const { toast } = useToast();
+  const [name, setName] = useState(category.category_name);
+  const [prefix, setPrefix] = useState(category.prefix);
+  const [description, setDescription] = useState(category.description ?? "");
+  const [domain, setDomain] = useState<DomainKey>(getDomain(category));
+  const [ownerRole, setOwnerRole] = useState<string>(category.default_owner_role ?? "");
+  const [newSubName, setNewSubName] = useState("");
+
+  const handleSave = async () => {
+    if (!name.trim() || !prefix.trim()) {
+      toast({ title: "שגיאה", description: "שם וקידומת הם שדות חובה", variant: "destructive" });
+      return;
+    }
+    try {
+      await updateMutation.mutateAsync({
+        id: category.id,
+        category_name: name,
+        prefix: prefix.toUpperCase(),
+        description: description || undefined,
+        domain,
+        default_owner_role: ownerRole || undefined,
+      });
+      toast({ title: "תת-הקטגוריה עודכנה" });
+      onClose();
+    } catch (err: any) {
+      toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleCreateSub = async () => {
+    const trimmed = newSubName.trim();
+    if (!trimmed) return;
+    try {
+      await createGroupMutation.mutateAsync({
+        category_id: category.id,
+        name: trimmed,
+        default_owner_role: category.default_owner_role ?? null,
+      });
+      setNewSubName("");
+      toast({ title: "תת-הקטגוריה נוצרה" });
+    } catch (err: any) {
+      toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+    }
+  };
+
+  return (
+    <div className="mx-1 mb-2 p-3 rounded-lg border border-primary/30 bg-muted/30 space-y-2 animate-fade-in">
+      <div className="grid grid-cols-2 gap-2">
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="שם"
+          className="px-2.5 py-1.5 bg-background rounded-md text-sm outline-none border border-border/50 focus:ring-1 focus:ring-primary/30"
+        />
+        <input
+          value={prefix}
+          onChange={(e) => setPrefix(e.target.value.replace(/[^a-zA-Z]/g, "").slice(0, 4))}
+          placeholder="קידומת"
+          className="px-2.5 py-1.5 bg-background rounded-md text-sm outline-none border border-border/50 focus:ring-1 focus:ring-primary/30 font-mono uppercase"
+          dir="ltr"
+        />
+      </div>
+      <input
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        placeholder="תיאור"
+        className="w-full px-2.5 py-1.5 bg-background rounded-md text-sm outline-none border border-border/50 focus:ring-1 focus:ring-primary/30"
+      />
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="text-[11px] text-muted-foreground mb-1 block">העבר דומיין</label>
+          <select
+            value={domain}
+            onChange={(e) => setDomain(e.target.value as DomainKey)}
+            className="w-full px-2.5 py-1.5 bg-background rounded-md text-sm outline-none border border-border/50 focus:ring-1 focus:ring-primary/30"
+          >
+            {DOMAIN_ORDER.map((k) => (
+              <option key={k} value={k}>{DOMAIN_META[k].title}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="text-[11px] text-muted-foreground mb-1 block">אחראי ברירת מחדל</label>
+          <select
+            value={ownerRole}
+            onChange={(e) => setOwnerRole(e.target.value)}
+            className="w-full px-2.5 py-1.5 bg-background rounded-md text-sm outline-none border border-border/50 focus:ring-1 focus:ring-primary/30"
+          >
+            <option value="">ללא</option>
+            {OWNER_ROLE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="flex gap-2 justify-end pt-1">
+        <Button size="sm" variant="outline" onClick={onClose}>
+          <X className="w-3.5 h-3.5 ml-1" />ביטול
+        </Button>
+        <Button size="sm" onClick={handleSave} disabled={updateMutation.isPending}>
+          <Check className="w-3.5 h-3.5 ml-1" />{updateMutation.isPending ? "שומר..." : "שמור"}
+        </Button>
+      </div>
+
+      <div className="flex gap-2 pt-2 border-t border-border/50">
+        <input
+          value={newSubName}
+          onChange={(e) => setNewSubName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleCreateSub()}
+          placeholder="תת-קטגוריה חדשה"
+          className="flex-1 px-2.5 py-1.5 bg-background rounded-md text-sm outline-none border border-dashed border-border/60 focus:ring-1 focus:ring-primary/30"
+        />
+        <Button size="sm" variant="outline" onClick={handleCreateSub} disabled={!newSubName.trim() || createGroupMutation.isPending}>
+          <Plus className="w-3.5 h-3.5 ml-1" />תת-קטגוריה חדשה
+        </Button>
+      </div>
     </div>
   );
 }
@@ -574,7 +734,7 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
 // ============================
 // Category Editor (name, prefix, description)
 // ============================
-function CategoryEditor({ category }: { category: { id: string; category_name: string; prefix: string; description?: string | null; skip_handover_form?: boolean | null; skip_return_form?: boolean | null; default_notification_days_before?: number | null; is_assignable?: boolean | null } }) {
+function CategoryEditor({ category }: { category: { id: string; category_name: string; prefix: string; description?: string | null; skip_handover_form?: boolean | null; skip_return_form?: boolean | null; default_notification_days_before?: number | null; is_assignable?: boolean | null; domain?: string | null; default_owner_role?: string | null } }) {
   const updateMutation = useUpdateCategory();
   const { toast } = useToast();
   const [editing, setEditing] = useState(false);
@@ -587,6 +747,8 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
   const [notifDays, setNotifDays] = useState<string>(
     category.default_notification_days_before == null ? "" : String(category.default_notification_days_before)
   );
+  const [domain, setDomain] = useState<DomainKey>(getDomain(category));
+  const [ownerRole, setOwnerRole] = useState<string>(category.default_owner_role ?? "");
 
   useEffect(() => {
     setName(category.category_name);
@@ -596,8 +758,10 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
     setSkipHandover(!!category.skip_handover_form);
     setSkipReturn(!!category.skip_return_form);
     setNotifDays(category.default_notification_days_before == null ? "" : String(category.default_notification_days_before));
+    setDomain(getDomain(category));
+    setOwnerRole(category.default_owner_role ?? "");
     setEditing(false);
-  }, [category.id, category.category_name, category.prefix, category.description, category.is_assignable, category.skip_handover_form, category.skip_return_form, category.default_notification_days_before]);
+  }, [category.id, category.category_name, category.prefix, category.description, category.is_assignable, category.skip_handover_form, category.skip_return_form, category.default_notification_days_before, category.domain, category.default_owner_role]);
 
   const handleSave = async () => {
     if (!name.trim() || !prefix.trim()) {
@@ -615,6 +779,8 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
         skip_handover_form: isAssignable ? skipHandover : true,
         skip_return_form: isAssignable ? skipReturn : true,
         default_notification_days_before: notifDays.trim() === "" ? null : Number(notifDays),
+        domain,
+        default_owner_role: ownerRole || undefined,
       });
       toast({ title: "קטגוריה עודכנה בהצלחה" });
       setEditing(false);
@@ -656,7 +822,7 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
           <div className="flex gap-2">
             <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setGroupsOpen(true)}>
               <Users className="w-3.5 h-3.5" />
-              משפחות
+              תת-קטגוריות
             </Button>
             <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setEditing(true)}>
               <Pencil className="w-3.5 h-3.5" />
@@ -692,6 +858,34 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
         <label className="text-sm font-medium mb-1 block">תיאור</label>
         <input value={description} onChange={e => setDescription(e.target.value)} placeholder="תיאור קצר..."
           className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30" />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-sm font-medium mb-1 block">העבר דומיין</label>
+          <select
+            value={domain}
+            onChange={(e) => setDomain(e.target.value as DomainKey)}
+            className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
+          >
+            {DOMAIN_ORDER.map((k) => (
+              <option key={k} value={k}>{DOMAIN_META[k].title}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="text-sm font-medium mb-1 block">אחראי ברירת מחדל</label>
+          <select
+            value={ownerRole}
+            onChange={(e) => setOwnerRole(e.target.value)}
+            className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
+          >
+            <option value="">ללא</option>
+            {OWNER_ROLE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="space-y-2 pt-2 border-t border-border/50">

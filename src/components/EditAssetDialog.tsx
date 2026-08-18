@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Package, FileSignature, History, FileText, Pencil } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useAssetCategories, useEmployees } from "@/hooks/useData";
+import { useAssetGroups } from "@/hooks/useAssetGroups";
 import { useCategoryFields } from "@/hooks/useCategories";
 import { useUpdateAsset } from "@/hooks/useMutations";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +25,7 @@ interface Asset {
   asset_code: string;
   asset_name: string;
   category_id: string;
+  group_id?: string | null;
   serial_number: string | null;
   current_owner_id: string | null;
   status: string;
@@ -52,14 +54,19 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
   const [mode, setMode] = useState<"view" | "edit">("view");
 
   const [form, setForm] = useState({
-    asset_name: "", category_id: "", serial_number: "", current_owner_id: "",
+    asset_name: "", category_id: "", group_id: "", serial_number: "", current_owner_id: "",
     status: "in_stock", manufacturer_model: "", condition: "good",
     expiry_date: "", notes: "", notification_days_before: "" as string,
   });
   const [customFields, setCustomFields] = useState<Record<string, string>>({});
 
   const { data: catFieldsRaw } = useCategoryFields(form.category_id);
+  const { data: assetGroups } = useAssetGroups();
   const selectedCategory = (categories ?? []).find((c: any) => c.id === form.category_id) as any;
+  const categoryGroups = useMemo(
+    () => (assetGroups ?? []).filter(g => g.category_id === form.category_id),
+    [assetGroups, form.category_id]
+  );
   const catFields = (catFieldsRaw ?? []).filter((cf: any) => {
     if (selectedCategory?.prefix === "CINS" && cf.field_name === "תוקף פוליסה") return false;
     return true;
@@ -70,6 +77,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
       setForm({
         asset_name: asset.asset_name,
         category_id: asset.category_id,
+        group_id: (asset as any).group_id ?? "",
         serial_number: asset.serial_number ?? "",
         current_owner_id: asset.current_owner_id ?? "",
         status: asset.status,
@@ -152,6 +160,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
         id: asset.id,
         asset_name: form.asset_name,
         category_id: form.category_id,
+        group_id: form.group_id || null,
         serial_number: form.serial_number || null,
         current_owner_id: form.current_owner_id || null,
         status: form.current_owner_id ? "in_use" : (form.status as any),
@@ -232,6 +241,21 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                 />
               )}
             </div>
+            {categoryGroups.length > 0 && (
+              <div>
+                <label className="text-sm font-medium mb-1 block">תת-קטגוריה</label>
+                {isView ? (
+                  <div className={readCls}>{display(categoryGroups.find(g => g.id === form.group_id)?.name)}</div>
+                ) : (
+                  <SearchableSelect
+                    value={form.group_id}
+                    onChange={(v) => setForm({ ...form, group_id: v })}
+                    options={categoryGroups.map(g => ({ value: g.id, label: g.name }))}
+                    placeholder="בחר..."
+                  />
+                )}
+              </div>
+            )}
             {(selectedCategory as any)?.is_assignable !== false && (
               <div>
                 <label className="text-sm font-medium mb-1 block">מצב הציוד</label>

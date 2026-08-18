@@ -187,6 +187,7 @@ export type Database = {
           company_id: string | null
           created_at: string
           default_notification_days_before: number | null
+          default_owner_role: string | null
           description: string | null
           domain: string
           icon: string | null
@@ -205,6 +206,7 @@ export type Database = {
           company_id?: string | null
           created_at?: string
           default_notification_days_before?: number | null
+          default_owner_role?: string | null
           description?: string | null
           domain?: string
           icon?: string | null
@@ -223,6 +225,7 @@ export type Database = {
           company_id?: string | null
           created_at?: string
           default_notification_days_before?: number | null
+          default_owner_role?: string | null
           description?: string | null
           domain?: string
           icon?: string | null
@@ -296,6 +299,7 @@ export type Database = {
           category_id: string
           company_id: string
           created_at: string
+          default_owner_role: string | null
           description: string | null
           id: string
           name: string
@@ -306,6 +310,7 @@ export type Database = {
           category_id: string
           company_id: string
           created_at?: string
+          default_owner_role?: string | null
           description?: string | null
           id?: string
           name: string
@@ -316,6 +321,7 @@ export type Database = {
           category_id?: string
           company_id?: string
           created_at?: string
+          default_owner_role?: string | null
           description?: string | null
           id?: string
           name?: string
@@ -849,6 +855,7 @@ export type Database = {
           attendance_corrections_auto_approve: boolean
           created_at: string
           created_by: string | null
+          domain_labels: Json | null
           expiry_notification_emails: string | null
           git_base_url: string | null
           git_custname: string | null
@@ -872,6 +879,7 @@ export type Database = {
           attendance_corrections_auto_approve?: boolean
           created_at?: string
           created_by?: string | null
+          domain_labels?: Json | null
           expiry_notification_emails?: string | null
           git_base_url?: string | null
           git_custname?: string | null
@@ -895,6 +903,7 @@ export type Database = {
           attendance_corrections_auto_approve?: boolean
           created_at?: string
           created_by?: string | null
+          domain_labels?: Json | null
           expiry_notification_emails?: string | null
           git_base_url?: string | null
           git_custname?: string | null

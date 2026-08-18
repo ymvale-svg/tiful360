@@ -44,6 +44,7 @@ export function useCreateAsset() {
       asset_code: string;
       asset_name: string;
       category_id: string;
+      group_id?: string | null;
       serial_number?: string;
       current_owner_id?: string;
       status?: "in_use" | "in_stock" | "in_repair";

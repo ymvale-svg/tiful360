@@ -11,6 +11,7 @@ import { Package, AlertCircle, Users, User, Search, Copy, CalendarIcon, X, Plus 
 import { format } from "date-fns";
 import { useCreateAsset } from "@/hooks/useMutations";
 import { useAssetCategories, useEmployees, useAssets } from "@/hooks/useData";
+import { useAssetGroups } from "@/hooks/useAssetGroups";
 import { useCategoryFields, useAddCategoryFieldOption } from "@/hooks/useCategories";
 import { useAuth } from "@/hooks/useAuth";
 import { useUploadAssetDocument } from "@/hooks/useAssetDocuments";
@@ -70,6 +71,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
     asset_code: "",
     asset_name: "",
     category_id: "",
+    group_id: "",
     serial_number: "",
     current_owner_id: "",
     status: "in_stock" as "in_use" | "in_stock" | "in_repair",
@@ -88,7 +90,12 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
   const [perEmpRows, setPerEmpRows] = useState<Record<string, Record<string, string>>>({});
 
   const { data: catFieldsRaw } = useCategoryFields(form.category_id);
+  const { data: assetGroups } = useAssetGroups();
   const selectedCategory = categories?.find(c => c.id === form.category_id);
+  const categoryGroups = useMemo(
+    () => (assetGroups ?? []).filter(g => g.category_id === form.category_id),
+    [assetGroups, form.category_id]
+  );
   const { isAdmin } = useAuth();
   const addOption = useAddCategoryFieldOption();
   // Hide custom fields that duplicate the system expiry_date field.
@@ -103,7 +110,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
   useEffect(() => {
     if (!open) {
       setForm({
-        asset_code: "", asset_name: "", category_id: "", serial_number: "",
+        asset_code: "", asset_name: "", category_id: "", group_id: "", serial_number: "",
         current_owner_id: "", status: "in_stock", expiry_date: "", notes: "",
         notification_days_before: "",
       });
@@ -309,6 +316,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
       e.asset_code = "מזהה פריט כבר קיים במערכת";
     if (!form.asset_name.trim()) e.asset_name = "שדה חובה";
     if (!form.category_id) e.category_id = "נא לבחור קטגוריה";
+    if (categoryGroups.length > 0 && !form.group_id) e.group_id = "נא לבחור תת-קטגוריה";
     if (form.serial_number && existingAssets?.some(a => a.serial_number === form.serial_number))
       e.serial_number = "מספר סידורי כבר קיים במערכת";
     (catFields ?? []).forEach(cf => {
@@ -327,6 +335,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
         asset_code: form.asset_code,
         asset_name: form.asset_name,
         category_id: form.category_id,
+        group_id: form.group_id || undefined,
         serial_number: form.serial_number || undefined,
         current_owner_id: form.current_owner_id || undefined,
         status: form.status,
@@ -362,6 +371,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
     const e: Record<string, string> = {};
     if (!form.asset_name.trim()) e.asset_name = "שדה חובה";
     if (!form.category_id) e.category_id = "נא לבחור קטגוריה";
+    if (categoryGroups.length > 0 && !form.group_id) e.group_id = "נא לבחור תת-קטגוריה";
     if (selectedEmployeeIds.length === 0) e.employees = "נא לבחור לפחות עובד אחד";
     if (selectedEmployeeIds.length > 100) e.employees = "ניתן לשייך עד 100 עובדים בפעם אחת";
 
@@ -445,6 +455,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
         asset_code: row[SYSTEM_FIELD_KEYS.asset_code]!.trim(),
         asset_name: form.asset_name.trim(),
         category_id: form.category_id,
+        group_id: form.group_id || null,
         serial_number: row[SYSTEM_FIELD_KEYS.serial_number]?.trim() || null,
         current_owner_id: empId,
         status: "in_use" as const,
@@ -507,13 +518,28 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
             <label className="text-sm font-medium mb-1 block">קטגוריה<span className="text-destructive mr-1">*</span></label>
             <SearchableSelect
               value={form.category_id}
-              onChange={(v) => { set("category_id", v); setCustomFields({}); }}
+              onChange={(v) => { set("category_id", v); set("group_id", ""); setCustomFields({}); }}
               options={(categories ?? []).map(c => ({ value: c.id, label: c.category_name }))}
               placeholder="בחר קטגוריה..."
               error={!!errors.category_id}
             />
             {errors.category_id && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.category_id}</p>}
           </div>
+
+          {/* Sub-category (group) — only shown when the category has groups defined */}
+          {categoryGroups.length > 0 && (
+            <div>
+              <label className="text-sm font-medium mb-1 block">תת-קטגוריה<span className="text-destructive mr-1">*</span></label>
+              <SearchableSelect
+                value={form.group_id}
+                onChange={(v) => set("group_id", v)}
+                options={categoryGroups.map(g => ({ value: g.id, label: g.name }))}
+                placeholder="בחר תת-קטגוריה..."
+                error={!!errors.group_id}
+              />
+              {errors.group_id && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.group_id}</p>}
+            </div>
+          )}
 
           {/* Single mode: asset_code (auto-generated, read-only) */}
           {!bulkMode && (
