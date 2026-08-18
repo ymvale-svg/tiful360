@@ -19,9 +19,10 @@ interface Props {
   onOpenChange: (v: boolean) => void;
   categoryId: string;
   categoryName: string;
+  companyId?: string | null;
 }
 
-export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryName }: Props) {
+export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryName, companyId }: Props) {
   const { data: assets } = useAssets();
   const { data: groups } = useAssetGroups();
   const createGroup = useCreateAssetGroup();
@@ -58,7 +59,7 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
     const name = newName.trim();
     if (!name) return;
     try {
-      const g = await createGroup.mutateAsync({ category_id: categoryId, name, default_owner_role: newOwnerRole || null });
+      const g = await createGroup.mutateAsync({ category_id: categoryId, name, default_owner_role: newOwnerRole || null, company_id: companyId ?? null });
       setNewName("");
       setNewOwnerRole("");
       setSelectedGroupId(g.id);

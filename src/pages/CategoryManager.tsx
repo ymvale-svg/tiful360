@@ -99,7 +99,7 @@ export default function CategoryManager() {
     if (!deleteTarget) return;
     try {
       await deleteMutation.mutateAsync(deleteTarget.id);
-      toast({ title: "תת-הקטגוריה נמחקה" });
+      toast({ title: "הקטגוריה נמחקה" });
       if (selectedId === deleteTarget.id) setSelectedId(null);
       setDeleteTarget(null);
     } catch (err: any) {
@@ -116,14 +116,14 @@ export default function CategoryManager() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-start justify-between">
         <div className="page-header">
-          <h1 className="page-title">ניהול דומיינים ותת-קטגוריות</h1>
+          <h1 className="page-title">ניהול דומיינים וקטגוריות</h1>
           <p className="page-subtitle">
-            6 דומיינים קשיחים · תת-קטגוריות נוצרות מתוך הדומיין שלהן עם שדות מותאמים
+            6 דומיינים קשיחים · קטגוריות נוצרות מתוך הדומיין שלהן עם שדות מותאמים
           </p>
         </div>
         <Button variant="outline" className="gap-2" onClick={() => openNewInDomain(null)}>
           <Plus className="w-4 h-4" />
-          תת-קטגוריה חדשה
+          קטגוריה חדשה
         </Button>
       </div>
 
@@ -151,18 +151,18 @@ export default function CategoryManager() {
                     </div>
                     <div className="flex-1 min-w-0 text-right">
                       <p className="font-medium text-sm">{meta.title}</p>
-                      <p className="text-[11px] text-muted-foreground truncate">
-                        {cats.length} תת-קטגוריות · {totalAssets} פריטים
-                      </p>
-                    </div>
-                  </button>
-                  {isOpen && (
-                    <div className="border-t border-border/50 p-2 space-y-1">
-                      {cats.length === 0 && (
-                        <p className="text-[11px] text-muted-foreground px-2 py-3 text-center">
-                          אין עדיין תת-קטגוריות בדומיין זה
+                        <p className="text-[11px] text-muted-foreground truncate">
+                          {cats.length} קטגוריות · {totalAssets} פריטים
                         </p>
-                      )}
+                      </div>
+                    </button>
+                    {isOpen && (
+                      <div className="border-t border-border/50 p-2 space-y-1">
+                        {cats.length === 0 && (
+                          <p className="text-[11px] text-muted-foreground px-2 py-3 text-center">
+                            אין עדיין קטגוריות בדומיין זה
+                          </p>
+                        )}
                       {cats.map((cat: any) => {
                         const assetCount = cat.assets?.[0]?.count ?? 0;
                         const active = selectedId === cat.id;
@@ -194,34 +194,34 @@ export default function CategoryManager() {
                               </button>
                               <button
                                 onClick={(e) => handleDeleteClick(e, cat)}
-                                title="מחק תת-קטגוריה"
-                                className="text-muted-foreground/40 hover:text-destructive transition-colors shrink-0 opacity-0 group-hover:opacity-100"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                            {quickEditing && (
-                              <QuickCategoryEdit
-                                category={cat}
-                                onClose={() => setQuickEditId(null)}
-                                updateMutation={updateCategoryMutation}
-                                createGroupMutation={createGroupMutation}
-                              />
-                            )}
+                              title="מחק קטגוריה"
+                              className="text-muted-foreground/40 hover:text-destructive transition-colors shrink-0 opacity-0 group-hover:opacity-100"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                           </div>
-                        );
-                      })}
-                      <button
-                        onClick={() => openNewInDomain(key)}
-                        className={cn(
-                          "w-full text-right rounded-lg px-3 py-2 text-xs text-muted-foreground hover:text-primary hover:bg-primary/5 border border-dashed border-border/60 hover:border-primary/40 transition-colors flex items-center gap-2 justify-center"
-                        )}
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        תת-קטגוריה חדשה ב{meta.title}
-                      </button>
-                    </div>
-                  )}
+                          {quickEditing && (
+                            <QuickCategoryEdit
+                              category={cat}
+                              onClose={() => setQuickEditId(null)}
+                              updateMutation={updateCategoryMutation}
+                              createGroupMutation={createGroupMutation}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                    <button
+                      onClick={() => openNewInDomain(key)}
+                      className={cn(
+                        "w-full text-right rounded-lg px-3 py-2 text-xs text-muted-foreground hover:text-primary hover:bg-primary/5 border border-dashed border-border/60 hover:border-primary/40 transition-colors flex items-center gap-2 justify-center"
+                      )}
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      קטגוריה חדשה ב{meta.title}
+                    </button>
+                  </div>
+                )}
                 </div>
               );
             })}
@@ -233,7 +233,7 @@ export default function CategoryManager() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="text-xs text-muted-foreground">
-                    עריכת תת-קטגוריה
+                    עריכת קטגוריה
                   </div>
                   <Button variant="ghost" size="sm" className="gap-1.5 h-7" onClick={() => setSelectedId(null)}>
                     <X className="w-3.5 h-3.5" />
@@ -266,16 +266,16 @@ export default function CategoryManager() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
-            <AlertDialogTitle>מחיקת תת-קטגוריה</AlertDialogTitle>
+            <AlertDialogTitle>מחיקת קטגוריה</AlertDialogTitle>
             <AlertDialogDescription>
               {deleteTarget && deleteTarget.assetCount > 0 ? (
                 <>
-                  תת-הקטגוריה <strong>{deleteTarget.name}</strong> מכילה {deleteTarget.assetCount} פריטים.
+                  הקטגוריה <strong>{deleteTarget.name}</strong> מכילה {deleteTarget.assetCount} פריטים.
                   <br />
                   יש להעביר או למחוק את הפריטים תחילה.
                 </>
               ) : (
-                <>האם למחוק את תת-הקטגוריה <strong>{deleteTarget?.name}</strong>? פעולה זו תמחק גם את השדות המותאמים שלה ואינה הפיכה.</>
+                <>האם למחוק את הקטגוריה <strong>{deleteTarget?.name}</strong>? פעולה זו תמחק גם את השדות המותאמים שלה ואינה הפיכה.</>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -332,7 +332,7 @@ function QuickCategoryEdit({
         domain,
         default_owner_role: ownerRole || undefined,
       });
-      toast({ title: "תת-הקטגוריה עודכנה" });
+      toast({ title: "הקטגוריה עודכנה" });
       onClose();
     } catch (err: any) {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
@@ -347,6 +347,7 @@ function QuickCategoryEdit({
         category_id: category.id,
         name: trimmed,
         default_owner_role: category.default_owner_role ?? null,
+        company_id: category.company_id ?? null,
       });
       setNewSubName("");
       toast({ title: "תת-הקטגוריה נוצרה" });
@@ -734,7 +735,7 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
 // ============================
 // Category Editor (name, prefix, description)
 // ============================
-function CategoryEditor({ category }: { category: { id: string; category_name: string; prefix: string; description?: string | null; skip_handover_form?: boolean | null; skip_return_form?: boolean | null; default_notification_days_before?: number | null; is_assignable?: boolean | null; domain?: string | null; default_owner_role?: string | null } }) {
+function CategoryEditor({ category }: { category: { id: string; category_name: string; prefix: string; description?: string | null; skip_handover_form?: boolean | null; skip_return_form?: boolean | null; default_notification_days_before?: number | null; is_assignable?: boolean | null; domain?: string | null; default_owner_role?: string | null; company_id?: string | null } }) {
   const updateMutation = useUpdateCategory();
   const { toast } = useToast();
   const [editing, setEditing] = useState(false);
@@ -835,6 +836,7 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
           onOpenChange={setGroupsOpen}
           categoryId={category.id}
           categoryName={category.category_name}
+          companyId={category.company_id ?? null}
         />
       </>
     );
@@ -1023,7 +1025,7 @@ function NewCategoryDialog({
 
   const handleCreate = async () => {
     if (!name.trim() || !prefix.trim()) {
-      toast({ title: "שגיאה", description: "שם תת-קטגוריה וקידומת הם שדות חובה", variant: "destructive" });
+      toast({ title: "שגיאה", description: "שם קטגוריה וקידומת הם שדות חובה", variant: "destructive" });
       return;
     }
     try {
@@ -1037,7 +1039,7 @@ function NewCategoryDialog({
         skip_handover_form: skipHandover,
         skip_return_form: skipReturn,
       });
-      toast({ title: "תת-הקטגוריה נוצרה בהצלחה" });
+      toast({ title: "הקטגוריה נוצרה בהצלחה" });
       onCreated(cat.id);
     } catch (err: any) {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
@@ -1050,11 +1052,11 @@ function NewCategoryDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md" dir="rtl">
         <DialogHeader>
-          <DialogTitle>תת-קטגוריה חדשה</DialogTitle>
+          <DialogTitle>קטגוריה חדשה</DialogTitle>
           <DialogDescription>
             {lockedMeta
-              ? `נוסיף תת-קטגוריה תחת הדומיין "${lockedMeta.title}"`
-              : "בחר דומיין והגדר תת-קטגוריה חדשה עם קידומת ייחודית לברקוד"}
+              ? `נוסיף קטגוריה תחת הדומיין "${lockedMeta.title}"`
+              : "בחר דומיין והגדר קטגוריה חדשה עם קידומת ייחודית לברקוד"}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 mt-4">
@@ -1087,7 +1089,7 @@ function NewCategoryDialog({
           )}
 
           <div>
-            <label className="text-sm font-medium mb-1.5 block">שם תת-הקטגוריה</label>
+            <label className="text-sm font-medium mb-1.5 block">שם הקטגוריה</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -1111,7 +1113,7 @@ function NewCategoryDialog({
             <input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="תיאור קצר של תת-הקטגוריה"
+              placeholder="תיאור קצר של הקטגוריה"
               className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
             />
           </div>
@@ -1128,7 +1130,7 @@ function NewCategoryDialog({
                 />
                 <div className="text-sm">
                   <div>דלג על אישור משיכה</div>
-                  <div className="text-[11px] text-muted-foreground">פריטים בתת-קטגוריה זו ישויכו לעובד ישירות, ללא טופס מסירה וחתימה.</div>
+                  <div className="text-[11px] text-muted-foreground">פריטים בקטגוריה זו ישויכו לעובד ישירות, ללא טופס מסירה וחתימה.</div>
                 </div>
               </label>
               <label className="flex items-start gap-2 cursor-pointer">
@@ -1140,7 +1142,7 @@ function NewCategoryDialog({
                 />
                 <div className="text-sm">
                   <div>דלג על אישור זיכוי</div>
-                  <div className="text-[11px] text-muted-foreground">החזרת פריטים בתת-קטגוריה זו למלאי תתבצע ללא טופס החזרה וחתימה.</div>
+                  <div className="text-[11px] text-muted-foreground">החזרת פריטים בקטגוריה זו למלאי תתבצע ללא טופס החזרה וחתימה.</div>
                 </div>
               </label>
             </div>
@@ -1152,7 +1154,7 @@ function NewCategoryDialog({
             </Button>
             <Button className="flex-1 gap-2" onClick={handleCreate} disabled={createMutation.isPending}>
               <Check className="w-4 h-4" />
-              {createMutation.isPending ? "יוצר..." : "צור תת-קטגוריה"}
+              {createMutation.isPending ? "יוצר..." : "צור קטגוריה"}
             </Button>
           </div>
         </div>
