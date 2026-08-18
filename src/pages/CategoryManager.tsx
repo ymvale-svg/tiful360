@@ -99,7 +99,7 @@ export default function CategoryManager() {
     if (!deleteTarget) return;
     try {
       await deleteMutation.mutateAsync(deleteTarget.id);
-      toast({ title: "תת-הקטגוריה נמחקה" });
+      toast({ title: "הקטגוריה נמחקה" });
       if (selectedId === deleteTarget.id) setSelectedId(null);
       setDeleteTarget(null);
     } catch (err: any) {
