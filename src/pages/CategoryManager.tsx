@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import {
   Plus, GripVertical, Trash2, Save, Pencil,
@@ -18,8 +19,9 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { DOMAIN_ORDER, DOMAIN_META, DOMAIN_DEFAULTS, getDomain, type DomainKey } from "@/lib/assetDomains";
-import { OWNER_ROLE_OPTIONS } from "@/lib/domainConfig";
+import { OWNER_ROLE_OPTIONS, getAllDomainLabels, type DomainLabels } from "@/lib/domainConfig";
 import { useCreateAssetGroup } from "@/hooks/useAssetGroups";
+import { useCompany } from "@/hooks/useCompany";
 
 type FieldType = "text" | "number" | "date" | "list" | "list_multi";
 
@@ -58,12 +60,30 @@ export default function CategoryManager() {
     return legalOnly ? allCategories.filter((c: any) => c.is_assignable === false) : allCategories;
   }, [allCategories, legalOnly]);
 
+  const { activeCompany } = useCompany();
+  const labels = useMemo(
+    () => getAllDomainLabels((activeCompany?.domain_labels ?? null) as DomainLabels | null),
+    [activeCompany?.domain_labels]
+  );
+
+
+  const [searchParams] = useSearchParams();
+  const focusDomain = searchParams.get("domain") as DomainKey | null;
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newCatOpen, setNewCatOpen] = useState(false);
   const [newCatDomain, setNewCatDomain] = useState<DomainKey | null>(null);
-  const [openDomains, setOpenDomains] = useState<Set<DomainKey>>(new Set());
+  const [openDomains, setOpenDomains] = useState<Set<DomainKey>>(
+    () => new Set(focusDomain && DOMAIN_ORDER.includes(focusDomain) ? [focusDomain] : [])
+  );
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; assetCount: number } | null>(null);
   const [quickEditId, setQuickEditId] = useState<string | null>(null);
+
+  // Focus the requested domain when arriving from the domain card "quick edit" button
+  useEffect(() => {
+    if (focusDomain && DOMAIN_ORDER.includes(focusDomain)) {
+      setOpenDomains((prev) => new Set(prev).add(focusDomain));
+    }
+  }, [focusDomain]);
   const { toast } = useToast();
   const deleteMutation = useDeleteCategory();
   const updateCategoryMutation = useUpdateCategory();
@@ -150,7 +170,7 @@ export default function CategoryManager() {
                       <Icon className="w-5 h-5" strokeWidth={1.75} />
                     </div>
                     <div className="flex-1 min-w-0 text-right">
-                      <p className="font-medium text-sm">{meta.title}</p>
+                      <p className="font-medium text-sm">{labels[key].title}</p>
                         <p className="text-[11px] text-muted-foreground truncate">
                           {cats.length} קטגוריות · {totalAssets} פריטים
                         </p>
@@ -218,7 +238,7 @@ export default function CategoryManager() {
                       )}
                     >
                       <Plus className="w-3.5 h-3.5" />
-                      קטגוריה חדשה ב{meta.title}
+                      קטגוריה חדשה ב{labels[key].title}
                     </button>
                   </div>
                 )}

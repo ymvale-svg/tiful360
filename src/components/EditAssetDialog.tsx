@@ -5,6 +5,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Package, FileSignature, History, FileText, Pencil } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { SubCategorySelect } from "@/components/assets/SubCategorySelect";
 import { useAssetCategories, useEmployees } from "@/hooks/useData";
 import { useAssetGroups } from "@/hooks/useAssetGroups";
 import { useCategoryFields } from "@/hooks/useCategories";
@@ -241,17 +242,18 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                 />
               )}
             </div>
-            {categoryGroups.length > 0 && (
+            {(categoryGroups.length > 0 || (!isView && form.category_id)) && (
               <div>
                 <label className="text-sm font-medium mb-1 block">תת-קטגוריה</label>
                 {isView ? (
                   <div className={readCls}>{display(categoryGroups.find(g => g.id === form.group_id)?.name)}</div>
                 ) : (
-                  <SearchableSelect
+                  <SubCategorySelect
+                    categoryId={form.category_id}
+                    companyId={(selectedCategory as any)?.company_id ?? asset?.company_id ?? null}
+                    defaultOwnerRole={(selectedCategory as any)?.default_owner_role ?? null}
                     value={form.group_id}
                     onChange={(v) => setForm({ ...form, group_id: v })}
-                    options={categoryGroups.map(g => ({ value: g.id, label: g.name }))}
-                    placeholder="בחר..."
                   />
                 )}
               </div>

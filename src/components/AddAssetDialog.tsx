@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { SubCategorySelect } from "@/components/assets/SubCategorySelect";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -526,15 +527,19 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
             {errors.category_id && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.category_id}</p>}
           </div>
 
-          {/* Sub-category (group) — only shown when the category has groups defined */}
-          {categoryGroups.length > 0 && (
+          {/* Sub-category (group) — shown once a category is selected; new values can be added inline */}
+          {form.category_id && (
             <div>
-              <label className="text-sm font-medium mb-1 block">תת-קטגוריה<span className="text-destructive mr-1">*</span></label>
-              <SearchableSelect
+              <label className="text-sm font-medium mb-1 block">
+                תת-קטגוריה
+                {categoryGroups.length > 0 && <span className="text-destructive mr-1">*</span>}
+              </label>
+              <SubCategorySelect
+                categoryId={form.category_id}
+                companyId={(selectedCategory as any)?.company_id ?? activeCompanyId}
+                defaultOwnerRole={(selectedCategory as any)?.default_owner_role ?? null}
                 value={form.group_id}
                 onChange={(v) => set("group_id", v)}
-                options={categoryGroups.map(g => ({ value: g.id, label: g.name }))}
-                placeholder="בחר תת-קטגוריה..."
                 error={!!errors.group_id}
               />
               {errors.group_id && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.group_id}</p>}
