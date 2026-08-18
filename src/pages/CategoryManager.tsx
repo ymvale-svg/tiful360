@@ -1023,7 +1023,7 @@ function NewCategoryDialog({
 
   const handleCreate = async () => {
     if (!name.trim() || !prefix.trim()) {
-      toast({ title: "שגיאה", description: "שם תת-קטגוריה וקידומת הם שדות חובה", variant: "destructive" });
+      toast({ title: "שגיאה", description: "שם קטגוריה וקידומת הם שדות חובה", variant: "destructive" });
       return;
     }
     try {
@@ -1037,7 +1037,7 @@ function NewCategoryDialog({
         skip_handover_form: skipHandover,
         skip_return_form: skipReturn,
       });
-      toast({ title: "תת-הקטגוריה נוצרה בהצלחה" });
+      toast({ title: "הקטגוריה נוצרה בהצלחה" });
       onCreated(cat.id);
     } catch (err: any) {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
@@ -1050,11 +1050,11 @@ function NewCategoryDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md" dir="rtl">
         <DialogHeader>
-          <DialogTitle>תת-קטגוריה חדשה</DialogTitle>
+          <DialogTitle>קטגוריה חדשה</DialogTitle>
           <DialogDescription>
             {lockedMeta
-              ? `נוסיף תת-קטגוריה תחת הדומיין "${lockedMeta.title}"`
-              : "בחר דומיין והגדר תת-קטגוריה חדשה עם קידומת ייחודית לברקוד"}
+              ? `נוסיף קטגוריה תחת הדומיין "${lockedMeta.title}"`
+              : "בחר דומיין והגדר קטגוריה חדשה עם קידומת ייחודית לברקוד"}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 mt-4">
@@ -1087,7 +1087,7 @@ function NewCategoryDialog({
           )}
 
           <div>
-            <label className="text-sm font-medium mb-1.5 block">שם תת-הקטגוריה</label>
+            <label className="text-sm font-medium mb-1.5 block">שם הקטגוריה</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -1111,7 +1111,7 @@ function NewCategoryDialog({
             <input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="תיאור קצר של תת-הקטגוריה"
+              placeholder="תיאור קצר של הקטגוריה"
               className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
             />
           </div>
@@ -1128,7 +1128,7 @@ function NewCategoryDialog({
                 />
                 <div className="text-sm">
                   <div>דלג על אישור משיכה</div>
-                  <div className="text-[11px] text-muted-foreground">פריטים בתת-קטגוריה זו ישויכו לעובד ישירות, ללא טופס מסירה וחתימה.</div>
+                  <div className="text-[11px] text-muted-foreground">פריטים בקטגוריה זו ישויכו לעובד ישירות, ללא טופס מסירה וחתימה.</div>
                 </div>
               </label>
               <label className="flex items-start gap-2 cursor-pointer">
@@ -1140,7 +1140,7 @@ function NewCategoryDialog({
                 />
                 <div className="text-sm">
                   <div>דלג על אישור זיכוי</div>
-                  <div className="text-[11px] text-muted-foreground">החזרת פריטים בתת-קטגוריה זו למלאי תתבצע ללא טופס החזרה וחתימה.</div>
+                  <div className="text-[11px] text-muted-foreground">החזרת פריטים בקטגוריה זו למלאי תתבצע ללא טופס החזרה וחתימה.</div>
                 </div>
               </label>
             </div>
@@ -1152,7 +1152,7 @@ function NewCategoryDialog({
             </Button>
             <Button className="flex-1 gap-2" onClick={handleCreate} disabled={createMutation.isPending}>
               <Check className="w-4 h-4" />
-              {createMutation.isPending ? "יוצר..." : "צור תת-קטגוריה"}
+              {createMutation.isPending ? "יוצר..." : "צור קטגוריה"}
             </Button>
           </div>
         </div>
