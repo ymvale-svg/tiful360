@@ -151,18 +151,18 @@ export default function CategoryManager() {
                     </div>
                     <div className="flex-1 min-w-0 text-right">
                       <p className="font-medium text-sm">{meta.title}</p>
-                      <p className="text-[11px] text-muted-foreground truncate">
-                        {cats.length} תת-קטגוריות · {totalAssets} פריטים
-                      </p>
-                    </div>
-                  </button>
-                  {isOpen && (
-                    <div className="border-t border-border/50 p-2 space-y-1">
-                      {cats.length === 0 && (
-                        <p className="text-[11px] text-muted-foreground px-2 py-3 text-center">
-                          אין עדיין תת-קטגוריות בדומיין זה
+                        <p className="text-[11px] text-muted-foreground truncate">
+                          {cats.length} קטגוריות · {totalAssets} פריטים
                         </p>
-                      )}
+                      </div>
+                    </button>
+                    {isOpen && (
+                      <div className="border-t border-border/50 p-2 space-y-1">
+                        {cats.length === 0 && (
+                          <p className="text-[11px] text-muted-foreground px-2 py-3 text-center">
+                            אין עדיין קטגוריות בדומיין זה
+                          </p>
+                        )}
                       {cats.map((cat: any) => {
                         const assetCount = cat.assets?.[0]?.count ?? 0;
                         const active = selectedId === cat.id;
