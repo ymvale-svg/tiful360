@@ -233,7 +233,7 @@ export default function CategoryManager() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="text-xs text-muted-foreground">
-                    עריכת תת-קטגוריה
+                    עריכת קטגוריה
                   </div>
                   <Button variant="ghost" size="sm" className="gap-1.5 h-7" onClick={() => setSelectedId(null)}>
                     <X className="w-3.5 h-3.5" />
@@ -266,16 +266,16 @@ export default function CategoryManager() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
-            <AlertDialogTitle>מחיקת תת-קטגוריה</AlertDialogTitle>
+            <AlertDialogTitle>מחיקת קטגוריה</AlertDialogTitle>
             <AlertDialogDescription>
               {deleteTarget && deleteTarget.assetCount > 0 ? (
                 <>
-                  תת-הקטגוריה <strong>{deleteTarget.name}</strong> מכילה {deleteTarget.assetCount} פריטים.
+                  הקטגוריה <strong>{deleteTarget.name}</strong> מכילה {deleteTarget.assetCount} פריטים.
                   <br />
                   יש להעביר או למחוק את הפריטים תחילה.
                 </>
               ) : (
-                <>האם למחוק את תת-הקטגוריה <strong>{deleteTarget?.name}</strong>? פעולה זו תמחק גם את השדות המותאמים שלה ואינה הפיכה.</>
+                <>האם למחוק את הקטגוריה <strong>{deleteTarget?.name}</strong>? פעולה זו תמחק גם את השדות המותאמים שלה ואינה הפיכה.</>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
