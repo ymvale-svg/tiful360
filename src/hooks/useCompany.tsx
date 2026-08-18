@@ -9,6 +9,7 @@ interface Company {
   portal_name?: string | null;
   portal_logo_url?: string | null;
   portal_primary_color?: string | null;
+  domain_labels?: any;
 }
 
 interface CompanyContextType {
@@ -17,6 +18,7 @@ interface CompanyContextType {
   activeCompany: Company | null;
   setActiveCompanyId: (id: string) => void;
   loading: boolean;
+  refetchCompanies: () => Promise<void>;
 }
 
 const CompanyContext = createContext<CompanyContextType>({
@@ -25,6 +27,7 @@ const CompanyContext = createContext<CompanyContextType>({
   activeCompany: null,
   setActiveCompanyId: () => {},
   loading: true,
+  refetchCompanies: async () => {},
 });
 
 export function CompanyProvider({ children }: { children: ReactNode }) {
@@ -46,14 +49,14 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         // Super admin sees all companies
         const { data } = await supabase
           .from("companies")
-          .select("id, name, logo_url, portal_name, portal_logo_url, portal_primary_color")
+          .select("id, name, logo_url, portal_name, portal_logo_url, portal_primary_color, domain_labels")
           .order("name");
         setCompanies(data ?? []);
       } else {
         // Regular users see only their companies via user_company_access
         const { data } = await supabase
           .from("user_company_access")
-          .select("company_id, companies(id, name, logo_url, portal_name, portal_logo_url, portal_primary_color)")
+          .select("company_id, companies(id, name, logo_url, portal_name, portal_logo_url, portal_primary_color, domain_labels)")
           .eq("user_id", user.id);
         const mapped = (data ?? [])
           .map((d: any) => d.companies)
@@ -92,7 +95,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
 
   return (
     <CompanyContext.Provider
-      value={{ companies, activeCompanyId, activeCompany, setActiveCompanyId, loading }}
+      value={{ companies, activeCompanyId, activeCompany, setActiveCompanyId, loading, refetchCompanies: fetchCompanies }}
     >
       {children}
     </CompanyContext.Provider>

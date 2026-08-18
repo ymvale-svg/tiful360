@@ -9,6 +9,7 @@ export type AssetGroup = {
   name: string;
   description: string | null;
   sort_order: number;
+  default_owner_role: string | null;
 };
 
 export function useAssetGroups() {
@@ -29,7 +30,7 @@ export function useCreateAssetGroup() {
   const qc = useQueryClient();
   const { activeCompanyId } = useCompany();
   return useMutation({
-    mutationFn: async (params: { category_id: string; name: string; description?: string | null }) => {
+    mutationFn: async (params: { category_id: string; name: string; description?: string | null; default_owner_role?: string | null }) => {
       const { data, error } = await supabase
         .from("asset_groups")
         .insert({ ...params, company_id: activeCompanyId } as any)
@@ -45,7 +46,7 @@ export function useCreateAssetGroup() {
 export function useUpdateAssetGroup() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...params }: { id: string; name?: string; description?: string | null; sort_order?: number }) => {
+    mutationFn: async ({ id, ...params }: { id: string; name?: string; description?: string | null; sort_order?: number; default_owner_role?: string | null }) => {
       const { error } = await supabase.from("asset_groups").update(params as any).eq("id", id);
       if (error) throw error;
     },

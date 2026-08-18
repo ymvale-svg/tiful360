@@ -1,7 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAssets, useAssetCategories, useITTickets } from "@/hooks/useData";
 import { useExpiringAssets } from "@/hooks/useExpiringAssets";
+import { useCompany } from "@/hooks/useCompany";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import {
   DOMAIN_META,
@@ -10,12 +14,19 @@ import {
   getDomain,
   type DomainKey,
 } from "@/lib/assetDomains";
+import { getAllDomainLabels, type DomainLabels } from "@/lib/domainConfig";
 import {
   AlertTriangle,
   Users,
   Clock,
   ArrowLeftRight,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   /** Deprecated — domain cards now navigate via /assets/:domain. Kept optional for back-compat. */
@@ -61,6 +72,16 @@ export function DomainsGrid({ onQuickAssign }: Props) {
   const { data: assets } = useAssets();
   const { data: expiring } = useExpiringAssets(30);
   const { data: tickets } = useITTickets();
+  const { activeCompany, activeCompanyId, refetchCompanies } = useCompany();
+  const { isAdmin } = useAuth();
+
+  const [editingKey, setEditingKey] = useState<DomainKey | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editHint, setEditHint] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const domainLabels = (activeCompany?.domain_labels ?? null) as DomainLabels | null;
+  const labels = useMemo(() => getAllDomainLabels(domainLabels), [domainLabels]);
 
   const grouped = useMemo(() => {
     const cats = categories ?? [];
@@ -87,6 +108,39 @@ export function DomainsGrid({ onQuickAssign }: Props) {
   const totalExpired = (expiring ?? []).filter((e) => e.days_left <= 0).length;
   const totalSoon30 = (expiring ?? []).filter((e) => e.days_left > 0).length;
   const openOffboardings = (tickets ?? []).filter((t: any) => t.ticket_type === "offboarding" && t.status !== "done").length;
+
+  const startEdit = (key: DomainKey) => {
+    setEditingKey(key);
+    setEditTitle(labels[key].title);
+    setEditHint(labels[key].hint);
+  };
+
+  const cancelEdit = () => {
+    setEditingKey(null);
+    setEditTitle("");
+    setEditHint("");
+  };
+
+  const saveEdit = async (key: DomainKey) => {
+    if (!activeCompanyId) return;
+    setSaving(true);
+    try {
+      const nextLabels: DomainLabels = { ...(domainLabels ?? {}) };
+      nextLabels[key] = { title: editTitle.trim(), hint: editHint.trim() };
+      const { error } = await supabase
+        .from("companies")
+        .update({ domain_labels: nextLabels as any })
+        .eq("id", activeCompanyId);
+      if (error) throw error;
+      await refetchCompanies();
+      toast({ title: "השינויים נשמרו" });
+      cancelEdit();
+    } catch (err: any) {
+      toast({ title: "שגיאה בשמירה", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (isLoading) {
     return <div className="p-8 text-center text-muted-foreground">טוען...</div>;
@@ -131,6 +185,58 @@ export function DomainsGrid({ onQuickAssign }: Props) {
             const slug = domainKeyToSlug(meta.key);
             const openDomain = () => navigate(`/assets/${slug}`);
             const isEmpty = cats.length === 0;
+            const label = labels[meta.key];
+            const isEditing = editingKey === meta.key;
+
+            if (isEditing) {
+              return (
+                <div
+                  key={meta.key}
+                  className={cn(
+                    "relative bg-card border border-primary/40 rounded-2xl p-5 text-right",
+                    meta.color.ring
+                  )}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className={cn(
+                      "w-12 h-12 rounded-xl flex items-center justify-center shrink-0",
+                      meta.color.bg, meta.color.text
+                    )}>
+                      <Icon className="w-6 h-6" strokeWidth={1.75} />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Input
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      placeholder="כותרת הדומיין"
+                      dir="rtl"
+                      className="text-right"
+                    />
+                    <Textarea
+                      value={editHint}
+                      onChange={(e) => setEditHint(e.target.value)}
+                      placeholder="תיאור קצר"
+                      dir="rtl"
+                      className="text-right resize-none"
+                      rows={2}
+                    />
+                    <div className="flex items-center gap-2 justify-end pt-1">
+                      <Button size="sm" variant="ghost" onClick={cancelEdit} disabled={saving}>
+                        <X className="w-4 h-4 ml-1" />
+                        ביטול
+                      </Button>
+                      <Button size="sm" onClick={() => saveEdit(meta.key)} disabled={saving || !editTitle.trim()}>
+                        <Check className="w-4 h-4 ml-1" />
+                        שמירה
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
             return (
               <div
                 key={meta.key}
@@ -159,9 +265,25 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                   </span>
                 )}
 
+                {isAdmin && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      startEdit(meta.key);
+                    }}
+                    className={cn(
+                      "absolute bottom-3 left-3 w-7 h-7 rounded-full flex items-center justify-center border border-border bg-background/80 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-foreground",
+                      !badge && "top-3"
+                    )}
+                    aria-label="ערוך תווית דומיין"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                )}
+
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1 text-right pr-2">
-                    <h3 className="text-base font-semibold leading-tight">{meta.title}</h3>
+                    <h3 className="text-base font-semibold leading-tight">{label.title}</h3>
                     <p className="text-xs text-muted-foreground mt-1">
                       {isEmpty ? "אין פריטים בדומיין זה" : domainSubtitle(meta.key, cats, assets)}
                     </p>

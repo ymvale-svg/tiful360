@@ -17,6 +17,7 @@ import { useSubEmployers } from "@/hooks/useSubEmployers";
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onCreated?: (employee: { id: string; full_name: string }) => void;
 }
 
 function isValidIsraeliId(id: string): boolean {
@@ -55,7 +56,7 @@ const OPERATIONS_BLOCKED: AppRole[] = ["admin", "payroll", "super_admin"];
 
 type FieldErrors = Record<string, string>;
 
-export function AddEmployeeDialog({ open, onOpenChange }: Props) {
+export function AddEmployeeDialog({ open, onOpenChange, onCreated }: Props) {
   const [form, setForm] = useState({
     employee_number: "",
     full_name: "",
@@ -165,6 +166,7 @@ export function AddEmployeeDialog({ open, onOpenChange }: Props) {
       } as any);
 
       toast({ title: "עובד נוסף בהצלחה" });
+      if (created?.id) onCreated?.({ id: created.id, full_name: form.full_name });
 
       // Send invitation in background if requested
       if (form.send_invite && activeCompanyId && created?.id) {

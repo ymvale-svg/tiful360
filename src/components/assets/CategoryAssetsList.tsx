@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useAssets, useAssetCategories } from "@/hooks/useData";
+import { useAssetGroups } from "@/hooks/useAssetGroups";
 import { getCategoryIcon, getCategoryColor } from "@/lib/categoryIcons";
 import { Search, Plus, Building2, ChevronLeft, AlertTriangle, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ interface Props {
 export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAsset }: Props) {
   const { data: assets, isLoading } = useAssets();
   const { data: categories } = useAssetCategories();
+  const { data: assetGroups } = useAssetGroups();
   const [search, setSearch] = useState("");
   const [selectedSub, setSelectedSub] = useState<string | null>(null);
 
@@ -46,16 +48,22 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
   };
   const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString("en-GB") : "—");
 
-  // Determine the grouping key per asset:
-  // - Insurance categories: group by custom_fields["סוג כיסוי"] (sub-category)
-  // - Other categories: group by asset_name
-  const groupKeyOf = (a: any): string => {
-    if (isInsurance) {
-      const t = (a.custom_fields?.["סוג כיסוי"] ?? "").toString().trim();
-      return t || "ללא סוג כיסוי";
-    }
-    return (a.asset_name ?? "ללא שם").trim();
-  };
+  const NO_GROUP_KEY = "__no_group__";
+  const NO_GROUP_LABEL = "ללא תת-קטגוריה";
+
+  const categoryGroups = useMemo(
+    () => (assetGroups ?? []).filter((g: any) => g.category_id === categoryId),
+    [assetGroups, categoryId]
+  );
+  const groupNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const g of categoryGroups) m.set(g.id, g.name);
+    return m;
+  }, [categoryGroups]);
+
+  // Determine the grouping key per asset based on its group_id (תת-קטגוריה)
+  const groupKeyOf = (a: any): string => a.group_id ?? NO_GROUP_KEY;
+  const groupNameOf = (key: string): string => (key === NO_GROUP_KEY ? NO_GROUP_LABEL : (groupNameById.get(key) ?? NO_GROUP_LABEL));
 
   // All assets in this category
   const categoryAssets = useMemo(
@@ -63,7 +71,7 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
     [assets, categoryId]
   );
 
-  // Group into sub-categories
+  // Group into sub-categories (by group_id)
   const subCategories = useMemo(() => {
     const map = new Map<string, any[]>();
     for (const a of categoryAssets) {
@@ -71,16 +79,20 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(a);
     }
-    let arr = Array.from(map.entries()).map(([name, list]) => {
+    let arr = Array.from(map.entries()).map(([key, list]) => {
       const assigned = list.filter((x) => x.status === "in_use").length;
-      return { name, items: list, total: list.length, assigned };
+      return { key, name: groupNameOf(key), items: list, total: list.length, assigned };
     });
     if (search) {
       const q = search.toLowerCase();
       arr = arr.filter((s) => s.name.toLowerCase().includes(q));
     }
-    return arr.sort((a, b) => a.name.localeCompare(b.name, "he"));
-  }, [categoryAssets, search, isInsurance]);
+    return arr.sort((a, b) => {
+      if (a.key === NO_GROUP_KEY) return 1;
+      if (b.key === NO_GROUP_KEY) return -1;
+      return a.name.localeCompare(b.name, "he");
+    });
+  }, [categoryAssets, search, groupNameById]);
 
   // Items inside the selected sub-category
   const subItems = useMemo(() => {
@@ -127,7 +139,7 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
               {category?.category_name ?? "—"}
             </button>
             <span className="text-muted-foreground">/</span>
-            <span className="font-medium">{selectedSub}</span>
+            <span className="font-medium">{groupNameOf(selectedSub)}</span>
           </>
         ) : (
           <span className="font-medium">{category?.category_name ?? "—"}</span>
@@ -150,7 +162,7 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
           </div>
           <div>
             <h1 className="text-xl font-bold">
-              {selectedSub ?? category?.category_name}
+              {selectedSub ? groupNameOf(selectedSub) : category?.category_name}
             </h1>
             <p className="text-xs text-muted-foreground">
               {selectedSub
@@ -163,7 +175,7 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={() => onAddAsset(categoryId, selectedSub && !isInsurance ? selectedSub : undefined)} className="gap-2">
+          <Button onClick={() => onAddAsset(categoryId)} className="gap-2">
             <Plus className="w-4 h-4" />
             פריט חדש
           </Button>
@@ -200,8 +212,8 @@ export function CategoryAssetsList({ categoryId, onBack, onSelectAsset, onAddAss
           <div key="subs" className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
             {subCategories.map((sc, idx) => (
               <button
-                key={sc.name}
-                onClick={() => setSelectedSub(sc.name)}
+                key={sc.key}
+                onClick={() => setSelectedSub(sc.key)}
                 style={{ animationDelay: `${Math.min(idx * 30, 300)}ms`, animationFillMode: "both" }}
                 className={cn(
                   "group relative bg-card border border-border rounded-2xl p-5 text-center",
