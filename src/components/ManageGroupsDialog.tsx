@@ -19,6 +19,7 @@ interface Props {
   onOpenChange: (v: boolean) => void;
   categoryId: string;
   categoryName: string;
+  companyId?: string | null;
 }
 
 export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryName }: Props) {
