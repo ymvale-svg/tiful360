@@ -332,7 +332,7 @@ function QuickCategoryEdit({
         domain,
         default_owner_role: ownerRole || undefined,
       });
-      toast({ title: "תת-הקטגוריה עודכנה" });
+      toast({ title: "הקטגוריה עודכנה" });
       onClose();
     } catch (err: any) {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
