@@ -30,10 +30,12 @@ export function useCreateAssetGroup() {
   const qc = useQueryClient();
   const { activeCompanyId } = useCompany();
   return useMutation({
-    mutationFn: async (params: { category_id: string; name: string; description?: string | null; default_owner_role?: string | null }) => {
+    mutationFn: async (params: { category_id: string; name: string; description?: string | null; default_owner_role?: string | null; company_id?: string | null }) => {
+      const companyId = params.company_id ?? activeCompanyId;
+      if (!companyId) throw new Error("לא נבחרה חברה פעילה");
       const { data, error } = await supabase
         .from("asset_groups")
-        .insert({ ...params, company_id: activeCompanyId } as any)
+        .insert({ ...params, company_id: companyId } as any)
         .select()
         .single();
       if (error) throw error;
