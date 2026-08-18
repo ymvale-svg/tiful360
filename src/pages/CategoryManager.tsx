@@ -116,14 +116,14 @@ export default function CategoryManager() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-start justify-between">
         <div className="page-header">
-          <h1 className="page-title">ניהול דומיינים ותת-קטגוריות</h1>
+          <h1 className="page-title">ניהול דומיינים וקטגוריות</h1>
           <p className="page-subtitle">
-            6 דומיינים קשיחים · תת-קטגוריות נוצרות מתוך הדומיין שלהן עם שדות מותאמים
+            6 דומיינים קשיחים · קטגוריות נוצרות מתוך הדומיין שלהן עם שדות מותאמים
           </p>
         </div>
         <Button variant="outline" className="gap-2" onClick={() => openNewInDomain(null)}>
           <Plus className="w-4 h-4" />
-          תת-קטגוריה חדשה
+          קטגוריה חדשה
         </Button>
       </div>
 
