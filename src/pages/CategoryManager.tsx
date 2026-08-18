@@ -836,6 +836,7 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
           onOpenChange={setGroupsOpen}
           categoryId={category.id}
           categoryName={category.category_name}
+          companyId={category.company_id ?? null}
         />
       </>
     );
