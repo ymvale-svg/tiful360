@@ -56,5 +56,6 @@
 - `AddAssetDialog.tsx` / `EditAssetDialog.tsx`: שדה `group_id` עם אותן אפשרויות; `CategoryAssetsList.tsx` יקבל סינון לפי תת-רמה.
 - `OnboardingChecklist.tsx`: קיבוץ דו-שכבתי, הצגת אחראי לכל שורה, וסינון `group_id` ב-`assetOptions`.
 - "העתק צרכים מעובד קיים" יעודכן לצבור מספר תתי-רמות לאותה קטגוריה.
+- עריכה מהירה: הרחבת `useUpdateCategory` לתמיכה ב-`domain`/`default_owner_role`, הרחבת `useAssetGroups` בעדכון שם/סדר/אחראי, ורכיב עריכה inline משותף. תוויות הדומיינים לחברה יישמרו בעמודת JSON חדשה ב-`companies` (`domain_labels`), עם נפילה חזרה ל-`DOMAIN_META` כשאין ערך.
 
 
