@@ -21,6 +21,7 @@ import {
   Clock,
   ArrowLeftRight,
   Pencil,
+  FolderTree,
   Check,
   X,
 } from "lucide-react";
@@ -266,19 +267,35 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                 )}
 
                 {isAdmin && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      startEdit(meta.key);
-                    }}
+                  <div
                     className={cn(
-                      "absolute bottom-3 left-3 w-7 h-7 rounded-full flex items-center justify-center border border-border bg-background/80 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-foreground",
-                      !badge && "top-3"
+                      "absolute left-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity",
+                      badge ? "bottom-3" : "top-3"
                     )}
-                    aria-label="ערוך תווית דומיין"
                   >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        startEdit(meta.key);
+                      }}
+                      className="w-7 h-7 rounded-full flex items-center justify-center border border-border bg-background/80 text-muted-foreground hover:text-foreground"
+                      aria-label="ערוך תווית דומיין"
+                      title="ערוך תווית דומיין"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/assets?tab=categories&domain=${meta.key}`);
+                      }}
+                      className="w-7 h-7 rounded-full flex items-center justify-center border border-border bg-background/80 text-muted-foreground hover:text-foreground"
+                      aria-label="עריכה מהירה של קטגוריות ותתי-קטגוריות"
+                      title="עריכה מהירה — קטגוריות ותתי-קטגוריות"
+                    >
+                      <FolderTree className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 )}
 
                 <div className="flex items-start justify-between mb-3">
