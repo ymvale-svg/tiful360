@@ -194,34 +194,34 @@ export default function CategoryManager() {
                               </button>
                               <button
                                 onClick={(e) => handleDeleteClick(e, cat)}
-                                title="מחק תת-קטגוריה"
-                                className="text-muted-foreground/40 hover:text-destructive transition-colors shrink-0 opacity-0 group-hover:opacity-100"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                            {quickEditing && (
-                              <QuickCategoryEdit
-                                category={cat}
-                                onClose={() => setQuickEditId(null)}
-                                updateMutation={updateCategoryMutation}
-                                createGroupMutation={createGroupMutation}
-                              />
-                            )}
+                              title="מחק קטגוריה"
+                              className="text-muted-foreground/40 hover:text-destructive transition-colors shrink-0 opacity-0 group-hover:opacity-100"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                           </div>
-                        );
-                      })}
-                      <button
-                        onClick={() => openNewInDomain(key)}
-                        className={cn(
-                          "w-full text-right rounded-lg px-3 py-2 text-xs text-muted-foreground hover:text-primary hover:bg-primary/5 border border-dashed border-border/60 hover:border-primary/40 transition-colors flex items-center gap-2 justify-center"
-                        )}
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        תת-קטגוריה חדשה ב{meta.title}
-                      </button>
-                    </div>
-                  )}
+                          {quickEditing && (
+                            <QuickCategoryEdit
+                              category={cat}
+                              onClose={() => setQuickEditId(null)}
+                              updateMutation={updateCategoryMutation}
+                              createGroupMutation={createGroupMutation}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                    <button
+                      onClick={() => openNewInDomain(key)}
+                      className={cn(
+                        "w-full text-right rounded-lg px-3 py-2 text-xs text-muted-foreground hover:text-primary hover:bg-primary/5 border border-dashed border-border/60 hover:border-primary/40 transition-colors flex items-center gap-2 justify-center"
+                      )}
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      קטגוריה חדשה ב{meta.title}
+                    </button>
+                  </div>
+                )}
                 </div>
               );
             })}
