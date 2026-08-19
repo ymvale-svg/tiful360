@@ -1167,6 +1167,37 @@ function NewCategoryDialog({
             />
           </div>
 
+          <div>
+            <label className="text-sm font-medium mb-1.5 block">תתי-קטגוריות (אופציונלי)</label>
+            <div className="flex gap-2">
+              <input
+                value={newSub}
+                onChange={(e) => setNewSub(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSub(); } }}
+                placeholder="למשל: מסך / ראוטר"
+                className="flex-1 px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
+              />
+              <Button type="button" size="sm" variant="outline" onClick={addSub} disabled={!newSub.trim()}>
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+            {subs.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {subs.map((s) => (
+                  <span key={s} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-primary/10 text-primary text-xs">
+                    {s}
+                    <button type="button" onClick={() => setSubs(subs.filter((x) => x !== s))} className="hover:text-destructive">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <p className="text-[11px] text-muted-foreground mt-1">יווצרו יחד עם הקטגוריה.</p>
+          </div>
+
+
+
           {(forceInstitutional ? false : defaults.is_assignable) && (
             <div className="space-y-2 pt-2 border-t border-border/50">
               <p className="text-xs font-medium text-muted-foreground">הגדרות טופסי מסירה/החזרה</p>
