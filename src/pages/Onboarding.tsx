@@ -49,7 +49,7 @@ export default function Onboarding() {
           <h1 className="page-title">קליטת עובדים</h1>
           <p className="page-subtitle">ניהול תהליכי הקליטה — מהזנת הצרכים ועד מסירת הציוד</p>
         </div>
-        <Button className="gap-2" onClick={() => setDialogOpen(true)}>
+        <Button className="gap-2 w-full sm:w-auto" onClick={() => setDialogOpen(true)}>
           <UserPlus className="w-4 h-4" />
           תהליך קליטה חדש
         </Button>
@@ -65,12 +65,12 @@ export default function Onboarding() {
             className="w-full pr-9 pl-3 py-2 bg-card border border-border rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
-        <div className="flex gap-1.5 overflow-x-auto">
+        <div className="grid grid-cols-3 sm:flex gap-1.5 w-full sm:w-auto">
           {(["all", "draft", "sent", "in_progress", "done"] as const).map((s) => (
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1.5 rounded-lg text-xs whitespace-nowrap border transition-colors ${
+              className={`min-w-0 px-2.5 py-1.5 rounded-lg text-xs whitespace-nowrap border transition-colors ${
                 statusFilter === s ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"
               }`}
             >

@@ -62,7 +62,12 @@ const bottomNav: NavItem[] = [
   { label: "הגדרות", icon: Settings, path: "/settings", roles: ["admin", "super_admin"], preload: preload.settings },
 ];
 
-export function AppSidebar() {
+interface AppSidebarProps {
+  mobileOpen?: boolean;
+  onMobileOpenChange?: (open: boolean) => void;
+}
+
+export function AppSidebar({ mobileOpen = false, onMobileOpenChange }: AppSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [isPending, startTransition] = useTransition();
@@ -75,18 +80,42 @@ export function AppSidebar() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const mql = window.matchMedia("(max-width: 1023px)");
-    const onChange = (e: MediaQueryListEvent) => setCollapsed(e.matches);
+    const updateLayout = (isCompact: boolean) => {
+      setCollapsed(isCompact);
+      document.documentElement.style.setProperty(
+        "--sidebar-width",
+        isCompact ? "0px" : "240px"
+      );
+      if (!isCompact) onMobileOpenChange?.(false);
+    };
+    updateLayout(mql.matches);
+    const onChange = (e: MediaQueryListEvent) => updateLayout(e.matches);
     mql.addEventListener("change", onChange);
     return () => mql.removeEventListener("change", onChange);
-  }, []);
+  }, [onMobileOpenChange]);
 
   // Broadcast width so layout can adjust its right margin
   useEffect(() => {
-    document.documentElement.style.setProperty(
-      "--sidebar-width",
-      collapsed ? "68px" : "240px"
-    );
+    if (window.innerWidth >= 1024) {
+      document.documentElement.style.setProperty(
+        "--sidebar-width",
+        collapsed ? "68px" : "240px"
+      );
+    }
   }, [collapsed]);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onMobileOpenChange?.(false);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [mobileOpen, onMobileOpenChange]);
   const { roles, signOut, user, isSuperAdmin } = useAuth();
 
   const canSee = (item: NavItem) => {
@@ -106,6 +135,7 @@ export function AppSidebar() {
       e.preventDefault();
       if (location.pathname === item.path) return;
       setPendingPath(item.path);
+      onMobileOpenChange?.(false);
       startTransition(() => {
         navigate(item.path);
       });
@@ -136,17 +166,19 @@ export function AppSidebar() {
   const visiblePortal = portalNav.filter(canSee);
   const visibleBottom = bottomNav.filter(canSee);
 
-  return (
+  const sidebar = (
     <aside
       className={cn(
-        "fixed top-0 right-0 h-screen bg-sidebar flex flex-col z-40 transition-all duration-300 border-l border-sidebar-border",
-        collapsed ? "w-[68px]" : "w-[240px]"
+        "fixed top-0 right-0 h-[100dvh] bg-sidebar flex flex-col z-50 transition-all duration-300 border-l border-sidebar-border",
+        mobileOpen ? "w-[280px] translate-x-0" : "w-[280px] translate-x-full lg:translate-x-0",
+        collapsed ? "lg:w-[68px]" : "lg:w-[240px]"
       )}
+      aria-label="ניווט ראשי"
     >
       {/* Logo */}
       <div className="p-4 flex items-center gap-3 border-b border-sidebar-border min-h-[64px]">
         <img src={logoImg} alt="תפעול 360" className="w-9 h-9 rounded-lg shrink-0 object-contain" />
-        {!collapsed && (
+        {(!collapsed || mobileOpen) && (
           <div className="overflow-hidden">
             <h1 className="text-sm font-bold text-sidebar-foreground whitespace-nowrap">תפעול 360</h1>
             <p className="text-[11px] text-sidebar-muted whitespace-nowrap">ניהול משאבים מרכזי</p>
@@ -160,7 +192,7 @@ export function AppSidebar() {
         {visibleSuperAdmin.length > 0 && (
           <>
             <div className="space-y-1">
-              {!collapsed && (
+              {(!collapsed || mobileOpen) && (
                 <p className="px-3 py-1 text-[11px] font-medium text-sidebar-muted uppercase tracking-wider flex items-center gap-1">
                   <Crown className="w-3 h-3" />
                   סופר אדמין
@@ -183,7 +215,7 @@ export function AppSidebar() {
         <div className="my-4 border-t border-sidebar-border" />
 
         <div className="space-y-1">
-          {!collapsed && (
+          {(!collapsed || mobileOpen) && (
             <p className="px-3 py-1 text-[11px] font-medium text-sidebar-muted uppercase tracking-wider">
               פורטל
             </p>
@@ -206,12 +238,12 @@ export function AppSidebar() {
           title={collapsed ? "התנתק" : undefined}
         >
           <LogOut className="w-5 h-5 shrink-0" />
-          {!collapsed && <span>התנתק</span>}
+          {(!collapsed || mobileOpen) && <span>התנתק</span>}
         </button>
 
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="sidebar-item sidebar-item-inactive w-full"
+          className="sidebar-item sidebar-item-inactive w-full hidden lg:flex"
         >
           {collapsed ? (
             <ChevronLeft className="w-5 h-5 shrink-0" />
@@ -224,5 +256,19 @@ export function AppSidebar() {
         </button>
       </div>
     </aside>
+  );
+
+  return (
+    <>
+      {mobileOpen && (
+        <button
+          type="button"
+          className="fixed inset-0 z-40 bg-foreground/30 lg:hidden"
+          aria-label="סגירת התפריט"
+          onClick={() => onMobileOpenChange?.(false)}
+        />
+      )}
+      {sidebar}
+    </>
   );
 }
