@@ -2,7 +2,7 @@ import { Suspense, useEffect, useState } from "react";
 import { Outlet, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { CompanySelector } from "./CompanySelector";
-import { Bell, Search, LogOut, UserRound } from "lucide-react";
+import { Bell, Search, LogOut, Menu, UserRound } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useData";
 import { hasDualAccess } from "@/lib/dualAccess";
@@ -16,6 +16,7 @@ export function AppLayout() {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [headerSearch, setHeaderSearch] = useState(searchParams.get("q") ?? "");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Keep header input in sync when route/url changes
   useEffect(() => {
@@ -51,11 +52,20 @@ export function AppLayout() {
   return (
     <div className="min-h-screen bg-background">
       <SkipLink />
-      <AppSidebar />
+      <AppSidebar mobileOpen={mobileMenuOpen} onMobileOpenChange={setMobileMenuOpen} />
       
       <div className="min-h-screen min-w-0 overflow-x-hidden transition-[margin] duration-300" style={{ marginRight: "var(--sidebar-width, 240px)" }}>
         <header role="banner" className="sticky top-0 z-30 h-16 bg-card/80 backdrop-blur-md border-b border-border flex items-center justify-between px-3 sm:px-6 gap-2">
           <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              className="lg:hidden p-2 rounded-lg hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="פתיחת תפריט ניווט"
+              aria-expanded={mobileMenuOpen}
+            >
+              <Menu className="w-5 h-5" aria-hidden="true" />
+            </button>
             <div className="hidden md:flex items-center gap-3 bg-muted rounded-lg px-3 py-2 w-56 lg:w-80">
               <Search className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
               <label htmlFor="global-search" className="sr-only">חיפוש כללי</label>
@@ -116,7 +126,7 @@ export function AppLayout() {
           </div>
         </header>
 
-        <main id="main-content" tabIndex={-1} className="p-3 sm:p-4 lg:p-6 focus:outline-none pb-24 max-w-full overflow-x-hidden">
+        <main id="main-content" tabIndex={-1} className="p-3 sm:p-4 lg:p-6 focus:outline-none pb-24 w-full max-w-full overflow-x-hidden">
           <Suspense fallback={null}>
             <Outlet />
           </Suspense>
