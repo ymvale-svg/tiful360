@@ -1027,7 +1027,10 @@ function NewCategoryDialog({
   const [description, setDescription] = useState("");
   const [skipHandover, setSkipHandover] = useState(false);
   const [skipReturn, setSkipReturn] = useState(false);
+  const [subs, setSubs] = useState<string[]>([]);
+  const [newSub, setNewSub] = useState("");
   const createMutation = useCreateCategory();
+  const createGroupMutation = useCreateAssetGroup();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -1038,10 +1041,23 @@ function NewCategoryDialog({
       setDescription("");
       setSkipHandover(false);
       setSkipReturn(false);
+      setSubs([]);
+      setNewSub("");
     }
   }, [open, lockedDomain]);
 
   const defaults = DOMAIN_DEFAULTS[domain];
+
+  const addSub = () => {
+    const trimmed = newSub.trim();
+    if (!trimmed) return;
+    if (subs.some((s) => s === trimmed)) {
+      setNewSub("");
+      return;
+    }
+    setSubs([...subs, trimmed]);
+    setNewSub("");
+  };
 
   const handleCreate = async () => {
     if (!name.trim() || !prefix.trim()) {
@@ -1059,12 +1075,25 @@ function NewCategoryDialog({
         skip_handover_form: skipHandover,
         skip_return_form: skipReturn,
       });
-      toast({ title: "הקטגוריה נוצרה בהצלחה" });
+      const pending = [...subs, newSub.trim()].filter(Boolean);
+      for (const subName of pending) {
+        await createGroupMutation.mutateAsync({
+          category_id: cat.id,
+          name: subName,
+          default_owner_role: (cat as any).default_owner_role ?? null,
+          company_id: (cat as any).company_id ?? null,
+        });
+      }
+      toast({
+        title: "הקטגוריה נוצרה בהצלחה",
+        description: pending.length ? `נוצרו ${pending.length} תתי-קטגוריות` : undefined,
+      });
       onCreated(cat.id);
     } catch (err: any) {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
     }
   };
+
 
   const lockedMeta = lockedDomain ? DOMAIN_META[lockedDomain] : null;
 
