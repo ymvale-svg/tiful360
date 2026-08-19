@@ -1027,7 +1027,10 @@ function NewCategoryDialog({
   const [description, setDescription] = useState("");
   const [skipHandover, setSkipHandover] = useState(false);
   const [skipReturn, setSkipReturn] = useState(false);
+  const [subs, setSubs] = useState<string[]>([]);
+  const [newSub, setNewSub] = useState("");
   const createMutation = useCreateCategory();
+  const createGroupMutation = useCreateAssetGroup();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -1038,10 +1041,23 @@ function NewCategoryDialog({
       setDescription("");
       setSkipHandover(false);
       setSkipReturn(false);
+      setSubs([]);
+      setNewSub("");
     }
   }, [open, lockedDomain]);
 
   const defaults = DOMAIN_DEFAULTS[domain];
+
+  const addSub = () => {
+    const trimmed = newSub.trim();
+    if (!trimmed) return;
+    if (subs.some((s) => s === trimmed)) {
+      setNewSub("");
+      return;
+    }
+    setSubs([...subs, trimmed]);
+    setNewSub("");
+  };
 
   const handleCreate = async () => {
     if (!name.trim() || !prefix.trim()) {
@@ -1059,12 +1075,25 @@ function NewCategoryDialog({
         skip_handover_form: skipHandover,
         skip_return_form: skipReturn,
       });
-      toast({ title: "הקטגוריה נוצרה בהצלחה" });
+      const pending = [...subs, newSub.trim()].filter(Boolean);
+      for (const subName of pending) {
+        await createGroupMutation.mutateAsync({
+          category_id: cat.id,
+          name: subName,
+          default_owner_role: (cat as any).default_owner_role ?? null,
+          company_id: (cat as any).company_id ?? null,
+        });
+      }
+      toast({
+        title: "הקטגוריה נוצרה בהצלחה",
+        description: pending.length ? `נוצרו ${pending.length} תתי-קטגוריות` : undefined,
+      });
       onCreated(cat.id);
     } catch (err: any) {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
     }
   };
+
 
   const lockedMeta = lockedDomain ? DOMAIN_META[lockedDomain] : null;
 
@@ -1137,6 +1166,37 @@ function NewCategoryDialog({
               className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
             />
           </div>
+
+          <div>
+            <label className="text-sm font-medium mb-1.5 block">תתי-קטגוריות (אופציונלי)</label>
+            <div className="flex gap-2">
+              <input
+                value={newSub}
+                onChange={(e) => setNewSub(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSub(); } }}
+                placeholder="למשל: מסך / ראוטר"
+                className="flex-1 px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
+              />
+              <Button type="button" size="sm" variant="outline" onClick={addSub} disabled={!newSub.trim()}>
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+            {subs.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {subs.map((s) => (
+                  <span key={s} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-primary/10 text-primary text-xs">
+                    {s}
+                    <button type="button" onClick={() => setSubs(subs.filter((x) => x !== s))} className="hover:text-destructive">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <p className="text-[11px] text-muted-foreground mt-1">יווצרו יחד עם הקטגוריה.</p>
+          </div>
+
+
 
           {(forceInstitutional ? false : defaults.is_assignable) && (
             <div className="space-y-2 pt-2 border-t border-border/50">
