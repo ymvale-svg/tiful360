@@ -152,11 +152,11 @@ export function AppSidebar({ mobileOpen = false, onMobileOpenChange }: AppSideba
           isActive ? "sidebar-item-active" : "sidebar-item-inactive",
           isLoading && "opacity-70"
         )}
-        title={collapsed ? item.label : undefined}
+        title={collapsed && !mobileOpen ? item.label : undefined}
         aria-current={isActive ? "page" : undefined}
       >
         <item.icon className="w-5 h-5 shrink-0" />
-        {!collapsed && <span>{item.label}</span>}
+        {(!collapsed || mobileOpen) && <span>{item.label}</span>}
       </a>
     );
   };
