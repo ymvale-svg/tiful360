@@ -109,8 +109,7 @@ export default function Assets() {
         </TabsList>
 
         <TabsContent value="assets" className="space-y-5 mt-4">
-          {true && (
-            <>
+
 
               <div className="flex items-start justify-between flex-wrap gap-3">
                 <div className="page-header">
