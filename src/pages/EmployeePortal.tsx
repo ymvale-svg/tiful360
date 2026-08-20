@@ -15,6 +15,7 @@ import { useCompany } from "@/hooks/useCompany";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PendingHandoverForms } from "@/components/PendingHandoverForms";
+import { MyProtocolsList } from "@/components/portal/MyProtocolsList";
 import { NewLeaveRequestDialog } from "@/components/NewLeaveRequestDialog";
 import { LeaveRequestsList } from "@/components/LeaveRequestsList";
 import { useMyLeaveRequests } from "@/hooks/useLeaveRequests";
@@ -541,6 +542,8 @@ export default function EmployeePortal() {
                 ) : (
                   <p className="text-center text-sm text-muted-foreground py-4">אין ציוד משויך אליך</p>
                 )}
+
+                <MyProtocolsList employeeId={myEmployee.id} />
 
                 <h2 className="font-semibold text-sm mt-6">הרשאות ומערכות ({myDigitalAccess.length})</h2>
                 {myDigitalAccess.length > 0 ? (
