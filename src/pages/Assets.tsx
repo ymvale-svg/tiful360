@@ -109,9 +109,9 @@ export default function Assets() {
         </TabsList>
 
         <TabsContent value="assets" className="space-y-5 mt-4">
-          {/* Show global header only on level 1 */}
-          {!cat && !assetId && (
+          {true && (
             <>
+
               <div className="flex items-start justify-between flex-wrap gap-3">
                 <div className="page-header">
                   <h1 className="page-title">משאבים</h1>
