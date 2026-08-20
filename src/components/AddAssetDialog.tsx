@@ -136,10 +136,11 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
       setForm(prev => ({
         ...prev,
         category_id: defaultCategoryId,
+        group_id: defaultGroupId ?? prev.group_id,
         asset_name: defaultAssetName ?? prev.asset_name,
       }));
     }
-  }, [open, defaultCategoryId, defaultAssetName]);
+  }, [open, defaultCategoryId, defaultGroupId, defaultAssetName]);
 
   // Prefill technical specs (custom fields) from an existing asset of the same model.
   // Only copies fields that are NOT per-employee (i.e. shared technical attributes).
