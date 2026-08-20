@@ -11,8 +11,8 @@ import { QuickAssignDialog } from "@/components/QuickAssignDialog";
 import CategoryManager from "@/pages/CategoryManager";
 import { exportToExcel } from "@/lib/exportExcel";
 import { DomainsGrid } from "@/components/assets/DomainsGrid";
-import { CategoryAssetsList } from "@/components/assets/CategoryAssetsList";
-import { AssetDetailView } from "@/components/assets/AssetDetailView";
+import { getDomain, domainKeyToSlug } from "@/lib/assetDomains";
+
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
