@@ -73,6 +73,8 @@ export function DomainsGrid({ onQuickAssign }: Props) {
   const { data: assets } = useAssets();
   const { data: expiring } = useExpiringAssets(30);
   const { data: tickets } = useITTickets();
+  const { data: assetGroups } = useAssetGroups();
+
   const { activeCompany, activeCompanyId, refetchCompanies } = useCompany();
   const { isAdmin } = useAuth();
 
