@@ -457,14 +457,16 @@ export default function AssetsDomainPage() {
                 <AlertTriangle className="w-3.5 h-3.5 text-warning" />
                 {selectedIds.size > 0 ? `${selectedIds.size} נבחרו` : "בחר פריטים כדי לשייך אותם לתת-קטגוריה"}
               </span>
-              <div className="w-56">
-                <SearchableSelect
+              <div className="w-64">
+                <SubCategorySelect
+                  categoryId={drilledCategory?.id ?? ""}
+                  companyId={drilledCategory?.company_id ?? null}
+                  defaultOwnerRole={drilledCategory?.default_owner_role ?? null}
                   value={assignTarget}
                   onChange={setAssignTarget}
-                  options={drilledSubGroups.map((g: any) => ({ value: g.id, label: g.name }))}
-                  placeholder={drilledSubGroups.length ? "בחר תת-קטגוריה..." : "אין תת-קטגוריות"}
                 />
               </div>
+
               <Button
                 size="sm"
                 className="gap-1.5"
