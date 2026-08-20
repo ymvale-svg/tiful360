@@ -581,6 +581,21 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
             {errors.asset_name && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.asset_name}</p>}
           </div>
 
+          {selectedCategory?.prefix !== "CINS" && selectedCategory?.prefix !== "CAR" && (
+            <div>
+              <label className="text-sm font-medium mb-1 block">יצרן ומודל</label>
+              <ManufacturerModelInput
+                value={form.manufacturer_model}
+                onChange={(v) => set("manufacturer_model", v)}
+                groupId={form.group_id || null}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                הערך נשמר ויוצע כרשימה נפתחת לפריטים הבאים באותה תת-קטגוריה
+              </p>
+            </div>
+          )}
+
+
 
           {/* Single mode: owner + expiry */}
           {!bulkMode && (
