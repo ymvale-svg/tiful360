@@ -419,6 +419,27 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "asset_handover_forms_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_handover_forms_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_handover_forms_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "asset_handover_forms_group_id_fkey"
             columns: ["group_id"]
             isOneToOne: false
