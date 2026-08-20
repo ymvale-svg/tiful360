@@ -33,6 +33,8 @@ interface LocalField {
   is_required: boolean;
   field_options: string[] | null;
   sort_order: number;
+  /** null = applies to all sub-categories of the category */
+  group_id: string | null;
 }
 
 const fieldTypeIcons: Record<FieldType, typeof Type> = {
@@ -457,6 +459,11 @@ function QuickCategoryEdit({
 // ============================
 function FieldsEditor({ categoryId, categoryName }: { categoryId: string; categoryName: string }) {
   const { data: dbFields, isLoading } = useCategoryFields(categoryId);
+  const { data: allGroups } = useAssetGroups();
+  const groups = useMemo(
+    () => (allGroups ?? []).filter((g: any) => g.category_id === categoryId),
+    [allGroups, categoryId],
+  );
   const saveMutation = useSaveCategoryFields();
   const { toast } = useToast();
   const [fields, setFields] = useState<LocalField[]>([]);
@@ -476,6 +483,7 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
           is_required: f.is_required,
           field_options: Array.isArray(f.field_options) ? (f.field_options as string[]) : null,
           sort_order: f.sort_order,
+          group_id: (f as any).group_id ?? null,
         }))
       );
       setDirty(false);
@@ -490,6 +498,7 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
       is_required: false,
       field_options: null,
       sort_order: fields.length,
+      group_id: null,
     };
     setFields([...fields, newField]);
     setDirty(true);
@@ -542,6 +551,7 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
           is_required: f.is_required,
           field_options: f.field_options,
           sort_order: i,
+          group_id: f.group_id,
         })),
       });
       setDirty(false);
@@ -562,6 +572,7 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
           <h2 className="font-semibold">{categoryName}</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
             {fields.length} שדות מותאמים • גרור לסידור מחדש
+            {groups.length > 0 && " • ניתן להגביל שדה לתת-קטגוריה"}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -632,6 +643,26 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
                 );
               })}
             </div>
+
+            {/* Sub-category scope */}
+            {groups.length > 0 && (
+              <select
+                value={field.group_id ?? ""}
+                onChange={(e) => updateField(field.tempId, { group_id: e.target.value || null })}
+                title="הצג שדה זה רק בתת-קטגוריה נבחרת"
+                className={cn(
+                  "shrink-0 max-w-[150px] text-xs rounded-md px-2 py-1 outline-none border transition-colors",
+                  field.group_id
+                    ? "bg-primary/10 text-primary border-primary/30"
+                    : "bg-muted text-muted-foreground border-transparent",
+                )}
+              >
+                <option value="">כל תתי-הקטגוריות</option>
+                {groups.map((g: any) => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+              </select>
+            )}
 
             {/* Required toggle */}
             <button
@@ -717,6 +748,11 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
                 <label className="text-xs font-medium">
                   {field.field_name || "ללא שם"}
                   {field.is_required && <span className="text-destructive mr-1">*</span>}
+                  {field.group_id && (
+                    <span className="text-[10px] text-primary mr-1">
+                      ({groups.find((g: any) => g.id === field.group_id)?.name})
+                    </span>
+                  )}
                 </label>
                 {field.field_type === "list" ? (
                   <select className="w-full bg-muted rounded-md px-3 py-2 text-sm outline-none" disabled>
