@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAssets, useAssetCategories, useITTickets } from "@/hooks/useData";
+import { useAssetGroups } from "@/hooks/useAssetGroups";
+
 import { useExpiringAssets } from "@/hooks/useExpiringAssets";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
