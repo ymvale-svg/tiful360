@@ -9,6 +9,8 @@ import { useState } from "react";
 import { EditAssetDialog } from "@/components/EditAssetDialog";
 import { HandoverFlow } from "@/components/handover/HandoverFlow";
 import { AssetDocumentsSection } from "@/components/AssetDocumentsSection";
+import { HandoverFormsList } from "@/components/handover/HandoverFormsList";
+import { useAssetHandoverForms } from "@/hooks/useHandoverForms";
 import { VehicleDetailsPanel } from "@/components/assets/VehicleDetailsPanel";
 import { DigitalAccessPanel } from "@/components/assets/DigitalAccessPanel";
 import { LicenseDetailsPanel } from "@/components/assets/LicenseDetailsPanel";
@@ -40,6 +42,8 @@ interface Props {
 
 export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategories }: Props) {
   const { data: assets } = useAssets();
+  const { data: handoverForms } = useAssetHandoverForms(assetId);
+
   const { data: categories } = useAssetCategories();
   const { data: employees } = useEmployees();
   const deleteMutation = useDeleteAsset();
@@ -293,6 +297,13 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
             <h2 className="text-sm font-semibold text-muted-foreground mb-3">מסמכים מצורפים</h2>
             <AssetDocumentsSection assetId={assetId} />
           </div>
+
+          {/* Handover / return protocols */}
+          <div className="bg-card border border-border rounded-xl p-5">
+            <h2 className="text-sm font-semibold text-muted-foreground mb-3">פרוטוקולי מסירה והזדכות</h2>
+            <HandoverFormsList forms={handoverForms ?? []} context="asset" />
+          </div>
+
         </div>
 
         {/* Owner & history */}
