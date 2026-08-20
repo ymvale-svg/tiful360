@@ -8,7 +8,7 @@ type Color = { r: number; g: number; b: number };
  * drawn in logical order and only the anchor point is right-aligned.
  */
 function drawRtlText(o: { page: PDFPage; text: string; font: PDFFont; size: number; rightX: number; y: number; color?: Color }) {
-  const t = o.text ?? "";
+  const t = shapeForVisual(o.text ?? "");
   if (!t) return;
   const w = o.font.widthOfTextAtSize(t, o.size);
   o.page.drawText(t, {
@@ -21,7 +21,7 @@ function drawRtlText(o: { page: PDFPage; text: string; font: PDFFont; size: numb
 }
 
 function drawCenteredRtlText(o: { page: PDFPage; text: string; font: PDFFont; size: number; centerX: number; y: number; color?: Color }) {
-  const t = o.text ?? "";
+  const t = shapeForVisual(o.text ?? "");
   if (!t) return;
   const w = o.font.widthOfTextAtSize(t, o.size);
   o.page.drawText(t, {
