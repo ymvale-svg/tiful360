@@ -164,30 +164,29 @@ export function groupCategoriesByDomain<T extends { id: string; domain?: string 
   return out;
 }
 
-/** Domains where each row is unique — no parent grouping. */
-const FLAT_DOMAINS: DomainKey[] = ["real_estate"];
+/** Sentinel key for assets that are not linked to any sub-category (asset_groups). */
+export const NO_SUBCATEGORY_KEY = "none";
+export const NO_SUBCATEGORY_LABEL = "ללא תת-קטגוריה";
 
-/** Returns the group-by key for an asset within its sub-category, per domain.
- *  Returns null when the domain should be displayed flat (no parent grouping).
- *  When the asset has an explicit `group_id` mapped to a known group, that
- *  group name is returned (takes priority over auto-grouping by asset_name). */
-export function getGroupKey(
-  asset: { asset_name?: string | null; custom_fields?: any; license_plate?: string | null; group_id?: string | null },
-  domain: DomainKey,
-  category?: { prefix?: string; protocol_type?: string } | null,
-  groupsById?: Map<string, { name: string }>,
-): string | null {
-  if (asset.group_id && groupsById?.has(asset.group_id)) {
-    return groupsById.get(asset.group_id)!.name;
-  }
-  if (FLAT_DOMAINS.includes(domain)) return null;
-  if (domain === "physical" && category?.protocol_type === "vehicle") return null;
-  if (domain === "insurance") {
-    const t = (asset.custom_fields?.["סוג כיסוי"] ?? "").toString().trim();
-    return t || "ללא סוג כיסוי";
-  }
-  return (asset.asset_name ?? "ללא שם").trim() || "ללא שם";
+/**
+ * Single source of truth for an asset's sub-category:
+ * the `group_id` FK to `asset_groups` — nothing else.
+ * Returns `null` when the asset is not linked to a sub-category.
+ */
+export function resolveSubCategoryId(asset: { group_id?: string | null }): string | null {
+  return asset.group_id ?? null;
 }
+
+/** Display name of an asset's sub-category, or the "no sub-category" label. */
+export function resolveSubCategoryName(
+  asset: { group_id?: string | null },
+  groupsById: Map<string, { name: string }>,
+): string {
+  const id = resolveSubCategoryId(asset);
+  if (id && groupsById.has(id)) return groupsById.get(id)!.name;
+  return NO_SUBCATEGORY_LABEL;
+}
+
 
 /**
  * Custom-field keys (Hebrew labels + English machine keys) rendered by the
