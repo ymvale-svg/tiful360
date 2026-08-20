@@ -340,6 +340,8 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
         category_id: form.category_id,
         group_id: form.group_id || undefined,
         serial_number: form.serial_number || undefined,
+        manufacturer_model: form.manufacturer_model || undefined,
+
         current_owner_id: form.current_owner_id || undefined,
         status: form.status,
         custom_fields: Object.keys(customFields).length > 0 ? customFields : undefined,
