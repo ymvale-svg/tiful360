@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SearchableSelect } from "@/components/ui/searchable-select";
+import { SubCategorySelect } from "@/components/assets/SubCategorySelect";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { useAssets, useAssetCategories } from "@/hooks/useData";
@@ -286,9 +286,8 @@ export default function AssetsDomainPage() {
     );
   }
 
-  const drilledSubGroups = drilledCategory
-    ? (groups ?? []).filter((g: any) => g.category_id === drilledCategory.id)
-    : [];
+
+
 
   return (
     <div className="space-y-5 animate-fade-in" dir="rtl">
@@ -457,14 +456,16 @@ export default function AssetsDomainPage() {
                 <AlertTriangle className="w-3.5 h-3.5 text-warning" />
                 {selectedIds.size > 0 ? `${selectedIds.size} נבחרו` : "בחר פריטים כדי לשייך אותם לתת-קטגוריה"}
               </span>
-              <div className="w-56">
-                <SearchableSelect
+              <div className="w-64">
+                <SubCategorySelect
+                  categoryId={drilledCategory?.id ?? ""}
+                  companyId={drilledCategory?.company_id ?? null}
+                  defaultOwnerRole={drilledCategory?.default_owner_role ?? null}
                   value={assignTarget}
                   onChange={setAssignTarget}
-                  options={drilledSubGroups.map((g: any) => ({ value: g.id, label: g.name }))}
-                  placeholder={drilledSubGroups.length ? "בחר תת-קטגוריה..." : "אין תת-קטגוריות"}
                 />
               </div>
+
               <Button
                 size="sm"
                 className="gap-1.5"

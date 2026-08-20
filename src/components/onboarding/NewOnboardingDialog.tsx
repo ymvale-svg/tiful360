@@ -406,6 +406,29 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
                             ) : (
                               <div className="space-y-2">
                                 <div className="flex items-center gap-2">
+                                  <input
+                                    value={quickAdd[c.id] ?? ""}
+                                    onChange={(e) => setQuickAdd((p) => ({ ...p, [c.id]: e.target.value }))}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        quickAddGroup(c.id);
+                                      }
+                                    }}
+                                    placeholder="＋ הוסף תת-קטגוריה..."
+                                    className="flex-1 min-w-0 px-3 py-1.5 bg-background border border-border rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
+                                  />
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => quickAddGroup(c.id)}
+                                    disabled={!quickAdd[c.id]?.trim() || createGroup.isPending}
+                                  >
+                                    הוסף
+                                  </Button>
+                                </div>
+                                <div className="flex items-center gap-2">
                                   <span className="text-xs text-muted-foreground">אחראי:</span>
                                   <SearchableSelect
                                     value={entry.owners["_"] || resolveOwnerRole(null, c)}
@@ -413,6 +436,7 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
                                     options={OWNER_ROLE_OPTIONS}
                                   />
                                 </div>
+
                                 <input
                                   value={entry.notes["_"] ?? ""}
                                   onChange={(e) => setNote(c.id, "_", e.target.value)}
