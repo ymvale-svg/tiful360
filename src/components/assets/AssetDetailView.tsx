@@ -42,6 +42,8 @@ interface Props {
 
 export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategories }: Props) {
   const { data: assets } = useAssets();
+  const { data: handoverForms } = useAssetHandoverForms(assetId);
+
   const { data: categories } = useAssetCategories();
   const { data: employees } = useEmployees();
   const deleteMutation = useDeleteAsset();
