@@ -22,6 +22,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { SubCategorySelect } from "@/components/assets/SubCategorySelect";
+import { ManufacturerModelInput } from "@/components/assets/ManufacturerModelInput";
+
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -74,6 +76,8 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
     category_id: "",
     group_id: "",
     serial_number: "",
+    manufacturer_model: "",
+
     current_owner_id: "",
     status: "in_stock" as "in_use" | "in_stock" | "in_repair",
     expiry_date: "",
@@ -111,7 +115,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
   useEffect(() => {
     if (!open) {
       setForm({
-        asset_code: "", asset_name: "", category_id: "", group_id: "", serial_number: "",
+        asset_code: "", asset_name: "", category_id: "", group_id: "", serial_number: "", manufacturer_model: "",
         current_owner_id: "", status: "in_stock", expiry_date: "", notes: "",
         notification_days_before: "",
       });
@@ -338,6 +342,8 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
         category_id: form.category_id,
         group_id: form.group_id || undefined,
         serial_number: form.serial_number || undefined,
+        manufacturer_model: form.manufacturer_model || undefined,
+
         current_owner_id: form.current_owner_id || undefined,
         status: form.status,
         custom_fields: Object.keys(customFields).length > 0 ? customFields : undefined,
@@ -458,6 +464,8 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
         category_id: form.category_id,
         group_id: form.group_id || null,
         serial_number: row[SYSTEM_FIELD_KEYS.serial_number]?.trim() || null,
+        manufacturer_model: form.manufacturer_model || null,
+
         current_owner_id: empId,
         status: "in_use" as const,
         custom_fields: { ...universalCustom, ...perEmpCustom },
@@ -580,6 +588,21 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
             />
             {errors.asset_name && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.asset_name}</p>}
           </div>
+
+          {selectedCategory?.prefix !== "CINS" && selectedCategory?.prefix !== "CAR" && (
+            <div>
+              <label className="text-sm font-medium mb-1 block">יצרן ומודל</label>
+              <ManufacturerModelInput
+                value={form.manufacturer_model}
+                onChange={(v) => set("manufacturer_model", v)}
+                groupId={form.group_id || null}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                הערך נשמר ויוצע כרשימה נפתחת לפריטים הבאים באותה תת-קטגוריה
+              </p>
+            </div>
+          )}
+
 
 
           {/* Single mode: owner + expiry */}
