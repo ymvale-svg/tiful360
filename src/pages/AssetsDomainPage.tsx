@@ -74,6 +74,7 @@ export default function AssetsDomainPage() {
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
   const [addOpen, setAddOpen] = useState(false);
   const [addCategoryId, setAddCategoryId] = useState<string | undefined>(undefined);
+  const [addGroupId, setAddGroupId] = useState<string | undefined>(undefined);
   const [newSubFor, setNewSubFor] = useState<string | null>(null);
   const [newSubName, setNewSubName] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
