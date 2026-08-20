@@ -74,6 +74,8 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
     category_id: "",
     group_id: "",
     serial_number: "",
+    manufacturer_model: "",
+
     current_owner_id: "",
     status: "in_stock" as "in_use" | "in_stock" | "in_repair",
     expiry_date: "",
