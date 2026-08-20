@@ -74,6 +74,7 @@ export default function AssetsDomainPage() {
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
   const [addOpen, setAddOpen] = useState(false);
   const [addCategoryId, setAddCategoryId] = useState<string | undefined>(undefined);
+  const [addGroupId, setAddGroupId] = useState<string | undefined>(undefined);
   const [newSubFor, setNewSubFor] = useState<string | null>(null);
   const [newSubName, setNewSubName] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -335,6 +336,7 @@ export default function AssetsDomainPage() {
         <Button
           onClick={() => {
             setAddCategoryId(catParam ?? domainCats[0]?.id);
+            setAddGroupId(subParam && subParam !== NO_SUBCATEGORY_KEY ? subParam : undefined);
             setAddOpen(true);
           }}
           disabled={domainCats.length === 0}
@@ -614,9 +616,10 @@ export default function AssetsDomainPage() {
         open={addOpen}
         onOpenChange={(v) => {
           setAddOpen(v);
-          if (!v) setAddCategoryId(undefined);
+          if (!v) { setAddCategoryId(undefined); setAddGroupId(undefined); }
         }}
         defaultCategoryId={addCategoryId}
+        defaultGroupId={addGroupId}
       />
     </div>
   );

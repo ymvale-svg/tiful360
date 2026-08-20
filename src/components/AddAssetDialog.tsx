@@ -30,6 +30,7 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultCategoryId?: string;
+  defaultGroupId?: string;
   defaultAssetName?: string;
 }
 
@@ -56,7 +57,7 @@ function isPerEmployeeByName(name: string): boolean {
 // Categories where expiry_date is per-employee by default
 const PER_EMP_EXPIRY_PREFIXES = ["VHC", "EQP"];
 
-export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultAssetName }: Props) {
+export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultGroupId, defaultAssetName }: Props) {
   const { activeCompanyId } = useCompany();
   const { data: categories } = useAssetCategories();
   const { data: employees } = useEmployees();
@@ -136,10 +137,11 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
       setForm(prev => ({
         ...prev,
         category_id: defaultCategoryId,
+        group_id: defaultGroupId ?? prev.group_id,
         asset_name: defaultAssetName ?? prev.asset_name,
       }));
     }
-  }, [open, defaultCategoryId, defaultAssetName]);
+  }, [open, defaultCategoryId, defaultGroupId, defaultAssetName]);
 
   // Prefill technical specs (custom fields) from an existing asset of the same model.
   // Only copies fields that are NOT per-employee (i.e. shared technical attributes).
