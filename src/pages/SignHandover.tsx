@@ -70,11 +70,8 @@ export default function SignHandover() {
     let createdUrl: string | null = null;
     (async () => {
       try {
-        const data: HandoverFormData = {
-          ...(record.form_snapshot as HandoverFormData),
-          receiver_signature: sigUrl,
-        };
-        const blob = await buildHandoverPdf(data);
+        const blob = await buildPdfForRecord(record.form_snapshot, sigUrl);
+
         if (cancelled) return;
         createdUrl = URL.createObjectURL(blob);
         setPreviewUrl((prev) => {
