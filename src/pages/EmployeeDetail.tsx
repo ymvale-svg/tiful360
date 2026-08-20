@@ -22,7 +22,7 @@ import { EditEmployeeDialog } from "@/components/EditEmployeeDialog";
 
 import { EmployeeDocumentsSection } from "@/components/EmployeeDocumentsSection";
 import { OffboardingProtocolCard } from "@/components/OffboardingProtocolCard";
-import { AssignAssetWithFormDialog } from "@/components/AssignAssetWithFormDialog";
+import { HandoverFlow } from "@/components/handover/HandoverFlow";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EmployeePayslipsTab } from "@/components/EmployeePayslipsTab";
@@ -572,7 +572,7 @@ export default function EmployeeDetail() {
 
       {/* Assign with form (preassigned to this employee) */}
       {pickedAsset && (
-        <AssignAssetWithFormDialog
+        <HandoverFlow
           open={assignAssetOpen}
           onOpenChange={(o) => { setAssignAssetOpen(o); if (!o) setPickAssetId(""); }}
           asset={{ ...pickedAsset, current_owner_id: id! } as any}
