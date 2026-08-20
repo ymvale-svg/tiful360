@@ -99,11 +99,15 @@ export async function loadTemplateDoc(templateUrl: string): Promise<TemplateDoc>
  * Keeps text in logical Unicode order for pdf-lib + fontkit.
  *
  * The embedded Noto Sans Hebrew font handles Hebrew glyph direction correctly
- * from logical text. Applying bidi reordering here reverses Hebrew word order,
- * while reversing the result also corrupts dates, times and Latin codes.
+ * from logical text, but reverses embedded LTR tokens inside an RTL line.
+ * Pre-reverse only those tokens so dates, times, numbers and Latin codes are
+ * restored by the font while Hebrew words remain in logical order.
  */
-export function shapeForVisual(text: string, _baseRtl = true): string {
-  return text ?? "";
+export function shapeForVisual(text: string, baseRtl = true): string {
+  if (!text || !baseRtl) return text ?? "";
+  return text.replace(/[A-Za-z0-9][A-Za-z0-9./:_-]*/g, (token) =>
+    Array.from(token).reverse().join("")
+  );
 }
 
 
