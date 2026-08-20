@@ -1,5 +1,5 @@
 import { rgb, PDFFont, PDFPage } from "pdf-lib";
-import { createHebrewDoc, drawLtrText, embedLogo } from "./hebrewPdf";
+import { createHebrewDoc, drawLtrText, embedLogo, shapeForVisual } from "./hebrewPdf";
 
 type Color = { r: number; g: number; b: number };
 
