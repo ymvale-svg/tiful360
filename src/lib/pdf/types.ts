@@ -1,5 +1,41 @@
 // Shared PDF form data interfaces — no UI deps.
 
+export type ProtocolDirection = "handover" | "return";
+
+export interface ProtocolField {
+  key: string;
+  label: string;
+  value: string;
+}
+
+export interface ProtocolMedia {
+  url: string;
+  type: "image" | "video";
+  label?: string | null;
+  captured_at?: string | null;
+}
+
+export interface ProtocolPdfData {
+  direction: ProtocolDirection;
+  title: string;
+  companyName: string;
+  companyLogoUrl?: string | null;
+  employeeName: string;
+  employeeIdNumber?: string | null;
+  employeeDepartment?: string | null;
+  issuerName?: string | null;
+  /** ISO timestamp of the handover/return moment. */
+  issuedAt: string;
+  fields: ProtocolField[];
+  bodyText?: string | null;
+  freeText?: string | null;
+  media?: ProtocolMedia[];
+  employeeSignature?: string | null;
+  issuerSignature?: string | null;
+}
+
+
+
 export interface HandoverFormAsset {
   asset_id?: string;
   asset_name: string;

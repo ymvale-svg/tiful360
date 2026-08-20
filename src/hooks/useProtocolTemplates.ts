@@ -13,13 +13,18 @@ export interface ProtocolTemplate {
   id: string;
   company_id: string | null;
   category_id: string | null;
+  /** Sub-category (asset_groups) scope — the most specific level. */
+  group_id: string | null;
   protocol_type: ProtocolType;
   display_name: string;
   body_template: string;
   requires_employee_sig: boolean;
   requires_issuer_sig: boolean;
   validity_days: number | null;
+  /** Field keys pre-selected for the details table of the protocol. */
+  field_defaults: string[] | null;
 }
+
 
 export const PROTOCOL_TYPES: { type: ProtocolType; label: string }[] = [
   { type: "physical", label: "מסירת ציוד פיזי" },
@@ -69,20 +74,32 @@ export function useProtocolTemplates(companyId: string | null | undefined) {
   });
 }
 
-/** Resolve effective template for a given (type, category) using priority:
- *  company+category → company-default → global-default. */
+/** Resolve effective template using priority:
+ *  company+sub-category → company+category → company-default → global-default. */
 export function resolveTemplate(
   templates: ProtocolTemplate[],
   protocolType: ProtocolType,
   companyId: string | null,
-  categoryId: string | null
+  categoryId: string | null,
+  groupId?: string | null
 ): ProtocolTemplate | null {
+  if (companyId && categoryId && groupId) {
+    const hit = templates.find(
+      (t) =>
+        t.company_id === companyId &&
+        t.protocol_type === protocolType &&
+        t.category_id === categoryId &&
+        t.group_id === groupId
+    );
+    if (hit) return hit;
+  }
   if (companyId && categoryId) {
     const hit = templates.find(
       (t) =>
         t.company_id === companyId &&
         t.protocol_type === protocolType &&
-        t.category_id === categoryId
+        t.category_id === categoryId &&
+        !t.group_id
     );
     if (hit) return hit;
   }
@@ -91,7 +108,8 @@ export function resolveTemplate(
       (t) =>
         t.company_id === companyId &&
         t.protocol_type === protocolType &&
-        t.category_id === null
+        t.category_id === null &&
+        !t.group_id
     );
     if (hit) return hit;
   }
@@ -100,7 +118,8 @@ export function resolveTemplate(
       (t) =>
         t.company_id === null &&
         t.protocol_type === protocolType &&
-        t.category_id === null
+        t.category_id === null &&
+        !t.group_id
     ) ?? null
   );
 }
@@ -111,31 +130,36 @@ export function useUpsertProtocolTemplate() {
     mutationFn: async (input: {
       company_id: string;
       category_id: string | null;
+      group_id?: string | null;
       protocol_type: ProtocolType;
       display_name: string;
       body_template: string;
       requires_issuer_sig: boolean;
       validity_days: number | null;
+      field_defaults?: string[] | null;
     }) => {
       const { error } = await supabase.from("document_protocols").upsert(
         {
           company_id: input.company_id,
           category_id: input.category_id,
+          group_id: input.group_id ?? null,
           protocol_type: input.protocol_type,
           display_name: input.display_name,
           body_template: input.body_template,
           requires_employee_sig: true,
           requires_issuer_sig: input.requires_issuer_sig,
           validity_days: input.validity_days,
+          field_defaults: input.field_defaults ?? [],
           updated_at: new Date().toISOString(),
-        },
-        { onConflict: "company_id,protocol_type,category_id" }
+        } as any,
+        { onConflict: "company_id,protocol_type,category_id,group_id" }
       );
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["protocol-templates"] }),
   });
 }
+
 
 export function useDeleteProtocolTemplateOverride() {
   const qc = useQueryClient();
@@ -168,6 +192,12 @@ export const PLACEHOLDER_HINTS: { key: string; label: string }[] = [
   { key: "asset_code", label: "קוד ציוד" },
   { key: "serial", label: "מספר סידורי" },
   { key: "category", label: "קטגוריה" },
+  { key: "manufacturer_model", label: "יצרן / דגם" },
+  { key: "license_plate", label: "מספר רישוי" },
+  { key: "odometer", label: 'ק"מ' },
+  { key: "issuer_name", label: "שם המוסר" },
   { key: "date", label: "תאריך" },
+  { key: "time", label: "שעה" },
   { key: "company_name", label: "שם החברה" },
 ];
+

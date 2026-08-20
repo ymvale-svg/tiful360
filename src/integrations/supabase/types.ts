@@ -195,6 +195,7 @@ export type Database = {
           is_assignable: boolean
           onboarding_form_group: string | null
           prefix: string
+          protocol_field_defaults: Json
           protocol_type: Database["public"]["Enums"]["protocol_domain"]
           signing_protocol: string | null
           skip_handover_form: boolean
@@ -214,6 +215,7 @@ export type Database = {
           is_assignable?: boolean
           onboarding_form_group?: string | null
           prefix: string
+          protocol_field_defaults?: Json
           protocol_type?: Database["public"]["Enums"]["protocol_domain"]
           signing_protocol?: string | null
           skip_handover_form?: boolean
@@ -233,6 +235,7 @@ export type Database = {
           is_assignable?: boolean
           onboarding_form_group?: string | null
           prefix?: string
+          protocol_field_defaults?: Json
           protocol_type?: Database["public"]["Enums"]["protocol_domain"]
           signing_protocol?: string | null
           skip_handover_form?: boolean
@@ -346,12 +349,19 @@ export type Database = {
           created_at: string
           created_by: string | null
           delivery_method: string
+          direction: string
           employee_id: string
           form_snapshot: Json
+          free_text: string | null
+          group_id: string | null
           id: string
+          issuer_signature: string | null
+          media: Json
+          odometer_km: number | null
           pdf_url: string | null
           protocol_subtype: string | null
           protocol_type: string
+          selected_fields: Json
           sign_token: string
           signature_data: string | null
           signed_at: string | null
@@ -364,12 +374,19 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           delivery_method?: string
+          direction?: string
           employee_id: string
           form_snapshot?: Json
+          free_text?: string | null
+          group_id?: string | null
           id?: string
+          issuer_signature?: string | null
+          media?: Json
+          odometer_km?: number | null
           pdf_url?: string | null
           protocol_subtype?: string | null
           protocol_type?: string
+          selected_fields?: Json
           sign_token?: string
           signature_data?: string | null
           signed_at?: string | null
@@ -382,18 +399,33 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           delivery_method?: string
+          direction?: string
           employee_id?: string
           form_snapshot?: Json
+          free_text?: string | null
+          group_id?: string | null
           id?: string
+          issuer_signature?: string | null
+          media?: Json
+          odometer_km?: number | null
           pdf_url?: string | null
           protocol_subtype?: string | null
           protocol_type?: string
+          selected_fields?: Json
           sign_token?: string
           signature_data?: string | null
           signed_at?: string | null
           status?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "asset_handover_forms_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "asset_groups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       assets: {
         Row: {
@@ -1064,6 +1096,8 @@ export type Database = {
           company_id: string | null
           created_at: string
           display_name: string
+          field_defaults: Json
+          group_id: string | null
           id: string
           protocol_type: string
           requires_employee_sig: boolean
@@ -1077,6 +1111,8 @@ export type Database = {
           company_id?: string | null
           created_at?: string
           display_name: string
+          field_defaults?: Json
+          group_id?: string | null
           id?: string
           protocol_type: string
           requires_employee_sig?: boolean
@@ -1090,6 +1126,8 @@ export type Database = {
           company_id?: string | null
           created_at?: string
           display_name?: string
+          field_defaults?: Json
+          group_id?: string | null
           id?: string
           protocol_type?: string
           requires_employee_sig?: boolean
@@ -1103,6 +1141,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "asset_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_protocols_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "asset_groups"
             referencedColumns: ["id"]
           },
         ]
@@ -2982,12 +3027,19 @@ export type Database = {
           created_at: string
           created_by: string | null
           delivery_method: string
+          direction: string
           employee_id: string
           form_snapshot: Json
+          free_text: string | null
+          group_id: string | null
           id: string
+          issuer_signature: string | null
+          media: Json
+          odometer_km: number | null
           pdf_url: string | null
           protocol_subtype: string | null
           protocol_type: string
+          selected_fields: Json
           sign_token: string
           signature_data: string | null
           signed_at: string | null
@@ -3205,12 +3257,19 @@ export type Database = {
           created_at: string
           created_by: string | null
           delivery_method: string
+          direction: string
           employee_id: string
           form_snapshot: Json
+          free_text: string | null
+          group_id: string | null
           id: string
+          issuer_signature: string | null
+          media: Json
+          odometer_km: number | null
           pdf_url: string | null
           protocol_subtype: string | null
           protocol_type: string
+          selected_fields: Json
           sign_token: string
           signature_data: string | null
           signed_at: string | null

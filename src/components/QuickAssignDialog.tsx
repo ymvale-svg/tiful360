@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Zap, Plus, X, ArrowLeft, Package } from "lucide-react";
 import { useEmployees, useAssets } from "@/hooks/useData";
-import { AssignAssetWithFormDialog } from "./AssignAssetWithFormDialog";
+import { HandoverFlow } from "@/components/handover/HandoverFlow";
 
 interface Props {
   open: boolean;
@@ -203,7 +203,7 @@ export function QuickAssignDialog({ open, onOpenChange }: Props) {
       </Dialog>
 
       {currentAsset && queueIndex !== null && (
-        <AssignAssetWithFormDialog
+        <HandoverFlow
           key={currentAsset.id}
           open={true}
           onOpenChange={(o) => {

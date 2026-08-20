@@ -192,7 +192,33 @@ export function wrapTextLines(text: string, font: PDFFont, size: number, maxWidt
   return lines;
 }
 
+/** Unified footer line printed on every document produced by the system. */
+export const DOCUMENT_FOOTER_TEXT = "הופק באמצעות תפעול 360 ©";
+
+/** Draw the unified footer at the bottom-center of a page. */
+export function drawDocumentFooter(page: PDFPage, font: PDFFont, size = 8) {
+  const { width } = page.getSize();
+  drawCenteredRtlText({
+    page,
+    text: DOCUMENT_FOOTER_TEXT,
+    font,
+    size,
+    centerX: width / 2,
+    y: 24,
+    color: { r: 0.55, g: 0.55, b: 0.55 },
+  });
+}
+
+/** Draw the unified footer on every page of the document. */
+export function drawFooterOnAllPages(pdf: PDFDocument, font: PDFFont, size = 8) {
+  for (const page of pdf.getPages()) drawDocumentFooter(page, font, size);
+}
+
+/** HTML/CSS equivalent of the unified footer, for printable HTML documents. */
+export const DOCUMENT_FOOTER_HTML = `<div style="margin-top:24px;text-align:center;font-size:10px;color:#8a8a8a;">${DOCUMENT_FOOTER_TEXT}</div>`;
+
 export async function embedSignaturePng(pdf: PDFDocument, dataUrl: string | null | undefined) {
+
   if (!dataUrl) return null;
   try {
     if (dataUrl.startsWith("data:image/png")) {

@@ -7,7 +7,7 @@ import { ChevronLeft, Pencil, FileSignature, UserMinus, Trash2, User, Building2,
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { EditAssetDialog } from "@/components/EditAssetDialog";
-import { AssignAssetWithFormDialog } from "@/components/AssignAssetWithFormDialog";
+import { HandoverFlow } from "@/components/handover/HandoverFlow";
 import { AssetDocumentsSection } from "@/components/AssetDocumentsSection";
 import { VehicleDetailsPanel } from "@/components/assets/VehicleDetailsPanel";
 import { DigitalAccessPanel } from "@/components/assets/DigitalAccessPanel";
@@ -349,7 +349,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
 
       {/* Dialogs */}
       <EditAssetDialog open={editOpen} onOpenChange={setEditOpen} asset={asset} />
-      <AssignAssetWithFormDialog open={assignOpen} onOpenChange={setAssignOpen} asset={asset} />
+      <HandoverFlow open={assignOpen} onOpenChange={setAssignOpen} asset={asset} />
 
       <AlertDialog open={unassignConfirm} onOpenChange={setUnassignConfirm}>
         <AlertDialogContent dir="rtl">

@@ -11,7 +11,7 @@ import { useAssetGroups } from "@/hooks/useAssetGroups";
 import { useCategoryFields } from "@/hooks/useCategories";
 import { useUpdateAsset } from "@/hooks/useMutations";
 import { useToast } from "@/hooks/use-toast";
-import { AssignAssetWithFormDialog } from "./AssignAssetWithFormDialog";
+import { HandoverFlow } from "@/components/handover/HandoverFlow";
 import { AssetDocumentsSection } from "./AssetDocumentsSection";
 import { CustomFieldsRenderer } from "./CustomFieldsRenderer";
 import { useQuery } from "@tanstack/react-query";
@@ -504,7 +504,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
         </div>
       </DialogContent>
 
-      <AssignAssetWithFormDialog
+      <HandoverFlow
         open={handoverOpen}
         onOpenChange={setHandoverOpen}
         asset={asset ? {

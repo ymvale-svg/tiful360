@@ -3,11 +3,43 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, FileSignature, Upload } from "lucide-react";
-import type { HandoverFormData } from "@/lib/pdf/types";
+import type { HandoverFormData, ProtocolPdfData } from "@/lib/pdf/types";
 import { SignaturePad, SignaturePadHandle } from "@/components/SignaturePad";
 import { buildHandoverPdf } from "@/lib/pdf/buildHandoverPdf";
+import { buildProtocolPdf } from "@/lib/pdf/buildProtocolPdf";
 import { uploadViaSignedToken } from "@/lib/signedFormUpload";
 import { useToast } from "@/hooks/use-toast";
+
+/** New-format snapshots produced by HandoverFlow carry `direction` + `fields`. */
+function isProtocolSnapshot(snap: any): boolean {
+  return !!snap && typeof snap === "object" && "direction" in snap && Array.isArray(snap.fields);
+}
+
+function toProtocolData(snap: any, signature: string | null): ProtocolPdfData {
+  return {
+    direction: snap.direction ?? "handover",
+    title: snap.title ?? "פרוטוקול משיכה",
+    companyName: snap.company_name ?? "",
+    companyLogoUrl: snap.company_logo_url ?? null,
+    employeeName: snap.employee_name ?? "",
+    employeeIdNumber: snap.employee_id_number ?? null,
+    employeeDepartment: snap.employee_department ?? null,
+    issuerName: snap.issuer_name ?? null,
+    issuedAt: snap.issued_at ?? new Date().toISOString(),
+    fields: snap.fields ?? [],
+    bodyText: snap.body_text ?? null,
+    freeText: snap.free_text ?? null,
+    media: snap.media ?? [],
+    employeeSignature: signature,
+    issuerSignature: snap.issuer_signature ?? null,
+  };
+}
+
+async function buildPdfForRecord(snap: any, signature: string | null): Promise<Blob> {
+  if (isProtocolSnapshot(snap)) return buildProtocolPdf(toProtocolData(snap, signature));
+  return buildHandoverPdf({ ...(snap as HandoverFormData), receiver_signature: signature });
+}
+
 
 export default function SignHandover() {
   const { token } = useParams();
@@ -38,11 +70,8 @@ export default function SignHandover() {
     let createdUrl: string | null = null;
     (async () => {
       try {
-        const data: HandoverFormData = {
-          ...(record.form_snapshot as HandoverFormData),
-          receiver_signature: sigUrl,
-        };
-        const blob = await buildHandoverPdf(data);
+        const blob = await buildPdfForRecord(record.form_snapshot, sigUrl);
+
         if (cancelled) return;
         createdUrl = URL.createObjectURL(blob);
         setPreviewUrl((prev) => {
@@ -80,7 +109,7 @@ export default function SignHandover() {
         });
       }
 
-      const pdfBlob = await buildHandoverPdf({ ...(record.form_snapshot as HandoverFormData), receiver_signature: sig });
+      const pdfBlob = await buildPdfForRecord(record.form_snapshot, sig);
       const pdfUrl = await uploadViaSignedToken({
         sign_token: token!,
         form_type: "handover",
@@ -95,7 +124,7 @@ export default function SignHandover() {
         _signature: sig,
         _attached_url: attachedUrl,
         _pdf_url: pdfUrl,
-        _form_snapshot: { ...record.form_snapshot, receiver_signature: sig },
+        _form_snapshot: { ...record.form_snapshot, receiver_signature: sig, employee_signature: sig },
       });
       if (error) throw error;
 
