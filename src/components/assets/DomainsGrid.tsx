@@ -313,7 +313,7 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                   </div>
                 </div>
 
-                {/* Sub-category chips */}
+                {/* Category chips */}
                 <div className="flex flex-wrap gap-1.5 justify-end">
                   {isEmpty ? (
                     <a
@@ -321,7 +321,7 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                       onClick={(e) => e.stopPropagation()}
                       className="text-[11px] px-2 py-1 rounded-md border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
                     >
-                      + הוסף תת-קטגוריה ראשונה
+                      + הוסף קטגוריה ראשונה
                     </a>
                   ) : (
                     <>
@@ -330,8 +330,9 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                           key={c.id}
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/assets/${slug}?sub=${c.id}`);
+                            navigate(`/assets/${slug}?cat=${c.id}`);
                           }}
+
                           className={cn(
                             "inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border border-border bg-background hover:bg-muted transition-colors",
                             meta.color.text
