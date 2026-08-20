@@ -113,7 +113,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
   useEffect(() => {
     if (!open) {
       setForm({
-        asset_code: "", asset_name: "", category_id: "", group_id: "", serial_number: "",
+        asset_code: "", asset_name: "", category_id: "", group_id: "", serial_number: "", manufacturer_model: "",
         current_owner_id: "", status: "in_stock", expiry_date: "", notes: "",
         notification_days_before: "",
       });
