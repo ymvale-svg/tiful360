@@ -30,6 +30,7 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultCategoryId?: string;
+  defaultGroupId?: string;
   defaultAssetName?: string;
 }
 
