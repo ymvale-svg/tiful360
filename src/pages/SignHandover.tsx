@@ -124,7 +124,7 @@ export default function SignHandover() {
         _signature: sig,
         _attached_url: attachedUrl,
         _pdf_url: pdfUrl,
-        _form_snapshot: { ...record.form_snapshot, receiver_signature: sig },
+        _form_snapshot: { ...record.form_snapshot, receiver_signature: sig, employee_signature: sig },
       });
       if (error) throw error;
 
