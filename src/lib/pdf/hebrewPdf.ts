@@ -1,13 +1,9 @@
 import { PDFDocument, PDFFont, PDFPage, rgb, StandardFonts } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
-// @ts-ignore - no types
-import bidiFactory from "bidi-js";
 // Bundled via Vite — guarantees we always get the real TTF bytes (not an
 // HTML fallback served by the dev server when a /public file is missing).
 import notoSansHebrewRegularUrl from "@/assets/fonts/NotoSansHebrew-Regular.ttf?url";
 import notoSansHebrewBoldUrl from "@/assets/fonts/NotoSansHebrew-Bold.ttf?url";
-
-const bidi = bidiFactory();
 
 // Cached as Uint8Array. We hand a *fresh copy* to pdf-lib on every embed
 // because pdf-lib/fontkit may detach or mutate the underlying ArrayBuffer,
@@ -100,29 +96,14 @@ export async function loadTemplateDoc(templateUrl: string): Promise<TemplateDoc>
 }
 
 /**
- * Reorders a logical string so it renders correctly with pdf-lib + fontkit.
+ * Keeps text in logical Unicode order for pdf-lib + fontkit.
  *
- * pdf-lib positions glyphs in the order it receives them and does not apply
- * the Unicode bidi algorithm. Convert logical Hebrew/mixed text to visual
- * order once before drawing it. Do not reverse the result again: doing so
- * reverses Hebrew words as well as dates and times in the rendered PDF.
+ * The embedded Noto Sans Hebrew font handles Hebrew glyph direction correctly
+ * from logical text. Applying bidi reordering here reverses Hebrew word order,
+ * while reversing the result also corrupts dates, times and Latin codes.
  */
-export function shapeForVisual(text: string, baseRtl = true): string {
-  if (!text) return "";
-  const paragraphs = text.split("\n");
-  const out: string[] = [];
-  for (const p of paragraphs) {
-    if (!p) { out.push(""); continue; }
-    const embeddingLevels = bidi.getEmbeddingLevels(p, baseRtl ? "rtl" : "ltr");
-    const flips = bidi.getReorderSegments(p, embeddingLevels);
-    let chars = p.split("");
-    for (const [start, end] of flips) {
-      const slice = chars.slice(start, end + 1).reverse();
-      chars.splice(start, end - start + 1, ...slice);
-    }
-    out.push(chars.join(""));
-  }
-  return out.join("\n");
+export function shapeForVisual(text: string, _baseRtl = true): string {
+  return text ?? "";
 }
 
 
