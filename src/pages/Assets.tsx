@@ -30,11 +30,10 @@ export default function Assets() {
   const [searchFocused, setSearchFocused] = useState(false);
 
   const activeTab = searchParams.get("tab") === "categories" ? "categories" : "assets";
-  const cat = searchParams.get("cat");
-  const assetId = searchParams.get("asset");
 
   const [addOpen, setAddOpen] = useState(false);
   const [addCategoryId, setAddCategoryId] = useState<string | undefined>(undefined);
+
   const [addTemplateName, setAddTemplateName] = useState<string | undefined>(undefined);
   const [importOpen, setImportOpen] = useState(false);
   const [quickAssignOpen, setQuickAssignOpen] = useState(false);
