@@ -335,6 +335,7 @@ export default function AssetsDomainPage() {
         <Button
           onClick={() => {
             setAddCategoryId(catParam ?? domainCats[0]?.id);
+            setAddGroupId(subParam && subParam !== NO_SUBCATEGORY_KEY ? subParam : undefined);
             setAddOpen(true);
           }}
           disabled={domainCats.length === 0}
