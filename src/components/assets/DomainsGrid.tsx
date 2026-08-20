@@ -177,7 +177,7 @@ export function DomainsGrid({ onQuickAssign }: Props) {
       <div>
         <h2 className="text-xs font-semibold text-muted-foreground mb-3 text-right">6 דומיינים</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {grouped.map(({ meta, cats, assets, expired, soon }) => {
+          {grouped.map(({ meta, cats, assets, expired, soon, subCount }) => {
             const Icon = meta.icon;
             const badge = expired > 0
               ? { text: `${expired} פגי תוקף`, cls: "bg-destructive/10 text-destructive" }
