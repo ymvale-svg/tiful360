@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { DOMAIN_ORDER, DOMAIN_META, DOMAIN_DEFAULTS, getDomain, type DomainKey } from "@/lib/assetDomains";
 import { OWNER_ROLE_OPTIONS, getAllDomainLabels, type DomainLabels } from "@/lib/domainConfig";
-import { useCreateAssetGroup } from "@/hooks/useAssetGroups";
+import { useCreateAssetGroup, useAssetGroups } from "@/hooks/useAssetGroups";
 import { useCompany } from "@/hooks/useCompany";
 
 type FieldType = "text" | "number" | "date" | "list" | "list_multi";
