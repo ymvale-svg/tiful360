@@ -18,6 +18,17 @@ export function useCategoryFields(categoryId: string) {
   });
 }
 
+/**
+ * Filter category fields for a specific sub-category.
+ * A field with group_id = null applies to every sub-category of the category.
+ */
+export function filterFieldsForGroup<T extends { group_id?: string | null }>(
+  fields: T[] | undefined | null,
+  groupId?: string | null,
+): T[] {
+  return (fields ?? []).filter((f) => !f.group_id || f.group_id === groupId);
+}
+
 export function useCreateCategory() {
   const queryClient = useQueryClient();
   const { activeCompanyId } = useCompany();
@@ -95,6 +106,7 @@ export function useSaveCategoryFields() {
         is_required: boolean;
         field_options: any;
         sort_order: number;
+        group_id?: string | null;
       }>;
     }) => {
       const existingIds = fields.filter(f => f.id).map(f => f.id!);
@@ -116,7 +128,8 @@ export function useSaveCategoryFields() {
             is_required: field.is_required,
             field_options: field.field_options,
             sort_order: field.sort_order,
-          }).eq("id", field.id);
+            group_id: field.group_id ?? null,
+          } as any).eq("id", field.id);
         } else {
           await supabase.from("category_fields").insert({
             category_id: categoryId,
@@ -125,7 +138,8 @@ export function useSaveCategoryFields() {
             is_required: field.is_required,
             field_options: field.field_options,
             sort_order: field.sort_order,
-          });
+            group_id: field.group_id ?? null,
+          } as any);
         }
       }
     },
