@@ -57,7 +57,7 @@ function isPerEmployeeByName(name: string): boolean {
 // Categories where expiry_date is per-employee by default
 const PER_EMP_EXPIRY_PREFIXES = ["VHC", "EQP"];
 
-export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultAssetName }: Props) {
+export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultGroupId, defaultAssetName }: Props) {
   const { activeCompanyId } = useCompany();
   const { data: categories } = useAssetCategories();
   const { data: employees } = useEmployees();
