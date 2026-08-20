@@ -13,13 +13,18 @@ export interface ProtocolTemplate {
   id: string;
   company_id: string | null;
   category_id: string | null;
+  /** Sub-category (asset_groups) scope — the most specific level. */
+  group_id: string | null;
   protocol_type: ProtocolType;
   display_name: string;
   body_template: string;
   requires_employee_sig: boolean;
   requires_issuer_sig: boolean;
   validity_days: number | null;
+  /** Field keys pre-selected for the details table of the protocol. */
+  field_defaults: string[] | null;
 }
+
 
 export const PROTOCOL_TYPES: { type: ProtocolType; label: string }[] = [
   { type: "physical", label: "מסירת ציוד פיזי" },
