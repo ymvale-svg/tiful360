@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAssets, useAssetCategories, useITTickets } from "@/hooks/useData";
+import { useAssetGroups } from "@/hooks/useAssetGroups";
+
 import { useExpiringAssets } from "@/hooks/useExpiringAssets";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
@@ -73,6 +75,8 @@ export function DomainsGrid({ onQuickAssign }: Props) {
   const { data: assets } = useAssets();
   const { data: expiring } = useExpiringAssets(30);
   const { data: tickets } = useITTickets();
+  const { data: assetGroups } = useAssetGroups();
+
   const { activeCompany, activeCompanyId, refetchCompanies } = useCompany();
   const { isAdmin } = useAuth();
 
@@ -102,9 +106,11 @@ export function DomainsGrid({ onQuickAssign }: Props) {
       const domainExpiring = (expiring ?? []).filter((e) => catIds.has(e.category_id));
       const expired = domainExpiring.filter((e) => e.days_left <= 0).length;
       const soon = domainExpiring.filter((e) => e.days_left > 0 && e.days_left <= 14).length;
-      return { meta, cats: sortedCats, assets: domainAssets, expired, soon };
+      const subCount = (assetGroups ?? []).filter((g: any) => catIds.has(g.category_id)).length;
+      return { meta, cats: sortedCats, assets: domainAssets, expired, soon, subCount };
     });
-  }, [categories, assets, expiring]);
+  }, [categories, assets, expiring, assetGroups]);
+
 
   const totalExpired = (expiring ?? []).filter((e) => e.days_left <= 0).length;
   const totalSoon30 = (expiring ?? []).filter((e) => e.days_left > 0).length;
@@ -175,7 +181,7 @@ export function DomainsGrid({ onQuickAssign }: Props) {
       <div>
         <h2 className="text-xs font-semibold text-muted-foreground mb-3 text-right">6 דומיינים</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {grouped.map(({ meta, cats, assets, expired, soon }) => {
+          {grouped.map(({ meta, cats, assets, expired, soon, subCount }) => {
             const Icon = meta.icon;
             const badge = expired > 0
               ? { text: `${expired} פגי תוקף`, cls: "bg-destructive/10 text-destructive" }
@@ -304,6 +310,12 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                     <p className="text-xs text-muted-foreground mt-1">
                       {isEmpty ? "אין פריטים בדומיין זה" : domainSubtitle(meta.key, cats, assets)}
                     </p>
+                    {!isEmpty && (
+                      <p className="text-[11px] text-muted-foreground/80 mt-0.5">
+                        {cats.length} קטגוריות · {subCount} תת-קטגוריות
+                      </p>
+                    )}
+
                   </div>
                   <div className={cn(
                     "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105",
@@ -313,7 +325,7 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                   </div>
                 </div>
 
-                {/* Sub-category chips */}
+                {/* Category chips */}
                 <div className="flex flex-wrap gap-1.5 justify-end">
                   {isEmpty ? (
                     <a
@@ -321,7 +333,7 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                       onClick={(e) => e.stopPropagation()}
                       className="text-[11px] px-2 py-1 rounded-md border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
                     >
-                      + הוסף תת-קטגוריה ראשונה
+                      + הוסף קטגוריה ראשונה
                     </a>
                   ) : (
                     <>
@@ -330,8 +342,9 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                           key={c.id}
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/assets/${slug}?sub=${c.id}`);
+                            navigate(`/assets/${slug}?cat=${c.id}`);
                           }}
+
                           className={cn(
                             "inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border border-border bg-background hover:bg-muted transition-colors",
                             meta.color.text

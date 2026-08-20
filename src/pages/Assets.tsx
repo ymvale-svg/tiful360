@@ -11,8 +11,8 @@ import { QuickAssignDialog } from "@/components/QuickAssignDialog";
 import CategoryManager from "@/pages/CategoryManager";
 import { exportToExcel } from "@/lib/exportExcel";
 import { DomainsGrid } from "@/components/assets/DomainsGrid";
-import { CategoryAssetsList } from "@/components/assets/CategoryAssetsList";
-import { AssetDetailView } from "@/components/assets/AssetDetailView";
+import { getDomain, domainKeyToSlug } from "@/lib/assetDomains";
+
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -30,11 +30,10 @@ export default function Assets() {
   const [searchFocused, setSearchFocused] = useState(false);
 
   const activeTab = searchParams.get("tab") === "categories" ? "categories" : "assets";
-  const cat = searchParams.get("cat");
-  const assetId = searchParams.get("asset");
 
   const [addOpen, setAddOpen] = useState(false);
   const [addCategoryId, setAddCategoryId] = useState<string | undefined>(undefined);
+
   const [addTemplateName, setAddTemplateName] = useState<string | undefined>(undefined);
   const [importOpen, setImportOpen] = useState(false);
   const [quickAssignOpen, setQuickAssignOpen] = useState(false);
@@ -91,19 +90,14 @@ export default function Assets() {
   const hasResults =
     searchResults.assets.length + searchResults.employees.length + searchResults.categories.length > 0;
 
-  const updateParams = (next: Record<string, string | null>) => {
-    const params = new URLSearchParams(searchParams);
-    for (const [k, v] of Object.entries(next)) {
-      if (v === null) params.delete(k);
-      else params.set(k, v);
-    }
-    setSearchParams(params);
+  const slugForCategory = (categoryId?: string | null) => {
+    const c = (categories ?? []).find((x: any) => x.id === categoryId);
+    return domainKeyToSlug(getDomain(c as any));
   };
-
-  const goToCategories = () => updateParams({ cat: null, asset: null });
-  const goToCategory = (id: string) => updateParams({ cat: id, asset: null });
+  const goToCategory = (id: string) => navigate(`/assets/${slugForCategory(id)}?cat=${id}`);
   const goToAsset = (id: string, categoryId?: string) =>
-    updateParams({ cat: categoryId ?? cat, asset: id });
+    navigate(`/assets/${slugForCategory(categoryId)}/${id}`);
+
 
   return (
     <div className="space-y-6 animate-fade-in" dir="rtl">
@@ -114,9 +108,8 @@ export default function Assets() {
         </TabsList>
 
         <TabsContent value="assets" className="space-y-5 mt-4">
-          {/* Show global header only on level 1 */}
-          {!cat && !assetId && (
-            <>
+
+
               <div className="flex items-start justify-between flex-wrap gap-3">
                 <div className="page-header">
                   <h1 className="page-title">משאבים</h1>
@@ -304,31 +297,12 @@ export default function Assets() {
                 )}
               </div>
 
-
               <DomainsGrid
                 onSelectCategory={goToCategory}
                 onQuickAssign={() => setQuickAssignOpen(true)}
               />
-            </>
-          )}
 
-          {cat && !assetId && (
-            <CategoryAssetsList
-              categoryId={cat}
-              onBack={goToCategories}
-              onSelectAsset={(id) => goToAsset(id)}
-              onAddAsset={(categoryId, templateName) => { setAddCategoryId(categoryId); setAddTemplateName(templateName); setAddOpen(true); }}
-            />
-          )}
 
-          {cat && assetId && (
-            <AssetDetailView
-              assetId={assetId}
-              categoryId={cat}
-              onBack={() => goToCategory(cat)}
-              onBackToCategories={goToCategories}
-            />
-          )}
         </TabsContent>
 
         <TabsContent value="categories" className="mt-4">

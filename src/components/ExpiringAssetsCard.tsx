@@ -3,7 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { CalendarClock, ChevronLeft, ExternalLink } from "lucide-react";
 import { useExpiringAssets, expiryUrgency, DOMAIN_LABELS, DOMAIN_STYLES, type ExpiringAsset } from "@/hooks/useExpiringAssets";
 import { RenewExpiryDialog } from "@/components/RenewExpiryDialog";
+import { getDomain, domainKeyToSlug } from "@/lib/assetDomains";
 import { cn } from "@/lib/utils";
+
 
 export function ExpiringAssetsCard() {
   const { data, isLoading } = useExpiringAssets(14);
@@ -13,10 +15,11 @@ export function ExpiringAssetsCard() {
   const navigateToSource = (item: ExpiringAsset) => {
     if (item.source_type === "digital_access" && item.current_owner_id) {
       navigate(`/employees/${item.current_owner_id}?tab=assets`);
-    } else if (item.category_id) {
-      navigate(`/assets?cat=${item.category_id}&asset=${item.asset_id}`);
+    } else if (item.asset_id) {
+      navigate(`/assets/${domainKeyToSlug(getDomain({ domain: item.domain } as any))}/${item.asset_id}`);
     }
   };
+
 
   const items = data ?? [];
 
