@@ -192,6 +192,12 @@ export const PLACEHOLDER_HINTS: { key: string; label: string }[] = [
   { key: "asset_code", label: "קוד ציוד" },
   { key: "serial", label: "מספר סידורי" },
   { key: "category", label: "קטגוריה" },
+  { key: "manufacturer_model", label: "יצרן / דגם" },
+  { key: "license_plate", label: "מספר רישוי" },
+  { key: "odometer", label: 'ק"מ' },
+  { key: "issuer_name", label: "שם המוסר" },
   { key: "date", label: "תאריך" },
+  { key: "time", label: "שעה" },
   { key: "company_name", label: "שם החברה" },
 ];
+
