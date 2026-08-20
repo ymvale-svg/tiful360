@@ -214,7 +214,7 @@ export function HandoverFlow({ open, onOpenChange, asset, direction = "handover"
       ? { current_owner_id: null, status: "in_stock" }
       : { current_owner_id: employeeId, status: "in_use" };
     if (isVehicle && odometer) patch.current_km = Number(odometer);
-    const { error } = await supabase.from("assets").update(patch).eq("id", asset!.id);
+    const { error } = await supabase.from("assets").update(patch as any).eq("id", asset!.id);
     if (error) throw error;
   };
 
