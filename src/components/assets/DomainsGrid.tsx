@@ -102,9 +102,11 @@ export function DomainsGrid({ onQuickAssign }: Props) {
       const domainExpiring = (expiring ?? []).filter((e) => catIds.has(e.category_id));
       const expired = domainExpiring.filter((e) => e.days_left <= 0).length;
       const soon = domainExpiring.filter((e) => e.days_left > 0 && e.days_left <= 14).length;
-      return { meta, cats: sortedCats, assets: domainAssets, expired, soon };
+      const subCount = (assetGroups ?? []).filter((g: any) => catIds.has(g.category_id)).length;
+      return { meta, cats: sortedCats, assets: domainAssets, expired, soon, subCount };
     });
-  }, [categories, assets, expiring]);
+  }, [categories, assets, expiring, assetGroups]);
+
 
   const totalExpired = (expiring ?? []).filter((e) => e.days_left <= 0).length;
   const totalSoon30 = (expiring ?? []).filter((e) => e.days_left > 0).length;
