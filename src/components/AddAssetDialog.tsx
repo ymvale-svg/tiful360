@@ -464,6 +464,8 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
         category_id: form.category_id,
         group_id: form.group_id || null,
         serial_number: row[SYSTEM_FIELD_KEYS.serial_number]?.trim() || null,
+        manufacturer_model: form.manufacturer_model || null,
+
         current_owner_id: empId,
         status: "in_use" as const,
         custom_fields: { ...universalCustom, ...perEmpCustom },
