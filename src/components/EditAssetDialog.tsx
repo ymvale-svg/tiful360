@@ -17,6 +17,8 @@ import { CustomFieldsRenderer } from "./CustomFieldsRenderer";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { ManufacturerModelInput } from "@/components/assets/ManufacturerModelInput";
+
 
 const INSURANCE_TYPES = ["רכב", "דירקטורים", "צד ג׳", "קבלני"];
 const INSURANCE_FIELD = "סוג ביטוח";
