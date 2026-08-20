@@ -285,12 +285,12 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
               {isView ? (
                 <div className={readCls}>{display(form.manufacturer_model)}</div>
               ) : (
-                <input
+                <ManufacturerModelInput
                   value={form.manufacturer_model}
-                  onChange={(e) => setForm({ ...form, manufacturer_model: e.target.value })}
-                  placeholder="למשל: Apple MacBook Pro 16"
-                  className={inputCls}
+                  onChange={(v) => setForm({ ...form, manufacturer_model: v })}
+                  groupId={form.group_id || null}
                 />
+
               )}
             </div>
           )}
