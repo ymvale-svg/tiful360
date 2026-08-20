@@ -1,5 +1,8 @@
-import { FileSignature, FileDown, Clock } from "lucide-react";
+import { useState } from "react";
+import { FileSignature, FileDown, Clock, Eye, ExternalLink } from "lucide-react";
 import type { HandoverFormRow } from "@/hooks/useHandoverForms";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   forms: HandoverFormRow[];
@@ -17,9 +20,12 @@ const fmt = (iso?: string | null) =>
 
 /** Shared list of handover / return protocols (item card + employee portal). */
 export function HandoverFormsList({ forms, context, emptyText = "אין עדיין פרוטוקולים" }: Props) {
+  const [preview, setPreview] = useState<{ url: string; title: string } | null>(null);
+
   if (forms.length === 0) {
     return <p className="text-sm text-muted-foreground">{emptyText}</p>;
   }
+
 
   return (
     <div className="space-y-2">
