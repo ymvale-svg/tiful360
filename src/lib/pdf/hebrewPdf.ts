@@ -1,5 +1,6 @@
 import { PDFDocument, PDFFont, PDFPage, rgb, StandardFonts } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
+import bidiFactory from "bidi-js";
 // Bundled via Vite — guarantees we always get the real TTF bytes (not an
 // HTML fallback served by the dev server when a /public file is missing).
 import notoSansHebrewRegularUrl from "@/assets/fonts/NotoSansHebrew-Regular.ttf?url";
@@ -103,11 +104,12 @@ export async function loadTemplateDoc(templateUrl: string): Promise<TemplateDoc>
  * Pre-reverse only those tokens so dates, times, numbers and Latin codes are
  * restored by the font while Hebrew words remain in logical order.
  */
+const bidi = bidiFactory();
+
 export function shapeForVisual(text: string, baseRtl = true): string {
   if (!text || !baseRtl) return text ?? "";
-  return text.replace(/[A-Za-z0-9][A-Za-z0-9./:_-]*/g, (token) =>
-    Array.from(token).reverse().join("")
-  );
+  const levels = bidi.getEmbeddingLevels(text, "rtl");
+  return bidi.getReorderedString(text, levels);
 }
 
 
