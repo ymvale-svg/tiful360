@@ -93,9 +93,43 @@ export function PendingHandoverForms({ employeeId }: Props) {
         .eq("id", active.id);
       if (error) throw error;
 
-      toast({ title: "נחתם בהצלחה", description: "המסמך נשמר בתיק שלך" });
+      const snap: any = active.form_snapshot ?? {};
+      const { data: emp } = await supabase
+        .from("employees")
+        .select("email, full_name")
+        .eq("id", active.employee_id)
+        .maybeSingle();
+      if (emp?.email) {
+        supabase.functions.invoke("send-transactional-email", {
+          body: {
+            templateName: "handover-protocol",
+            recipientEmail: emp.email,
+            idempotencyKey: `handover-form-${active.id}`,
+            templateData: {
+              employeeName: emp.full_name ?? snap.employee_name ?? "",
+              companyName: snap.company_name ?? "",
+              itemName: snap.asset_name ?? snap.title ?? "",
+              itemCode: snap.asset_code ?? "",
+              direction: active.direction ?? "handover",
+              title: snap.title ?? null,
+              issuerName: snap.issuer_name ?? "",
+              issuedAt: new Date().toLocaleString("he-IL", {
+                day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+              }),
+              fields: (snap.fields ?? []).map((f: any) => ({ label: f.label, value: String(f.value ?? "") })),
+              notes: snap.free_text ?? null,
+              pdfUrl,
+              portalUrl: `${window.location.origin}/portal`,
+            },
+          },
+        }).catch((e) => console.error("protocol email failed", e));
+      }
+
+      toast({ title: "נחתם בהצלחה", description: "המסמך נשמר באזור האישי ונשלח אליך במייל" });
       qc.invalidateQueries({ queryKey: ["pending-handover", employeeId] });
+      qc.invalidateQueries({ queryKey: ["handover-forms"] });
       setActive(null); setSigUrl(null);
+
     } catch (err: any) {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
     } finally {
