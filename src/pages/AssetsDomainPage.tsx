@@ -286,9 +286,8 @@ export default function AssetsDomainPage() {
     );
   }
 
-  const drilledSubGroups = drilledCategory
-    ? (groups ?? []).filter((g: any) => g.category_id === drilledCategory.id)
-    : [];
+
+
 
   return (
     <div className="space-y-5 animate-fade-in" dir="rtl">
