@@ -310,6 +310,12 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                     <p className="text-xs text-muted-foreground mt-1">
                       {isEmpty ? "אין פריטים בדומיין זה" : domainSubtitle(meta.key, cats, assets)}
                     </p>
+                    {!isEmpty && (
+                      <p className="text-[11px] text-muted-foreground/80 mt-0.5">
+                        {cats.length} קטגוריות · {subCount} תת-קטגוריות
+                      </p>
+                    )}
+
                   </div>
                   <div className={cn(
                     "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105",
