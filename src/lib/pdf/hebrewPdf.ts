@@ -157,7 +157,8 @@ export function drawRtlText(opts: DrawTextOpts) {
 }
 
 export function drawLtrText(opts: Omit<DrawTextOpts, "rightX"> & { x: number }) {
-  opts.page.drawText(opts.text ?? "", {
+  opts.page.drawText(shapeForVisual(opts.text ?? "", false), {
+
     x: opts.x,
     y: opts.y,
     size: opts.size,
