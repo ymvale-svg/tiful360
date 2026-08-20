@@ -100,8 +100,13 @@ export async function loadTemplateDoc(templateUrl: string): Promise<TemplateDoc>
 }
 
 /**
- * Reorders a logical string to its visual order (right-to-left appearance for Hebrew).
- * Uses bidi-js to handle mixed Hebrew + numbers + Latin properly.
+ * Reorders a logical string so it renders correctly with pdf-lib + fontkit.
+ *
+ * The embedded Noto Sans Hebrew font already lays glyphs out right-to-left,
+ * so a pure Hebrew string renders correctly as-is — but embedded LTR runs
+ * (numbers, dates, Latin codes) come out reversed. We therefore compute the
+ * proper bidi visual order and then reverse the whole line, which yields a
+ * string the RTL-laying engine renders exactly as intended.
  */
 export function shapeForVisual(text: string, baseRtl = true): string {
   if (!text) return "";
@@ -116,11 +121,12 @@ export function shapeForVisual(text: string, baseRtl = true): string {
       const slice = chars.slice(start, end + 1).reverse();
       chars.splice(start, end - start + 1, ...slice);
     }
-    // For pure RTL paragraphs, also reverse the whole line if base is RTL and line has no embedding flips applied at top level
-    out.push(chars.join(""));
+    // Compensate for the font's own RTL layout direction.
+    out.push(chars.reverse().join(""));
   }
   return out.join("\n");
 }
+
 
 export interface DrawTextOpts {
   page: PDFPage;
@@ -151,7 +157,8 @@ export function drawRtlText(opts: DrawTextOpts) {
 }
 
 export function drawLtrText(opts: Omit<DrawTextOpts, "rightX"> & { x: number }) {
-  opts.page.drawText(opts.text ?? "", {
+  opts.page.drawText(shapeForVisual(opts.text ?? "", false), {
+
     x: opts.x,
     y: opts.y,
     size: opts.size,

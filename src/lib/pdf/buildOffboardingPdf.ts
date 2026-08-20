@@ -5,6 +5,7 @@ import {
   drawCenteredRtlText,
   embedSignaturePng,
   wrapTextLines,
+  shapeForVisual,
 } from "./hebrewPdf";
 import type { OffboardingFormData } from "./types";
 
@@ -86,8 +87,9 @@ export async function buildOffboardingPdf(data: OffboardingFormData): Promise<Bl
 
       drawCenteredRtlText({ page, text: desc, font: regular, size: 9, centerX: COL_CENTERS[0], y });
       drawCenteredRtlText({ page, text: manuf, font: regular, size: 9, centerX: COL_CENTERS[1], y });
-      const sw = regular.widthOfTextAtSize(serial, 9);
-      page.drawText(serial, { x: COL_CENTERS[2] - sw / 2, y, size: 9, font: regular });
+      const serialVisual = shapeForVisual(serial, false);
+      const sw = regular.widthOfTextAtSize(serialVisual, 9);
+      page.drawText(serialVisual, { x: COL_CENTERS[2] - sw / 2, y, size: 9, font: regular });
       drawCenteredRtlText({ page, text: cond, font: regular, size: 9, centerX: COL_CENTERS[3], y });
     });
 
