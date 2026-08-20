@@ -302,8 +302,7 @@ export default function Assets() {
                 onSelectCategory={goToCategory}
                 onQuickAssign={() => setQuickAssignOpen(true)}
               />
-            </>
-          )}
+
 
         </TabsContent>
 
