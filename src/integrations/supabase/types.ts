@@ -836,6 +836,7 @@ export type Database = {
           field_name: string
           field_options: Json | null
           field_type: Database["public"]["Enums"]["field_type"]
+          group_id: string | null
           id: string
           is_expiry_field: boolean
           is_required: boolean
@@ -848,6 +849,7 @@ export type Database = {
           field_name: string
           field_options?: Json | null
           field_type?: Database["public"]["Enums"]["field_type"]
+          group_id?: string | null
           id?: string
           is_expiry_field?: boolean
           is_required?: boolean
@@ -860,6 +862,7 @@ export type Database = {
           field_name?: string
           field_options?: Json | null
           field_type?: Database["public"]["Enums"]["field_type"]
+          group_id?: string | null
           id?: string
           is_expiry_field?: boolean
           is_required?: boolean
@@ -878,6 +881,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "category_fields_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "asset_groups"
             referencedColumns: ["id"]
           },
         ]
