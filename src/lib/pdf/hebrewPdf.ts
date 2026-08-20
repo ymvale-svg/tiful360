@@ -1,13 +1,9 @@
 import { PDFDocument, PDFFont, PDFPage, rgb, StandardFonts } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
-// @ts-ignore - no types
-import bidiFactory from "bidi-js";
 // Bundled via Vite — guarantees we always get the real TTF bytes (not an
 // HTML fallback served by the dev server when a /public file is missing).
 import notoSansHebrewRegularUrl from "@/assets/fonts/NotoSansHebrew-Regular.ttf?url";
 import notoSansHebrewBoldUrl from "@/assets/fonts/NotoSansHebrew-Bold.ttf?url";
-
-const bidi = bidiFactory();
 
 // Cached as Uint8Array. We hand a *fresh copy* to pdf-lib on every embed
 // because pdf-lib/fontkit may detach or mutate the underlying ArrayBuffer,
@@ -100,31 +96,18 @@ export async function loadTemplateDoc(templateUrl: string): Promise<TemplateDoc>
 }
 
 /**
- * Reorders a logical string so it renders correctly with pdf-lib + fontkit.
+ * Keeps text in logical Unicode order for pdf-lib + fontkit.
  *
- * The embedded Noto Sans Hebrew font already lays glyphs out right-to-left,
- * so a pure Hebrew string renders correctly as-is — but embedded LTR runs
- * (numbers, dates, Latin codes) come out reversed. We therefore compute the
- * proper bidi visual order and then reverse the whole line, which yields a
- * string the RTL-laying engine renders exactly as intended.
+ * The embedded Noto Sans Hebrew font handles Hebrew glyph direction correctly
+ * from logical text, but reverses embedded LTR tokens inside an RTL line.
+ * Pre-reverse only those tokens so dates, times, numbers and Latin codes are
+ * restored by the font while Hebrew words remain in logical order.
  */
 export function shapeForVisual(text: string, baseRtl = true): string {
-  if (!text) return "";
-  const paragraphs = text.split("\n");
-  const out: string[] = [];
-  for (const p of paragraphs) {
-    if (!p) { out.push(""); continue; }
-    const embeddingLevels = bidi.getEmbeddingLevels(p, baseRtl ? "rtl" : "ltr");
-    const flips = bidi.getReorderSegments(p, embeddingLevels);
-    let chars = p.split("");
-    for (const [start, end] of flips) {
-      const slice = chars.slice(start, end + 1).reverse();
-      chars.splice(start, end - start + 1, ...slice);
-    }
-    // Compensate for the font's own RTL layout direction.
-    out.push(chars.reverse().join(""));
-  }
-  return out.join("\n");
+  if (!text || !baseRtl) return text ?? "";
+  return text.replace(/[A-Za-z0-9][A-Za-z0-9./:_-]*/g, (token) =>
+    Array.from(token).reverse().join("")
+  );
 }
 
 
