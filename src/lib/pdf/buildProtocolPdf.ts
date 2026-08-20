@@ -7,6 +7,7 @@ import {
   embedLogo,
   wrapTextLines,
   drawFooterOnAllPages,
+  shapeForVisual,
 } from "./hebrewPdf";
 import type { ProtocolPdfData } from "./types";
 
@@ -222,7 +223,7 @@ export async function buildProtocolPdf(data: ProtocolPdfData): Promise<Blob> {
     });
     y -= 14;
     // The URL itself is LTR — draw it as-is, left aligned.
-    page.drawText(v.url, { x: MARGIN_L, y, size: 7.5, font: regular, color: rgb(0.35, 0.35, 0.35) });
+    page.drawText(shapeForVisual(v.url, false), { x: MARGIN_L, y, size: 7.5, font: regular, color: rgb(0.35, 0.35, 0.35) });
     y -= 18;
   }
 
