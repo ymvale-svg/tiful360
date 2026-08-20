@@ -293,6 +293,13 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
             <h2 className="text-sm font-semibold text-muted-foreground mb-3">מסמכים מצורפים</h2>
             <AssetDocumentsSection assetId={assetId} />
           </div>
+
+          {/* Handover / return protocols */}
+          <div className="bg-card border border-border rounded-xl p-5">
+            <h2 className="text-sm font-semibold text-muted-foreground mb-3">פרוטוקולי מסירה והזדכות</h2>
+            <HandoverFormsList forms={handoverForms ?? []} context="asset" />
+          </div>
+
         </div>
 
         {/* Owner & history */}
