@@ -3,7 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { CalendarClock, ChevronLeft, ExternalLink } from "lucide-react";
 import { useExpiringAssets, expiryUrgency, DOMAIN_LABELS, DOMAIN_STYLES, type ExpiringAsset } from "@/hooks/useExpiringAssets";
 import { RenewExpiryDialog } from "@/components/RenewExpiryDialog";
+import { getDomain, domainKeyToSlug } from "@/lib/assetDomains";
 import { cn } from "@/lib/utils";
+
 
 export function ExpiringAssetsCard() {
   const { data, isLoading } = useExpiringAssets(14);
