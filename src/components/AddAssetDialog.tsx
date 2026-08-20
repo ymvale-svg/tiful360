@@ -22,6 +22,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { SubCategorySelect } from "@/components/assets/SubCategorySelect";
+import { ManufacturerModelInput } from "@/components/assets/ManufacturerModelInput";
+
 import { cn } from "@/lib/utils";
 
 interface Props {
