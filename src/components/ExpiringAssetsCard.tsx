@@ -13,10 +13,11 @@ export function ExpiringAssetsCard() {
   const navigateToSource = (item: ExpiringAsset) => {
     if (item.source_type === "digital_access" && item.current_owner_id) {
       navigate(`/employees/${item.current_owner_id}?tab=assets`);
-    } else if (item.category_id) {
-      navigate(`/assets?cat=${item.category_id}&asset=${item.asset_id}`);
+    } else if (item.asset_id) {
+      navigate(`/assets/${domainKeyToSlug(getDomain({ domain: item.domain } as any))}/${item.asset_id}`);
     }
   };
+
 
   const items = data ?? [];
 
