@@ -9,6 +9,8 @@ import { useState } from "react";
 import { EditAssetDialog } from "@/components/EditAssetDialog";
 import { HandoverFlow } from "@/components/handover/HandoverFlow";
 import { AssetDocumentsSection } from "@/components/AssetDocumentsSection";
+import { HandoverFormsList } from "@/components/handover/HandoverFormsList";
+import { useAssetHandoverForms } from "@/hooks/useHandoverForms";
 import { VehicleDetailsPanel } from "@/components/assets/VehicleDetailsPanel";
 import { DigitalAccessPanel } from "@/components/assets/DigitalAccessPanel";
 import { LicenseDetailsPanel } from "@/components/assets/LicenseDetailsPanel";
