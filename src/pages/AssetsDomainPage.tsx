@@ -616,9 +616,10 @@ export default function AssetsDomainPage() {
         open={addOpen}
         onOpenChange={(v) => {
           setAddOpen(v);
-          if (!v) setAddCategoryId(undefined);
+          if (!v) { setAddCategoryId(undefined); setAddGroupId(undefined); }
         }}
         defaultCategoryId={addCategoryId}
+        defaultGroupId={addGroupId}
       />
     </div>
   );
