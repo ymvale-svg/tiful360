@@ -12,7 +12,7 @@ import { format } from "date-fns";
 import { useCreateAsset } from "@/hooks/useMutations";
 import { useAssetCategories, useEmployees, useAssets } from "@/hooks/useData";
 import { useAssetGroups } from "@/hooks/useAssetGroups";
-import { useCategoryFields, useAddCategoryFieldOption } from "@/hooks/useCategories";
+import { useCategoryFields, useAddCategoryFieldOption, filterFieldsForGroup } from "@/hooks/useCategories";
 import { useAuth } from "@/hooks/useAuth";
 import { useUploadAssetDocument } from "@/hooks/useAssetDocuments";
 import { FileText, Upload, Trash2 } from "lucide-react";
@@ -107,8 +107,11 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultA
   // Any custom field literally named like the system expiry is treated as a duplicate.
   const EXPIRY_DUPLICATE_NAMES = new Set(["תוקף", "תוקף פוליסה", "תאריך תפוגה", "תאריך תוקף"]);
   const catFields = useMemo(
-    () => (catFieldsRaw ?? []).filter((cf: any) => !EXPIRY_DUPLICATE_NAMES.has((cf.field_name ?? "").trim())),
-    [catFieldsRaw]
+    () =>
+      filterFieldsForGroup(catFieldsRaw as any[], form.group_id || null).filter(
+        (cf: any) => !EXPIRY_DUPLICATE_NAMES.has((cf.field_name ?? "").trim()),
+      ),
+    [catFieldsRaw, form.group_id]
   );
 
   // Reset everything when dialog closes

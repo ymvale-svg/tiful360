@@ -8,7 +8,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { SubCategorySelect } from "@/components/assets/SubCategorySelect";
 import { useAssetCategories, useEmployees } from "@/hooks/useData";
 import { useAssetGroups } from "@/hooks/useAssetGroups";
-import { useCategoryFields } from "@/hooks/useCategories";
+import { useCategoryFields, filterFieldsForGroup } from "@/hooks/useCategories";
 import { useUpdateAsset } from "@/hooks/useMutations";
 import { useToast } from "@/hooks/use-toast";
 import { HandoverFlow } from "@/components/handover/HandoverFlow";
@@ -70,7 +70,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
     () => (assetGroups ?? []).filter(g => g.category_id === form.category_id),
     [assetGroups, form.category_id]
   );
-  const catFields = (catFieldsRaw ?? []).filter((cf: any) => {
+  const catFields = filterFieldsForGroup(catFieldsRaw as any[], form.group_id || null).filter((cf: any) => {
     if (selectedCategory?.prefix === "CINS" && cf.field_name === "תוקף פוליסה") return false;
     return true;
   });
