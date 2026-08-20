@@ -1,8 +1,11 @@
-import { useState } from "react";
-import { FileSignature, FileDown, Clock, Eye, ExternalLink } from "lucide-react";
+import { useEffect, useState } from "react";
+import { FileSignature, FileDown, Clock, Eye, ExternalLink, Images, Play } from "lucide-react";
 import type { HandoverFormRow } from "@/hooks/useHandoverForms";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { buildProtocolPdf } from "@/lib/pdf/buildProtocolPdf";
+import { isProtocolSnapshot, protocolDataFromSnapshot } from "@/lib/pdf/protocolSnapshot";
+import type { ProtocolMedia } from "@/lib/pdf/types";
 
 interface Props {
   forms: HandoverFormRow[];
@@ -21,6 +24,27 @@ const fmt = (iso?: string | null) =>
 /** Shared list of handover / return protocols (item card + employee portal). */
 export function HandoverFormsList({ forms, context, emptyText = "אין עדיין פרוטוקולים" }: Props) {
   const [preview, setPreview] = useState<{ url: string; title: string } | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<{ items: ProtocolMedia[]; title: string } | null>(null);
+  const [creatingPreview, setCreatingPreview] = useState(false);
+
+  useEffect(() => () => {
+    if (preview?.url.startsWith("blob:")) URL.revokeObjectURL(preview.url);
+  }, [preview]);
+
+  const openPreview = async (form: HandoverFormRow, title: string, fallbackUrl: string) => {
+    const snapshot = (form.form_snapshot ?? {}) as Record<string, any>;
+    if (!isProtocolSnapshot(snapshot)) {
+      setPreview({ url: fallbackUrl, title });
+      return;
+    }
+    setCreatingPreview(true);
+    try {
+      const blob = await buildProtocolPdf(protocolDataFromSnapshot(snapshot));
+      setPreview({ url: URL.createObjectURL(blob), title });
+    } finally {
+      setCreatingPreview(false);
+    }
+  };
 
   if (forms.length === 0) {
     return <p className="text-sm text-muted-foreground">{emptyText}</p>;
@@ -40,6 +64,7 @@ export function HandoverFormsList({ forms, context, emptyText = "אין עדיי
         const code = context === "employee" ? f.assets?.asset_code : null;
         const url = f.pdf_url || f.attached_document_url;
         const pending = f.status !== "signed";
+        const media = (Array.isArray(f.media) ? f.media : Array.isArray(snap.media) ? snap.media : []) as ProtocolMedia[];
 
         return (
           <div
@@ -60,16 +85,32 @@ export function HandoverFormsList({ forms, context, emptyText = "אין עדיי
                 {pending && <span className="text-warning">· ממתין לחתימה</span>}
               </p>
             </div>
-            {url && (
-              <div className="flex items-center gap-1 shrink-0">
-                <button
+            <div className="flex items-center gap-1 shrink-0">
+              {media.length > 0 && (
+                <Button
                   type="button"
-                  onClick={() => setPreview({ url, title: `${title} · ${subject}` })}
-                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 gap-1 px-2 text-xs"
+                  onClick={() => setMediaPreview({ items: media, title: `${title} · ${subject}` })}
+                >
+                  <Images className="w-3.5 h-3.5" />
+                  תיעוד ({media.length})
+                </Button>
+              )}
+              {url && (
+              <div className="flex items-center gap-1 shrink-0">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={creatingPreview}
+                  onClick={() => void openPreview(f, `${title} · ${subject}`, url)}
+                  className="h-8 gap-1 px-2 text-xs"
                 >
                   <Eye className="w-3.5 h-3.5" />
                   צפייה
-                </button>
+                </Button>
                 <a
                   href={url}
                   download
@@ -81,7 +122,8 @@ export function HandoverFormsList({ forms, context, emptyText = "אין עדיי
                   <span className="hidden sm:inline">הורדה</span>
                 </a>
               </div>
-            )}
+              )}
+            </div>
           </div>
         );
       })}
@@ -113,6 +155,31 @@ export function HandoverFormsList({ forms, context, emptyText = "אין עדיי
                 הורדה
               </a>
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!mediaPreview} onOpenChange={(open) => !open && setMediaPreview(null)}>
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>{mediaPreview?.title} · תיעוד מצולם</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {mediaPreview?.items.map((item, index) => (
+              <div key={`${item.url}-${index}`} className="overflow-hidden rounded-lg border bg-muted/20">
+                {item.type === "video" ? (
+                  <video src={item.url} controls playsInline preload="metadata" className="aspect-video w-full bg-foreground/10 object-contain" />
+                ) : (
+                  <a href={item.url} target="_blank" rel="noopener noreferrer">
+                    <img src={item.url} alt={item.label || `תיעוד ${index + 1}`} loading="lazy" className="aspect-video w-full object-contain" />
+                  </a>
+                )}
+                <div className="flex items-center gap-2 p-2 text-sm">
+                  {item.type === "video" && <Play className="h-4 w-4 text-primary" />}
+                  <span>{item.label || (item.type === "video" ? "סרטון מסירה" : `תמונה ${index + 1}`)}</span>
+                </div>
+              </div>
+            ))}
           </div>
         </DialogContent>
       </Dialog>
