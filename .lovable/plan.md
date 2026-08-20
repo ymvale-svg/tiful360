@@ -22,5 +22,12 @@
 **קוד**
 - קומפוננטה חדשה `src/components/handover/HandoverFlow.tsx` (שלבים: פרטים → מדיה → חתימות → סיכום), עם `FieldPicker`, `MediaCapture` (`<input type=file capture>` לתמונות/סרטון), ו-`SignaturePad` הקיים.
 - `src/lib/pdf/buildProtocolPdf.ts` — בונה על תשתית `hebrewPdf.ts` הקיימת, תומך בשני הכיוונים, תמונות וחותמת תאריך+שעה.
-- הסרת `AssignAssetWithFormDialog.tsx` והחלפת כל נקודות הקריאה (כרטיס פריט, מסך משאבים, שיוך מהיר, קליטת עובד) במודול החדש; מסלולי `SignHandover` מותאמים לשדות החדשים.
 - `VehicleDetailsPanel` יקבל כפתור "מסירת רכב" שפותח את אותו מודול עם ברירות מחדל של קטגוריית רכב.
+
+**ניקוי הקוד הישן (מסלול "חתימה מול איש התפעול")**
+- מחיקת `src/components/AssignAssetWithFormDialog.tsx` על כל הלוגיקה של `method`/`step` ("manager_present" מול "portal"), האזהרות והדיאלוגים הנלווים.
+- החלפת כל נקודות הקריאה אליו — כרטיס פריט, מסך משאבים, שיוך מהיר (`QuickAssignDialog`), צ'קליסט קליטה — בקריאה למודול החדש; הסרת ייבואים ומצבים שנשארו יתומים.
+- איחוד בניית ה-PDF: `buildHandoverPdf.ts` והתלות שלו בתבנית `receive-template.pdf` וב-`HandoverFormData` הישן יוסרו לאחר שכל המסכים עוברים ל-`buildProtocolPdf`; `PendingHandoverForms` ו-`SignHandover` יעברו לאותה פונקציה ולשדות החדשים.
+- ניקוי מונחים ישנים: `delivery_method` ממופה חד-פעמית לערכי המודול החדש (`on_site` / `remote_sign` / `manual_upload`), ותוויות UI כמו "חתימה מול מנהל" מוחלפות ב"חתימה במקום".
+- תאימות לאחור: טפסים שנחתמו בעבר ממשיכים להיפתח מתוך `pdf_url` השמור — אין רינדור מחדש של סנאפשוטים ישנים.
+
