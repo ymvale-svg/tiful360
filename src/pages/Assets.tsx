@@ -91,19 +91,14 @@ export default function Assets() {
   const hasResults =
     searchResults.assets.length + searchResults.employees.length + searchResults.categories.length > 0;
 
-  const updateParams = (next: Record<string, string | null>) => {
-    const params = new URLSearchParams(searchParams);
-    for (const [k, v] of Object.entries(next)) {
-      if (v === null) params.delete(k);
-      else params.set(k, v);
-    }
-    setSearchParams(params);
+  const slugForCategory = (categoryId?: string | null) => {
+    const c = (categories ?? []).find((x: any) => x.id === categoryId);
+    return domainKeyToSlug(getDomain(c as any));
   };
-
-  const goToCategories = () => updateParams({ cat: null, asset: null });
-  const goToCategory = (id: string) => updateParams({ cat: id, asset: null });
+  const goToCategory = (id: string) => navigate(`/assets/${slugForCategory(id)}?cat=${id}`);
   const goToAsset = (id: string, categoryId?: string) =>
-    updateParams({ cat: categoryId ?? cat, asset: id });
+    navigate(`/assets/${slugForCategory(categoryId)}/${id}`);
+
 
   return (
     <div className="space-y-6 animate-fade-in" dir="rtl">
