@@ -299,7 +299,6 @@ export default function Assets() {
                 )}
               </div>
 
-
               <DomainsGrid
                 onSelectCategory={goToCategory}
                 onQuickAssign={() => setQuickAssignOpen(true)}
@@ -307,23 +306,6 @@ export default function Assets() {
             </>
           )}
 
-          {cat && !assetId && (
-            <CategoryAssetsList
-              categoryId={cat}
-              onBack={goToCategories}
-              onSelectAsset={(id) => goToAsset(id)}
-              onAddAsset={(categoryId, templateName) => { setAddCategoryId(categoryId); setAddTemplateName(templateName); setAddOpen(true); }}
-            />
-          )}
-
-          {cat && assetId && (
-            <AssetDetailView
-              assetId={assetId}
-              categoryId={cat}
-              onBack={() => goToCategory(cat)}
-              onBackToCategories={goToCategories}
-            />
-          )}
         </TabsContent>
 
         <TabsContent value="categories" className="mt-4">
