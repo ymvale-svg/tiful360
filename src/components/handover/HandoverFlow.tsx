@@ -252,6 +252,42 @@ export function HandoverFlow({ open, onOpenChange, asset, direction = "handover"
     media,
   });
 
+  /** Email the signed protocol to the receiving employee. */
+  const sendProtocolEmail = async (pdfUrl: string | null) => {
+    const to = employee?.email;
+    if (!to) return;
+    try {
+      await supabase.functions.invoke("send-transactional-email", {
+        body: {
+          templateName: "handover-protocol",
+          recipientEmail: to,
+          idempotencyKey: `handover-${asset!.id}-${employeeId}-${Date.now()}`,
+          templateData: {
+            employeeName: employee?.full_name ?? "",
+            companyName: activeCompany?.name ?? "",
+            itemName: asset?.asset_name ?? "",
+            itemCode: asset?.asset_code ?? "",
+            direction,
+            title: template?.display_name ?? null,
+            issuerName,
+            issuedAt: new Date().toLocaleString("he-IL", {
+              day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+            }),
+            fields: [
+              ...selectedFields,
+              ...(isVehicle && odometer ? [{ label: 'ק"מ במעמד המסירה', value: odometer }] : []),
+            ].map((f: any) => ({ label: f.label, value: String(f.value ?? "") })),
+            notes: freeText || null,
+            pdfUrl,
+            portalUrl: `${window.location.origin}/portal`,
+          },
+        },
+      });
+    } catch (e) {
+      console.error("protocol email failed", e);
+    }
+  };
+
   // ---- Actions ----
   const handleDirectAssign = async () => {
     setBusy(true);
@@ -300,10 +336,12 @@ export function HandoverFlow({ open, onOpenChange, asset, direction = "handover"
         signed_at: new Date().toISOString(),
       });
       await applyAssetUpdate();
+      await sendProtocolEmail(pdfUrl);
 
-      toast({ title: "הפרוטוקול נחתם ונשמר", description: "המסמך נוסף לתיק העובד ולכרטיס הפריט" });
+      toast({ title: "הפרוטוקול נחתם ונשמר", description: "המסמך נוסף לאזור האישי, לכרטיס הפריט ונשלח במייל לעובד" });
       qc.invalidateQueries({ queryKey: ["assets"] });
       qc.invalidateQueries({ queryKey: ["handover-forms"] });
+      qc.invalidateQueries({ queryKey: ["pending-handover"] });
       onAssigned?.();
       close();
     } catch (e: any) {
@@ -328,6 +366,7 @@ export function HandoverFlow({ open, onOpenChange, asset, direction = "handover"
       toast({ title: "נשלח לחתימה", description: "הפרוטוקול ממתין לעובד בפורטל" });
       qc.invalidateQueries({ queryKey: ["assets"] });
       qc.invalidateQueries({ queryKey: ["handover-forms"] });
+      qc.invalidateQueries({ queryKey: ["pending-handover"] });
       onAssigned?.();
       close();
     } catch (e: any) {
