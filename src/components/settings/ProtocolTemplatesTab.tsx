@@ -23,6 +23,9 @@ import {
   PLACEHOLDER_HINTS,
 } from "@/hooks/useProtocolTemplates";
 import { buildProtocolPreviewPdf } from "@/lib/pdf/buildProtocolPreviewPdf";
+import { useAuth } from "@/hooks/useAuth";
+import { useAssetGroups, type AssetGroup } from "@/hooks/useAssetGroups";
+import { DOMAIN_META, DOMAIN_ORDER, type DomainKey } from "@/lib/assetDomains";
 
 export function ProtocolTemplatesTab() {
   const { activeCompanyId, activeCompany } = useCompany();
