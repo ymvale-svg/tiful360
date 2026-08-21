@@ -507,7 +507,13 @@ export default function EmployeeDetail() {
 
       {/* Payslips tab */}
       {activeTab === "payslips" && (
-        <EmployeePayslipsTab employeeId={id!} employee={employee} canSeeSalary={isSuperAdmin || isAdmin || isPayroll || isHR} />
+        <EmployeePayslipsTab
+          employeeId={id!}
+          employee={employee}
+          canSeeSalary={isSuperAdmin || isAdmin || isPayroll || isHR}
+          requiresReveal={(employee as any).linked_user_id !== user?.id}
+          auditContext="תיק עובד"
+        />
       )}
 
       {/* Digital access tab removed - now part of Assets tab via DACC category */}
