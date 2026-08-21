@@ -23,24 +23,39 @@ import {
   PLACEHOLDER_HINTS,
 } from "@/hooks/useProtocolTemplates";
 import { buildProtocolPreviewPdf } from "@/lib/pdf/buildProtocolPreviewPdf";
+import { useAuth } from "@/hooks/useAuth";
+import { useAssetGroups, type AssetGroup } from "@/hooks/useAssetGroups";
+import { DOMAIN_META, DOMAIN_ORDER, type DomainKey } from "@/lib/assetDomains";
 
 export function ProtocolTemplatesTab() {
   const { activeCompanyId, activeCompany } = useCompany();
   const { data: templates = [] } = useProtocolTemplates(activeCompanyId);
+  const { isAdmin, isSuperAdmin, isOperations } = useAuth();
+  const canManage = isAdmin || isSuperAdmin || isOperations;
 
   const { data: categories = [] } = useQuery({
     queryKey: ["asset_categories", activeCompanyId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("asset_categories")
-        .select("id, category_name, protocol_type")
+        .select("id, category_name, protocol_type, domain")
         .eq("company_id", activeCompanyId!)
         .order("category_name");
       if (error) throw error;
       return data ?? [];
     },
-    enabled: !!activeCompanyId,
+    enabled: !!activeCompanyId && canManage,
   });
+
+  const { data: groups = [] } = useAssetGroups();
+
+  if (!canManage) {
+    return (
+      <div className="text-center py-10 text-muted-foreground text-sm">
+        אין לך הרשאה לצפות בתבניות פרוטוקולים. הגישה מוגבלת למנהל מערכת ולתפעול.
+      </div>
+    );
+  }
 
   if (!activeCompanyId) {
     return <div className="text-center py-8 text-muted-foreground">לא נבחרה חברה</div>;
@@ -54,7 +69,8 @@ export function ProtocolTemplatesTab() {
           <h3 className="font-semibold">תבניות פרוטוקולים</h3>
         </div>
         <p className="text-xs text-muted-foreground">
-          ערוך את הטקסט המופיע בפרוטוקולי מסירה והחזרת ציוד. ניתן להגדיר ברירת מחדל לחברה, או טקסט שונה לקטגוריה ספציפית.
+          ערוך את הטקסט המופיע בפרוטוקולי מסירה והחזרת ציוד. ניתן להגדיר ברירת מחדל לחברה, או שיוך ישיר לדומיין → קטגוריה → תת-קטגוריה.
+          שיוך לקטגוריה בלבד יחול על כל תתי-הקטגוריות שלה.
         </p>
         <PlaceholderHints />
       </div>
@@ -67,7 +83,7 @@ export function ProtocolTemplatesTab() {
           </TabsTrigger>
           <TabsTrigger value="category" className="gap-1.5">
             <Tag className="w-4 h-4" />
-            לפי קטגוריה
+            שיוך לדומיין / קטגוריה
           </TabsTrigger>
         </TabsList>
 
@@ -78,6 +94,7 @@ export function ProtocolTemplatesTab() {
               protocolType={p.type}
               defaultDisplayName={p.label}
               categoryId={null}
+              groupId={null}
               templates={templates}
               companyId={activeCompanyId}
               companyName={activeCompany?.name ?? ""}
@@ -88,7 +105,8 @@ export function ProtocolTemplatesTab() {
 
         <TabsContent value="category" className="space-y-3">
           <PerCategoryEditor
-            categories={categories}
+            categories={categories as any}
+            groups={groups}
             templates={templates}
             companyId={activeCompanyId}
             companyName={activeCompany?.name ?? ""}
@@ -117,45 +135,106 @@ function PlaceholderHints() {
 }
 
 function PerCategoryEditor({
-  categories, templates, companyId, companyName, logoUrl,
+  categories, groups, templates, companyId, companyName, logoUrl,
 }: {
-  categories: { id: string; category_name: string; protocol_type: string }[];
+  categories: { id: string; category_name: string; protocol_type: string; domain: string | null }[];
+  groups: AssetGroup[];
   templates: any[];
   companyId: string;
   companyName: string;
   logoUrl: string | null;
 }) {
+  const [domain, setDomain] = useState<DomainKey | "">("");
   const [catId, setCatId] = useState<string>("");
+  const [groupId, setGroupId] = useState<string>("");
+
+  const domainCategories = useMemo(
+    () => (domain ? categories.filter((c) => (c.domain ?? "physical") === domain) : []),
+    [categories, domain]
+  );
   const selected = categories.find((c) => c.id === catId);
+  const catGroups = useMemo(
+    () => groups.filter((g) => g.category_id === catId),
+    [groups, catId]
+  );
+  const selectedGroup = catGroups.find((g) => g.id === groupId);
+
   const protocolType = selected
     ? deriveProtocolTypeFromCategory(selected.protocol_type)
     : null;
-  const displayName = `${PROTOCOL_TYPES.find((p) => p.type === protocolType)?.label ?? ""} — ${selected?.category_name ?? ""}`;
+  const displayName = `${PROTOCOL_TYPES.find((p) => p.type === protocolType)?.label ?? ""} — ${selected?.category_name ?? ""}${selectedGroup ? ` / ${selectedGroup.name}` : ""}`;
 
   return (
     <div className="space-y-3">
-      <div className="bg-card rounded-xl border border-border/50 p-4">
-        <Label className="text-sm mb-1.5 block">בחר קטגוריה</Label>
-        <Select value={catId} onValueChange={setCatId}>
-          <SelectTrigger><SelectValue placeholder="בחר קטגוריה לעריכת פרוטוקול ייעודי" /></SelectTrigger>
-          <SelectContent>
-            {categories.map((c) => (
-              <SelectItem key={c.id} value={c.id}>{c.category_name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="bg-card rounded-xl border border-border/50 p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div>
+          <Label className="text-sm mb-1.5 block">דומיין</Label>
+          <Select
+            value={domain}
+            onValueChange={(v) => { setDomain(v as DomainKey); setCatId(""); setGroupId(""); }}
+          >
+            <SelectTrigger><SelectValue placeholder="בחר דומיין" /></SelectTrigger>
+            <SelectContent>
+              {DOMAIN_ORDER.map((d) => (
+                <SelectItem key={d} value={d}>{DOMAIN_META[d].title}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label className="text-sm mb-1.5 block">קטגוריה</Label>
+          <Select
+            value={catId}
+            onValueChange={(v) => { setCatId(v); setGroupId(""); }}
+            disabled={!domain}
+          >
+            <SelectTrigger><SelectValue placeholder={domain ? "בחר קטגוריה" : "בחר דומיין תחילה"} /></SelectTrigger>
+            <SelectContent>
+              {domainCategories.map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.category_name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label className="text-sm mb-1.5 block">תת-קטגוריה (אופציונלי)</Label>
+          <Select
+            value={groupId || "__all__"}
+            onValueChange={(v) => setGroupId(v === "__all__" ? "" : v)}
+            disabled={!catId || catGroups.length === 0}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={catGroups.length ? "כל תתי-הקטגוריות" : "אין תתי-קטגוריות"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">כל תתי-הקטגוריות</SelectItem>
+              {catGroups.map((g) => (
+                <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         {selected && (
-          <p className="text-xs text-muted-foreground mt-2">
+          <p className="text-xs text-muted-foreground md:col-span-3">
             סוג פרוטוקול נגזר: <span className="font-medium">{PROTOCOL_TYPES.find((p) => p.type === protocolType)?.label}</span>
+            {" · "}
+            {selectedGroup
+              ? `התבנית תחול על תת-הקטגוריה "${selectedGroup.name}" בלבד`
+              : `התבנית תחול על כל תתי-הקטגוריות של "${selected.category_name}"`}
           </p>
         )}
       </div>
 
       {selected && protocolType && (
         <TemplateEditor
+          key={`${selected.id}-${groupId}`}
           protocolType={protocolType}
           defaultDisplayName={displayName}
           categoryId={selected.id}
+          groupId={groupId || null}
           templates={templates}
           companyId={companyId}
           companyName={companyName}
@@ -166,12 +245,14 @@ function PerCategoryEditor({
   );
 }
 
+
 function TemplateEditor({
-  protocolType, defaultDisplayName, categoryId, templates, companyId, companyName, logoUrl,
+  protocolType, defaultDisplayName, categoryId, groupId, templates, companyId, companyName, logoUrl,
 }: {
   protocolType: ProtocolType;
   defaultDisplayName: string;
   categoryId: string | null;
+  groupId: string | null;
   templates: any[];
   companyId: string;
   companyName: string;
@@ -182,15 +263,17 @@ function TemplateEditor({
   const del = useDeleteProtocolTemplateOverride();
 
   const effective = useMemo(
-    () => resolveTemplate(templates, protocolType, companyId, categoryId),
-    [templates, protocolType, companyId, categoryId]
+    () => resolveTemplate(templates, protocolType, companyId, categoryId, groupId),
+    [templates, protocolType, companyId, categoryId, groupId]
   );
   const ownOverride = templates.find(
     (t: any) =>
       t.company_id === companyId &&
       t.protocol_type === protocolType &&
-      t.category_id === categoryId
+      t.category_id === categoryId &&
+      (t.group_id ?? null) === groupId
   );
+
 
   const [body, setBody] = useState(effective?.body_template ?? "");
   const [displayName, setDisplayName] = useState(effective?.display_name ?? defaultDisplayName);
@@ -212,6 +295,8 @@ function TemplateEditor({
       await upsert.mutateAsync({
         company_id: companyId,
         category_id: categoryId,
+        group_id: groupId,
+
         protocol_type: protocolType,
         display_name: displayName.trim() || defaultDisplayName,
         body_template: body,
@@ -263,10 +348,13 @@ function TemplateEditor({
 
   const isOverride = !!ownOverride;
   const inheritsFrom = !isOverride
-    ? categoryId
-      ? "ברירת המחדל של החברה"
-      : "ברירת המחדל הגלובלית"
+    ? groupId
+      ? "התבנית של הקטגוריה"
+      : categoryId
+        ? "ברירת המחדל של החברה"
+        : "ברירת המחדל הגלובלית"
     : null;
+
 
   return (
     <div className="bg-card rounded-xl border border-border/50 shadow-card p-4 space-y-3">
