@@ -565,8 +565,10 @@ export default function AssetsDomainPage() {
                         domain={domain}
                         isAssignable={isAssignable}
                         onClick={() => { setSelectedIds(new Set()); updateParams({ cat: category.id, sub: c.id }); }}
+                        onDelete={c.id === NO_SUBCATEGORY_KEY ? undefined : () => handleDeleteGroup(c.id, c.name, c.items.length)}
                       />
                     ))}
+
                   </div>
                 ) : (
                   <div className="bg-card border border-border rounded-xl overflow-hidden">
