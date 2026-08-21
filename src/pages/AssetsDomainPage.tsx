@@ -2,8 +2,9 @@ import { useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ChevronRight, ChevronDown, Search, Plus, ArrowRight, Users, AlertTriangle,
-  ArrowUpDown, LayoutGrid, List, FolderPlus, Check, X, Link2,
+  ArrowUpDown, LayoutGrid, List, FolderPlus, Check, X, Link2, Trash2,
 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SubCategorySelect } from "@/components/assets/SubCategorySelect";
