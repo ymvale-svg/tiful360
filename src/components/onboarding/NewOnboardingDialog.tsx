@@ -58,6 +58,7 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
       setSelected({});
       setCopyFromId("");
       setQuickAdd({});
+      setQuickModel({});
     }
   }, [open]);
 
@@ -73,12 +74,13 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
     const next: Record<string, SelectedEntry> = {};
     (tpl.default_items ?? []).forEach((i) => {
       if (!i.catalog_ref_id) return;
-      const entry = next[i.catalog_ref_id] ?? { groupIds: [], notes: {}, owners: {} };
+      const entry = next[i.catalog_ref_id] ?? { groupIds: [], notes: {}, owners: {}, models: {} };
       if (i.selected_group_id && !entry.groupIds.includes(i.selected_group_id)) {
         entry.groupIds.push(i.selected_group_id);
       }
       if (i.selected_group_id) {
         entry.owners[i.selected_group_id] = i.owner_role ?? "";
+        if (i.selected_model_id) entry.models[i.selected_group_id] = i.selected_model_id;
       }
       next[i.catalog_ref_id] = entry;
     });
