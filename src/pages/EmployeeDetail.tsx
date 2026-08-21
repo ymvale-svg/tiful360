@@ -88,7 +88,7 @@ export default function EmployeeDetail() {
     a.asset_categories?.protocol_type === "digital" || (a.asset_categories?.prefix ?? "") === "DACC";
   const physicalAssets = employeeAssets.filter((a: any) => !isDigital(a));
   const digitalAccessAssets = employeeAssets.filter(isDigital);
-  const { isAdmin, isSuperAdmin, isPayroll, isOperations, isFinance, user } = useAuth();
+  const { isAdmin, isSuperAdmin, isPayroll, isHR, isOperations, isFinance, user } = useAuth();
   const qc = useQueryClient();
   const canEditRemotePunch = isSuperAdmin || isAdmin || isPayroll || isOperations || isFinance;
   const [savingRemote, setSavingRemote] = useState(false);
@@ -135,9 +135,9 @@ export default function EmployeeDetail() {
 
 
 
-  const canSeePayslips =
-    isSuperAdmin || isAdmin || isPayroll ||
-    (!!employee?.linked_user_id && employee.linked_user_id === user?.id);
+  const isSelf = !!employee?.linked_user_id && employee.linked_user_id === user?.id;
+  const canSeePayslips = isSuperAdmin || isAdmin || isPayroll || isHR || isSelf;
+
 
   const tabs = canSeePayslips ? allTabs : allTabs.filter((t) => t.id !== "payslips");
 
@@ -464,7 +464,7 @@ export default function EmployeeDetail() {
 
       {/* Payslips tab */}
       {activeTab === "payslips" && (
-        <EmployeePayslipsTab employeeId={id!} employee={employee} canSeeSalary={isAdmin} />
+        <EmployeePayslipsTab employeeId={id!} employee={employee} canSeeSalary={isSuperAdmin || isAdmin || isPayroll || isHR} />
       )}
 
       {/* Digital access tab removed - now part of Assets tab via DACC category */}

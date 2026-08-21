@@ -856,7 +856,7 @@ function UnmatchedPayslipsList({ batchId }: { batchId: string }) {
 function EmployeeLookupTab() {
   const { activeCompanyId } = useCompany();
   const { data: employees = [] } = useEmployees();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isSuperAdmin, isPayroll, isHR } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const employeeId = searchParams.get("employee") ?? "";
 
@@ -891,7 +891,7 @@ function EmployeeLookupTab() {
       </div>
 
       {selected ? (
-        <EmployeePayslipsTab employeeId={selected.id} employee={selected} canSeeSalary={isAdmin} />
+        <EmployeePayslipsTab employeeId={selected.id} employee={selected} canSeeSalary={isSuperAdmin || isAdmin || isPayroll || isHR} />
       ) : (
         <div className="bg-card rounded-xl border border-border/50 shadow-card p-12 text-center text-sm text-muted-foreground">
           בחר עובד כדי לראות את תלושי השכר שלו
