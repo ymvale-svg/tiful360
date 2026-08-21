@@ -28,6 +28,8 @@ type SelectedEntry = {
   groupIds: string[];
   notes: Record<string, string>;
   owners: Record<string, string>;
+  /** groupId -> chosen model id (vehicle models etc.) */
+  models: Record<string, string>;
 };
 
 export function NewOnboardingDialog({ open, onOpenChange }: Props) {
@@ -37,7 +39,9 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
   const { data: groups = [] } = useAssetGroups();
   const { data: assets = [] } = useAssets();
   const { data: templates = [] } = useRoleTemplates();
+  const { data: groupModels = [] } = useAssetGroupModels();
   const createGroup = useCreateAssetGroup();
+  const createModel = useCreateAssetGroupModel();
   const create = useCreateOnboardingProcess();
 
   const [employeeId, setEmployeeId] = useState("");
@@ -45,6 +49,8 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
   const [copyFromId, setCopyFromId] = useState("");
   const [newEmployeeOpen, setNewEmployeeOpen] = useState(false);
   const [quickAdd, setQuickAdd] = useState<Record<string, string>>({});
+  const [quickModel, setQuickModel] = useState<Record<string, string>>({});
+
 
   useEffect(() => {
     if (!open) {
