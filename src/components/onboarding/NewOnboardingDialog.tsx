@@ -8,6 +8,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useToast } from "@/hooks/use-toast";
 import { useEmployees, useAssetCategories, useAssets } from "@/hooks/useData";
 import { useAssetGroups, useCreateAssetGroup } from "@/hooks/useAssetGroups";
+import { useAssetGroupModels, useCreateAssetGroupModel } from "@/hooks/useAssetGroupModels";
 import {
   useCreateOnboardingProcess,
   useRoleTemplates,
@@ -27,6 +28,8 @@ type SelectedEntry = {
   groupIds: string[];
   notes: Record<string, string>;
   owners: Record<string, string>;
+  /** groupId -> chosen model id (vehicle models etc.) */
+  models: Record<string, string>;
 };
 
 export function NewOnboardingDialog({ open, onOpenChange }: Props) {
@@ -36,7 +39,9 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
   const { data: groups = [] } = useAssetGroups();
   const { data: assets = [] } = useAssets();
   const { data: templates = [] } = useRoleTemplates();
+  const { data: groupModels = [] } = useAssetGroupModels();
   const createGroup = useCreateAssetGroup();
+  const createModel = useCreateAssetGroupModel();
   const create = useCreateOnboardingProcess();
 
   const [employeeId, setEmployeeId] = useState("");
@@ -44,6 +49,8 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
   const [copyFromId, setCopyFromId] = useState("");
   const [newEmployeeOpen, setNewEmployeeOpen] = useState(false);
   const [quickAdd, setQuickAdd] = useState<Record<string, string>>({});
+  const [quickModel, setQuickModel] = useState<Record<string, string>>({});
+
 
   useEffect(() => {
     if (!open) {
@@ -51,6 +58,7 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
       setSelected({});
       setCopyFromId("");
       setQuickAdd({});
+      setQuickModel({});
     }
   }, [open]);
 
@@ -66,12 +74,13 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
     const next: Record<string, SelectedEntry> = {};
     (tpl.default_items ?? []).forEach((i) => {
       if (!i.catalog_ref_id) return;
-      const entry = next[i.catalog_ref_id] ?? { groupIds: [], notes: {}, owners: {} };
+      const entry = next[i.catalog_ref_id] ?? { groupIds: [], notes: {}, owners: {}, models: {} };
       if (i.selected_group_id && !entry.groupIds.includes(i.selected_group_id)) {
         entry.groupIds.push(i.selected_group_id);
       }
       if (i.selected_group_id) {
         entry.owners[i.selected_group_id] = i.owner_role ?? "";
+        if (i.selected_model_id) entry.models[i.selected_group_id] = i.selected_model_id;
       }
       next[i.catalog_ref_id] = entry;
     });
@@ -99,17 +108,20 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
   const groupsForCategory = (categoryId: string) =>
     groups.filter((g) => g.category_id === categoryId);
 
+  const modelsForGroup = (groupId: string) =>
+    groupModels.filter((m) => m.group_id === groupId && m.is_active);
+
   const toggleCategory = (categoryId: string) =>
     setSelected((prev) => {
       const next = { ...prev };
       if (next[categoryId]) delete next[categoryId];
-      else next[categoryId] = { groupIds: [], notes: {}, owners: {} };
+      else next[categoryId] = { groupIds: [], notes: {}, owners: {}, models: {} };
       return next;
     });
 
   const toggleGroup = (categoryId: string, groupId: string) =>
     setSelected((prev) => {
-      const entry = prev[categoryId] ?? { groupIds: [], notes: {}, owners: {} };
+      const entry = prev[categoryId] ?? { groupIds: [], notes: {}, owners: {}, models: {} };
       const has = entry.groupIds.includes(groupId);
       const group = groups.find((g) => g.id === groupId);
       const cat = (categories as any[]).find((c) => c.id === categoryId);
@@ -117,15 +129,28 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
         groupIds: has ? entry.groupIds.filter((id) => id !== groupId) : [...entry.groupIds, groupId],
         notes: { ...entry.notes },
         owners: { ...entry.owners },
+        models: { ...(entry.models ?? {}) },
       };
       if (!has) {
         next.owners[groupId] = resolveOwnerRole(group, cat);
       } else {
         delete next.notes[groupId];
         delete next.owners[groupId];
+        delete next.models[groupId];
       }
       return { ...prev, [categoryId]: next };
     });
+
+  const setModel = (categoryId: string, groupId: string, modelId: string) =>
+    setSelected((prev) => {
+      const entry = prev[categoryId];
+      if (!entry) return prev;
+      return {
+        ...prev,
+        [categoryId]: { ...entry, models: { ...(entry.models ?? {}), [groupId]: modelId } },
+      };
+    });
+
 
   const setOwner = (categoryId: string, groupId: string, ownerRole: string) =>
     setSelected((prev) => {
@@ -164,6 +189,19 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
     }
   };
 
+  const quickAddModel = async (categoryId: string, groupId: string) => {
+    const name = quickModel[groupId]?.trim();
+    if (!name) return;
+    try {
+      const created = await createModel.mutateAsync({ group_id: groupId, name });
+      setQuickModel((prev) => ({ ...prev, [groupId]: "" }));
+      setModel(categoryId, groupId, created.id);
+      toast({ title: "הדגם נוסף", description: name });
+    } catch (e: any) {
+      toast({ title: "שגיאה בהוספת דגם", description: e.message, variant: "destructive" });
+    }
+  };
+
   const copyFromEmployee = (sourceId: string) => {
     setCopyFromId(sourceId);
     const theirs = (assets as any[]).filter((a) => a.current_owner_id === sourceId);
@@ -171,7 +209,7 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
     theirs.forEach((a) => {
       const catId = a.category_id;
       const groupId = a.group_id;
-      const entry = next[catId] ?? { groupIds: [], notes: {}, owners: {} };
+      const entry = next[catId] ?? { groupIds: [], notes: {}, owners: {}, models: {} };
       if (groupId && !entry.groupIds.includes(groupId)) {
         entry.groupIds.push(groupId);
         const group = groups.find((g) => g.id === groupId);
@@ -202,16 +240,23 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
       }
       return entry.groupIds.map((groupId) => {
         const group = groups.find((g) => g.id === groupId);
+        const modelId = entry.models?.[groupId] || null;
+        const model = modelId ? groupModels.find((m) => m.id === modelId) : null;
+        const baseTitle = group
+          ? `${cat?.category_name ?? "פריט"} · ${group.name}`
+          : cat?.category_name ?? "פריט";
         return {
-          title: group ? `${cat?.category_name ?? "פריט"} · ${group.name}` : cat?.category_name ?? "פריט",
+          title: model ? `${baseTitle} · ${model.name}` : baseTitle,
           owner_role: entry.owners[groupId] || resolveOwnerRole(group, cat),
           item_type: domain === "digital" ? "access" : domain === "licenses" ? "license" : "asset",
           catalog_ref_id: categoryId,
           selected_group_id: groupId,
+          selected_model_id: modelId,
           notes: entry.notes[groupId]?.trim() || null,
         };
       });
     });
+
 
   const submit = async (status: "draft" | "sent") => {
     if (!employeeId) {
@@ -393,6 +438,47 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
                                           />
                                         </div>
                                       </div>
+                                      {c.protocol_type === "vehicle" && (
+                                        <div className="space-y-1.5 rounded-lg bg-muted/40 p-2">
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-xs text-muted-foreground shrink-0">דגם:</span>
+                                            <div className="flex-1 min-w-0">
+                                              <SearchableSelect
+                                                value={entry.models?.[groupId] ?? ""}
+                                                onChange={(v) => setModel(c.id, groupId, v)}
+                                                options={modelsForGroup(groupId).map((m) => ({
+                                                  value: m.id,
+                                                  label: m.manufacturer ? `${m.manufacturer} ${m.name}` : m.name,
+                                                }))}
+                                                placeholder="בחר דגם רכב..."
+                                              />
+                                            </div>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <input
+                                              value={quickModel[groupId] ?? ""}
+                                              onChange={(e) => setQuickModel((p) => ({ ...p, [groupId]: e.target.value }))}
+                                              onKeyDown={(e) => {
+                                                if (e.key === "Enter") {
+                                                  e.preventDefault();
+                                                  quickAddModel(c.id, groupId);
+                                                }
+                                              }}
+                                              placeholder="＋ הוסף דגם רכב..."
+                                              className="flex-1 min-w-0 px-3 py-1.5 bg-background border border-border rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
+                                            />
+                                            <Button
+                                              type="button"
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={() => quickAddModel(c.id, groupId)}
+                                              disabled={!quickModel[groupId]?.trim() || createModel.isPending}
+                                            >
+                                              הוסף
+                                            </Button>
+                                          </div>
+                                        </div>
+                                      )}
                                       <input
                                         value={entry.notes[groupId] ?? ""}
                                         onChange={(e) => setNote(c.id, groupId, e.target.value)}
