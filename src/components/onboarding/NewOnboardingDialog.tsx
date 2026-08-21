@@ -8,6 +8,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useToast } from "@/hooks/use-toast";
 import { useEmployees, useAssetCategories, useAssets } from "@/hooks/useData";
 import { useAssetGroups, useCreateAssetGroup } from "@/hooks/useAssetGroups";
+import { useAssetGroupModels, useCreateAssetGroupModel } from "@/hooks/useAssetGroupModels";
 import {
   useCreateOnboardingProcess,
   useRoleTemplates,
