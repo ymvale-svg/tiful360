@@ -105,6 +105,14 @@ export async function loadTemplateDoc(templateUrl: string): Promise<TemplateDoc>
  */
 export function shapeForVisual(text: string, baseRtl = true): string {
   if (!text || !baseRtl) return text ?? "";
+
+  // pdf-lib does not run the Unicode bidi algorithm. Noto Sans Hebrew lays
+  // Hebrew glyphs correctly, but an LTR token only needs pre-reversing when
+  // it is embedded inside an actual Hebrew run. Standalone values (asset
+  // codes, licence plates, dates and serial numbers) are already LTR; shaping
+  // them as RTL reverses the value itself (for example CAR -> RAC).
+  if (!/[\u0590-\u05FF]/.test(text)) return text;
+
   return text.replace(/[A-Za-z0-9][A-Za-z0-9./:_-]*/g, (token) =>
     Array.from(token).reverse().join("")
   );
