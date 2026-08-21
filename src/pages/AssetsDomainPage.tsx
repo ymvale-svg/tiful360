@@ -601,10 +601,13 @@ export default function AssetsDomainPage() {
                         return e && new Date(e) < new Date();
                       });
                       return (
-                        <button
+                        <div
                           key={c.id}
+                          role="button"
+                          tabIndex={0}
                           onClick={() => { setSelectedIds(new Set()); updateParams({ cat: category.id, sub: c.id }); }}
-                          className="w-full grid grid-cols-[1fr_7rem_5rem_6rem_2rem] gap-2 px-4 py-2.5 text-sm border-t border-border hover:bg-muted/40 text-right items-center transition-colors"
+                          onKeyDown={(e) => { if (e.key === "Enter") { setSelectedIds(new Set()); updateParams({ cat: category.id, sub: c.id }); } }}
+                          className="w-full grid grid-cols-[1fr_7rem_5rem_6rem_2rem_2rem] gap-2 px-4 py-2.5 text-sm border-t border-border hover:bg-muted/40 text-right items-center transition-colors cursor-pointer"
                         >
                           <div className="flex items-center gap-2 truncate">
                             {hasExpired && <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0" />}
@@ -617,8 +620,19 @@ export default function AssetsDomainPage() {
                           </div>
                           <div className="text-xs text-muted-foreground">{c.items.length}</div>
                           <div className="text-xs">{active} / {c.items.length}</div>
+                          {c.id === NO_SUBCATEGORY_KEY ? <div /> : (
+                            <button
+                              type="button"
+                              title="מחק תת-קטגוריה"
+                              onClick={(e) => { e.stopPropagation(); handleDeleteGroup(c.id, c.name, c.items.length); }}
+                              className="text-muted-foreground hover:text-destructive p-1 rounded-md"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                           <ArrowRight className="w-4 h-4 text-muted-foreground rtl:rotate-180" />
-                        </button>
+                        </div>
+
                       );
                     })}
                   </div>
