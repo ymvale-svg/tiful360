@@ -85,6 +85,15 @@ export default function EmployeeDetail() {
   const { data: activityLog } = useActivityLog(id);
   const unassignAsset = useUnassignAsset();
   const { data: leaveRequests } = useEmployeeLeaveRequests(id!);
+  const { data: handoverForms } = useEmployeeHandoverForms(id);
+  const navigate = useNavigate();
+
+  const goToAsset = (asset: any) => {
+    const slug = domainKeyToSlug(getDomain(asset.asset_categories ?? {}));
+    navigate(`/assets/${slug}/${asset.id}`);
+  };
+
+
 
   // Split employee assets by protocol_type (digital domain = digital access entries)
   const employeeAssets = assets ?? [];
