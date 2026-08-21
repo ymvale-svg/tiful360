@@ -990,6 +990,7 @@ export type Database = {
           portal_logo_url: string | null
           portal_name: string | null
           portal_primary_color: string | null
+          secretariat_emails: string | null
           updated_at: string
         }
         Insert: {
@@ -1014,6 +1015,7 @@ export type Database = {
           portal_logo_url?: string | null
           portal_name?: string | null
           portal_primary_color?: string | null
+          secretariat_emails?: string | null
           updated_at?: string
         }
         Update: {
@@ -1038,6 +1040,7 @@ export type Database = {
           portal_logo_url?: string | null
           portal_name?: string | null
           portal_primary_color?: string | null
+          secretariat_emails?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -3059,6 +3062,7 @@ export type Database = {
           it_emails: string
           operations_emails: string
           payroll_emails: string
+          secretariat_emails: string
         }[]
       }
       get_daily_missing_punches: {
@@ -3526,7 +3530,7 @@ export type Database = {
       employee_status: "active" | "onboarding" | "leaving" | "inactive"
       field_type: "text" | "number" | "date" | "list" | "list_multi"
       leave_request_status: "pending" | "approved" | "rejected" | "cancelled"
-      leave_request_type: "vacation" | "sick" | "personal" | "other"
+      leave_request_type: "vacation" | "sick" | "personal" | "other" | "reserve"
       permission_level: "read" | "write" | "admin"
       protocol_domain:
         | "physical"
@@ -3691,7 +3695,7 @@ export const Constants = {
       employee_status: ["active", "onboarding", "leaving", "inactive"],
       field_type: ["text", "number", "date", "list", "list_multi"],
       leave_request_status: ["pending", "approved", "rejected", "cancelled"],
-      leave_request_type: ["vacation", "sick", "personal", "other"],
+      leave_request_type: ["vacation", "sick", "personal", "other", "reserve"],
       permission_level: ["read", "write", "admin"],
       protocol_domain: [
         "physical",
