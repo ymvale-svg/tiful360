@@ -74,6 +74,7 @@ export interface NewOnboardingItem {
   item_type?: string;
   catalog_ref_id?: string | null;
   selected_group_id?: string | null;
+  selected_model_id?: string | null;
   fulfillment_type?: string | null;
   notes?: string | null;
 }
@@ -113,6 +114,7 @@ export function useCreateOnboardingProcess() {
             owner_role: i.owner_role ?? "it_manager",
             catalog_ref_id: i.catalog_ref_id ?? null,
             selected_group_id: i.selected_group_id ?? null,
+            selected_model_id: i.selected_model_id ?? null,
             fulfillment_type: i.fulfillment_type ?? null,
             notes: i.notes ?? null,
           })) as any
