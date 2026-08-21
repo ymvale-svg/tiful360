@@ -339,6 +339,23 @@ function QuickCategoryEdit({
   const [domain, setDomain] = useState<DomainKey>(getDomain(category));
   const [ownerRole, setOwnerRole] = useState<string>(category.default_owner_role ?? "");
   const [newSubName, setNewSubName] = useState("");
+  const { data: allGroups } = useAssetGroups();
+  const deleteGroupMutation = useDeleteAssetGroup();
+  const subGroups = useMemo(
+    () => (allGroups ?? []).filter((g: any) => g.category_id === category.id),
+    [allGroups, category.id],
+  );
+
+  const handleDeleteSub = async (id: string, subName: string) => {
+    if (!window.confirm(`למחוק את תת-הקטגוריה "${subName}"? הפריטים יוסרו ממנה אך לא יימחקו.`)) return;
+    try {
+      await deleteGroupMutation.mutateAsync(id);
+      toast({ title: "תת-הקטגוריה נמחקה" });
+    } catch (err: any) {
+      toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+    }
+  };
+
 
   const handleSave = async () => {
     if (!name.trim() || !prefix.trim()) {
