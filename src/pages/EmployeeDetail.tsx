@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   ArrowRight, Shield, Key, Clock, AlertTriangle, UserMinus,
   FileText, RefreshCw, Package, User, Mail, Phone, Calendar, Building2, IdCard,
@@ -27,6 +27,10 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EmployeePayslipsTab } from "@/components/EmployeePayslipsTab";
 import { useAuth } from "@/hooks/useAuth";
+import { HandoverFormsList } from "@/components/handover/HandoverFormsList";
+import { useEmployeeHandoverForms } from "@/hooks/useHandoverForms";
+import { getDomain, domainKeyToSlug } from "@/lib/assetDomains";
+
 
 const allTabs = [
   { id: "personal", label: "פרטים אישיים", icon: User },
@@ -81,6 +85,15 @@ export default function EmployeeDetail() {
   const { data: activityLog } = useActivityLog(id);
   const unassignAsset = useUnassignAsset();
   const { data: leaveRequests } = useEmployeeLeaveRequests(id!);
+  const { data: handoverForms } = useEmployeeHandoverForms(id);
+  const navigate = useNavigate();
+
+  const goToAsset = (asset: any) => {
+    const slug = domainKeyToSlug(getDomain(asset.asset_categories ?? {}));
+    navigate(`/assets/${slug}/${asset.id}`);
+  };
+
+
 
   // Split employee assets by protocol_type (digital domain = digital access entries)
   const employeeAssets = assets ?? [];
@@ -249,7 +262,19 @@ export default function EmployeeDetail() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {(assets ?? []).map((asset) => (
-              <div key={asset.id} className="bg-card rounded-xl border border-border/50 shadow-card p-5 hover:shadow-md transition-shadow">
+              <div
+                key={asset.id}
+                role="link"
+                tabIndex={0}
+                onClick={() => goToAsset(asset)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    goToAsset(asset);
+                  }
+                }}
+                className="bg-card rounded-xl border border-border/50 shadow-card p-5 hover:shadow-md hover:border-primary/40 transition-all cursor-pointer"
+              >
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="font-medium">{asset.asset_name}</p>
@@ -260,14 +285,15 @@ export default function EmployeeDetail() {
                   </div>
                   <span className="status-badge status-active">{assetStatusLabels[asset.status] ?? asset.status}</span>
                 </div>
+
                 {asset.expiry_date && (
                   <div className="mt-3 pt-3 border-t border-border/50 flex items-center gap-2 text-xs text-muted-foreground">
                     <AlertTriangle className="w-3 h-3 text-warning" />
                     <span>תפוגה: {new Date(asset.expiry_date).toLocaleDateString("en-GB")}</span>
                   </div>
                 )}
-                <div className="flex items-center gap-2 mt-3">
-                  <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setTransferAsset(asset)}>
+                <div className="flex items-center gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
+                  <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={(e) => { e.stopPropagation(); setTransferAsset(asset); }}>
                     <RefreshCw className="w-3 h-3" />
                     העבר בעלות
                   </Button>
@@ -275,7 +301,8 @@ export default function EmployeeDetail() {
                     variant="outline"
                     size="sm"
                     className="gap-1.5 text-xs"
-                    onClick={async () => {
+                    onClick={async (e) => {
+                      e.stopPropagation();
                       if (!confirm(`לבטל את שיוך הפריט "${asset.asset_name}"?`)) return;
                       try {
                         await unassignAsset.mutateAsync(asset.id);
@@ -285,6 +312,7 @@ export default function EmployeeDetail() {
                       }
                     }}
                   >
+
                     <Unlink className="w-3 h-3" />
                     בטל שיוך
                   </Button>
@@ -446,9 +474,24 @@ export default function EmployeeDetail() {
       {/* Documents tab */}
       {activeTab === "documents" && (
         <div className="space-y-4 animate-fade-in">
+          <div className="bg-card rounded-xl border border-border/50 shadow-card p-6">
+            <h2 className="text-base font-semibold flex items-center gap-2 mb-1">
+              <FileText className="w-4 h-4 text-primary" />
+              פרוטוקולי מסירה והזדכות
+            </h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              כל טפסי המסירה וההחזרה החתומים של העובד.
+            </p>
+            <HandoverFormsList
+              forms={handoverForms ?? []}
+              context="employee"
+              emptyText="אין פרוטוקולים חתומים לעובד"
+            />
+          </div>
           <EmployeeDocumentsSection employeeId={id!} />
           <EmployeeTax101FormsList employeeId={id!} />
         </div>
+
       )}
 
       {/* Leave tab */}
