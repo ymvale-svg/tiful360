@@ -587,13 +587,15 @@ export default function AssetsDomainPage() {
                   </div>
                 ) : (
                   <div className="bg-card border border-border rounded-xl overflow-hidden">
-                    <div className="grid grid-cols-[1fr_7rem_5rem_6rem_2rem] gap-2 px-4 py-2 bg-muted/40 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide text-right">
+                    <div className="grid grid-cols-[1fr_7rem_5rem_6rem_2rem_2rem] gap-2 px-4 py-2 bg-muted/40 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide text-right">
                       <div>תת-קטגוריה</div>
                       <div>אחראי</div>
                       <div>סה״כ</div>
                       <div>פעילים</div>
                       <div></div>
+                      <div></div>
                     </div>
+
                     {cards.map((c) => {
                       const active = c.items.filter((a: any) => a.status === "in_use" || a.current_owner_id).length;
                       const hasExpired = c.items.some((a: any) => {
