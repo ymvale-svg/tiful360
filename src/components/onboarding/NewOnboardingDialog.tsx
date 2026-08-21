@@ -438,6 +438,47 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
                                           />
                                         </div>
                                       </div>
+                                      {c.protocol_type === "vehicle" && (
+                                        <div className="space-y-1.5 rounded-lg bg-muted/40 p-2">
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-xs text-muted-foreground shrink-0">דגם:</span>
+                                            <div className="flex-1 min-w-0">
+                                              <SearchableSelect
+                                                value={entry.models?.[groupId] ?? ""}
+                                                onChange={(v) => setModel(c.id, groupId, v)}
+                                                options={modelsForGroup(groupId).map((m) => ({
+                                                  value: m.id,
+                                                  label: m.manufacturer ? `${m.manufacturer} ${m.name}` : m.name,
+                                                }))}
+                                                placeholder="בחר דגם רכב..."
+                                              />
+                                            </div>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <input
+                                              value={quickModel[groupId] ?? ""}
+                                              onChange={(e) => setQuickModel((p) => ({ ...p, [groupId]: e.target.value }))}
+                                              onKeyDown={(e) => {
+                                                if (e.key === "Enter") {
+                                                  e.preventDefault();
+                                                  quickAddModel(c.id, groupId);
+                                                }
+                                              }}
+                                              placeholder="＋ הוסף דגם רכב..."
+                                              className="flex-1 min-w-0 px-3 py-1.5 bg-background border border-border rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
+                                            />
+                                            <Button
+                                              type="button"
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={() => quickAddModel(c.id, groupId)}
+                                              disabled={!quickModel[groupId]?.trim() || createModel.isPending}
+                                            >
+                                              הוסף
+                                            </Button>
+                                          </div>
+                                        </div>
+                                      )}
                                       <input
                                         value={entry.notes[groupId] ?? ""}
                                         onChange={(e) => setNote(c.id, groupId, e.target.value)}
