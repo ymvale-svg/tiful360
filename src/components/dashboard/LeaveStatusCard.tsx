@@ -5,7 +5,7 @@ import { useTeamLeaveRequests } from "@/hooks/useLeaveRequests";
 import { buildGoogleCalendarUrl } from "@/lib/googleCalendar";
 
 const TYPE_LABELS: Record<string, string> = {
-  vacation: "חופשה", sick: "מחלה", personal: "יום אישי", other: "אחר",
+  vacation: "חופשה", sick: "מחלה", reserve: "מילואים", personal: "יום אישי", other: "אחר",
 };
 const STATUS_LABELS: Record<string, string> = {
   approved: "מאושר",

@@ -22,6 +22,7 @@ interface Props {
 const TYPES: { value: LeaveRequestType; label: string }[] = [
   { value: "vacation", label: "חופשה" },
   { value: "sick", label: "מחלה" },
+  { value: "reserve", label: "מילואים" },
   { value: "personal", label: "יום אישי" },
   { value: "other", label: "אחר" },
 ];
