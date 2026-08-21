@@ -108,17 +108,20 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
   const groupsForCategory = (categoryId: string) =>
     groups.filter((g) => g.category_id === categoryId);
 
+  const modelsForGroup = (groupId: string) =>
+    groupModels.filter((m) => m.group_id === groupId && m.is_active);
+
   const toggleCategory = (categoryId: string) =>
     setSelected((prev) => {
       const next = { ...prev };
       if (next[categoryId]) delete next[categoryId];
-      else next[categoryId] = { groupIds: [], notes: {}, owners: {} };
+      else next[categoryId] = { groupIds: [], notes: {}, owners: {}, models: {} };
       return next;
     });
 
   const toggleGroup = (categoryId: string, groupId: string) =>
     setSelected((prev) => {
-      const entry = prev[categoryId] ?? { groupIds: [], notes: {}, owners: {} };
+      const entry = prev[categoryId] ?? { groupIds: [], notes: {}, owners: {}, models: {} };
       const has = entry.groupIds.includes(groupId);
       const group = groups.find((g) => g.id === groupId);
       const cat = (categories as any[]).find((c) => c.id === categoryId);
@@ -126,15 +129,28 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
         groupIds: has ? entry.groupIds.filter((id) => id !== groupId) : [...entry.groupIds, groupId],
         notes: { ...entry.notes },
         owners: { ...entry.owners },
+        models: { ...(entry.models ?? {}) },
       };
       if (!has) {
         next.owners[groupId] = resolveOwnerRole(group, cat);
       } else {
         delete next.notes[groupId];
         delete next.owners[groupId];
+        delete next.models[groupId];
       }
       return { ...prev, [categoryId]: next };
     });
+
+  const setModel = (categoryId: string, groupId: string, modelId: string) =>
+    setSelected((prev) => {
+      const entry = prev[categoryId];
+      if (!entry) return prev;
+      return {
+        ...prev,
+        [categoryId]: { ...entry, models: { ...(entry.models ?? {}), [groupId]: modelId } },
+      };
+    });
+
 
   const setOwner = (categoryId: string, groupId: string, ownerRole: string) =>
     setSelected((prev) => {
