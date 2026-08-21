@@ -42,4 +42,4 @@
 
 - `supabase/config.toml` — הוספת `[functions.leave-ics] verify_jwt = false`.
 - `supabase/functions/leave-ics/index.ts` — תאריכי UTC, נפילה חזרה ל-`start_date`, `SEQUENCE`.
-- `supabase/functions/send-leave-request-email/index.ts` — חילוץ `sendSecretariatInvite()` וקריאה לה בשלושת האירועים, תיקון `buildGcalUrl`.
+- `supabase/functions/send-leave-request-email/index.ts` — חילוץ `sendCalendarInvite()` (מזכירות + מנהל ישיר), קריאה לה בשלושת האירועים, תנאי "לא בדיעבד" לפי שעון ישראל, ותיקון `buildGcalUrl`.
