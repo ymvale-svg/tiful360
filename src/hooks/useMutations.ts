@@ -74,6 +74,7 @@ export function useCreateAsset() {
 
 export function useTransferAsset() {
   const queryClient = useQueryClient();
+  const { activeCompanyId } = useCompany();
   return useMutation({
     mutationFn: async ({ assetId, newOwnerId, assetName, fromName, toName }: {
       assetId: string;
@@ -93,13 +94,16 @@ export function useTransferAsset() {
 
       const { data: { user } } = await supabase.auth.getUser();
       await supabase.from("activity_log").insert({
-        action: `העברת בעלות: ${assetName}`,
+        company_id: activeCompanyId,
+        employee_id: newOwnerId,
+        action: newOwnerId ? `הזנת ציוד לעובד: ${assetName}` : `החזרת ציוד למלאי: ${assetName}`,
         details: `מ-${fromName} אל ${toName}`,
         entity_type: "asset",
         entity_id: assetId,
         performed_by: user?.id,
       });
     },
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["assets"] });
       queryClient.invalidateQueries({ queryKey: ["employee-assets"] });
