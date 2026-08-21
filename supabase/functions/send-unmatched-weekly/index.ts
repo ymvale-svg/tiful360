@@ -57,10 +57,10 @@ Deno.serve(async (req) => {
   // Fetch unmatched punches in the window
   let q = admin
     .from('attendance_punches')
-    .select('company_id, employee_code_raw, punched_at')
+    .select('company_id, employee_code_raw, punch_at')
     .is('employee_id', null)
-    .gte('punched_at', `${fromISO}T00:00:00+00:00`)
-    .lte('punched_at', `${toISOStr}T23:59:59+00:00`)
+    .gte('punch_at', `${fromISO}T00:00:00+00:00`)
+    .lte('punch_at', `${toISOStr}T23:59:59+00:00`)
     .limit(10000)
   if (requestedCompany) q = q.eq('company_id', requestedCompany)
   const { data: punches, error } = await q
@@ -77,10 +77,10 @@ Deno.serve(async (req) => {
     const code = String(p.employee_code_raw ?? '').trim()
     if (!code) continue
     const compMap = byCompany.get(p.company_id) ?? new Map<string, Agg>()
-    const cur = compMap.get(code) ?? { count: 0, first: p.punched_at, last: p.punched_at }
+    const cur = compMap.get(code) ?? { count: 0, first: p.punch_at, last: p.punch_at }
     cur.count++
-    if (p.punched_at < cur.first) cur.first = p.punched_at
-    if (p.punched_at > cur.last) cur.last = p.punched_at
+    if (p.punch_at < cur.first) cur.first = p.punch_at
+    if (p.punch_at > cur.last) cur.last = p.punch_at
     compMap.set(code, cur)
     byCompany.set(p.company_id, compMap)
   }
