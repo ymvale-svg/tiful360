@@ -279,8 +279,8 @@ export default function EmployeeDetail() {
                     <span>תפוגה: {new Date(asset.expiry_date).toLocaleDateString("en-GB")}</span>
                   </div>
                 )}
-                <div className="flex items-center gap-2 mt-3">
-                  <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setTransferAsset(asset)}>
+                <div className="flex items-center gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
+                  <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={(e) => { e.stopPropagation(); setTransferAsset(asset); }}>
                     <RefreshCw className="w-3 h-3" />
                     העבר בעלות
                   </Button>
@@ -288,7 +288,8 @@ export default function EmployeeDetail() {
                     variant="outline"
                     size="sm"
                     className="gap-1.5 text-xs"
-                    onClick={async () => {
+                    onClick={async (e) => {
+                      e.stopPropagation();
                       if (!confirm(`לבטל את שיוך הפריט "${asset.asset_name}"?`)) return;
                       try {
                         await unassignAsset.mutateAsync(asset.id);
@@ -298,6 +299,7 @@ export default function EmployeeDetail() {
                       }
                     }}
                   >
+
                     <Unlink className="w-3 h-3" />
                     בטל שיוך
                   </Button>
