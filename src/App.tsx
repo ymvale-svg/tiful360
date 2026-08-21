@@ -84,7 +84,7 @@ const App = () => (
                   <Route path="/leave-requests" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "direct_manager", "payroll", "hr"]}><LeaveRequests /></ProtectedRoute>} />
                   <Route path="/attendance-corrections" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "direct_manager", "payroll", "hr"]}><AttendanceCorrections /></ProtectedRoute>} />
                   <Route path="/onboarding" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations", "it_manager", "hr"]}><Onboarding /></ProtectedRoute>} />
-                  <Route path="/payroll" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "payroll", "hr", "finance"]}><Payroll /></ProtectedRoute>} />
+                  <Route path="/payroll" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "payroll", "hr"]}><Payroll /></ProtectedRoute>} />
                   <Route path="/attendance-map" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "payroll", "hr", "direct_manager"]}><AttendanceMap /></ProtectedRoute>} />
                   <Route path="/settings" element={<ProtectedRoute requiredRoles={["admin", "super_admin"]}><Settings /></ProtectedRoute>} />
                 </Route>
