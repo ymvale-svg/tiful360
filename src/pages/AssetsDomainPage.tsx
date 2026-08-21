@@ -10,7 +10,7 @@ import { SubCategorySelect } from "@/components/assets/SubCategorySelect";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { useAssets, useAssetCategories } from "@/hooks/useData";
-import { useAssetGroups, useCreateAssetGroup, useAssignAssetsToGroup } from "@/hooks/useAssetGroups";
+import { useAssetGroups, useCreateAssetGroup, useAssignAssetsToGroup, useDeleteAssetGroup } from "@/hooks/useAssetGroups";
 import { useExpiringAssets } from "@/hooks/useExpiringAssets";
 import { AssetDetailView } from "@/components/assets/AssetDetailView";
 import { AddAssetDialog } from "@/components/AddAssetDialog";
