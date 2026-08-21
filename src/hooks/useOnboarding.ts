@@ -13,6 +13,7 @@ export interface OnboardingItem {
   owner_role: string;
   catalog_ref_id: string | null;
   selected_group_id: string | null;
+  selected_model_id?: string | null;
   fulfillment_type: string | null;
   asset_id: string | null;
   status: string;
