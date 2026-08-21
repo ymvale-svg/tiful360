@@ -345,10 +345,13 @@ function TemplateEditor({
 
   const isOverride = !!ownOverride;
   const inheritsFrom = !isOverride
-    ? categoryId
-      ? "ברירת המחדל של החברה"
-      : "ברירת המחדל הגלובלית"
+    ? groupId
+      ? "התבנית של הקטגוריה"
+      : categoryId
+        ? "ברירת המחדל של החברה"
+        : "ברירת המחדל הגלובלית"
     : null;
+
 
   return (
     <div className="bg-card rounded-xl border border-border/50 shadow-card p-4 space-y-3">
