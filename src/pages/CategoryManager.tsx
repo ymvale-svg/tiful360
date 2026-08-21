@@ -455,7 +455,28 @@ function QuickCategoryEdit({
         </Button>
       </div>
 
+      {subGroups.length > 0 && (
+        <div className="pt-2 border-t border-border/50 space-y-1">
+          <div className="text-[11px] text-muted-foreground">תת-קטגוריות קיימות</div>
+          {subGroups.map((g: any) => (
+            <div key={g.id} className="flex items-center gap-2 px-2.5 py-1.5 bg-background rounded-md border border-border/50">
+              <span className="flex-1 truncate text-sm">{g.name}</span>
+              <button
+                type="button"
+                title="מחק תת-קטגוריה"
+                onClick={() => handleDeleteSub(g.id, g.name)}
+                disabled={deleteGroupMutation.isPending}
+                className="text-muted-foreground hover:text-destructive p-1 rounded-md disabled:opacity-50"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="flex gap-2 pt-2 border-t border-border/50">
+
         <input
           value={newSubName}
           onChange={(e) => setNewSubName(e.target.value)}
