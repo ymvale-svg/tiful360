@@ -474,9 +474,24 @@ export default function EmployeeDetail() {
       {/* Documents tab */}
       {activeTab === "documents" && (
         <div className="space-y-4 animate-fade-in">
+          <div className="bg-card rounded-xl border border-border/50 shadow-card p-6">
+            <h2 className="text-base font-semibold flex items-center gap-2 mb-1">
+              <FileText className="w-4 h-4 text-primary" />
+              פרוטוקולי מסירה והזדכות
+            </h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              כל טפסי המסירה וההחזרה החתומים של העובד.
+            </p>
+            <HandoverFormsList
+              forms={handoverForms ?? []}
+              context="employee"
+              emptyText="אין פרוטוקולים חתומים לעובד"
+            />
+          </div>
           <EmployeeDocumentsSection employeeId={id!} />
           <EmployeeTax101FormsList employeeId={id!} />
         </div>
+
       )}
 
       {/* Leave tab */}
