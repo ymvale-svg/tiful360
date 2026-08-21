@@ -297,6 +297,60 @@ export type Database = {
         }
         Relationships: []
       }
+      asset_group_models: {
+        Row: {
+          company_id: string
+          created_at: string
+          group_id: string
+          id: string
+          is_active: boolean
+          manufacturer: string | null
+          name: string
+          notes: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          group_id: string
+          id?: string
+          is_active?: boolean
+          manufacturer?: string | null
+          name: string
+          notes?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          group_id?: string
+          id?: string
+          is_active?: boolean
+          manufacturer?: string | null
+          name?: string
+          notes?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_group_models_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_group_models_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "asset_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_groups: {
         Row: {
           category_id: string
@@ -2002,6 +2056,7 @@ export type Database = {
           owner_role: string
           process_id: string
           selected_group_id: string | null
+          selected_model_id: string | null
           status: string
           title: string
         }
@@ -2018,6 +2073,7 @@ export type Database = {
           owner_role?: string
           process_id: string
           selected_group_id?: string | null
+          selected_model_id?: string | null
           status?: string
           title: string
         }
@@ -2034,6 +2090,7 @@ export type Database = {
           owner_role?: string
           process_id?: string
           selected_group_id?: string | null
+          selected_model_id?: string | null
           status?: string
           title?: string
         }
@@ -2064,6 +2121,13 @@ export type Database = {
             columns: ["selected_group_id"]
             isOneToOne: false
             referencedRelation: "asset_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_items_selected_model_id_fkey"
+            columns: ["selected_model_id"]
+            isOneToOne: false
+            referencedRelation: "asset_group_models"
             referencedColumns: ["id"]
           },
         ]
