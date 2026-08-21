@@ -27,6 +27,10 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EmployeePayslipsTab } from "@/components/EmployeePayslipsTab";
 import { useAuth } from "@/hooks/useAuth";
+import { HandoverFormsList } from "@/components/handover/HandoverFormsList";
+import { useEmployeeHandoverForms } from "@/hooks/useHandoverForms";
+import { getDomain, domainKeyToSlug } from "@/lib/assetDomains";
+
 
 const allTabs = [
   { id: "personal", label: "פרטים אישיים", icon: User },
