@@ -314,6 +314,7 @@ export function HandoverFlow({ open, onOpenChange, asset, direction = "handover"
       await applyAssetUpdate();
       toast({ title: isReturn ? "הפריט הוחזר" : "הפריט שויך", description: "קטגוריה זו אינה דורשת פרוטוקול חתום" });
       qc.invalidateQueries({ queryKey: ["assets"] });
+      qc.invalidateQueries({ queryKey: ["activity-log"] });
       onAssigned?.();
       close();
     } catch (e: any) {
@@ -359,6 +360,7 @@ export function HandoverFlow({ open, onOpenChange, asset, direction = "handover"
 
       toast({ title: "הפרוטוקול נחתם ונשמר", description: "המסמך נוסף לאזור האישי, לכרטיס הפריט ונשלח במייל לעובד" });
       qc.invalidateQueries({ queryKey: ["assets"] });
+      qc.invalidateQueries({ queryKey: ["activity-log"] });
       qc.invalidateQueries({ queryKey: ["handover-forms"] });
       qc.invalidateQueries({ queryKey: ["pending-handover"] });
       onAssigned?.();
@@ -384,6 +386,7 @@ export function HandoverFlow({ open, onOpenChange, asset, direction = "handover"
       await applyAssetUpdate();
       toast({ title: "נשלח לחתימה", description: "הפרוטוקול ממתין לעובד בפורטל" });
       qc.invalidateQueries({ queryKey: ["assets"] });
+      qc.invalidateQueries({ queryKey: ["activity-log"] });
       qc.invalidateQueries({ queryKey: ["handover-forms"] });
       qc.invalidateQueries({ queryKey: ["pending-handover"] });
       onAssigned?.();
