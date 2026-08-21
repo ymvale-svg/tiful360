@@ -244,11 +244,12 @@ function PerCategoryEditor({
 
 
 function TemplateEditor({
-  protocolType, defaultDisplayName, categoryId, templates, companyId, companyName, logoUrl,
+  protocolType, defaultDisplayName, categoryId, groupId, templates, companyId, companyName, logoUrl,
 }: {
   protocolType: ProtocolType;
   defaultDisplayName: string;
   categoryId: string | null;
+  groupId: string | null;
   templates: any[];
   companyId: string;
   companyName: string;
@@ -259,15 +260,17 @@ function TemplateEditor({
   const del = useDeleteProtocolTemplateOverride();
 
   const effective = useMemo(
-    () => resolveTemplate(templates, protocolType, companyId, categoryId),
-    [templates, protocolType, companyId, categoryId]
+    () => resolveTemplate(templates, protocolType, companyId, categoryId, groupId),
+    [templates, protocolType, companyId, categoryId, groupId]
   );
   const ownOverride = templates.find(
     (t: any) =>
       t.company_id === companyId &&
       t.protocol_type === protocolType &&
-      t.category_id === categoryId
+      t.category_id === categoryId &&
+      (t.group_id ?? null) === groupId
   );
+
 
   const [body, setBody] = useState(effective?.body_template ?? "");
   const [displayName, setDisplayName] = useState(effective?.display_name ?? defaultDisplayName);
