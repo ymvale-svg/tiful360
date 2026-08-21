@@ -135,9 +135,9 @@ export default function EmployeeDetail() {
 
 
 
-  const canSeePayslips =
-    isSuperAdmin || isAdmin || isPayroll ||
-    (!!employee?.linked_user_id && employee.linked_user_id === user?.id);
+  const isSelf = !!employee?.linked_user_id && employee.linked_user_id === user?.id;
+  const canSeePayslips = isSuperAdmin || isAdmin || isPayroll || isHR || isSelf;
+
 
   const tabs = canSeePayslips ? allTabs : allTabs.filter((t) => t.id !== "payslips");
 
