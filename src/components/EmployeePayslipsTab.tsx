@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmployeePayslips, getPayslipSignedUrl, useDeletePayslip } from "@/hooks/usePayslips";
-import { Download, Calendar, TrendingUp, Stethoscope, FileText, Eye, Trash2 } from "lucide-react";
+import { Download, Calendar, TrendingUp, Stethoscope, FileText, Eye, Trash2, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { PayslipSummaryDialog } from "@/components/PayslipSummaryDialog";
@@ -16,11 +16,17 @@ interface Props {
   employee: any;
   canSeeSalary: boolean;
   hideBalances?: boolean;
+  /** When true (viewing someone else's payroll data) the data is masked until explicitly revealed. */
+  requiresReveal?: boolean;
+  /** Free-text context recorded in the audit email/log. */
+  auditContext?: string;
 }
 
 const MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
 
-export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary, hideBalances }: Props) {
+export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary, hideBalances, requiresReveal, auditContext }: Props) {
+  const [revealed, setRevealed] = useState(!requiresReveal);
+  const [revealing, setRevealing] = useState(false);
   const { data: payslips, isLoading } = useEmployeePayslips(employeeId);
   const { toast } = useToast();
   const [summaryPayslip, setSummaryPayslip] = useState<any | null>(null);
@@ -54,12 +60,51 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary, hideBa
     window.open(url, "_blank");
   };
 
+  const handleReveal = async () => {
+    setRevealing(true);
+    try {
+      await supabase.functions.invoke("notify-payslip-access", {
+        body: { employee_id: employeeId, context: auditContext ?? "תיק עובד — תלושי שכר" },
+      });
+    } catch {
+      /* audit failure must not block an authorized view */
+    } finally {
+      setRevealing(false);
+      setRevealed(true);
+    }
+  };
+
   const lastUpdate = emp?.balances_updated_at
     ? new Date(emp.balances_updated_at).toLocaleDateString("en-GB")
     : null;
 
+  if (!revealed) {
+    return (
+      <div className="animate-fade-in bg-card rounded-xl border border-border/50 shadow-card p-8 text-center max-w-xl mx-auto">
+        <div className="w-12 h-12 rounded-full bg-warning/10 flex items-center justify-center mx-auto mb-4">
+          <ShieldAlert className="w-6 h-6 text-warning" />
+        </div>
+        <h2 className="text-base font-semibold">נתוני שכר מוסתרים</h2>
+        <p className="text-sm text-muted-foreground mt-2">
+          נתוני השכר של {emp?.full_name ?? "העובד"} חסויים ואינם מוצגים באופן חופשי.
+          חשיפת הנתונים מתועדת, ומנהלי המערכת יקבלו על כך עדכון במייל.
+        </p>
+        <Button className="mt-5 gap-2" onClick={handleReveal} disabled={revealing}>
+          <Eye className="w-4 h-4" />
+          {revealing ? "מתעד גישה..." : "הצג נתוני שכר"}
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4 animate-fade-in">
+      {requiresReveal && (
+        <div className="flex items-center gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
+          <ShieldAlert className="w-4 h-4 text-warning shrink-0" />
+          <span>הגישה לנתוני שכר של עובד זה תועדה ונשלח עדכון בקרה למנהלי המערכת.</span>
+        </div>
+      )}
       {/* Summary cards */}
       {!hideBalances && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
