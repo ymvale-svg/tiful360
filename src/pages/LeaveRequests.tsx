@@ -7,7 +7,7 @@ import { ExportExcelButton } from "@/components/ExcelActionButtons";
 import { buildGoogleCalendarUrl } from "@/lib/googleCalendar";
 import { exportToExcel } from "@/lib/exportExcel";
 
-const TYPE_LABELS: Record<string, string> = { vacation: "חופשה", sick: "מחלה", personal: "יום אישי", other: "אחר" };
+const TYPE_LABELS: Record<string, string> = { vacation: "חופשה", sick: "מחלה", reserve: "מילואים", personal: "יום אישי", other: "אחר" };
 const STATUS_LABELS: Record<string, string> = { approved: "מאושר", rejected: "נדחה", cancelled: "בוטל", pending: "ממתין" };
 
 export default function LeaveRequests() {

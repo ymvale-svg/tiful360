@@ -22,7 +22,7 @@ import { Tax101AdminTab } from "@/components/payroll/Tax101AdminTab";
 import { AttendanceClockTab } from "@/components/payroll/AttendanceClockTab";
 
 const MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
-const TYPE_LABELS_PAYROLL: Record<string, string> = { vacation: "חופשה", sick: "מחלה", personal: "יום אישי", other: "אחר" };
+const TYPE_LABELS_PAYROLL: Record<string, string> = { vacation: "חופשה", sick: "מחלה", reserve: "מילואים", personal: "יום אישי", other: "אחר" };
 
 export default function Payroll() {
   const { activeCompanyId } = useCompany();

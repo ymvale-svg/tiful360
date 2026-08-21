@@ -23,7 +23,7 @@ import { useAuth } from "@/hooks/useAuth";
 // ============================
 function EmailsSettings({
   columnKey, title, description, placeholder,
-}: { columnKey: "it_emails" | "expiry_notification_emails" | "operations_emails" | "payroll_emails"; title: string; description: string; placeholder: string }) {
+}: { columnKey: "it_emails" | "expiry_notification_emails" | "operations_emails" | "payroll_emails" | "secretariat_emails"; title: string; description: string; placeholder: string }) {
   const { activeCompanyId, activeCompany } = useCompany();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -143,6 +143,12 @@ export default function Settings() {
               title='נמענים להתראות IT'
               description='כתובות דוא"ל שיקבלו התראה בעת פתיחת קריאת IT חדשה (מופרדות בפסיק)'
               placeholder="it@company.com, ops@company.com"
+            />
+            <EmailsSettings
+              columnKey="secretariat_emails"
+              title="נמענים לזימוני יומן (מזכירות)"
+              description='כתובות דוא"ל של המזכירות שיקבלו זימון ליומן על כל חופשה / מחלה / מילואים מאושרת (מופרדות בפסיק)'
+              placeholder="office@company.com"
             />
             <EmailsSettings
               columnKey="expiry_notification_emails"

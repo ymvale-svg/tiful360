@@ -7,7 +7,7 @@ import { EditSickLeaveDialog } from "@/components/EditSickLeaveDialog";
 import { buildGoogleCalendarUrl } from "@/lib/googleCalendar";
 
 const TYPE_LABELS: Record<string, string> = {
-  vacation: "חופשה", sick: "מחלה", personal: "יום אישי", other: "אחר",
+  vacation: "חופשה", sick: "מחלה", reserve: "מילואים", personal: "יום אישי", other: "אחר",
 };
 const STATUS_LABELS: Record<string, string> = {
   pending: "ממתין", approved: "מאושר", rejected: "נדחה", cancelled: "בוטל",
