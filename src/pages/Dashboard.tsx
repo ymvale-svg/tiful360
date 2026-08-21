@@ -1,6 +1,6 @@
 import { 
-  Users, Package, AlertTriangle, Shield, TrendingUp, 
-  UserMinus, Car, Smartphone, Monitor, Clock, Wrench
+  Users, Package, AlertTriangle, Shield, UserPlus,
+  UserMinus, Clock
 } from "lucide-react";
 import { Link, Navigate } from "react-router-dom";
 import { useDashboardStats, useAlerts, useEmployees, useActivityLog } from "@/hooks/useData";
@@ -8,10 +8,17 @@ import { useAuth } from "@/hooks/useAuth";
 import { ExpiringAssetsCard } from "@/components/ExpiringAssetsCard";
 import { LeaveStatusCard } from "@/components/dashboard/LeaveStatusCard";
 import { OnboardingCard } from "@/components/dashboard/OnboardingCard";
+import { AttendanceMissingCard } from "@/components/dashboard/AttendanceMissingCard";
+import { Tax101StatusCard } from "@/components/dashboard/Tax101StatusCard";
 import { hasDualAccess } from "@/lib/dualAccess";
+import { resolveDashboardConfig, type KpiKey } from "@/lib/dashboardConfig";
 
 export default function Dashboard() {
   const { roles, loading } = useAuth();
+  const { data: stats } = useDashboardStats();
+  const { data: alerts } = useAlerts();
+  const { data: employees } = useEmployees();
+  const { data: activityLog } = useActivityLog();
 
   // Wait for roles to load before rendering — prevents flash of admin UI
   // for employee-only users before the redirect kicks in.
@@ -34,19 +41,22 @@ export default function Dashboard() {
   if (hasDualAccess(roles) && sessionStorage.getItem("activeExperience") !== "ops") {
     return <Navigate to="/select-experience" replace />;
   }
-  const { data: stats } = useDashboardStats();
-  const { data: alerts } = useAlerts();
-  const { data: employees } = useEmployees();
-  const { data: activityLog } = useActivityLog();
+
+  const config = resolveDashboardConfig(roles);
+  const showWidget = (w: string) => config.widgets.includes(w as any);
 
   const leavingEmployees = employees?.filter(e => e.status === "leaving") ?? [];
 
-  const statCards = [
-    { label: "עובדים פעילים", value: stats?.activeEmployees ?? "—", icon: Users, color: "text-primary", bg: "bg-primary/10" },
-    { label: "פריטי ציוד", value: stats?.totalAssets ?? "—", icon: Package, color: "text-info", bg: "bg-info/10" },
-    { label: "התראות פתוחות", value: stats?.openAlerts ?? "—", icon: AlertTriangle, color: "text-warning", bg: "bg-warning/10" },
-    { label: "משימות IT פתוחות", value: stats?.openTickets ?? "—", icon: Shield, color: "text-destructive", bg: "bg-destructive/10" },
-  ];
+  const KPI_DEFS: Record<KpiKey, { label: string; value: number | string; icon: typeof Users; color: string; bg: string }> = {
+    activeEmployees: { label: "עובדים פעילים", value: stats?.activeEmployees ?? "—", icon: Users, color: "text-primary", bg: "bg-primary/10" },
+    onboardingEmployees: { label: "עובדים בקליטה", value: stats?.onboardingEmployees ?? "—", icon: UserPlus, color: "text-success", bg: "bg-success/10" },
+    totalAssets: { label: "פריטי ציוד", value: stats?.totalAssets ?? "—", icon: Package, color: "text-info", bg: "bg-info/10" },
+    openAlerts: { label: "התראות פתוחות", value: stats?.openAlerts ?? "—", icon: AlertTriangle, color: "text-warning", bg: "bg-warning/10" },
+    openTickets: { label: "משימות IT פתוחות", value: stats?.openTickets ?? "—", icon: Shield, color: "text-destructive", bg: "bg-destructive/10" },
+  };
+
+  const statCards = config.kpis.map((k) => ({ key: k, ...KPI_DEFS[k] }));
+  const expiryDomains = config.expiryDomains === "all" ? undefined : config.expiryDomains ?? undefined;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -56,28 +66,33 @@ export default function Dashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map((stat) => (
-          <div key={stat.label} className="stat-card">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-                <p className="kpi-number mt-1">{stat.value}</p>
-              </div>
-              <div className={`${stat.bg} ${stat.color} p-2.5 rounded-lg`}>
-                <stat.icon className="w-5 h-5" />
+      {statCards.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {statCards.map((stat) => (
+            <div key={stat.key} className="stat-card">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">{stat.label}</p>
+                  <p className="kpi-number mt-1">{stat.value}</p>
+                </div>
+                <div className={`${stat.bg} ${stat.color} p-2.5 rounded-lg`}>
+                  <stat.icon className="w-5 h-5" />
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
-      {/* Expiring assets */}
-      <ExpiringAssetsCard />
+      {/* Expiring assets — filtered by role domains */}
+      {showWidget("expiring") && <ExpiringAssetsCard domains={expiryDomains} />}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <div className={`grid grid-cols-1 gap-6 ${showWidget("activity") ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}>
         {/* Recent Activity */}
+        {showWidget("activity") && (
         <div className="lg:col-span-2 bg-card rounded-xl border border-border/50 shadow-card">
+
           <div className="p-5 border-b border-border/50 flex items-center justify-between">
             <h2 className="font-semibold">פעילות אחרונה</h2>
             <Link to="/employees" className="text-xs text-primary hover:underline">הצג הכל</Link>
@@ -102,20 +117,27 @@ export default function Dashboard() {
             )}
           </div>
         </div>
+        )}
 
         {/* Sidebar */}
         <div className="space-y-6">
-          <OnboardingCard />
+          {showWidget("onboarding") && <OnboardingCard />}
+
+          {showWidget("attendanceMissing") && <AttendanceMissingCard />}
+
+          {showWidget("tax101") && <Tax101StatusCard />}
 
           {/* Leave requests */}
-          <LeaveStatusCard />
+          {showWidget("leave") && <LeaveStatusCard />}
 
           {/* Upcoming alerts */}
+          {showWidget("alerts") && (
           <div className="bg-card rounded-xl border border-border/50 shadow-card">
             <div className="p-5 border-b border-border/50 flex items-center justify-between">
               <h2 className="font-semibold">התראות קרובות</h2>
               <Link to="/alerts" className="text-xs text-primary hover:underline">הכל</Link>
             </div>
+
             <div className="divide-y divide-border/50">
               {(alerts ?? []).slice(0, 4).map((alert) => (
                 <div key={alert.id} className="p-4 flex items-center gap-3">
@@ -136,9 +158,11 @@ export default function Dashboard() {
               )}
             </div>
           </div>
+          )}
 
           {/* Leaving employees */}
-          {leavingEmployees.length > 0 && (
+          {showWidget("leaving") && leavingEmployees.length > 0 && (
+
             <div className="bg-card rounded-xl border border-destructive/20 shadow-card">
               <div className="p-5 border-b border-destructive/20 flex items-center gap-2">
                 <UserMinus className="w-4 h-4 text-destructive" />
