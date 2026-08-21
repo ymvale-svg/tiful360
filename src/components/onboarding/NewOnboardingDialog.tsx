@@ -189,6 +189,19 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
     }
   };
 
+  const quickAddModel = async (categoryId: string, groupId: string) => {
+    const name = quickModel[groupId]?.trim();
+    if (!name) return;
+    try {
+      const created = await createModel.mutateAsync({ group_id: groupId, name });
+      setQuickModel((prev) => ({ ...prev, [groupId]: "" }));
+      setModel(categoryId, groupId, created.id);
+      toast({ title: "הדגם נוסף", description: name });
+    } catch (e: any) {
+      toast({ title: "שגיאה בהוספת דגם", description: e.message, variant: "destructive" });
+    }
+  };
+
   const copyFromEmployee = (sourceId: string) => {
     setCopyFromId(sourceId);
     const theirs = (assets as any[]).filter((a) => a.current_owner_id === sourceId);
@@ -196,7 +209,7 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
     theirs.forEach((a) => {
       const catId = a.category_id;
       const groupId = a.group_id;
-      const entry = next[catId] ?? { groupIds: [], notes: {}, owners: {} };
+      const entry = next[catId] ?? { groupIds: [], notes: {}, owners: {}, models: {} };
       if (groupId && !entry.groupIds.includes(groupId)) {
         entry.groupIds.push(groupId);
         const group = groups.find((g) => g.id === groupId);
@@ -227,16 +240,23 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
       }
       return entry.groupIds.map((groupId) => {
         const group = groups.find((g) => g.id === groupId);
+        const modelId = entry.models?.[groupId] || null;
+        const model = modelId ? groupModels.find((m) => m.id === modelId) : null;
+        const baseTitle = group
+          ? `${cat?.category_name ?? "פריט"} · ${group.name}`
+          : cat?.category_name ?? "פריט";
         return {
-          title: group ? `${cat?.category_name ?? "פריט"} · ${group.name}` : cat?.category_name ?? "פריט",
+          title: model ? `${baseTitle} · ${model.name}` : baseTitle,
           owner_role: entry.owners[groupId] || resolveOwnerRole(group, cat),
           item_type: domain === "digital" ? "access" : domain === "licenses" ? "license" : "asset",
           catalog_ref_id: categoryId,
           selected_group_id: groupId,
+          selected_model_id: modelId,
           notes: entry.notes[groupId]?.trim() || null,
         };
       });
     });
+
 
   const submit = async (status: "draft" | "sent") => {
     if (!employeeId) {
