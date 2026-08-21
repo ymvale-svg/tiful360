@@ -117,20 +117,27 @@ export default function Dashboard() {
             )}
           </div>
         </div>
+        )}
 
         {/* Sidebar */}
         <div className="space-y-6">
-          <OnboardingCard />
+          {showWidget("onboarding") && <OnboardingCard />}
+
+          {showWidget("attendanceMissing") && <AttendanceMissingCard />}
+
+          {showWidget("tax101") && <Tax101StatusCard />}
 
           {/* Leave requests */}
-          <LeaveStatusCard />
+          {showWidget("leave") && <LeaveStatusCard />}
 
           {/* Upcoming alerts */}
+          {showWidget("alerts") && (
           <div className="bg-card rounded-xl border border-border/50 shadow-card">
             <div className="p-5 border-b border-border/50 flex items-center justify-between">
               <h2 className="font-semibold">התראות קרובות</h2>
               <Link to="/alerts" className="text-xs text-primary hover:underline">הכל</Link>
             </div>
+
             <div className="divide-y divide-border/50">
               {(alerts ?? []).slice(0, 4).map((alert) => (
                 <div key={alert.id} className="p-4 flex items-center gap-3">
