@@ -64,6 +64,21 @@ export default function AssetsDomainPage() {
   const { data: expiring } = useExpiringAssets(30);
   const createGroup = useCreateAssetGroup();
   const assignToGroup = useAssignAssetsToGroup();
+  const deleteGroup = useDeleteAssetGroup();
+
+  const handleDeleteGroup = async (groupId: string, groupName: string, itemCount: number) => {
+    const msg = itemCount > 0
+      ? `למחוק את תת-הקטגוריה "${groupName}"? ${itemCount} פריטים יעברו ל"ללא תת-קטגוריה" (הם לא יימחקו).`
+      : `למחוק את תת-הקטגוריה "${groupName}"?`;
+    if (!window.confirm(msg)) return;
+    try {
+      await deleteGroup.mutateAsync(groupId);
+      toast({ title: "תת-הקטגוריה נמחקה" });
+    } catch (e: any) {
+      toast({ title: "שגיאה במחיקה", description: e.message, variant: "destructive" });
+    }
+  };
+
 
   const [search, setSearch] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("count");
