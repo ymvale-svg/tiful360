@@ -88,9 +88,11 @@ export default function Dashboard() {
       {showWidget("expiring") && <ExpiringAssetsCard domains={expiryDomains} />}
 
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className={`grid grid-cols-1 gap-6 ${showWidget("activity") ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}>
         {/* Recent Activity */}
+        {showWidget("activity") && (
         <div className="lg:col-span-2 bg-card rounded-xl border border-border/50 shadow-card">
+
           <div className="p-5 border-b border-border/50 flex items-center justify-between">
             <h2 className="font-semibold">פעילות אחרונה</h2>
             <Link to="/employees" className="text-xs text-primary hover:underline">הצג הכל</Link>
