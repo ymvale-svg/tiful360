@@ -158,9 +158,11 @@ export default function Dashboard() {
               )}
             </div>
           </div>
+          )}
 
           {/* Leaving employees */}
-          {leavingEmployees.length > 0 && (
+          {showWidget("leaving") && leavingEmployees.length > 0 && (
+
             <div className="bg-card rounded-xl border border-destructive/20 shadow-card">
               <div className="p-5 border-b border-destructive/20 flex items-center gap-2">
                 <UserMinus className="w-4 h-4 text-destructive" />
