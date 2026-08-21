@@ -1,13 +1,18 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CalendarClock, ChevronLeft, ExternalLink } from "lucide-react";
-import { useExpiringAssets, expiryUrgency, DOMAIN_LABELS, DOMAIN_STYLES, type ExpiringAsset } from "@/hooks/useExpiringAssets";
+import { useExpiringAssets, expiryUrgency, DOMAIN_LABELS, DOMAIN_STYLES, type ExpiringAsset, type ProtocolDomain } from "@/hooks/useExpiringAssets";
 import { RenewExpiryDialog } from "@/components/RenewExpiryDialog";
 import { getDomain, domainKeyToSlug } from "@/lib/assetDomains";
 import { cn } from "@/lib/utils";
 
+interface ExpiringAssetsCardProps {
+  /** Limit the card to specific domains. Omit for all domains. */
+  domains?: ProtocolDomain[];
+  title?: string;
+}
 
-export function ExpiringAssetsCard() {
+export function ExpiringAssetsCard({ domains, title }: ExpiringAssetsCardProps = {}) {
   const { data, isLoading } = useExpiringAssets(14);
   const [selected, setSelected] = useState<ExpiringAsset | null>(null);
   const navigate = useNavigate();
@@ -21,15 +26,24 @@ export function ExpiringAssetsCard() {
   };
 
 
-  const items = data ?? [];
+  const allItems = data ?? [];
+  const items = domains && domains.length > 0
+    ? allItems.filter((i) => domains.includes(i.domain))
+    : allItems;
+
+  const heading = title
+    ?? (domains && domains.length === 1
+      ? `${DOMAIN_LABELS[domains[0]]} לחידוש (14 יום)`
+      : "תוקפים מתקרבים (14 יום)");
 
   return (
     <div className="bg-card rounded-xl border border-border/50 shadow-card">
       <div className="p-5 border-b border-border/50 flex items-center justify-between">
         <h2 className="font-semibold flex items-center gap-2">
           <CalendarClock className="w-4 h-4 text-primary" />
-          תוקפים מתקרבים (14 יום)
+          {heading}
         </h2>
+
         {items.length > 0 && (
           <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-md">
             {items.length}
