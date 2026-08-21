@@ -734,7 +734,8 @@ function SubCategoryCard({
           </div>
         )}
       </div>
-    </button>
+    </div>
+
   );
 }
 
