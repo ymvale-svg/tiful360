@@ -659,12 +659,13 @@ export default function AssetsDomainPage() {
 }
 
 function SubCategoryCard({
-  card, domain, isAssignable, onClick,
+  card, domain, isAssignable, onClick, onDelete,
 }: {
   card: SubCard;
   domain: DomainKey;
   isAssignable: boolean;
   onClick: () => void;
+  onDelete?: () => void;
 }) {
   const Icon = getCategoryIcon(card.name);
   const color = getCategoryColor(card.name);
@@ -677,10 +678,13 @@ function SubCategoryCard({
   const isUnassigned = card.id === NO_SUBCATEGORY_KEY;
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => { if (e.key === "Enter") onClick(); }}
       className={cn(
-        "group relative bg-card border rounded-2xl p-4 text-center",
+        "group relative bg-card border rounded-2xl p-4 text-center cursor-pointer",
         "hover:shadow-xl hover:-translate-y-1 hover:ring-2 active:scale-[0.98] transition-all duration-200",
         isUnassigned ? "border-dashed border-warning/50 hover:ring-warning/30" : cn("border-border", color.ring),
         "flex flex-col items-center gap-3 aspect-square justify-center",
@@ -694,6 +698,21 @@ function SubCategoryCard({
           <AlertTriangle className="w-3 h-3" />
         </span>
       )}
+      {onDelete && (
+        <button
+          type="button"
+          title="מחק תת-קטגוריה"
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          className={cn(
+            "absolute bottom-2 left-2 p-1.5 rounded-lg text-muted-foreground/70",
+            "hover:bg-destructive/10 hover:text-destructive transition-colors",
+            "opacity-0 group-hover:opacity-100 focus:opacity-100 md:opacity-0 max-md:opacity-100",
+          )}
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      )}
+
       <div className={cn(
         "w-20 h-20 rounded-2xl flex items-center justify-center shadow-md ring-1 ring-border/40",
         "transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:ring-2",
