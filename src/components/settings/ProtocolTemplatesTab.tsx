@@ -292,6 +292,8 @@ function TemplateEditor({
       await upsert.mutateAsync({
         company_id: companyId,
         category_id: categoryId,
+        group_id: groupId,
+
         protocol_type: protocolType,
         display_name: displayName.trim() || defaultDisplayName,
         body_template: body,
