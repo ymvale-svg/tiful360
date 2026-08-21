@@ -19,6 +19,7 @@ const FROM_NAME = "תפעול 360";
 const TYPE_LABELS: Record<string, string> = {
   vacation: "חופשה",
   sick: "מחלה",
+  reserve: "מילואים",
   personal: "יום אישי",
   other: "אחר",
 };
@@ -231,7 +232,7 @@ Deno.serve(async (req) => {
 
     const { data: company } = await supabase
       .from("companies")
-      .select("id, name, payroll_emails, hr_emails")
+      .select("id, name, payroll_emails, hr_emails, secretariat_emails")
       .eq("id", request.company_id)
       .single();
 
@@ -242,6 +243,7 @@ Deno.serve(async (req) => {
         .filter((s) => s.length > 0 && /^\S+@\S+\.\S+$/.test(s));
 
     const hrList = parseEmailList((company as any)?.hr_emails);
+    const secretariatList = parseEmailList((company as any)?.secretariat_emails);
 
     let manager: any = null;
     if (employee?.direct_manager_id) {
@@ -411,6 +413,31 @@ Deno.serve(async (req) => {
         }
       }
 
+
+      // ------- SECRETARIAT CALENDAR INVITE -------
+      if (secretariatList.length > 0) {
+        const icsUrl = `${SUPABASE_URL}/functions/v1/leave-ics?id=${request.id}`;
+        const inviteHtml = baseLayout(
+          "זימון ליומן — היעדרות עובד",
+          `<h2 style="margin:0 0 8px;font-size:18px;">📅 זימון ליומן — ${escapeHtml(typeLabel)}</h2>
+           <p style="color:#475569;font-size:14px;">${escapeHtml(employee?.full_name ?? "עובד")} ייעדר/תיעדר בתאריכים הבאים. יש להוסיף את האירוע ליומן המזכירות.</p>
+           ${detailsTable(baseDetails)}
+           <p style="margin:18px 0;">
+             <a href="${icsUrl}" style="display:inline-block;background:#0f172a;color:#fff;text-decoration:none;padding:11px 22px;border-radius:8px;font-weight:600;font-size:14px;">📎 הורדת זימון ליומן (ICS)</a>
+           </p>
+           ${gcalButton}`,
+        );
+        for (const to of secretariatList) {
+          await enqueueEmail(
+            supabase,
+            to,
+            `📅 זימון ליומן — ${employee?.full_name} (${typeLabel})`,
+            inviteHtml,
+            "leave-approved-secretariat",
+            `leave-approved-secretariat-${request.id}-${to}`,
+          );
+        }
+      }
 
       // Notify payroll
       const payrollList = (company?.payroll_emails ?? "")
