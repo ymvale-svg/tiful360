@@ -16,6 +16,7 @@ import { EmailTemplatesTab } from "@/components/EmailTemplatesTab";
 import { ProtocolTemplatesTab } from "@/components/settings/ProtocolTemplatesTab";
 import { GoogleCalendarSyncCard } from "@/components/settings/GoogleCalendarSyncCard";
 import { Mail } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 // ============================
 // Generic Emails Settings (per column)
@@ -76,6 +77,8 @@ function EmailsSettings({
 
 export default function Settings() {
   const navigate = useNavigate();
+  const { isAdmin, isSuperAdmin, isOperations } = useAuth();
+  const canManageProtocols = isAdmin || isSuperAdmin || isOperations;
 
   const shortcuts = [
     { icon: Database, title: "מחולל קטגוריות", desc: "הוספה ועריכת סוגי ציוד", path: "/categories" },
@@ -108,10 +111,12 @@ export default function Settings() {
             <Mail className="w-4 h-4" />
             תבניות מייל
           </TabsTrigger>
-          <TabsTrigger value="protocols" className="gap-1.5">
-            <FileText className="w-4 h-4" />
-            פרוטוקולי מסירה
-          </TabsTrigger>
+          {canManageProtocols && (
+            <TabsTrigger value="protocols" className="gap-1.5">
+              <FileText className="w-4 h-4" />
+              פרוטוקולי מסירה
+            </TabsTrigger>
+          )}
           <TabsTrigger value="alerts" className="gap-1.5">
             <Bell className="w-4 h-4" />
             חוקי התראות
@@ -152,9 +157,11 @@ export default function Settings() {
           <EmailTemplatesTab />
         </TabsContent>
 
-        <TabsContent value="protocols">
-          <ProtocolTemplatesTab />
-        </TabsContent>
+        {canManageProtocols && (
+          <TabsContent value="protocols">
+            <ProtocolTemplatesTab />
+          </TabsContent>
+        )}
 
         <TabsContent value="alerts">
           <AlertRulesSettings />
