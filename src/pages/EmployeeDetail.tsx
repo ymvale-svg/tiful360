@@ -249,7 +249,19 @@ export default function EmployeeDetail() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {(assets ?? []).map((asset) => (
-              <div key={asset.id} className="bg-card rounded-xl border border-border/50 shadow-card p-5 hover:shadow-md transition-shadow">
+              <div
+                key={asset.id}
+                role="link"
+                tabIndex={0}
+                onClick={() => goToAsset(asset)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    goToAsset(asset);
+                  }
+                }}
+                className="bg-card rounded-xl border border-border/50 shadow-card p-5 hover:shadow-md hover:border-primary/40 transition-all cursor-pointer"
+              >
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="font-medium">{asset.asset_name}</p>
@@ -260,6 +272,7 @@ export default function EmployeeDetail() {
                   </div>
                   <span className="status-badge status-active">{assetStatusLabels[asset.status] ?? asset.status}</span>
                 </div>
+
                 {asset.expiry_date && (
                   <div className="mt-3 pt-3 border-t border-border/50 flex items-center gap-2 text-xs text-muted-foreground">
                     <AlertTriangle className="w-3 h-3 text-warning" />
