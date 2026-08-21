@@ -60,17 +60,22 @@ export function useDeleteAssetGroup() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      // Unlink any assets first (group_id has ON DELETE SET NULL but be explicit)
+      // Unlink dependants first so the delete never trips a foreign key.
       await supabase.from("assets").update({ group_id: null } as any).eq("group_id", id);
+      await supabase.from("category_fields").update({ group_id: null } as any).eq("group_id", id);
+      await supabase.from("onboarding_items").update({ selected_group_id: null } as any).eq("selected_group_id", id);
+      await supabase.from("asset_handover_forms").update({ group_id: null } as any).eq("group_id", id);
       const { error } = await supabase.from("asset_groups").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["asset-groups"] });
       qc.invalidateQueries({ queryKey: ["assets"] });
+      qc.invalidateQueries({ queryKey: ["category-fields"] });
     },
   });
 }
+
 
 export function useAssignAssetsToGroup() {
   const qc = useQueryClient();

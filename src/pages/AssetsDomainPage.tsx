@@ -2,15 +2,16 @@ import { useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ChevronRight, ChevronDown, Search, Plus, ArrowRight, Users, AlertTriangle,
-  ArrowUpDown, LayoutGrid, List, FolderPlus, Check, X, Link2,
+  ArrowUpDown, LayoutGrid, List, FolderPlus, Check, X, Link2, Trash2,
 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SubCategorySelect } from "@/components/assets/SubCategorySelect";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { useAssets, useAssetCategories } from "@/hooks/useData";
-import { useAssetGroups, useCreateAssetGroup, useAssignAssetsToGroup } from "@/hooks/useAssetGroups";
+import { useAssetGroups, useCreateAssetGroup, useAssignAssetsToGroup, useDeleteAssetGroup } from "@/hooks/useAssetGroups";
 import { useExpiringAssets } from "@/hooks/useExpiringAssets";
 import { AssetDetailView } from "@/components/assets/AssetDetailView";
 import { AddAssetDialog } from "@/components/AddAssetDialog";
@@ -64,6 +65,21 @@ export default function AssetsDomainPage() {
   const { data: expiring } = useExpiringAssets(30);
   const createGroup = useCreateAssetGroup();
   const assignToGroup = useAssignAssetsToGroup();
+  const deleteGroup = useDeleteAssetGroup();
+
+  const handleDeleteGroup = async (groupId: string, groupName: string, itemCount: number) => {
+    const msg = itemCount > 0
+      ? `למחוק את תת-הקטגוריה "${groupName}"? ${itemCount} פריטים יעברו ל"ללא תת-קטגוריה" (הם לא יימחקו).`
+      : `למחוק את תת-הקטגוריה "${groupName}"?`;
+    if (!window.confirm(msg)) return;
+    try {
+      await deleteGroup.mutateAsync(groupId);
+      toast({ title: "תת-הקטגוריה נמחקה" });
+    } catch (e: any) {
+      toast({ title: "שגיאה במחיקה", description: e.message, variant: "destructive" });
+    }
+  };
+
 
   const [search, setSearch] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("count");
@@ -565,18 +581,22 @@ export default function AssetsDomainPage() {
                         domain={domain}
                         isAssignable={isAssignable}
                         onClick={() => { setSelectedIds(new Set()); updateParams({ cat: category.id, sub: c.id }); }}
+                        onDelete={c.id === NO_SUBCATEGORY_KEY ? undefined : () => handleDeleteGroup(c.id, c.name, c.items.length)}
                       />
                     ))}
+
                   </div>
                 ) : (
                   <div className="bg-card border border-border rounded-xl overflow-hidden">
-                    <div className="grid grid-cols-[1fr_7rem_5rem_6rem_2rem] gap-2 px-4 py-2 bg-muted/40 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide text-right">
+                    <div className="grid grid-cols-[1fr_7rem_5rem_6rem_2rem_2rem] gap-2 px-4 py-2 bg-muted/40 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide text-right">
                       <div>תת-קטגוריה</div>
                       <div>אחראי</div>
                       <div>סה״כ</div>
                       <div>פעילים</div>
                       <div></div>
+                      <div></div>
                     </div>
+
                     {cards.map((c) => {
                       const active = c.items.filter((a: any) => a.status === "in_use" || a.current_owner_id).length;
                       const hasExpired = c.items.some((a: any) => {
@@ -584,10 +604,13 @@ export default function AssetsDomainPage() {
                         return e && new Date(e) < new Date();
                       });
                       return (
-                        <button
+                        <div
                           key={c.id}
+                          role="button"
+                          tabIndex={0}
                           onClick={() => { setSelectedIds(new Set()); updateParams({ cat: category.id, sub: c.id }); }}
-                          className="w-full grid grid-cols-[1fr_7rem_5rem_6rem_2rem] gap-2 px-4 py-2.5 text-sm border-t border-border hover:bg-muted/40 text-right items-center transition-colors"
+                          onKeyDown={(e) => { if (e.key === "Enter") { setSelectedIds(new Set()); updateParams({ cat: category.id, sub: c.id }); } }}
+                          className="w-full grid grid-cols-[1fr_7rem_5rem_6rem_2rem_2rem] gap-2 px-4 py-2.5 text-sm border-t border-border hover:bg-muted/40 text-right items-center transition-colors cursor-pointer"
                         >
                           <div className="flex items-center gap-2 truncate">
                             {hasExpired && <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0" />}
@@ -600,8 +623,19 @@ export default function AssetsDomainPage() {
                           </div>
                           <div className="text-xs text-muted-foreground">{c.items.length}</div>
                           <div className="text-xs">{active} / {c.items.length}</div>
+                          {c.id === NO_SUBCATEGORY_KEY ? <div /> : (
+                            <button
+                              type="button"
+                              title="מחק תת-קטגוריה"
+                              onClick={(e) => { e.stopPropagation(); handleDeleteGroup(c.id, c.name, c.items.length); }}
+                              className="text-muted-foreground hover:text-destructive p-1 rounded-md"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                           <ArrowRight className="w-4 h-4 text-muted-foreground rtl:rotate-180" />
-                        </button>
+                        </div>
+
                       );
                     })}
                   </div>
@@ -626,12 +660,13 @@ export default function AssetsDomainPage() {
 }
 
 function SubCategoryCard({
-  card, domain, isAssignable, onClick,
+  card, domain, isAssignable, onClick, onDelete,
 }: {
   card: SubCard;
   domain: DomainKey;
   isAssignable: boolean;
   onClick: () => void;
+  onDelete?: () => void;
 }) {
   const Icon = getCategoryIcon(card.name);
   const color = getCategoryColor(card.name);
@@ -644,10 +679,13 @@ function SubCategoryCard({
   const isUnassigned = card.id === NO_SUBCATEGORY_KEY;
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => { if (e.key === "Enter") onClick(); }}
       className={cn(
-        "group relative bg-card border rounded-2xl p-4 text-center",
+        "group relative bg-card border rounded-2xl p-4 text-center cursor-pointer",
         "hover:shadow-xl hover:-translate-y-1 hover:ring-2 active:scale-[0.98] transition-all duration-200",
         isUnassigned ? "border-dashed border-warning/50 hover:ring-warning/30" : cn("border-border", color.ring),
         "flex flex-col items-center gap-3 aspect-square justify-center",
@@ -661,6 +699,21 @@ function SubCategoryCard({
           <AlertTriangle className="w-3 h-3" />
         </span>
       )}
+      {onDelete && (
+        <button
+          type="button"
+          title="מחק תת-קטגוריה"
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          className={cn(
+            "absolute bottom-2 left-2 p-1.5 rounded-lg text-muted-foreground/70",
+            "hover:bg-destructive/10 hover:text-destructive transition-colors",
+            "opacity-0 group-hover:opacity-100 focus:opacity-100 md:opacity-0 max-md:opacity-100",
+          )}
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      )}
+
       <div className={cn(
         "w-20 h-20 rounded-2xl flex items-center justify-center shadow-md ring-1 ring-border/40",
         "transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:ring-2",
@@ -682,7 +735,8 @@ function SubCategoryCard({
           </div>
         )}
       </div>
-    </button>
+    </div>
+
   );
 }
 
