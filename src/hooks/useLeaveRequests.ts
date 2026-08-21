@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 
-export type LeaveRequestType = "vacation" | "sick" | "personal" | "other";
+export type LeaveRequestType = "vacation" | "sick" | "personal" | "other" | "reserve";
 export type LeaveRequestStatus = "pending" | "approved" | "rejected" | "cancelled";
 
 const SELECT = `*,
