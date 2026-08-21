@@ -1,6 +1,6 @@
 import { 
-  Users, Package, AlertTriangle, Shield, TrendingUp, 
-  UserMinus, Car, Smartphone, Monitor, Clock, Wrench
+  Users, Package, AlertTriangle, Shield, UserPlus,
+  UserMinus, Clock
 } from "lucide-react";
 import { Link, Navigate } from "react-router-dom";
 import { useDashboardStats, useAlerts, useEmployees, useActivityLog } from "@/hooks/useData";
@@ -8,10 +8,17 @@ import { useAuth } from "@/hooks/useAuth";
 import { ExpiringAssetsCard } from "@/components/ExpiringAssetsCard";
 import { LeaveStatusCard } from "@/components/dashboard/LeaveStatusCard";
 import { OnboardingCard } from "@/components/dashboard/OnboardingCard";
+import { AttendanceMissingCard } from "@/components/dashboard/AttendanceMissingCard";
+import { Tax101StatusCard } from "@/components/dashboard/Tax101StatusCard";
 import { hasDualAccess } from "@/lib/dualAccess";
+import { resolveDashboardConfig, type KpiKey } from "@/lib/dashboardConfig";
 
 export default function Dashboard() {
   const { roles, loading } = useAuth();
+  const { data: stats } = useDashboardStats();
+  const { data: alerts } = useAlerts();
+  const { data: employees } = useEmployees();
+  const { data: activityLog } = useActivityLog();
 
   // Wait for roles to load before rendering — prevents flash of admin UI
   // for employee-only users before the redirect kicks in.
@@ -34,19 +41,22 @@ export default function Dashboard() {
   if (hasDualAccess(roles) && sessionStorage.getItem("activeExperience") !== "ops") {
     return <Navigate to="/select-experience" replace />;
   }
-  const { data: stats } = useDashboardStats();
-  const { data: alerts } = useAlerts();
-  const { data: employees } = useEmployees();
-  const { data: activityLog } = useActivityLog();
+
+  const config = resolveDashboardConfig(roles);
+  const showWidget = (w: string) => config.widgets.includes(w as any);
 
   const leavingEmployees = employees?.filter(e => e.status === "leaving") ?? [];
 
-  const statCards = [
-    { label: "עובדים פעילים", value: stats?.activeEmployees ?? "—", icon: Users, color: "text-primary", bg: "bg-primary/10" },
-    { label: "פריטי ציוד", value: stats?.totalAssets ?? "—", icon: Package, color: "text-info", bg: "bg-info/10" },
-    { label: "התראות פתוחות", value: stats?.openAlerts ?? "—", icon: AlertTriangle, color: "text-warning", bg: "bg-warning/10" },
-    { label: "משימות IT פתוחות", value: stats?.openTickets ?? "—", icon: Shield, color: "text-destructive", bg: "bg-destructive/10" },
-  ];
+  const KPI_DEFS: Record<KpiKey, { label: string; value: number | string; icon: typeof Users; color: string; bg: string }> = {
+    activeEmployees: { label: "עובדים פעילים", value: stats?.activeEmployees ?? "—", icon: Users, color: "text-primary", bg: "bg-primary/10" },
+    onboardingEmployees: { label: "עובדים בקליטה", value: stats?.onboardingEmployees ?? "—", icon: UserPlus, color: "text-success", bg: "bg-success/10" },
+    totalAssets: { label: "פריטי ציוד", value: stats?.totalAssets ?? "—", icon: Package, color: "text-info", bg: "bg-info/10" },
+    openAlerts: { label: "התראות פתוחות", value: stats?.openAlerts ?? "—", icon: AlertTriangle, color: "text-warning", bg: "bg-warning/10" },
+    openTickets: { label: "משימות IT פתוחות", value: stats?.openTickets ?? "—", icon: Shield, color: "text-destructive", bg: "bg-destructive/10" },
+  };
+
+  const statCards = config.kpis.map((k) => ({ key: k, ...KPI_DEFS[k] }));
+  const expiryDomains = config.expiryDomains === "all" ? undefined : config.expiryDomains ?? undefined;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -56,24 +66,27 @@ export default function Dashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map((stat) => (
-          <div key={stat.label} className="stat-card">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-                <p className="kpi-number mt-1">{stat.value}</p>
-              </div>
-              <div className={`${stat.bg} ${stat.color} p-2.5 rounded-lg`}>
-                <stat.icon className="w-5 h-5" />
+      {statCards.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {statCards.map((stat) => (
+            <div key={stat.key} className="stat-card">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">{stat.label}</p>
+                  <p className="kpi-number mt-1">{stat.value}</p>
+                </div>
+                <div className={`${stat.bg} ${stat.color} p-2.5 rounded-lg`}>
+                  <stat.icon className="w-5 h-5" />
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
-      {/* Expiring assets */}
-      <ExpiringAssetsCard />
+      {/* Expiring assets — filtered by role domains */}
+      {showWidget("expiring") && <ExpiringAssetsCard domains={expiryDomains} />}
+
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Activity */}
