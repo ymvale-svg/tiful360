@@ -383,6 +383,7 @@ Deno.serve(async (req) => {
            ${detailsTable(baseDetails)}
            ${endLine}
            ${attachLine}
+           ${retroNote("start")}
            ${ctaButton(reviewUrl, "צפייה בבקשה")}`,
         );
         const subj = `📋 עדכון: ${employee?.full_name} דיווח/ה על ימי מחלה`;
@@ -392,6 +393,8 @@ Deno.serve(async (req) => {
         for (const to of recipients) {
           await enqueueEmail(supabase, to, subj, html, "leave-sick-submitted", `leave-sick-submitted-${request.id}-${to}`);
         }
+        // Sick reports auto-approve, so the invite goes out at submission time.
+        await sendCalendarInvite("start", "submitted");
       } else {
         if (!manager?.email) {
           return new Response(
