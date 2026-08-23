@@ -275,6 +275,97 @@ Deno.serve(async (req) => {
       req.headers.get("origin") ?? "https://tiful360.lovable.app";
     const reviewUrl = `${portalBase}/leave-requests`;
 
+    /* -------- calendar invite (secretariat + direct manager) -------- */
+
+    const toYmd = (s: string) => {
+      const d = new Date(`${s}T00:00:00Z`);
+      return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}${String(d.getUTCDate()).padStart(2, "0")}`;
+    };
+
+    /** Today in Israel time as YYYY-MM-DD. */
+    const todayIsrael = () =>
+      new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Jerusalem",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(new Date());
+
+    /** Open-ended reports fall back to a single-day event on the start date. */
+    const effectiveEnd: string = request.end_date ?? request.start_date;
+
+    const buildGcalUrl = () => {
+      const endEx = new Date(`${effectiveEnd}T00:00:00Z`);
+      endEx.setUTCDate(endEx.getUTCDate() + 1);
+      const endYmd = `${endEx.getUTCFullYear()}${String(endEx.getUTCMonth() + 1).padStart(2, "0")}${String(endEx.getUTCDate()).padStart(2, "0")}`;
+      const title = `${employee?.full_name ?? "עובד"} — ${typeLabel}`;
+      const details = `${typeLabel}${request.reason ? ` — ${request.reason}` : ""}`;
+      const p = new URLSearchParams({
+        action: "TEMPLATE",
+        text: title,
+        dates: `${toYmd(request.start_date)}/${endYmd}`,
+        details,
+      });
+      return `https://calendar.google.com/calendar/render?${p.toString()}`;
+    };
+    const gcalUrl = buildGcalUrl();
+    const gcalButton = `<p style="margin:18px 0;">
+        <a href="${gcalUrl}" style="display:inline-block;background:#16a34a;color:#fff;text-decoration:none;padding:11px 22px;border-radius:8px;font-weight:600;font-size:14px;">📅 הוסף ליומן Google</a>
+      </p>`;
+
+    /**
+     * A calendar invite is only useful while the absence is still ahead of us
+     * or happening now. Retroactive reports (start date already passed, or a
+     * sick report closed after its end date) skip the invite entirely.
+     */
+    const today = todayIsrael();
+    const isRetroactive = (anchor: "start" | "end") =>
+      (anchor === "start" ? request.start_date : effectiveEnd) < today;
+
+    const sendCalendarInvite = async (
+      anchor: "start" | "end",
+      keySuffix: string,
+    ) => {
+      if (isRetroactive(anchor)) return false;
+      const recipients = new Set<string>(secretariatList);
+      if (manager?.email) recipients.add(manager.email);
+      if (recipients.size === 0) return false;
+
+      const icsUrl = `${SUPABASE_URL}/functions/v1/leave-ics?id=${request.id}`;
+      const openNote = !request.end_date
+        ? `<p style="color:#475569;font-size:13px;">תאריך הסיום טרם עודכן — הזימון נקבע כרגע ליום אחד ויתעדכן עם סגירת הדיווח.</p>`
+        : "";
+      const inviteHtml = baseLayout(
+        "זימון ליומן — היעדרות עובד",
+        `<h2 style="margin:0 0 8px;font-size:18px;">📅 זימון ליומן — ${escapeHtml(typeLabel)}</h2>
+         <p style="color:#475569;font-size:14px;">${escapeHtml(employee?.full_name ?? "עובד")} ייעדר/תיעדר בתאריכים הבאים. יש להוסיף את האירוע ליומן.</p>
+         ${detailsTable(baseDetails)}
+         ${openNote}
+         <p style="margin:18px 0;">
+           <a href="${icsUrl}" style="display:inline-block;background:#0f172a;color:#fff;text-decoration:none;padding:11px 22px;border-radius:8px;font-weight:600;font-size:14px;">📎 הורדת זימון ליומן (ICS)</a>
+         </p>
+         ${gcalButton}`,
+      );
+      for (const to of recipients) {
+        await enqueueEmail(
+          supabase,
+          to,
+          `📅 זימון ליומן — ${employee?.full_name} (${typeLabel})`,
+          inviteHtml,
+          "leave-calendar-invite",
+          `leave-calendar-invite-${keySuffix}-${request.id}-${to}`,
+        );
+      }
+      return true;
+    };
+
+    const retroNote = (anchor: "start" | "end") =>
+      isRetroactive(anchor)
+        ? `<p style="color:#64748b;font-size:12px;">לא נשלח זימון ליומן — מדובר בדיווח בדיעבד שמועדו כבר חלף.</p>`
+        : "";
+
+
+
     // ------- SUBMITTED -------
     if (event === "submitted") {
       if (request.request_type === "sick") {
