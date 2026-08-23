@@ -446,32 +446,7 @@ Deno.serve(async (req) => {
 
     // ------- APPROVED -------
     if (event === "approved") {
-      // Build Google Calendar link (all-day event)
-      const buildGcalUrl = () => {
-        if (!request.end_date) return null;
-        const toYmd = (s: string) => {
-          const d = new Date(s);
-          return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
-        };
-        const endEx = new Date(request.end_date);
-        endEx.setDate(endEx.getDate() + 1);
-        const endYmd = `${endEx.getFullYear()}${String(endEx.getMonth() + 1).padStart(2, "0")}${String(endEx.getDate()).padStart(2, "0")}`;
-        const title = `${employee?.full_name ?? "עובד"} בחופש`;
-        const details = `${typeLabel}${request.reason ? ` — ${request.reason}` : ""}`;
-        const p = new URLSearchParams({
-          action: "TEMPLATE",
-          text: title,
-          dates: `${toYmd(request.start_date)}/${endYmd}`,
-          details,
-        });
-        return `https://calendar.google.com/calendar/render?${p.toString()}`;
-      };
-      const gcalUrl = buildGcalUrl();
-      const gcalButton = gcalUrl
-        ? `<p style="margin:18px 0;">
-             <a href="${gcalUrl}" style="display:inline-block;background:#16a34a;color:#fff;text-decoration:none;padding:11px 22px;border-radius:8px;font-weight:600;font-size:14px;">📅 הוסף ליומן Google</a>
-           </p>`
-        : "";
+
 
       // Notify employee
       if (employee?.email) {
