@@ -87,7 +87,8 @@ const App = () => (
                   <Route path="/onboarding" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations", "it_manager", "hr"]}><Onboarding /></ProtectedRoute>} />
                   <Route path="/payroll" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "payroll", "hr"]}><Payroll /></ProtectedRoute>} />
                   <Route path="/attendance-map" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "payroll", "hr", "direct_manager"]}><AttendanceMap /></ProtectedRoute>} />
-                  <Route path="/settings" element={<ProtectedRoute requiredRoles={["admin", "super_admin"]}><Settings /></ProtectedRoute>} />
+                  <Route path="/announcements" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "ceo", "operations", "secretariat", "hr"]}><Announcements /></ProtectedRoute>} />
+                  <Route path="/settings" element={<ProtectedRoute requiredRoles={["admin", "super_admin"]}><Settings /></ProtectedRoute>} />}
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
