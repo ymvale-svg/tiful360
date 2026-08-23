@@ -360,6 +360,12 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
       const catName = selectedCategory?.category_name ?? "פריט";
       toast({ title: `${catName} נוסף בהצלחה`, description: form.asset_name });
       onOpenChange(false);
+      if (thenHandover && (created as any)?.id) {
+        setHandoverAsset({
+          ...(created as any),
+          asset_categories: selectedCategory ?? null,
+        });
+      }
       // Upload pending documents in background (don't block UI)
       if (pendingDocs.length > 0 && (created as any)?.id) {
         const assetId = (created as any).id;
