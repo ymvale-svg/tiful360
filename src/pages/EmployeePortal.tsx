@@ -722,7 +722,13 @@ export default function EmployeePortal() {
                     {new Date(item.published_at).toLocaleDateString("en-GB")}
                   </span>
                 </div>
-                <p className="text-sm text-muted-foreground">{item.content}</p>
+                <p className="text-sm text-muted-foreground whitespace-pre-line">{item.content}</p>
+                {(item as any).sender_name && (
+                  <p className="mt-3 pt-2 border-t border-border/40 text-xs text-muted-foreground">
+                    בברכה, {(item as any).sender_name}
+                    {(item as any).sender_role ? ` · ${(item as any).sender_role}` : ""}
+                  </p>
+                )}
               </div>
             )) : (
               <p className="text-center text-sm text-muted-foreground py-8">אין הודעות כרגע</p>
