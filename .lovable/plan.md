@@ -9,19 +9,21 @@
 - תגיות סטטוס: מתוזמנת / פעילה / פגה
 - כפתור "הודעה חדשה" + עריכה ומחיקה לכל שורה
 - טופס: כותרת, תוכן (טקסט רב-שורות), תאריך ושעת פרסום, תאריך תפוגה (אופציונלי)
+- חתימת השולח נשמרת אוטומטית בעת הפרסום: שם המשתמש ותפקידו (מתוך כרטיס העובד המקושר, ובהיעדר — שם התצוגה של המשתמש והתפקיד במערכת), עם אפשרות לעריכה ידנית של השם/התפקיד לפני שמירה.
 
-**תצוגה בפורטל העובדים**: יוצגו רק הודעות שתאריך הפרסום שלהן עבר ושטרם פגו.
+**תצוגה בפורטל העובדים**: יוצגו רק הודעות שתאריך הפרסום שלהן עבר ושטרם פגו, וכל הודעה תציג בתחתיתה את חתימת השולח ("בברכה, {שם} · {תפקיד}").
 
-**הרשאות**: אדמין על, אדמין, תפעול, מזכירות, משאבי אנוש. תפקיד "מזכירות" לא קיים היום במערכת — נוסיף אותו כתפקיד חדש שניתן להקצות במסך ניהול המשתמשים.
+**הרשאות**: אדמין על, אדמין, מנכ"ל, תפעול, מזכירות, משאבי אנוש. התפקידים "מזכירות" ו"מנכ"ל" לא קיימים היום במערכת — נוסיף אותם כתפקידים חדשים שניתן להקצות במסך ניהול המשתמשים.
 
 ## פירוט טכני
 
 1. מיגרציה:
-   - הוספת ערך `secretariat` ל-enum `app_role` (מיגרציה נפרדת/ראשונה, כנדרש ב-Postgres).
-   - הוספת עמודות `expires_at timestamptz null` לטבלת `announcements` (ה-`published_at` כבר קיים).
-   - פונקציית עזר `can_manage_announcements(_user_id, _company_id)` (security definer) שמחזירה true ל-super_admin/admin של החברה/operations/hr/secretariat.
+   - הוספת הערכים `secretariat` ו-`ceo` ל-enum `app_role` (מיגרציה נפרדת/ראשונה, כנדרש ב-Postgres).
+   - הוספת עמודות `expires_at timestamptz null`, `sender_name text`, `sender_role text` לטבלת `announcements` (ה-`published_at` כבר קיים).
+   - פונקציית עזר `can_manage_announcements(_user_id, _company_id)` (security definer) שמחזירה true ל-super_admin/admin של החברה/ceo/operations/hr/secretariat.
    - החלפת מדיניות ה-RLS: SELECT לכל משתמשי החברה (כמו היום), ו-INSERT/UPDATE/DELETE לפי הפונקציה החדשה. שמירה על GRANT-ים קיימים.
-2. הוספת `secretariat` לרשימות התפקידים בצד הלקוח: `AppRole` ב-`useAuth`, `ProtectedRoute`, מסך ניהול המשתמשים (תווית "מזכירות") ו-`dualAccess`.
+2. הוספת `secretariat` ו-`ceo` לרשימות התפקידים בצד הלקוח: `AppRole` ב-`useAuth`, `ProtectedRoute`, מסך ניהול המשתמשים (תוויות "מזכירות" ו"מנכ"ל") ו-`dualAccess`.
+
 3. הוק חדש `src/hooks/useAnnouncements.ts` עם שאילתות ומוטציות (react-query, invalidation למפתח `announcements`).
 4. עמוד חדש `src/pages/Announcements.tsx` + רישום נתיב `/announcements` ב-`App.tsx` תחת `ProtectedRoute` עם התפקידים המורשים, ופריט תפריט ב-`AppSidebar` שמוצג רק להם.
 5. סינון לפי `published_at <= now()` ו-`expires_at is null or expires_at > now()` בשאילתות של `EmployeePortal.tsx` ו-`useData.ts`.
