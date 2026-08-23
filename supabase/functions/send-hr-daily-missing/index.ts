@@ -122,15 +122,19 @@ Deno.serve(async (req) => {
       XLSX.utils.book_append_sheet(wb, ws, 'החתמות חסרות')
       const arr = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer
       const filename = `hr-reports/${companyId}/daily_${target}_${crypto.randomUUID().slice(0, 8)}.xlsx`
-      const { error: upErr } = await admin.storage.from('email-assets').upload(
+      const { error: upErr } = await admin.storage.from('hr-reports').upload(
         filename, new Uint8Array(arr), {
           contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
           upsert: false,
         })
       if (upErr) errors.push(`upload ${companyId}: ${upErr.message}`)
       else {
-        const { data: urlData } = admin.storage.from('email-assets').getPublicUrl(filename)
-        downloadUrl = urlData.publicUrl
+        // Private bucket: hand out a short-lived signed URL (14 days) instead of a public link
+        const { data: urlData, error: signErr } = await admin.storage
+          .from('hr-reports')
+          .createSignedUrl(filename, 60 * 60 * 24 * 14)
+        if (signErr) errors.push(`sign ${companyId}: ${signErr.message}`)
+        else downloadUrl = urlData?.signedUrl ?? null
       }
     }
 
