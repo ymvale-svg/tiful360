@@ -111,8 +111,12 @@ Deno.serve(async (req) => {
         upsert: false,
       })
     if (upErr) { errors.push(`upload ${companyId}: ${upErr.message}`); continue }
-    const { data: urlData } = admin.storage.from('email-assets').getPublicUrl(filename)
-    const downloadUrl = urlData.publicUrl
+    // Private bucket: short-lived signed URL (14 days) instead of a permanent public link
+    const { data: urlData, error: signErr } = await admin.storage
+      .from('hr-reports')
+      .createSignedUrl(filename, 60 * 60 * 24 * 14)
+    if (signErr || !urlData?.signedUrl) { errors.push(`sign ${companyId}: ${signErr?.message ?? 'no url'}`); continue }
+    const downloadUrl = urlData.signedUrl
 
     // Recipients: payroll_emails only
     const { data: comp } = await admin
