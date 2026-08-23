@@ -8,6 +8,8 @@ const OPS_ROLES: AppRole[] = [
   "direct_manager",
   "payroll",
   "hr",
+  "secretariat",
+  "ceo",
 ];
 
 /**
