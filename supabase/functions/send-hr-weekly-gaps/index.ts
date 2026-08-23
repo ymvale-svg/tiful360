@@ -139,7 +139,7 @@ Deno.serve(async (req) => {
     const arr = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer
 
     const filename = `hr-reports/${companyId}/${from}_${to}_${crypto.randomUUID().slice(0, 8)}.xlsx`
-    const { error: upErr } = await admin.storage.from('email-assets').upload(
+    const { error: upErr } = await admin.storage.from('hr-reports').upload(
       filename, new Uint8Array(arr), {
         contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         upsert: false,
