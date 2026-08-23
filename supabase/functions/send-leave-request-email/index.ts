@@ -432,15 +432,18 @@ Deno.serve(async (req) => {
          <p style="color:#475569;font-size:14px;">${escapeHtml(employee?.full_name ?? "עובד")} עדכן/ה את סיום ימי המחלה.</p>
          ${detailsTable(baseDetails)}
          ${attachLine}
+         ${retroNote("end")}
          ${ctaButton(reviewUrl, "צפייה בבקשה")}`,
       );
       const recipients = new Set<string>();
       if (manager?.email) recipients.add(manager.email);
       for (const e of hrList) recipients.add(e);
       const subj = `📋 סגירת מחלה — ${employee?.full_name}`;
-        for (const to of recipients) {
-          await enqueueEmail(supabase, to, subj, html, "leave-sick-closed", `leave-sick-closed-${request.id}-${to}`);
-        }
+      for (const to of recipients) {
+        await enqueueEmail(supabase, to, subj, html, "leave-sick-closed", `leave-sick-closed-${request.id}-${to}`);
+      }
+      // Updated invite (same ICS UID, higher SEQUENCE) unless closed retroactively.
+      await sendCalendarInvite("end", "closed");
     }
 
 
