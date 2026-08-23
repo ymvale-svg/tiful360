@@ -154,6 +154,15 @@ export default function Assets() {
                     </Button>
                     <Button
                       size="sm"
+                      variant="secondary"
+                      className="gap-1.5 rounded-full"
+                      onClick={() => navigate("/assets-handover")}
+                    >
+                      <FileSignature className="w-4 h-4" />
+                      בצע מסירה
+                    </Button>
+                    <Button
+                      size="sm"
                       variant="outline"
                       className="gap-1.5 rounded-full"
                       onClick={() => setQuickAssignOpen(true)}
