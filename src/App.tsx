@@ -19,6 +19,7 @@ import AttendanceMap from "@/pages/AttendanceMap";
 // Lazy: less-frequent pages — split into separate chunks loaded on demand
 const Assets = lazy(() => import("@/pages/Assets"));
 const AssetsDomainPage = lazy(() => import("@/pages/AssetsDomainPage"));
+const UnassignedAssets = lazy(() => import("@/pages/UnassignedAssets"));
 const ITTickets = lazy(() => import("@/pages/ITTickets"));
 const Alerts = lazy(() => import("@/pages/Alerts"));
 const EmployeePortal = lazy(() => import("@/pages/EmployeePortal"));
