@@ -41,3 +41,5 @@ project_id = "rhzmhiknbcipucfvgkok"
     verify_jwt = true
   [functions.send-payroll-monthly-gaps]
     verify_jwt = false
+  [functions.leave-ics]
+    verify_jwt = false
