@@ -14,13 +14,14 @@ import {
   Wallet,
   UserPlus,
   MapPin,
+  Megaphone,
 } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import logoImg from "@/assets/logo.png";
 
-type AppRole = "admin" | "it_manager" | "employee" | "super_admin" | "direct_manager" | "payroll" | "hr" | "operations" | "finance" | "legal";
+type AppRole = "admin" | "it_manager" | "employee" | "super_admin" | "direct_manager" | "payroll" | "hr" | "operations" | "finance" | "legal" | "secretariat" | "ceo";
 
 interface NavItem {
   label: string;
@@ -38,6 +39,7 @@ const preload = {
   settings: () => import("@/pages/Settings"),
   portal: () => import("@/pages/EmployeePortal"),
   companies: () => import("@/pages/Companies"),
+  announcements: () => import("@/pages/Announcements"),
 };
 
 const mainNav: NavItem[] = [
@@ -48,6 +50,7 @@ const mainNav: NavItem[] = [
   { label: "משימות IT", icon: Shield, path: "/it-tickets", roles: ["admin", "it_manager", "super_admin", "operations"], preload: preload.itTickets },
   { label: "משאבי אנוש", icon: Wallet, path: "/payroll", roles: ["admin", "super_admin", "payroll", "hr"], preload: preload.payroll },
   { label: "מפת נוכחות", icon: MapPin, path: "/attendance-map", roles: ["admin", "super_admin", "payroll", "hr", "direct_manager"] },
+  { label: "הודעות", icon: Megaphone, path: "/announcements", roles: ["admin", "super_admin", "ceo", "operations", "secretariat", "hr"], preload: preload.announcements },
 ];
 
 const superAdminNav: NavItem[] = [

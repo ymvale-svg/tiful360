@@ -36,6 +36,7 @@ const AttendanceCorrections = lazy(() => import("@/pages/AttendanceCorrections")
 const Payroll = lazy(() => import("@/pages/Payroll"));
 const Onboarding = lazy(() => import("@/pages/Onboarding"));
 const Tax101TokenPage = lazy(() => import("@/pages/Tax101TokenPage"));
+const Announcements = lazy(() => import("@/pages/Announcements"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -86,6 +87,7 @@ const App = () => (
                   <Route path="/onboarding" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations", "it_manager", "hr"]}><Onboarding /></ProtectedRoute>} />
                   <Route path="/payroll" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "payroll", "hr"]}><Payroll /></ProtectedRoute>} />
                   <Route path="/attendance-map" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "payroll", "hr", "direct_manager"]}><AttendanceMap /></ProtectedRoute>} />
+                  <Route path="/announcements" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "ceo", "operations", "secretariat", "hr"]}><Announcements /></ProtectedRoute>} />
                   <Route path="/settings" element={<ProtectedRoute requiredRoles={["admin", "super_admin"]}><Settings /></ProtectedRoute>} />
                 </Route>
                 <Route path="*" element={<NotFound />} />

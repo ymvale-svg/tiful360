@@ -33,8 +33,10 @@ interface ManagedUser {
 const ROLE_LABELS: Record<string, string> = {
   super_admin: "סופר אדמין",
   admin: "מנהל מערכת",
+  ceo: 'מנכ"ל',
   it_manager: "מנהל IT",
   operations: "עובד תפעול",
+  secretariat: "מזכירות",
   direct_manager: "מנהל ישיר",
   hr: "משאבי אנוש",
   payroll: "חשב/ת שכר",
@@ -46,8 +48,10 @@ const ROLE_LABELS: Record<string, string> = {
 const ROLE_COLORS: Record<string, string> = {
   super_admin: "bg-primary/10 text-primary border-primary/20",
   admin: "bg-destructive/10 text-destructive border-destructive/20",
+  ceo: "bg-indigo-500/10 text-indigo-600 border-indigo-500/20 dark:text-indigo-400",
   it_manager: "bg-accent text-accent-foreground border-accent",
   operations: "bg-cyan-500/10 text-cyan-600 border-cyan-500/20 dark:text-cyan-400",
+  secretariat: "bg-teal-500/10 text-teal-600 border-teal-500/20 dark:text-teal-400",
   direct_manager: "bg-orange-500/10 text-orange-600 border-orange-500/20 dark:text-orange-400",
   hr: "bg-pink-500/10 text-pink-600 border-pink-500/20 dark:text-pink-400",
   payroll: "bg-purple-500/10 text-purple-600 border-purple-500/20 dark:text-purple-400",
@@ -57,7 +61,7 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 // Roles that operations users cannot grant or revoke
-const OPERATIONS_RESTRICTED_ROLES = new Set(["super_admin", "admin", "payroll", "hr"]);
+const OPERATIONS_RESTRICTED_ROLES = new Set(["super_admin", "admin", "ceo", "payroll", "hr"]);
 
 async function fetchUsers(companyId: string | null): Promise<ManagedUser[]> {
   const { data: { session } } = await supabase.auth.getSession();

@@ -73,6 +73,16 @@ const ROLE_CONFIG: Record<AppRole, DashboardConfig> = {
     widgets: ["leave", "attendanceMissing"],
     expiryDomains: null,
   },
+  ceo: {
+    kpis: ["activeEmployees", "totalAssets", "openAlerts", "openTickets"],
+    widgets: ["onboarding", "leave", "leaving", "alerts", "activity"],
+    expiryDomains: ALL_DOMAINS,
+  },
+  secretariat: {
+    kpis: ["activeEmployees"],
+    widgets: ["leave", "onboarding"],
+    expiryDomains: null,
+  },
   employee: {
     kpis: [],
     widgets: [],

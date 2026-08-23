@@ -129,7 +129,13 @@ export function useAnnouncements() {
   return useQuery({
     queryKey: ["announcements", activeCompanyId],
     queryFn: async () => {
-      let query = supabase.from("announcements").select("*").order("published_at", { ascending: false });
+      const nowIso = new Date().toISOString();
+      let query = supabase
+        .from("announcements")
+        .select("*")
+        .lte("published_at", nowIso)
+        .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+        .order("published_at", { ascending: false });
       if (activeCompanyId) query = query.eq("company_id", activeCompanyId);
       const { data, error } = await query;
       if (error) throw error;
