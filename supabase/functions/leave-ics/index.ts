@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
     const { data: request } = await supabase
       .from("leave_requests")
-      .select("id, employee_id, request_type, start_date, end_date, status, created_at")
+      .select("id, employee_id, request_type, start_date, end_date, status, created_at, updated_at")
       .eq("id", id)
       .maybeSingle();
 
