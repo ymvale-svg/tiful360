@@ -7,7 +7,8 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Package, AlertCircle, Users, User, Search, Copy, CalendarIcon, X, Plus as PlusIcon } from "lucide-react";
+import { Package, AlertCircle, Users, User, Search, Copy, CalendarIcon, X, Plus as PlusIcon, FileSignature } from "lucide-react";
+import { HandoverFlow } from "@/components/handover/HandoverFlow";
 import { format } from "date-fns";
 import { useCreateAsset } from "@/hooks/useMutations";
 import { useAssetCategories, useEmployees, useAssets } from "@/hooks/useData";
@@ -70,6 +71,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
   const [submitting, setSubmitting] = useState(false);
   const [pendingDocs, setPendingDocs] = useState<File[]>([]);
   const [docDragging, setDocDragging] = useState(false);
+  const [handoverAsset, setHandoverAsset] = useState<any>(null);
 
   const [form, setForm] = useState({
     asset_code: "",
@@ -319,7 +321,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
   const clearSelection = () => setSelectedEmployeeIds([]);
 
   // ============ Single mode submit ============
-  const handleSubmitSingle = async () => {
+  const handleSubmitSingle = async (thenHandover = false) => {
     const e: Record<string, string> = {};
     if (!form.asset_code.trim()) e.asset_code = "שדה חובה";
     else if (existingAssets?.some(a => a.asset_code === form.asset_code))
@@ -360,6 +362,12 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
       const catName = selectedCategory?.category_name ?? "פריט";
       toast({ title: `${catName} נוסף בהצלחה`, description: form.asset_name });
       onOpenChange(false);
+      if (thenHandover && (created as any)?.id) {
+        setHandoverAsset({
+          ...(created as any),
+          asset_categories: selectedCategory ?? null,
+        });
+      }
       // Upload pending documents in background (don't block UI)
       if (pendingDocs.length > 0 && (created as any)?.id) {
         const assetId = (created as any).id;
@@ -511,6 +519,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
   const expiryIsPerEmp = perEmpFieldKeys.has(SYSTEM_FIELD_KEYS.expiry_date);
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn("max-h-[90vh] overflow-y-auto", bulkMode ? "max-w-5xl" : "max-w-lg")}
@@ -1183,8 +1192,19 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
             </div>
           )}
 
-          <div className="flex gap-3 pt-3">
+          <div className="flex flex-col sm:flex-row gap-3 pt-3">
             <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>ביטול</Button>
+            {!bulkMode && selectedCategory?.is_assignable !== false && (
+              <Button
+                variant="secondary"
+                className="flex-1 gap-2"
+                onClick={() => handleSubmitSingle(true)}
+                disabled={mutation.isPending || submitting}
+              >
+                <FileSignature className="w-4 h-4" />
+                הוסף ובצע מסירה
+              </Button>
+            )}
             <Button
               className="flex-1"
               onClick={handleSubmit}
@@ -1200,5 +1220,12 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
         </div>
       </DialogContent>
     </Dialog>
+
+    <HandoverFlow
+      open={!!handoverAsset}
+      onOpenChange={(o) => { if (!o) setHandoverAsset(null); }}
+      asset={handoverAsset}
+    />
+    </>
   );
 }
