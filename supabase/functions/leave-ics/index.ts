@@ -20,8 +20,9 @@ const TYPE_LABELS: Record<string, string> = {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** Format a date as YYYYMMDD using UTC parts (date strings parse as UTC midnight). */
 function ymd(d: Date) {
-  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+  return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}${String(d.getUTCDate()).padStart(2, "0")}`;
 }
 
 function escapeIcs(s: string) {
@@ -43,7 +44,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
     const { data: request } = await supabase
       .from("leave_requests")
-      .select("id, employee_id, request_type, start_date, end_date, status, created_at")
+      .select("id, employee_id, request_type, start_date, end_date, status, created_at, updated_at")
       .eq("id", id)
       .maybeSingle();
 
@@ -61,13 +62,24 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     const typeLabel = TYPE_LABELS[request.request_type] ?? "היעדרות";
-    const start = new Date(request.start_date);
-    const endEx = new Date(request.end_date ?? request.start_date);
-    endEx.setDate(endEx.getDate() + 1);
+    // Open-ended reports (sick without an end date) become a single-day event.
+    const start = new Date(`${request.start_date}T00:00:00Z`);
+    const endEx = new Date(`${request.end_date ?? request.start_date}T00:00:00Z`);
+    endEx.setUTCDate(endEx.getUTCDate() + 1);
 
     const title = `${employee?.full_name ?? "עובד"} — ${typeLabel}`;
     const description = `${typeLabel}${employee?.department ? ` · ${employee.department}` : ""}`;
     const stamp = new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+    // Bump SEQUENCE on every update so calendars replace the existing event
+    // (same UID) instead of creating a duplicate — e.g. when a sick report is closed.
+    const sequence = request.updated_at && request.created_at
+      ? Math.max(
+          0,
+          Math.floor(
+            (new Date(request.updated_at).getTime() - new Date(request.created_at).getTime()) / 1000,
+          ),
+        )
+      : 0;
 
     const ics = [
       "BEGIN:VCALENDAR",
@@ -78,6 +90,7 @@ Deno.serve(async (req) => {
       "BEGIN:VEVENT",
       `UID:leave-${request.id}@tiful360`,
       `DTSTAMP:${stamp}`,
+      `SEQUENCE:${sequence}`,
       `DTSTART;VALUE=DATE:${ymd(start)}`,
       `DTEND;VALUE=DATE:${ymd(endEx)}`,
       `SUMMARY:${escapeIcs(title)}`,

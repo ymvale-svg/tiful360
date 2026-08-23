@@ -275,6 +275,97 @@ Deno.serve(async (req) => {
       req.headers.get("origin") ?? "https://tiful360.lovable.app";
     const reviewUrl = `${portalBase}/leave-requests`;
 
+    /* -------- calendar invite (secretariat + direct manager) -------- */
+
+    const toYmd = (s: string) => {
+      const d = new Date(`${s}T00:00:00Z`);
+      return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}${String(d.getUTCDate()).padStart(2, "0")}`;
+    };
+
+    /** Today in Israel time as YYYY-MM-DD. */
+    const todayIsrael = () =>
+      new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Jerusalem",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(new Date());
+
+    /** Open-ended reports fall back to a single-day event on the start date. */
+    const effectiveEnd: string = request.end_date ?? request.start_date;
+
+    const buildGcalUrl = () => {
+      const endEx = new Date(`${effectiveEnd}T00:00:00Z`);
+      endEx.setUTCDate(endEx.getUTCDate() + 1);
+      const endYmd = `${endEx.getUTCFullYear()}${String(endEx.getUTCMonth() + 1).padStart(2, "0")}${String(endEx.getUTCDate()).padStart(2, "0")}`;
+      const title = `${employee?.full_name ?? "עובד"} — ${typeLabel}`;
+      const details = `${typeLabel}${request.reason ? ` — ${request.reason}` : ""}`;
+      const p = new URLSearchParams({
+        action: "TEMPLATE",
+        text: title,
+        dates: `${toYmd(request.start_date)}/${endYmd}`,
+        details,
+      });
+      return `https://calendar.google.com/calendar/render?${p.toString()}`;
+    };
+    const gcalUrl = buildGcalUrl();
+    const gcalButton = `<p style="margin:18px 0;">
+        <a href="${gcalUrl}" style="display:inline-block;background:#16a34a;color:#fff;text-decoration:none;padding:11px 22px;border-radius:8px;font-weight:600;font-size:14px;">📅 הוסף ליומן Google</a>
+      </p>`;
+
+    /**
+     * A calendar invite is only useful while the absence is still ahead of us
+     * or happening now. Retroactive reports (start date already passed, or a
+     * sick report closed after its end date) skip the invite entirely.
+     */
+    const today = todayIsrael();
+    const isRetroactive = (anchor: "start" | "end") =>
+      (anchor === "start" ? request.start_date : effectiveEnd) < today;
+
+    const sendCalendarInvite = async (
+      anchor: "start" | "end",
+      keySuffix: string,
+    ) => {
+      if (isRetroactive(anchor)) return false;
+      const recipients = new Set<string>(secretariatList);
+      if (manager?.email) recipients.add(manager.email);
+      if (recipients.size === 0) return false;
+
+      const icsUrl = `${SUPABASE_URL}/functions/v1/leave-ics?id=${request.id}`;
+      const openNote = !request.end_date
+        ? `<p style="color:#475569;font-size:13px;">תאריך הסיום טרם עודכן — הזימון נקבע כרגע ליום אחד ויתעדכן עם סגירת הדיווח.</p>`
+        : "";
+      const inviteHtml = baseLayout(
+        "זימון ליומן — היעדרות עובד",
+        `<h2 style="margin:0 0 8px;font-size:18px;">📅 זימון ליומן — ${escapeHtml(typeLabel)}</h2>
+         <p style="color:#475569;font-size:14px;">${escapeHtml(employee?.full_name ?? "עובד")} ייעדר/תיעדר בתאריכים הבאים. יש להוסיף את האירוע ליומן.</p>
+         ${detailsTable(baseDetails)}
+         ${openNote}
+         <p style="margin:18px 0;">
+           <a href="${icsUrl}" style="display:inline-block;background:#0f172a;color:#fff;text-decoration:none;padding:11px 22px;border-radius:8px;font-weight:600;font-size:14px;">📎 הורדת זימון ליומן (ICS)</a>
+         </p>
+         ${gcalButton}`,
+      );
+      for (const to of recipients) {
+        await enqueueEmail(
+          supabase,
+          to,
+          `📅 זימון ליומן — ${employee?.full_name} (${typeLabel})`,
+          inviteHtml,
+          "leave-calendar-invite",
+          `leave-calendar-invite-${keySuffix}-${request.id}-${to}`,
+        );
+      }
+      return true;
+    };
+
+    const retroNote = (anchor: "start" | "end") =>
+      isRetroactive(anchor)
+        ? `<p style="color:#64748b;font-size:12px;">לא נשלח זימון ליומן — מדובר בדיווח בדיעבד שמועדו כבר חלף.</p>`
+        : "";
+
+
+
     // ------- SUBMITTED -------
     if (event === "submitted") {
       if (request.request_type === "sick") {
@@ -292,6 +383,7 @@ Deno.serve(async (req) => {
            ${detailsTable(baseDetails)}
            ${endLine}
            ${attachLine}
+           ${retroNote("start")}
            ${ctaButton(reviewUrl, "צפייה בבקשה")}`,
         );
         const subj = `📋 עדכון: ${employee?.full_name} דיווח/ה על ימי מחלה`;
@@ -301,6 +393,8 @@ Deno.serve(async (req) => {
         for (const to of recipients) {
           await enqueueEmail(supabase, to, subj, html, "leave-sick-submitted", `leave-sick-submitted-${request.id}-${to}`);
         }
+        // Sick reports auto-approve, so the invite goes out at submission time.
+        await sendCalendarInvite("start", "submitted");
       } else {
         if (!manager?.email) {
           return new Response(
@@ -341,46 +435,24 @@ Deno.serve(async (req) => {
          <p style="color:#475569;font-size:14px;">${escapeHtml(employee?.full_name ?? "עובד")} עדכן/ה את סיום ימי המחלה.</p>
          ${detailsTable(baseDetails)}
          ${attachLine}
+         ${retroNote("end")}
          ${ctaButton(reviewUrl, "צפייה בבקשה")}`,
       );
       const recipients = new Set<string>();
       if (manager?.email) recipients.add(manager.email);
       for (const e of hrList) recipients.add(e);
       const subj = `📋 סגירת מחלה — ${employee?.full_name}`;
-        for (const to of recipients) {
-          await enqueueEmail(supabase, to, subj, html, "leave-sick-closed", `leave-sick-closed-${request.id}-${to}`);
-        }
+      for (const to of recipients) {
+        await enqueueEmail(supabase, to, subj, html, "leave-sick-closed", `leave-sick-closed-${request.id}-${to}`);
+      }
+      // Updated invite (same ICS UID, higher SEQUENCE) unless closed retroactively.
+      await sendCalendarInvite("end", "closed");
     }
 
 
     // ------- APPROVED -------
     if (event === "approved") {
-      // Build Google Calendar link (all-day event)
-      const buildGcalUrl = () => {
-        if (!request.end_date) return null;
-        const toYmd = (s: string) => {
-          const d = new Date(s);
-          return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
-        };
-        const endEx = new Date(request.end_date);
-        endEx.setDate(endEx.getDate() + 1);
-        const endYmd = `${endEx.getFullYear()}${String(endEx.getMonth() + 1).padStart(2, "0")}${String(endEx.getDate()).padStart(2, "0")}`;
-        const title = `${employee?.full_name ?? "עובד"} בחופש`;
-        const details = `${typeLabel}${request.reason ? ` — ${request.reason}` : ""}`;
-        const p = new URLSearchParams({
-          action: "TEMPLATE",
-          text: title,
-          dates: `${toYmd(request.start_date)}/${endYmd}`,
-          details,
-        });
-        return `https://calendar.google.com/calendar/render?${p.toString()}`;
-      };
-      const gcalUrl = buildGcalUrl();
-      const gcalButton = gcalUrl
-        ? `<p style="margin:18px 0;">
-             <a href="${gcalUrl}" style="display:inline-block;background:#16a34a;color:#fff;text-decoration:none;padding:11px 22px;border-radius:8px;font-weight:600;font-size:14px;">📅 הוסף ליומן Google</a>
-           </p>`
-        : "";
+
 
       // Notify employee
       if (employee?.email) {
@@ -414,30 +486,8 @@ Deno.serve(async (req) => {
       }
 
 
-      // ------- SECRETARIAT CALENDAR INVITE -------
-      if (secretariatList.length > 0) {
-        const icsUrl = `${SUPABASE_URL}/functions/v1/leave-ics?id=${request.id}`;
-        const inviteHtml = baseLayout(
-          "זימון ליומן — היעדרות עובד",
-          `<h2 style="margin:0 0 8px;font-size:18px;">📅 זימון ליומן — ${escapeHtml(typeLabel)}</h2>
-           <p style="color:#475569;font-size:14px;">${escapeHtml(employee?.full_name ?? "עובד")} ייעדר/תיעדר בתאריכים הבאים. יש להוסיף את האירוע ליומן המזכירות.</p>
-           ${detailsTable(baseDetails)}
-           <p style="margin:18px 0;">
-             <a href="${icsUrl}" style="display:inline-block;background:#0f172a;color:#fff;text-decoration:none;padding:11px 22px;border-radius:8px;font-weight:600;font-size:14px;">📎 הורדת זימון ליומן (ICS)</a>
-           </p>
-           ${gcalButton}`,
-        );
-        for (const to of secretariatList) {
-          await enqueueEmail(
-            supabase,
-            to,
-            `📅 זימון ליומן — ${employee?.full_name} (${typeLabel})`,
-            inviteHtml,
-            "leave-approved-secretariat",
-            `leave-approved-secretariat-${request.id}-${to}`,
-          );
-        }
-      }
+      // ------- CALENDAR INVITE (secretariat + direct manager) -------
+      await sendCalendarInvite("start", "approved");
 
       // Notify payroll
       const payrollList = (company?.payroll_emails ?? "")
