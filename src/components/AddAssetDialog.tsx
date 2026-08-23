@@ -517,6 +517,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
   const expiryIsPerEmp = perEmpFieldKeys.has(SYSTEM_FIELD_KEYS.expiry_date);
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn("max-h-[90vh] overflow-y-auto", bulkMode ? "max-w-5xl" : "max-w-lg")}
