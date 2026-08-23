@@ -71,6 +71,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
   const [submitting, setSubmitting] = useState(false);
   const [pendingDocs, setPendingDocs] = useState<File[]>([]);
   const [docDragging, setDocDragging] = useState(false);
+  const [handoverAsset, setHandoverAsset] = useState<any>(null);
 
   const [form, setForm] = useState({
     asset_code: "",
