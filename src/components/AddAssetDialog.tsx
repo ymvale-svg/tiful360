@@ -1190,8 +1190,19 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
             </div>
           )}
 
-          <div className="flex gap-3 pt-3">
+          <div className="flex flex-col sm:flex-row gap-3 pt-3">
             <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>ביטול</Button>
+            {!bulkMode && selectedCategory?.is_assignable !== false && (
+              <Button
+                variant="secondary"
+                className="flex-1 gap-2"
+                onClick={() => handleSubmitSingle(true)}
+                disabled={mutation.isPending || submitting}
+              >
+                <FileSignature className="w-4 h-4" />
+                הוסף ובצע מסירה
+              </Button>
+            )}
             <Button
               className="flex-1"
               onClick={handleSubmit}
@@ -1207,5 +1218,12 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
         </div>
       </DialogContent>
     </Dialog>
+
+    <HandoverFlow
+      open={!!handoverAsset}
+      onOpenChange={(o) => { if (!o) setHandoverAsset(null); }}
+      asset={handoverAsset}
+    />
+    </>
   );
 }
