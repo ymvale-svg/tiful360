@@ -185,10 +185,13 @@ export default function EmployeePortal() {
     queryKey: ["announcements", activeCompanyId],
     queryFn: async () => {
       if (!activeCompanyId) return [];
+      const nowIso = new Date().toISOString();
       const { data, error } = await supabase
         .from("announcements")
         .select("*")
         .eq("company_id", activeCompanyId)
+        .lte("published_at", nowIso)
+        .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
         .order("published_at", { ascending: false })
         .limit(5);
       if (error) throw error;
