@@ -14,6 +14,7 @@ import {
   Wallet,
   UserPlus,
   MapPin,
+  Megaphone,
 } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
