@@ -319,7 +319,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
   const clearSelection = () => setSelectedEmployeeIds([]);
 
   // ============ Single mode submit ============
-  const handleSubmitSingle = async () => {
+  const handleSubmitSingle = async (thenHandover = false) => {
     const e: Record<string, string> = {};
     if (!form.asset_code.trim()) e.asset_code = "שדה חובה";
     else if (existingAssets?.some(a => a.asset_code === form.asset_code))
