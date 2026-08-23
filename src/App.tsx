@@ -36,6 +36,7 @@ const AttendanceCorrections = lazy(() => import("@/pages/AttendanceCorrections")
 const Payroll = lazy(() => import("@/pages/Payroll"));
 const Onboarding = lazy(() => import("@/pages/Onboarding"));
 const Tax101TokenPage = lazy(() => import("@/pages/Tax101TokenPage"));
+const Announcements = lazy(() => import("@/pages/Announcements"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
