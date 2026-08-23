@@ -149,8 +149,11 @@ export type Database = {
           content: string
           created_at: string
           created_by: string | null
+          expires_at: string | null
           id: string
           published_at: string
+          sender_name: string | null
+          sender_role: string | null
           title: string
         }
         Insert: {
@@ -158,8 +161,11 @@ export type Database = {
           content: string
           created_at?: string
           created_by?: string | null
+          expires_at?: string | null
           id?: string
           published_at?: string
+          sender_name?: string | null
+          sender_role?: string | null
           title: string
         }
         Update: {
@@ -167,8 +173,11 @@ export type Database = {
           content?: string
           created_at?: string
           created_by?: string | null
+          expires_at?: string | null
           id?: string
           published_at?: string
+          sender_name?: string | null
+          sender_role?: string | null
           title?: string
         }
         Relationships: [
@@ -2902,6 +2911,10 @@ export type Database = {
       apply_attendance_correction: {
         Args: { _correction_id: string }
         Returns: undefined
+      }
+      can_manage_announcements: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: boolean
       }
       claim_employee_for_current_user: { Args: never; Returns: boolean }
       classify_existing_punches: {
