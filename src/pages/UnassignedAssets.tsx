@@ -140,7 +140,7 @@ export default function UnassignedAssets() {
           <SelectContent>
             <SelectItem value="all">כל תתי-הקטגוריות</SelectItem>
             {visibleGroups.map((g: any) => (
-              <SelectItem key={g.id} value={g.id}>{g.group_name ?? g.name}</SelectItem>
+              <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
