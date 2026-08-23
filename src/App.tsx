@@ -19,6 +19,7 @@ import AttendanceMap from "@/pages/AttendanceMap";
 // Lazy: less-frequent pages — split into separate chunks loaded on demand
 const Assets = lazy(() => import("@/pages/Assets"));
 const AssetsDomainPage = lazy(() => import("@/pages/AssetsDomainPage"));
+const UnassignedAssets = lazy(() => import("@/pages/UnassignedAssets"));
 const ITTickets = lazy(() => import("@/pages/ITTickets"));
 const Alerts = lazy(() => import("@/pages/Alerts"));
 const EmployeePortal = lazy(() => import("@/pages/EmployeePortal"));
@@ -75,6 +76,7 @@ const App = () => (
                   <Route path="/employees" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations", "payroll", "hr", "finance"]}><Employees /></ProtectedRoute>} />
                   <Route path="/employees/:id" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations", "direct_manager", "payroll", "hr", "finance"]}><EmployeeDetail /></ProtectedRoute>} />
                   <Route path="/assets" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin", "operations", "finance", "legal"]}><Assets /></ProtectedRoute>} />
+                  <Route path="/assets-handover" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin", "operations", "finance", "legal"]}><UnassignedAssets /></ProtectedRoute>} />
                   <Route path="/assets/:domain/:itemId?" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin", "operations", "finance", "legal"]}><AssetsDomainPage /></ProtectedRoute>} />
 
                   <Route path="/categories" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations", "legal"]}><CategoryManager /></ProtectedRoute>} />

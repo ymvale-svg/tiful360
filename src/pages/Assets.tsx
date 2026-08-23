@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Plus, Search, Zap, MoreHorizontal, Package, UserRound, FolderTree } from "lucide-react";
+import { Plus, Search, Zap, MoreHorizontal, Package, UserRound, FolderTree, FileSignature } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
@@ -151,6 +151,15 @@ export default function Assets() {
                     >
                       <Plus className="w-4 h-4" />
                       פריט חדש
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="gap-1.5 rounded-full"
+                      onClick={() => navigate("/assets-handover")}
+                    >
+                      <FileSignature className="w-4 h-4" />
+                      בצע מסירה
                     </Button>
                     <Button
                       size="sm"
