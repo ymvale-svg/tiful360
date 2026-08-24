@@ -15,6 +15,12 @@ const ERROR_MAP: { match: (s: string) => boolean; he: string }[] = [
   { match: (s) => /same.?password|new password should be different|different from the old password/i.test(s), he: "הסיסמה החדשה זהה לסיסמה הקודמת. בחר סיסמה אחרת" },
   { match: (s) => /pwned|compromised|hibp|has been (?:found|leaked)/i.test(s), he: "הסיסמה הזו דלפה במאגרי סיסמאות פרוצים. בחר סיסמה אחרת" },
   { match: (s) => /signup.*disabled/i.test(s), he: "הרשמה אינה מאופשרת כרגע" },
+  // Server-side access gate (handle_new_user trigger) — user has no active employee record
+  { match: (s) => /אינו מורשה גישה/.test(s), he: "משתמש זה אינו מורשה גישה למערכת. פנה למנהל המערכת" },
+  {
+    match: (s) => /unexpected_failure|database error (saving|granting)|error (saving|granting) new user/i.test(s),
+    he: "המשתמש אינו מורשה גישה למערכת. יש לפנות למנהל המערכת להקמת כרטיס עובד",
+  },
 
   // Google OAuth
   { match: (s) => /redirect_uri_mismatch/i.test(s), he: "בעיה בהגדרות הכניסה עם Google. פנה למנהל המערכת" },

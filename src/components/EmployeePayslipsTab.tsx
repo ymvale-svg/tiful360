@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmployeePayslips, getPayslipSignedUrl, useDeletePayslip } from "@/hooks/usePayslips";
@@ -32,6 +32,12 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary, hideBa
   const [summaryPayslip, setSummaryPayslip] = useState<any | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
   const deleteMutation = useDeletePayslip();
+
+  // Re-arm the confidentiality gate whenever the viewed employee changes,
+  // so switching employees requires a fresh (audited) reveal.
+  useEffect(() => {
+    setRevealed(!requiresReveal);
+  }, [employeeId, requiresReveal]);
 
   // Fetch fresh employee record with balance fields (employees_public view doesn't expose balances)
   const { data: empFull } = useQuery({
