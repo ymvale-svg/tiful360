@@ -64,12 +64,30 @@ const QUICK_TEXTS = [
   "נמסרו מפתחות רזרביים",
 ];
 
-export function HandoverFlow({ open, onOpenChange, asset, direction = "handover", defaultEmployeeId, onAssigned }: Props) {
+export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction = "handover", defaultEmployeeId, onAssigned }: Props) {
   const { data: employees } = useEmployees();
   const { activeCompany, activeCompanyId } = useCompany();
   const { user } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
+
+  /** Callers pass partial asset objects; load the full row so every detail (km, plate, custom fields…) reaches the protocol. */
+  const [fullAsset, setFullAsset] = useState<AssetLike | null>(null);
+  useEffect(() => {
+    if (!open || !assetProp?.id) { setFullAsset(null); return; }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("assets")
+        .select("*, asset_categories(category_name, skip_handover_form, skip_return_form, protocol_type, protocol_field_defaults)")
+        .eq("id", assetProp.id)
+        .maybeSingle();
+      if (!cancelled && data) setFullAsset(data as any);
+    })();
+    return () => { cancelled = true; };
+  }, [open, assetProp?.id]);
+
+  const asset = (fullAsset ?? assetProp) as AssetLike | null;
 
   const isReturn = direction === "return";
   const preassignedOwnerId = asset?.current_owner_id ?? "";
@@ -90,9 +108,22 @@ export function HandoverFlow({ open, onOpenChange, asset, direction = "handover"
   const issuerSigRef = useRef<SignaturePadHandle>(null);
   const receiverSigRef = useRef<SignaturePadHandle>(null);
 
-  const employee = (employees ?? []).find((e: any) => e.id === employeeId) as any;
+  const listEmployee = (employees ?? []).find((e: any) => e.id === employeeId) as any;
+  /** The public employees list omits sensitive fields (id number); load the full record for the protocol. */
+  const [fullEmployee, setFullEmployee] = useState<any>(null);
+  useEffect(() => {
+    if (!open || !employeeId) { setFullEmployee(null); return; }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.from("employees").select("*").eq("id", employeeId).maybeSingle();
+      if (!cancelled && data) setFullEmployee(data);
+    })();
+    return () => { cancelled = true; };
+  }, [open, employeeId]);
+  const employee = fullEmployee ?? listEmployee;
   const issuerEmployee = (employees ?? []).find((e: any) => e.linked_user_id === user?.id) as any;
   const issuerName = issuerEmployee?.full_name ?? "";
+
 
   const categoryName = asset?.asset_categories?.category_name ?? "";
   const isVehicle = asset?.asset_categories?.protocol_type === "vehicle" || !!asset?.license_plate;
