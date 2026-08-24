@@ -12,7 +12,8 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const SENDER_DOMAIN = "notify.bedekclic.com";
+import { enqueueTransactionalEmail } from "../_shared/enqueueEmail.ts";
+const SENDER_DOMAIN = "notify.tiful360.com";
 const FROM_EMAIL = `noreply@${SENDER_DOMAIN}`;
 const FROM_NAME = "תפעול 360";
 const PORTAL_BASE = "https://tiful360.lovable.app";
@@ -167,18 +168,13 @@ Deno.serve(async (req) => {
 
       let sent = 0;
       for (const to of recipients) {
-        const { error } = await supabase.rpc("enqueue_email", {
-          queue_name: "transactional_emails",
-          payload: {
-            to,
-            from: { email: FROM_EMAIL, name: FROM_NAME },
-            subject,
-            html,
-            template_name: "expiring_assets_summary",
-          },
+        const ok = await enqueueTransactionalEmail(supabase, {
+          to,
+          subject,
+          html,
+          label: "expiring-assets-summary",
         });
-        if (!error) sent++;
-        else console.error("enqueue error", to, error);
+        if (ok) sent++;
       }
 
       // Mark as sent (one row per item, regardless of recipients)

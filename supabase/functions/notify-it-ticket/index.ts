@@ -11,7 +11,8 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const SENDER_DOMAIN = "notify.bedekclic.com";
+import { enqueueTransactionalEmail } from "../_shared/enqueueEmail.ts";
+const SENDER_DOMAIN = "notify.tiful360.com";
 const FROM_EMAIL = `noreply@${SENDER_DOMAIN}`;
 const FROM_NAME = "תפעול 360";
 
@@ -72,19 +73,12 @@ async function enqueueEmail(
   subject: string,
   html: string,
 ) {
-  const payload = {
+  return await enqueueTransactionalEmail(supabase, {
     to,
-    from: { email: FROM_EMAIL, name: FROM_NAME },
     subject,
     html,
-    template_name: "it_ticket_new",
-  };
-  const { error } = await supabase.rpc("enqueue_email", {
-    queue_name: "transactional_emails",
-    payload,
+    label: "it-ticket-new",
   });
-  if (error) console.error("enqueue error", to, error);
-  return !error;
 }
 
 Deno.serve(async (req) => {

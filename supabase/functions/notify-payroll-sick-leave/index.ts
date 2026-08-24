@@ -1,3 +1,4 @@
+import { enqueueTransactionalEmail } from "../_shared/enqueueEmail.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.103.0";
 
 const corsHeaders = {
@@ -110,17 +111,14 @@ Deno.serve(async (req) => {
     const enqueued: number[] = [];
     for (const to of recipients) {
       try {
-        const { data: msgId } = await supabase.rpc("enqueue_email", {
-          queue_name: "transactional_emails",
-          payload: {
-            to,
-            subject,
-            html,
-            template: "sick-leave-notification",
-            metadata: { request_id, employee_id: request.employee_id },
-          },
+        const ok = await enqueueTransactionalEmail(supabase, {
+          to,
+          subject,
+          html,
+          label: "sick-leave-notification",
+          metadata: { request_id, employee_id: request.employee_id },
         });
-        if (msgId) enqueued.push(Number(msgId));
+        if (ok) enqueued.push(1);
       } catch (e) {
         console.error("enqueue failed for", to, e);
       }

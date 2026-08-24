@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.103.0";
+import { enqueueTransactionalEmail } from "../_shared/enqueueEmail.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -66,20 +67,20 @@ Deno.serve(async (req) => {
       details: `${viewerName} צפה בנתוני השכר של ${employee.full_name}${context ? ` (${context})` : ""}`,
     });
 
-    // Recipients: company admins + super admins
-    const { data: access } = await admin
-      .from("user_company_access")
-      .select("user_id, role")
-      .eq("company_id", employee.company_id)
+    // Recipients: system admins + super admins (roles live in user_roles)
+    const { data: roleRows } = await admin
+      .from("user_roles")
+      .select("user_id")
       .in("role", ["admin", "super_admin"]);
 
     const recipients: string[] = [];
-    for (const row of access ?? []) {
+    for (const row of roleRows ?? []) {
       if (row.user_id === viewer.id) continue;
       const { data: u } = await admin.auth.admin.getUserById(row.user_id);
       const email = u?.user?.email;
       if (email && !recipients.includes(email)) recipients.push(email);
     }
+
     if (recipients.length === 0) return json({ logged: true, skipped: "no admin recipients" });
 
     const { data: company } = await admin
@@ -104,15 +105,12 @@ Deno.serve(async (req) => {
     `;
 
     for (const to of recipients) {
-      await admin.rpc("enqueue_email", {
-        queue_name: "transactional_emails",
-        payload: {
-          to,
-          subject,
-          html,
-          template: "payslip-access-audit",
-          metadata: { employee_id, viewer_id: viewer.id },
-        },
+      await enqueueTransactionalEmail(admin, {
+        to,
+        subject,
+        html,
+        label: "payslip-access-audit",
+        metadata: { employee_id, viewer_id: viewer.id },
       });
     }
 
