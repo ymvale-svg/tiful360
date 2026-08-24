@@ -21,6 +21,7 @@ const corsHeaders = {
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const MODEL = Deno.env.get("LOVABLE_AI_MODEL")?.trim() || "google/gemini-2.5-flash";
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
@@ -730,7 +731,7 @@ async function tryAnswerAssetDocumentSearch(message: string, supabase: any, comp
   return lines.join("\n");
 }
 
-async function executeTool(name: string, args: any, supabase: any, companyId: string | null) {
+async function executeTool(name: string, args: any, supabase: any, companyId: string | null, userId: string | null = null) {
   try {
     if (name === "query_table") {
       const def = getTableDef(args?.table);
@@ -979,6 +980,8 @@ Deno.serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    const userId = (claims.claims as any)?.sub ?? null;
+
     const body = await req.json();
     const { messages, companyId, approvedAction } = body as {
       messages: Array<{ role: "user" | "assistant"; content: string }>;
@@ -1001,7 +1004,7 @@ Deno.serve(async (req) => {
     ];
 
     if (approvedAction) {
-      const result = await executeTool(approvedAction.name, approvedAction.args, supabase, companyId ?? null);
+      const result = await executeTool(approvedAction.name, approvedAction.args, supabase, companyId ?? null, userId);
       conv.push({
         role: "user",
         content: `הפעולה ${approvedAction.name} בוצעה. תוצאה: ${JSON.stringify(result)}`,
@@ -1032,7 +1035,7 @@ Deno.serve(async (req) => {
       conv.push({ role: "assistant", content: msg?.content ?? "", tool_calls: toolCalls });
       for (const call of toolCalls) {
         const args = parseToolArgs(call.function?.arguments);
-        const result = await executeTool(call.function?.name, args, supabase, companyId ?? null);
+        const result = await executeTool(call.function?.name, args, supabase, companyId ?? null, userId);
         conv.push({
           role: "tool",
           tool_call_id: call.id,
