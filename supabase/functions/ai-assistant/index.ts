@@ -381,6 +381,23 @@ const tools = [
   {
     type: "function",
     function: {
+      name: "find_employee",
+      description:
+        "חיפוש עובד לפי שם עם התאמה חכמה (סדר מילים הפוך, שם חלקי, שגיאות כתיב). **תמיד** השתמש בכלי הזה כשהמשתמש מזכיר שם של עובד — לפני query_table. מחזיר match (התאמה ודאית אחת) או suggestions (רשימת אפשרויות דומות לתשאול המשתמש).",
+      parameters: {
+        type: "object",
+        required: ["name"],
+        properties: {
+          name: { type: "string", description: "השם שהמשתמש כתב, כפי שהוא" },
+          include_inactive: { type: "boolean", description: "לכלול עובדים לא פעילים (ברירת מחדל false)" },
+        },
+      },
+    },
+  },
+  {
+
+    type: "function",
+    function: {
       name: "send_email",
       description:
         "שולח מייל לעובד במערכת. כתובת המייל נשלפת בשרת מתוך רשומת העובד — אל תספק כתובת מייל. השתמש בכלי זה כשהמשתמש מבקש לשלוח מייל/הודעה/עדכון/תזכורת לעובד מסוים. דורש אישור משתמש, ומותר רק למשתמשים בעלי הרשאה (אדמין על, אדמין, משאבי אנוש, חשבות שכר, מזכירות, מנכ\"ל).",
