@@ -755,8 +755,76 @@ async function tryAnswerAssetDocumentSearch(message: string, supabase: any, comp
   if ((docs ?? []).length) lines.push("הקישורים תקפים ל-10 דקות.");
   return lines.join("\n");
 }
+// ---------- Fuzzy employee name matching ----------
+function normalizeName(s: string): string {
+  return String(s ?? "")
+    .replace(/[\u0591-\u05C7]/g, "") // Hebrew niqqud
+    .replace(/["'`׳״.,\-_()]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function levenshtein(a: string, b: string): number {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(
+        prev[j] + 1,
+        cur[j - 1] + 1,
+        prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1),
+      );
+    }
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
+// Score a single query token against a candidate's name tokens (0..1)
+function tokenScore(qt: string, nameTokens: string[]): number {
+  let best = 0;
+  for (const nt of nameTokens) {
+    let s = 0;
+    if (nt === qt) s = 1;
+    else if (nt.startsWith(qt) || qt.startsWith(nt)) s = 0.9;
+    else if (nt.includes(qt) || qt.includes(nt)) s = 0.8;
+    else {
+      const dist = levenshtein(qt, nt);
+      const maxLen = Math.max(qt.length, nt.length);
+      const allowed = maxLen <= 4 ? 1 : 2;
+      if (dist <= allowed) s = 1 - dist / maxLen;
+    }
+    if (s > best) best = s;
+  }
+  return best;
+}
+
+function scoreEmployeeName(query: string, fullName: string): number {
+  const q = normalizeName(query);
+  const n = normalizeName(fullName);
+  if (!q || !n) return 0;
+  if (q === n) return 1;
+  const qTokens = q.split(" ").filter(Boolean);
+  const nTokens = n.split(" ").filter(Boolean);
+  // Order-insensitive: same token set (any order) is a full match
+  if (qTokens.length > 1 && qTokens.length === nTokens.length) {
+    const sortedEqual =
+      [...qTokens].sort().join(" ") === [...nTokens].sort().join(" ");
+    if (sortedEqual) return 1;
+  }
+  const scores = qTokens.map((qt) => tokenScore(qt, nTokens));
+  const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+  // Slight bonus when every query token matched well (order irrelevant)
+  const allMatched = scores.every((s) => s >= 0.8);
+  return Math.min(0.99, allMatched ? avg * 0.98 : avg * 0.85);
+}
 
 async function executeTool(name: string, args: any, supabase: any, companyId: string | null, userId: string | null = null) {
+
   try {
     if (name === "query_table") {
       const def = getTableDef(args?.table);
