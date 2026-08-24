@@ -303,12 +303,12 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
     media,
   });
 
-  /** Email the signed protocol to the receiving employee. */
+  /** Email the signed protocol to the receiving employee (recipient is resolved server-side). */
   const sendProtocolEmail = async (pdfUrl: string | null) => {
-    const to = employee?.email;
-    if (!to) return;
+    if (!employeeId) return;
     try {
-      await supabase.functions.invoke("send-handover-protocol-email", {
+      const { data, error } = await supabase.functions.invoke("send-handover-protocol-email", {
+
         body: {
           employeeId,
           idempotencyKey: `handover-${asset!.id}-${employeeId}-${Date.now()}`,
