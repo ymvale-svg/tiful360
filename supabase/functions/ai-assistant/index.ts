@@ -366,10 +366,30 @@ const tools = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "send_email",
+      description:
+        "שולח מייל לעובד במערכת. כתובת המייל נשלפת בשרת מתוך רשומת העובד — אל תספק כתובת מייל. השתמש בכלי זה כשהמשתמש מבקש לשלוח מייל/הודעה/עדכון/תזכורת לעובד מסוים. דורש אישור משתמש, ומותר רק למשתמשים בעלי הרשאה (אדמין על, אדמין, משאבי אנוש, חשבות שכר, מזכירות, מנכ\"ל).",
+      parameters: {
+        type: "object",
+        required: ["employee_id", "subject", "body"],
+        properties: {
+          employee_id: { type: "string", description: "id של העובד מטבלת employees (מצא אותו קודם עם query_table)" },
+          employee_name: { type: "string", description: "שם העובד — לתצוגה בכרטיס האישור בלבד" },
+          subject: { type: "string", description: "נושא המייל" },
+          body: { type: "string", description: "גוף המייל בעברית, טקסט רגיל. שורות חדשות יומרו לפסקאות." },
+        },
+      },
+    },
+  },
 ];
 
 
-const WRITE_ACTIONS = new Set(["insert_row", "update_row", "delete_row"]);
+const WRITE_ACTIONS = new Set(["insert_row", "update_row", "delete_row", "send_email"]);
+const EMAIL_ALLOWED_ROLES = new Set(["super_admin", "admin", "hr", "payroll", "secretariat", "ceo"]);
+
 
 
 // ============================================================
