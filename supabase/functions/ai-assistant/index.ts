@@ -926,6 +926,46 @@ async function executeTool(name: string, args: any, supabase: any, companyId: st
       };
     }
 
+    if (name === "find_employee") {
+      if (!companyId) return { error: "לא נבחרה חברה" };
+      const query = String(args?.name ?? "").trim();
+      if (!query) return { error: "חסר שם לחיפוש" };
+
+      let q = supabase
+        .from("employees")
+        .select("id, full_name, employee_code, role, department, status, email, phone")
+        .eq("company_id", companyId)
+        .limit(2000);
+      if (args?.include_inactive !== true) q = q.eq("status", "active");
+      const { data, error } = await q;
+      if (error) return { error: error.message };
+
+      const scored = (data ?? [])
+        .map((e: any) => ({ ...e, score: Number(scoreEmployeeName(query, e.full_name)) }))
+        .filter((e: any) => e.score >= 0.55)
+        .sort((a: any, b: any) => b.score - a.score)
+        .slice(0, 6)
+        .map((e: any) => ({ ...e, score: Math.round(e.score * 100) / 100 }));
+
+      if (!scored.length) {
+        return { query, match: null, suggestions: [], note: "לא נמצאה התאמה. אפשר לבקש מהמשתמש לאמת את השם או לחפש לפי מחלקה/תפקיד." };
+      }
+
+      const top = scored[0];
+      const second = scored[1];
+      const confident = top.score >= 0.85 && (!second || top.score - second.score >= 0.15);
+      if (confident) {
+        return { query, match: top, suggestions: scored.slice(1), note: "התאמה ודאית — המשך בפעולה." };
+      }
+      return {
+        query,
+        match: null,
+        suggestions: scored,
+        note: "לא ודאי. הצג למשתמש את האפשרויות הדומות (שם + מחלקה/תפקיד) ובקש לבחור אחת לפני שאתה ממשיך.",
+      };
+    }
+
+
     if (name === "find_birthdays") {
       if (!companyId) return { error: "לא נבחרה חברה" };
       const fm = Number(args?.from_month), fd = Number(args?.from_day);
