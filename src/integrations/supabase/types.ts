@@ -2956,10 +2956,6 @@ export type Database = {
         Args: { _company_id: string }
         Returns: undefined
       }
-      delete_email: {
-        Args: { message_id: number; queue_name: string }
-        Returns: boolean
-      }
       edit_own_punch_time: {
         Args: { _new_punch_at: string; _punch_id: string }
         Returns: {
@@ -2984,11 +2980,6 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
-      }
-      email_queue_dispatch: { Args: never; Returns: undefined }
-      enqueue_email: {
-        Args: { payload: Json; queue_name: string }
-        Returns: number
       }
       finalize_expired_offboarding: { Args: never; Returns: number }
       find_birthdays_by_range: {
@@ -3271,25 +3262,8 @@ export type Database = {
       is_operations: { Args: { _user_id: string }; Returns: boolean }
       is_payroll: { Args: { _user_id: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
-      move_to_dlq: {
-        Args: {
-          dlq_name: string
-          message_id: number
-          payload: Json
-          source_queue: string
-        }
-        Returns: number
-      }
       my_access_blocked: { Args: never; Returns: boolean }
       my_self_edit_count_this_month: { Args: never; Returns: number }
-      read_email_batch: {
-        Args: { batch_size: number; queue_name: string; vt: number }
-        Returns: {
-          message: Json
-          msg_id: number
-          read_ct: number
-        }[]
-      }
       set_company_attendance_auto_approve: {
         Args: { _company_id: string; _value: boolean }
         Returns: boolean

@@ -1,5 +1,16 @@
 // AI Assistant Edge Function — Lovable AI Gateway + schema-aware generic tools
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { sendHtmlEmailLogged, SITE_NAME } from "../_shared/send-email-logged.ts";
+
+function escapeHtml(s: string): string {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,6 +21,7 @@ const corsHeaders = {
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const MODEL = Deno.env.get("LOVABLE_AI_MODEL")?.trim() || "google/gemini-2.5-flash";
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
@@ -366,10 +378,30 @@ const tools = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "send_email",
+      description:
+        "שולח מייל לעובד במערכת. כתובת המייל נשלפת בשרת מתוך רשומת העובד — אל תספק כתובת מייל. השתמש בכלי זה כשהמשתמש מבקש לשלוח מייל/הודעה/עדכון/תזכורת לעובד מסוים. דורש אישור משתמש, ומותר רק למשתמשים בעלי הרשאה (אדמין על, אדמין, משאבי אנוש, חשבות שכר, מזכירות, מנכ\"ל).",
+      parameters: {
+        type: "object",
+        required: ["employee_id", "subject", "body"],
+        properties: {
+          employee_id: { type: "string", description: "id של העובד מטבלת employees (מצא אותו קודם עם query_table)" },
+          employee_name: { type: "string", description: "שם העובד — לתצוגה בכרטיס האישור בלבד" },
+          subject: { type: "string", description: "נושא המייל" },
+          body: { type: "string", description: "גוף המייל בעברית, טקסט רגיל. שורות חדשות יומרו לפסקאות." },
+        },
+      },
+    },
+  },
 ];
 
 
-const WRITE_ACTIONS = new Set(["insert_row", "update_row", "delete_row"]);
+const WRITE_ACTIONS = new Set(["insert_row", "update_row", "delete_row", "send_email"]);
+const EMAIL_ALLOWED_ROLES = new Set(["super_admin", "admin", "hr", "payroll", "secretariat", "ceo"]);
+
 
 
 // ============================================================
@@ -538,6 +570,14 @@ function baseSystemPrompt(catalog: string): string {
 - דוגמאות למה שאתה יכול לעשות: עדכן פרטי עובד, שנה סטטוס בקשת חופשה ל-approved/rejected, פתח/סגור פנייה IT, סמן התראה כטופלה, עדכן פרטי נכס, שייך נכס לעובד (current_owner_id), עדכן ימי עבודה, השבת התראות אי-החתמה לעובד.
 
 
+## שליחת מיילים — \`send_email\`
+- כשהמשתמש מבקש "שלח מייל ל..." / "עדכן את X במייל" / "תזכיר לו במייל" — **חובה** להשתמש בכלי \`send_email\`.
+- קודם מצא את העובד עם \`query_table employees\` (לפי שם) וקח את ה-\`id\` שלו. **אל תספק כתובת מייל** — היא נשלפת בשרת מרשומת העובד.
+- נסח נושא קצר וגוף מייל ענייני בעברית לפי בקשת המשתמש. אל תמציא נתונים — רק מה שהמשתמש ביקש או מה שהוחזר מכלי.
+- הכלי דורש אישור: הצג בקצרה למי נשלח ומה תוכן ההודעה, וכרטיס האישור יוצג אוטומטית.
+- אל תשלח מיילים שיווקיים/תפוצה רחבה. מייל אחד לנמען אחד לכל בקשה.
+- אם אין לעובד כתובת מייל או שאין הרשאה — דווח למשתמש בדיוק את השגיאה שהוחזרה.
+
 ${catalog}
 
 ## סכימת טבלאות
@@ -699,7 +739,7 @@ async function tryAnswerAssetDocumentSearch(message: string, supabase: any, comp
   return lines.join("\n");
 }
 
-async function executeTool(name: string, args: any, supabase: any, companyId: string | null) {
+async function executeTool(name: string, args: any, supabase: any, companyId: string | null, userId: string | null = null) {
   try {
     if (name === "query_table") {
       const def = getTableDef(args?.table);
@@ -819,7 +859,65 @@ async function executeTool(name: string, args: any, supabase: any, companyId: st
       return { count: data?.length ?? 0, results: data };
     }
 
+    if (name === "send_email") {
+      if (!userId) return { error: "לא זוהה משתמש" };
+      if (!companyId) return { error: "לא נבחרה חברה" };
+
+      const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const { data: roleRows } = await admin.from("user_roles").select("role").eq("user_id", userId);
+      const roles = (roleRows ?? []).map((r: any) => r.role);
+      if (!roles.some((r: string) => EMAIL_ALLOWED_ROLES.has(r))) {
+        return { error: "אין לך הרשאה לשלוח מיילים דרך העוזר" };
+      }
+
+      const employeeId = String(args?.employee_id ?? "").trim();
+      const subject = String(args?.subject ?? "").trim();
+      const bodyText = String(args?.body ?? "").trim();
+      if (!employeeId) return { error: "חסר employee_id" };
+      if (!subject || !bodyText) return { error: "חסר נושא או גוף המייל" };
+
+      // The recipient address is always resolved server-side from the employee record.
+      const { data: employee } = await supabase
+        .from("employees")
+        .select("id, full_name, email")
+        .eq("id", employeeId)
+        .maybeSingle();
+      if (!employee) return { error: "העובד לא נמצא או שאין לך הרשאה אליו" };
+      if (!employee.email) return { error: `לעובד ${employee.full_name} אין כתובת מייל במערכת` };
+
+      const paragraphs = bodyText
+        .split(/\n{2,}/)
+        .map((p) => p.trim())
+        .filter(Boolean)
+        .map((p) => `<p style="margin:0 0 12px">${escapeHtml(p).replace(/\n/g, "<br />")}</p>`)
+        .join("");
+
+      const html = `<!doctype html><html dir="rtl" lang="he"><body style="margin:0;background:#ffffff;font-family:Arial,Helvetica,sans-serif;color:#1f2937">
+        <div style="max-width:600px;margin:0 auto;padding:24px">
+          <h1 style="font-size:18px;margin:0 0 16px">${escapeHtml(subject)}</h1>
+          <p style="margin:0 0 12px">שלום ${escapeHtml(employee.full_name ?? "")},</p>
+          ${paragraphs}
+          <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0" />
+          <p style="font-size:12px;color:#6b7280;margin:0">${escapeHtml(SITE_NAME)}</p>
+        </div>
+      </body></html>`;
+
+      const sent = await sendHtmlEmailLogged(admin, {
+        to: employee.email,
+        subject,
+        html,
+        label: "ai-assistant-message",
+        idempotencyKey: `ai-email-${employeeId}-${Date.now()}`,
+        metadata: { sent_by: userId, employee_id: employeeId },
+      });
+
+      return sent
+        ? { success: true, sent_to: employee.full_name }
+        : { error: "שליחת המייל נכשלה או שהנמען חסום לקבלת מיילים" };
+    }
+
     return { error: `כלי לא ידוע: ${name}` };
+
 
 
   } catch (e: any) {
@@ -890,6 +988,8 @@ Deno.serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    const userId = (claims.claims as any)?.sub ?? null;
+
     const body = await req.json();
     const { messages, companyId, approvedAction } = body as {
       messages: Array<{ role: "user" | "assistant"; content: string }>;
@@ -912,7 +1012,7 @@ Deno.serve(async (req) => {
     ];
 
     if (approvedAction) {
-      const result = await executeTool(approvedAction.name, approvedAction.args, supabase, companyId ?? null);
+      const result = await executeTool(approvedAction.name, approvedAction.args, supabase, companyId ?? null, userId);
       conv.push({
         role: "user",
         content: `הפעולה ${approvedAction.name} בוצעה. תוצאה: ${JSON.stringify(result)}`,
@@ -943,7 +1043,7 @@ Deno.serve(async (req) => {
       conv.push({ role: "assistant", content: msg?.content ?? "", tool_calls: toolCalls });
       for (const call of toolCalls) {
         const args = parseToolArgs(call.function?.arguments);
-        const result = await executeTool(call.function?.name, args, supabase, companyId ?? null);
+        const result = await executeTool(call.function?.name, args, supabase, companyId ?? null, userId);
         conv.push({
           role: "tool",
           tool_call_id: call.id,

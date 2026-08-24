@@ -20,6 +20,7 @@ const ACTION_TITLES: Record<string, (a: any) => string> = {
   create_it_ticket: () => "פתיחת פניית IT",
   approve_leave_request: () => "עדכון סטטוס בקשת חופשה",
   close_it_ticket: () => "סגירת פניית IT",
+  send_email: (a) => `שליחת מייל ל${a?.employee_name ?? "עובד"}`,
 };
 
 const TABLE_LABELS: Record<string, string> = {
@@ -61,6 +62,9 @@ const FIELD_LABELS: Record<string, string> = {
   direct_manager_id: "מנהל ישיר",
   category_id: "קטגוריה",
   asset_id: "נכס",
+  subject: "נושא",
+  body: "תוכן ההודעה",
+  employee_name: "נמען",
 };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
