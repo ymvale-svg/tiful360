@@ -100,11 +100,11 @@ export function PendingHandoverForms({ employeeId }: Props) {
         .eq("id", active.employee_id)
         .maybeSingle();
       if (emp?.email) {
-        supabase.functions.invoke("send-transactional-email", {
+        supabase.functions.invoke("send-handover-protocol-email", {
           body: {
-            templateName: "handover-protocol",
-            recipientEmail: emp.email,
+            employeeId: active.employee_id,
             idempotencyKey: `handover-form-${active.id}`,
+
             templateData: {
               employeeName: emp.full_name ?? snap.employee_name ?? "",
               companyName: snap.company_name ?? "",

@@ -3,6 +3,7 @@
 // is missing an in/out punch, enqueue an email using the existing attendance-gaps template.
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
+import { sendTemplateEmailLogged } from '../_shared/send-email-logged.ts'
 
 const APP_URL = 'https://tiful360.com'
 const WEEKDAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת']
@@ -83,22 +84,12 @@ Deno.serve(async (req) => {
       }],
     }
     const idempotencyKey = `missing-punch-${r.employee_id}-${target}`
-    const resp = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${serviceKey}`,
-        apikey: serviceKey,
-      },
-      body: JSON.stringify({
-        templateName: 'attendance-gaps',
-        recipientEmail: r.email,
-        idempotencyKey,
-        templateData,
-      }),
+    const result = await sendTemplateEmailLogged(admin, 'attendance-gaps', r.email, {
+      templateData,
+      idempotencyKey,
     })
-    if (resp.ok) queued++
-    else errors.push(`${r.email}: ${resp.status} ${await resp.text().catch(() => '')}`)
+    if (result.sent) queued++
+    else if (result.error) errors.push(`${r.email}: ${result.error}`)
   }
 
   return new Response(JSON.stringify({ date: target, total: rows?.length ?? 0, queued, skipped_no_email, skipped_agent_down, errors }), {

@@ -4,6 +4,7 @@
 // Scheduled by pg_cron every Thursday at 14:00 Asia/Jerusalem.
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
+import { sendTemplateEmailLogged } from '../_shared/send-email-logged.ts'
 
 function todayIL(): Date {
   const now = new Date()
@@ -114,28 +115,18 @@ Deno.serve(async (req) => {
 
     for (const email of recipients) {
       const idempotencyKey = `unmatched-weekly-${companyId}-${email}-${fromISO}-${toISOStr}`
-      const resp = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${serviceKey}`,
-          apikey: serviceKey,
+      const result = await sendTemplateEmailLogged(admin, 'unmatched-punches-weekly', email, {
+        templateData: {
+          recipientName: 'שלום',
+          companyName: (comp as any)?.name ?? '',
+          fromDate: fromLabel,
+          toDate: toLabel,
+          rows,
         },
-        body: JSON.stringify({
-          templateName: 'unmatched-punches-weekly',
-          recipientEmail: email,
-          idempotencyKey,
-          templateData: {
-            recipientName: 'שלום',
-            companyName: (comp as any)?.name ?? '',
-            fromDate: fromLabel,
-            toDate: toLabel,
-            rows,
-          },
-        }),
+        idempotencyKey,
       })
-      if (resp.ok) queued++
-      else errors.push(`${email}: ${resp.status} ${await resp.text().catch(() => '')}`)
+      if (result.sent) queued++
+      else if (result.error) errors.push(`${email}: ${result.error}`)
     }
   }
 

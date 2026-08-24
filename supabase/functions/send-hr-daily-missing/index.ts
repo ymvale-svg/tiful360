@@ -5,6 +5,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import * as XLSX from 'npm:xlsx@0.18.5'
+import { sendTemplateEmailLogged } from '../_shared/send-email-logged.ts'
 
 const WEEKDAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת']
 
@@ -152,22 +153,12 @@ Deno.serve(async (req) => {
         })),
       }
       const idempotencyKey = `hr-daily-missing-${companyId}-${email}-${target}`
-      const resp = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${serviceKey}`,
-          apikey: serviceKey,
-        },
-        body: JSON.stringify({
-          templateName: 'hr-daily-missing',
-          recipientEmail: email,
-          idempotencyKey,
-          templateData,
-        }),
+      const result = await sendTemplateEmailLogged(admin, 'hr-daily-missing', email, {
+        templateData,
+        idempotencyKey,
       })
-      if (resp.ok) queued++
-      else errors.push(`${email}: ${resp.status} ${await resp.text().catch(() => '')}`)
+      if (result.sent) queued++
+      else if (result.error) errors.push(`${email}: ${result.error}`)
     }
   }
 

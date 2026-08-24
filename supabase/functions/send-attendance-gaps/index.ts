@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
+import { sendTemplateEmailLogged } from '../_shared/send-email-logged.ts'
 
 const APP_URL = 'https://tiful360.com'
 
@@ -114,25 +115,14 @@ Deno.serve(async (req) => {
 
     const idempotencyKey = `attendance-gaps-${empId}-${from}-${to}`
 
-    const resp = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${serviceKey}`,
-        apikey: serviceKey,
-      },
-      body: JSON.stringify({
-        templateName: 'attendance-gaps',
-        recipientEmail: info.email,
-        idempotencyKey,
-        templateData,
-      }),
+    const result = await sendTemplateEmailLogged(admin, 'attendance-gaps', info.email, {
+      templateData,
+      idempotencyKey,
     })
-    if (resp.ok) {
+    if (result.sent) {
       queued++
-    } else {
-      const errText = await resp.text().catch(() => '')
-      errors.push(`${info.email}: ${resp.status} ${errText}`)
+    } else if (result.error) {
+      errors.push(`${info.email}: ${result.error}`)
     }
   }
 

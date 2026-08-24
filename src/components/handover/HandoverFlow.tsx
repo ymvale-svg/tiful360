@@ -276,11 +276,11 @@ export function HandoverFlow({ open, onOpenChange, asset, direction = "handover"
     const to = employee?.email;
     if (!to) return;
     try {
-      await supabase.functions.invoke("send-transactional-email", {
+      await supabase.functions.invoke("send-handover-protocol-email", {
         body: {
-          templateName: "handover-protocol",
-          recipientEmail: to,
+          employeeId,
           idempotencyKey: `handover-${asset!.id}-${employeeId}-${Date.now()}`,
+
           templateData: {
             employeeName: employee?.full_name ?? "",
             companyName: activeCompany?.name ?? "",

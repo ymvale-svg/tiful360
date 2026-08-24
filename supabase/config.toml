@@ -3,8 +3,6 @@ project_id = "rhzmhiknbcipucfvgkok"
 [functions]
   [functions.auth-email-hook]
     verify_jwt = false
-  [functions.process-email-queue]
-    verify_jwt = false
   [functions.split-payslips]
     verify_jwt = false
   [functions.send-tax101-email]
@@ -21,13 +19,7 @@ project_id = "rhzmhiknbcipucfvgkok"
     verify_jwt = false
   [functions.tax-form-101-signed-url]
     verify_jwt = false
-  [functions.send-transactional-email]
-    verify_jwt = true
   [functions.preview-transactional-email]
-    verify_jwt = false
-  [functions.handle-email-unsubscribe]
-    verify_jwt = false
-  [functions.handle-email-suppression]
     verify_jwt = false
   [functions.send-attendance-gaps]
     verify_jwt = true
@@ -43,3 +35,5 @@ project_id = "rhzmhiknbcipucfvgkok"
     verify_jwt = false
   [functions.leave-ics]
     verify_jwt = false
+  [functions.send-handover-protocol-email]
+    verify_jwt = true

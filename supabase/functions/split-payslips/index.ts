@@ -4,6 +4,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.103.0';
 import { extractText, getDocumentProxy } from 'https://esm.sh/unpdf@0.12.1';
 import { PDFDocument } from 'https://esm.sh/pdf-lib@1.17.1';
+import { sendHtmlEmailLogged } from '../_shared/send-email-logged.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -724,38 +725,6 @@ Deno.serve(async (req) => {
       ? `<div style="text-align:center; padding:16px 0;"><img src="${companyLogoUrl}" alt="${companyName}" style="max-height:80px; max-width:240px; display:inline-block;" /></div>`
       : '';
 
-    // Email sender config — must match send-transactional-email
-    const SITE_NAME = 'tiful360';
-    const SENDER_DOMAIN = 'notify.tiful360.com';
-    const FROM_DOMAIN = 'tiful360.com';
-
-    const generateUnsubToken = () => {
-      const bytes = new Uint8Array(32);
-      crypto.getRandomValues(bytes);
-      return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
-    };
-
-    const getOrCreateUnsubscribeToken = async (email: string): Promise<string | null> => {
-      const normalized = email.toLowerCase();
-      const { data: existing } = await admin
-        .from('email_unsubscribe_tokens')
-        .select('token, used_at')
-        .eq('email', normalized)
-        .maybeSingle();
-      if (existing && !existing.used_at) return existing.token;
-      if (existing && existing.used_at) return null; // suppressed
-      const token = generateUnsubToken();
-      await admin
-        .from('email_unsubscribe_tokens')
-        .upsert({ token, email: normalized }, { onConflict: 'email', ignoreDuplicates: true });
-      const { data: stored } = await admin
-        .from('email_unsubscribe_tokens')
-        .select('token')
-        .eq('email', normalized)
-        .maybeSingle();
-      return stored?.token ?? token;
-    };
-
     for (const n of payslipNotifications) {
       const periodLabel = `${monthNames[n.period_month - 1] ?? n.period_month}/${n.period_year}`;
       const vars = {
@@ -776,53 +745,16 @@ Deno.serve(async (req) => {
         html = logoHtml + html;
       }
       try {
-        // Suppression check — skip recipients that bounced/unsubscribed
-        const { data: suppressed } = await admin
-          .from('suppressed_emails')
-          .select('id')
-          .eq('email', n.to.toLowerCase())
-          .maybeSingle();
-        if (suppressed) {
-          console.log('payslip email suppressed', n.to);
-          continue;
-        }
-
-        const unsubscribeToken = await getOrCreateUnsubscribeToken(n.to);
-        if (!unsubscribeToken) {
-          console.log('payslip email skipped, no unsubscribe token', n.to);
-          continue;
-        }
-
-        const messageId = crypto.randomUUID();
-        const idempotencyKey = `payslip-${batchId}-${n.employee_id}`;
-
-        await admin.from('email_send_log').insert({
-          message_id: messageId,
-          template_name: 'payslip-available',
-          recipient_email: n.to,
-          status: 'pending',
-        });
-
-        await admin.rpc('enqueue_email', {
-          queue_name: 'transactional_emails',
-          payload: {
-            message_id: messageId,
-            to: n.to,
-            from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
-            sender_domain: SENDER_DOMAIN,
-            subject,
-            html,
-            text: html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
-            purpose: 'transactional',
-            label: 'payslip-available',
-            idempotency_key: idempotencyKey,
-            unsubscribe_token: unsubscribeToken,
-            queued_at: new Date().toISOString(),
-            metadata: { employee_id: n.employee_id, period_year: n.period_year, period_month: n.period_month, batch_id: batchId },
-          },
+        await sendHtmlEmailLogged(admin, {
+          to: n.to,
+          subject,
+          html,
+          label: 'payslip-available',
+          idempotencyKey: `payslip-${batchId}-${n.employee_id}`,
+          metadata: { employee_id: n.employee_id, period_year: n.period_year, period_month: n.period_month, batch_id: batchId },
         });
       } catch (e) {
-        console.error('enqueue payslip email failed for', n.to, e);
+        console.error('payslip email failed for', n.to, e);
       }
     }
 

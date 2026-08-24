@@ -1,8 +1,8 @@
 // Edge Function: send-leave-request-email
 // Receives { request_id, event } where event is 'submitted' | 'approved' | 'sick-closed'.
-// Enqueues the appropriate emails into the auth_emails / transactional_emails pgmq queue
-// using the existing Lovable email infrastructure.
+// Sends the appropriate emails through Lovable's managed email delivery.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.103.0";
+import { sendHtmlEmailLogged } from "../_shared/send-email-logged.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -78,50 +78,6 @@ function ctaButton(href: string, label: string) {
   </p>`;
 }
 
-function generateToken(): string {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-async function getOrCreateUnsubscribeToken(supabase: any, email: string): Promise<string | null> {
-  const normalized = email.toLowerCase();
-  const { data: existing } = await supabase
-    .from("email_unsubscribe_tokens")
-    .select("token, used_at")
-    .eq("email", normalized)
-    .maybeSingle();
-  if (existing && !existing.used_at) return existing.token;
-  if (existing && existing.used_at) return null; // suppressed
-  const token = generateToken();
-  await supabase
-    .from("email_unsubscribe_tokens")
-    .upsert({ token, email: normalized }, { onConflict: "email", ignoreDuplicates: true });
-  const { data: stored } = await supabase
-    .from("email_unsubscribe_tokens")
-    .select("token")
-    .eq("email", normalized)
-    .maybeSingle();
-  return stored?.token ?? token;
-}
-
-function htmlToText(html: string): string {
-  return html
-    .replace(/<style[\s\S]*?<\/style>/gi, "")
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/(p|div|tr|h[1-6]|li)>/gi, "\n")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/[ \t]+/g, " ")
-    .replace(/\n\s*\n+/g, "\n\n")
-    .trim();
-}
-
 async function enqueueEmail(
   supabase: any,
   to: string,
@@ -130,56 +86,7 @@ async function enqueueEmail(
   label: string,
   idempotencyKey: string,
 ) {
-  const normalized = to.toLowerCase();
-  // Suppression check
-  const { data: suppressed } = await supabase
-    .from("suppressed_emails")
-    .select("id")
-    .eq("email", normalized)
-    .maybeSingle();
-  const messageId = crypto.randomUUID();
-  if (suppressed) {
-    await supabase.from("email_send_log").insert({
-      message_id: messageId, template_name: label, recipient_email: to, status: "suppressed",
-    });
-    return false;
-  }
-  const unsubscribe_token = await getOrCreateUnsubscribeToken(supabase, to);
-  if (!unsubscribe_token) {
-    await supabase.from("email_send_log").insert({
-      message_id: messageId, template_name: label, recipient_email: to, status: "suppressed",
-    });
-    return false;
-  }
-  await supabase.from("email_send_log").insert({
-    message_id: messageId, template_name: label, recipient_email: to, status: "pending",
-  });
-  const { error } = await supabase.rpc("enqueue_email", {
-    queue_name: "transactional_emails",
-    payload: {
-      message_id: messageId,
-      to,
-      from: `${FROM_NAME} <${FROM_EMAIL}>`,
-      sender_domain: SENDER_DOMAIN,
-      subject,
-      html,
-      text: htmlToText(html) || subject,
-      purpose: "transactional",
-      label,
-      idempotency_key: idempotencyKey,
-      unsubscribe_token,
-      queued_at: new Date().toISOString(),
-    },
-  });
-  if (error) {
-    console.error("enqueue error", to, error);
-    await supabase.from("email_send_log").insert({
-      message_id: messageId, template_name: label, recipient_email: to,
-      status: "failed", error_message: "Failed to enqueue",
-    });
-    return false;
-  }
-  return true;
+  return await sendHtmlEmailLogged(supabase, { to, subject, html, label, idempotencyKey });
 }
 
 Deno.serve(async (req) => {
