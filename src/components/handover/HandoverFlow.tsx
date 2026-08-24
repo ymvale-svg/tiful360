@@ -164,7 +164,8 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
       DEFAULT_FIELD_KEYS;
     setSelectedKeys(candidateFields.filter((f) => defaults.includes(f.key)).map((f) => f.key));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, asset?.id, template?.id]);
+  }, [open, asset?.id, template?.id, fullAsset]);
+
 
   const toggleKey = (key: string) =>
     setSelectedKeys((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
