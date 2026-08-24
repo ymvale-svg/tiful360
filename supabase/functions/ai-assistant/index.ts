@@ -1,5 +1,16 @@
 // AI Assistant Edge Function — Lovable AI Gateway + schema-aware generic tools
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { sendHtmlEmailLogged, SITE_NAME } from "../_shared/send-email-logged.ts";
+
+function escapeHtml(s: string): string {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
