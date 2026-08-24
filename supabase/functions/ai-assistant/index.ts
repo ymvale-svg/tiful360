@@ -381,6 +381,23 @@ const tools = [
   {
     type: "function",
     function: {
+      name: "find_employee",
+      description:
+        "חיפוש עובד לפי שם עם התאמה חכמה (סדר מילים הפוך, שם חלקי, שגיאות כתיב). **תמיד** השתמש בכלי הזה כשהמשתמש מזכיר שם של עובד — לפני query_table. מחזיר match (התאמה ודאית אחת) או suggestions (רשימת אפשרויות דומות לתשאול המשתמש).",
+      parameters: {
+        type: "object",
+        required: ["name"],
+        properties: {
+          name: { type: "string", description: "השם שהמשתמש כתב, כפי שהוא" },
+          include_inactive: { type: "boolean", description: "לכלול עובדים לא פעילים (ברירת מחדל false)" },
+        },
+      },
+    },
+  },
+  {
+
+    type: "function",
+    function: {
       name: "send_email",
       description:
         "שולח מייל לעובד במערכת. כתובת המייל נשלפת בשרת מתוך רשומת העובד — אל תספק כתובת מייל. השתמש בכלי זה כשהמשתמש מבקש לשלוח מייל/הודעה/עדכון/תזכורת לעובד מסוים. דורש אישור משתמש, ומותר רק למשתמשים בעלי הרשאה (אדמין על, אדמין, משאבי אנוש, חשבות שכר, מזכירות, מנכ\"ל).",
@@ -554,12 +571,15 @@ function baseSystemPrompt(catalog: string): string {
 - "מי גר ב..." → employees \`city ilike '%X%'\`.
 - "המנהל של X" → קודם employees לפי שם, ואז employees נוסף לפי \`direct_manager_id\`.
 
-## חוק ברזל — חיפוש עובד לפי שם
-- כשהמשתמש נותן שם עובד (שם פרטי + משפחה, או רק אחד מהם), חפש ב-\`employees.full_name ilike\`.
-- **אם השם מכיל יותר ממילה אחת** (למשל "גילעד קוגלמן") והחיפוש המלא \`full_name ilike '%גילעד קוגלמן%'\` החזיר 0 — **חובה** להריץ חיפוש נפרד לכל מילה לחוד (\`full_name ilike '%גילעד%'\` וגם \`full_name ilike '%קוגלמן%'\`) לפני שאתה אומר "לא מצאתי".
-- **סדר מילים לא משנה**: "מלכה קוגלמן" ו-"קוגלמן מלכה" הם אותו עובד. אם חיפוש מלא בסדר שניתן נכשל, חובה לנסות גם את הסדר ההפוך (\`full_name ilike '%קוגלמן מלכה%'\`) **וגם** חיפוש נפרד לכל מילה. עובד שמכיל את **כל** המילים בכל סדר — הוא ההתאמה.
-- אם נמצא בדיוק עובד אחד עם אחת מהמילים — זה העובד. אם נמצאו כמה — העדף את זה שמכיל את כל המילים (בכל סדר); אחרת הצג רשימה קצרה ובקש לבחור.
-- אותו כלל לחיפוש לפי שם משפחה בלבד, שם פרטי בלבד, או שם עם שגיאת כתיב קלה (נסה שורש מקוצר של 3-4 אותיות).
+## חוק ברזל — חיפוש עובד לפי שם (\`find_employee\`)
+- כשהמשתמש מזכיר שם עובד (שם מלא, שם פרטי בלבד, שם משפחה בלבד, סדר הפוך או עם שגיאת כתיב) — **חובה** להשתמש קודם בכלי \`find_employee\` עם השם כפי שנכתב. אל תחפש ידנית ב-\`query_table employees\` לפי שם.
+- הכלי מטפל אוטומטית ב: סדר מילים הפוך ("עמית לנג" = "לנג עמית"), שם חלקי, וטעויות כתיב קלות.
+- אם התקבל \`match\` — זו ההתאמה, המשך בפעולה (השתמש ב-\`id\` שלה) בלי לשאול.
+- אם התקבל \`match: null\` עם \`suggestions\` — **אל תנחש ואל תבצע פעולה**. שאל את המשתמש בצורה קצרה: "לא בטוח למי התכוונת — האם התכוונת ל:" ואז רשימה ממוספרת עם שם מלא + מחלקה/תפקיד לכל אפשרות, ובקש לבחור מספר או להבהיר.
+- אם אין אף הצעה — אמור שלא מצאת, והצע למשתמש לבדוק את האיות או לחפש לפי מחלקה/תפקיד/מספר עובד.
+- אם המשתמש בחר מספר מהרשימה שהצגת — קח את ה-\`id\` של אותה הצעה והמשך מהנקודה שבה עצרת (כולל שליחת מייל/עדכון שביקש).
+- לחיפוש מידע נוסף על עובד שאותר (חופשות, נכסים, פניות) — השתמש ב-\`id\` שקיבלת מ-\`find_employee\` בשאילתות ההמשך.
+
 - describe_table — רק לעמודות שאינן בקטלוג למטה.
 
 ## פעולות כתיבה — יש לך הרשאה מלאה בגבולות ההרשאות של המשתמש
@@ -572,7 +592,7 @@ function baseSystemPrompt(catalog: string): string {
 
 ## שליחת מיילים — \`send_email\`
 - כשהמשתמש מבקש "שלח מייל ל..." / "עדכן את X במייל" / "תזכיר לו במייל" — **חובה** להשתמש בכלי \`send_email\`.
-- קודם מצא את העובד עם \`query_table employees\` (לפי שם) וקח את ה-\`id\` שלו. **אל תספק כתובת מייל** — היא נשלפת בשרת מרשומת העובד.
+- קודם מצא את העובד עם \`find_employee\` וקח את ה-\`id\` שלו. אם הכלי החזיר הצעות במקום התאמה — שאל את המשתמש למי התכוון לפני השליחה. **אל תספק כתובת מייל** — היא נשלפת בשרת מרשומת העובד.
 - נסח נושא קצר וגוף מייל ענייני בעברית לפי בקשת המשתמש. אל תמציא נתונים — רק מה שהמשתמש ביקש או מה שהוחזר מכלי.
 - הכלי דורש אישור: הצג בקצרה למי נשלח ומה תוכן ההודעה, וכרטיס האישור יוצג אוטומטית.
 - אל תשלח מיילים שיווקיים/תפוצה רחבה. מייל אחד לנמען אחד לכל בקשה.
@@ -738,8 +758,76 @@ async function tryAnswerAssetDocumentSearch(message: string, supabase: any, comp
   if ((docs ?? []).length) lines.push("הקישורים תקפים ל-10 דקות.");
   return lines.join("\n");
 }
+// ---------- Fuzzy employee name matching ----------
+function normalizeName(s: string): string {
+  return String(s ?? "")
+    .replace(/[\u0591-\u05C7]/g, "") // Hebrew niqqud
+    .replace(/["'`׳״.,\-_()]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function levenshtein(a: string, b: string): number {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(
+        prev[j] + 1,
+        cur[j - 1] + 1,
+        prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1),
+      );
+    }
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
+// Score a single query token against a candidate's name tokens (0..1)
+function tokenScore(qt: string, nameTokens: string[]): number {
+  let best = 0;
+  for (const nt of nameTokens) {
+    let s = 0;
+    if (nt === qt) s = 1;
+    else if (nt.startsWith(qt) || qt.startsWith(nt)) s = 0.9;
+    else if (nt.includes(qt) || qt.includes(nt)) s = 0.8;
+    else {
+      const dist = levenshtein(qt, nt);
+      const maxLen = Math.max(qt.length, nt.length);
+      const allowed = maxLen <= 4 ? 1 : 2;
+      if (dist <= allowed) s = 1 - dist / maxLen;
+    }
+    if (s > best) best = s;
+  }
+  return best;
+}
+
+function scoreEmployeeName(query: string, fullName: string): number {
+  const q = normalizeName(query);
+  const n = normalizeName(fullName);
+  if (!q || !n) return 0;
+  if (q === n) return 1;
+  const qTokens = q.split(" ").filter(Boolean);
+  const nTokens = n.split(" ").filter(Boolean);
+  // Order-insensitive: same token set (any order) is a full match
+  if (qTokens.length > 1 && qTokens.length === nTokens.length) {
+    const sortedEqual =
+      [...qTokens].sort().join(" ") === [...nTokens].sort().join(" ");
+    if (sortedEqual) return 1;
+  }
+  const scores = qTokens.map((qt) => tokenScore(qt, nTokens));
+  const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+  // Slight bonus when every query token matched well (order irrelevant)
+  const allMatched = scores.every((s) => s >= 0.8);
+  return Math.min(0.99, allMatched ? avg * 0.98 : avg * 0.85);
+}
 
 async function executeTool(name: string, args: any, supabase: any, companyId: string | null, userId: string | null = null) {
+
   try {
     if (name === "query_table") {
       const def = getTableDef(args?.table);
@@ -840,6 +928,46 @@ async function executeTool(name: string, args: any, supabase: any, companyId: st
         expires_in_seconds: 600,
       };
     }
+
+    if (name === "find_employee") {
+      if (!companyId) return { error: "לא נבחרה חברה" };
+      const query = String(args?.name ?? "").trim();
+      if (!query) return { error: "חסר שם לחיפוש" };
+
+      let q = supabase
+        .from("employees")
+        .select("id, full_name, employee_code, role, department, status, email, phone")
+        .eq("company_id", companyId)
+        .limit(2000);
+      if (args?.include_inactive !== true) q = q.eq("status", "active");
+      const { data, error } = await q;
+      if (error) return { error: error.message };
+
+      const scored = (data ?? [])
+        .map((e: any) => ({ ...e, score: Number(scoreEmployeeName(query, e.full_name)) }))
+        .filter((e: any) => e.score >= 0.55)
+        .sort((a: any, b: any) => b.score - a.score)
+        .slice(0, 6)
+        .map((e: any) => ({ ...e, score: Math.round(e.score * 100) / 100 }));
+
+      if (!scored.length) {
+        return { query, match: null, suggestions: [], note: "לא נמצאה התאמה. אפשר לבקש מהמשתמש לאמת את השם או לחפש לפי מחלקה/תפקיד." };
+      }
+
+      const top = scored[0];
+      const second = scored[1];
+      const confident = top.score >= 0.85 && (!second || top.score - second.score >= 0.15);
+      if (confident) {
+        return { query, match: top, suggestions: scored.slice(1), note: "התאמה ודאית — המשך בפעולה." };
+      }
+      return {
+        query,
+        match: null,
+        suggestions: scored,
+        note: "לא ודאי. הצג למשתמש את האפשרויות הדומות (שם + מחלקה/תפקיד) ובקש לבחור אחת לפני שאתה ממשיך.",
+      };
+    }
+
 
     if (name === "find_birthdays") {
       if (!companyId) return { error: "לא נבחרה חברה" };
