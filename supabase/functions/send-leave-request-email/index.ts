@@ -12,7 +12,7 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const SENDER_DOMAIN = "notify.bedekclic.com";
+const SENDER_DOMAIN = "notify.tiful360.com";
 const FROM_EMAIL = `noreply@${SENDER_DOMAIN}`;
 const FROM_NAME = "תפעול 360";
 
