@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { sendTemplateEmailLogged } from "../_shared/send-email-logged.ts"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -219,22 +220,12 @@ async function notifyUnmatched(
 
     for (const to of recipients) {
       const idempotencyKey = `unmatched-punches-${companyId}-${to}-${alertDate}`;
-      const resp = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${serviceKey}`,
-          apikey: serviceKey,
-        },
-        body: JSON.stringify({
-          templateName: "unmatched-punches",
-          recipientEmail: to,
-          idempotencyKey,
-          templateData: { companyName: (company as any)?.name ?? "", entries },
-        }),
+      const result = await sendTemplateEmailLogged(supabase, "unmatched-punches", to, {
+        templateData: { companyName: (company as any)?.name ?? "", entries },
+        idempotencyKey,
       });
-      if (!resp.ok) {
-        console.error("send failed", to, resp.status, await resp.text().catch(() => ""));
+      if (!result.sent && result.error) {
+        console.error("send failed", to, result.error);
       }
     }
   }
