@@ -334,10 +334,19 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
           },
         },
       });
+      if (error) throw error;
+      if (data && data.success === false) {
+        toast({
+          title: "הפרוטוקול נשמר, אך לא נשלח במייל",
+          description: data.reason === "no_email" ? "לעובד אין כתובת מייל בתיק העובד" : "שליחת המייל נחסמה",
+        });
+      }
     } catch (e) {
       console.error("protocol email failed", e);
+      toast({ title: "הפרוטוקול נשמר, אך שליחת המייל נכשלה", variant: "destructive" });
     }
   };
+
 
   // ---- Actions ----
   const handleDirectAssign = async () => {
