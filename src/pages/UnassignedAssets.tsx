@@ -11,6 +11,7 @@ import { useAssetGroups } from "@/hooks/useAssetGroups";
 import { HandoverFlow } from "@/components/handover/HandoverFlow";
 import { DOMAIN_META, DOMAIN_ORDER, getDomain, domainKeyToSlug, type DomainKey } from "@/lib/assetDomains";
 import { cn } from "@/lib/utils";
+import { usePersistentFilter } from "@/hooks/usePersistentFilter";
 
 const statusLabels: Record<string, string> = {
   in_use: "בשימוש", in_stock: "במלאי", in_repair: "בתיקון", lost: "אבד",
@@ -24,12 +25,12 @@ export default function UnassignedAssets() {
   const { data: categories } = useAssetCategories();
   const { data: groups } = useAssetGroups();
 
-  const [q, setQ] = useState("");
-  const [domain, setDomain] = useState<"all" | DomainKey>("all");
-  const [categoryId, setCategoryId] = useState<string>("all");
-  const [groupId, setGroupId] = useState<string>("all");
-  const [status, setStatus] = useState<string>("all");
-  const [sort, setSort] = useState<SortKey>("created_desc");
+  const [q, setQ] = usePersistentFilter<string>("unassigned:q", "");
+  const [domain, setDomain] = usePersistentFilter<"all" | DomainKey>("unassigned:domain", "all");
+  const [categoryId, setCategoryId] = usePersistentFilter<string>("unassigned:cat", "all");
+  const [groupId, setGroupId] = usePersistentFilter<string>("unassigned:group", "all");
+  const [status, setStatus] = usePersistentFilter<string>("unassigned:status", "all");
+  const [sort, setSort] = usePersistentFilter<SortKey>("unassigned:sort", "created_desc");
   const [handoverAsset, setHandoverAsset] = useState<any | null>(null);
 
   const catById = useMemo(() => {
