@@ -30,6 +30,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { HandoverFormsList } from "@/components/handover/HandoverFormsList";
 import { useEmployeeHandoverForms } from "@/hooks/useHandoverForms";
 import { getDomain, domainKeyToSlug } from "@/lib/assetDomains";
+import { EmployeeActivityTimeline } from "@/components/EmployeeActivityTimeline";
+
 
 
 const allTabs = [
@@ -520,32 +522,15 @@ export default function EmployeeDetail() {
 
       {/* History tab */}
       {activeTab === "history" && (
-        <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 animate-fade-in">
-          {(activityLog ?? []).length > 0 ? (
-            <div className="relative">
-              <div className="absolute top-0 bottom-0 right-[17px] w-0.5 bg-border" />
-              <div className="space-y-6">
-                {(activityLog ?? []).map((item) => (
-                  <div key={item.id} className="flex items-start gap-5 relative">
-                    <div className="timeline-dot mt-1 z-10 shrink-0" />
-                    <div className="flex-1 pb-2">
-                      <p className="text-sm">{item.action}</p>
-                      <div className="flex items-center gap-3 mt-1">
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(item.created_at).toLocaleDateString("en-GB")}
-                        </span>
-                        {item.details && <span className="text-xs text-muted-foreground">{item.details}</span>}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">אין היסטוריה עדיין</div>
-          )}
-        </div>
+        <EmployeeActivityTimeline
+          employeeId={id!}
+          employee={employee}
+          activityLog={activityLog ?? []}
+          leaveRequests={leaveRequests ?? []}
+          handoverForms={handoverForms ?? []}
+        />
       )}
+
 
       {/* Offboarding dialog */}
       <OffboardingDialog
