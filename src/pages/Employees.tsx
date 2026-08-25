@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { usePersistentFilter } from "@/hooks/usePersistentFilter";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Search, Plus, UserMinus, Mail, Send, ShieldCheck, ShieldAlert, UserCheck, UserX } from "lucide-react";
 import { ExportExcelButton, ImportExcelButton } from "@/components/ExcelActionButtons";
@@ -82,8 +83,8 @@ export default function Employees() {
     if ((!t || t === "employees") && tab !== "employees") setTab("employees");
   }, [searchParams]);
 
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<EmployeeStatus | "all">("active");
+  const [search, setSearch] = usePersistentFilter<string>("employees:search", "");
+  const [statusFilter, setStatusFilter] = usePersistentFilter<EmployeeStatus | "all">("employees:status", "active");
   const [addOpen, setAddOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
