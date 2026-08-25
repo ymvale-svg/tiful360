@@ -70,8 +70,8 @@ export default function Employees() {
   const queryClient = useQueryClient();
   const updateEmployee = useUpdateEmployee();
   const navigate = useNavigate();
-  const { isAdmin, isSuperAdmin, isHR, isPayroll } = useAuth();
-  const canManageUsers = isAdmin || isSuperAdmin || isHR || isPayroll;
+  const { isAdmin, isSuperAdmin, isHR, isPayroll, isOperations, isIT } = useAuth();
+  const canManageUsers = isAdmin || isSuperAdmin || isHR || isPayroll || isOperations || isIT;
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = searchParams.get("tab") === "users" && canManageUsers ? "users" : "employees";
   const [tab, setTab] = useState<"employees" | "users">(initialTab);
@@ -83,7 +83,7 @@ export default function Employees() {
   }, [searchParams]);
 
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<EmployeeStatus | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<EmployeeStatus | "all">("active");
   const [addOpen, setAddOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
