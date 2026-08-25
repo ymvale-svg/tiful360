@@ -36,6 +36,7 @@ interface Props {
 export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
   const { toast } = useToast();
   const update = useUpdateEmployee();
+  const cancelOffboarding = useCancelOffboarding();
   const { data: allEmployees } = useEmployees();
   const { activeCompanyId, activeCompany } = useCompany();
   const { data: subEmployers = [] } = useSubEmployers(true);
