@@ -33,13 +33,21 @@ Deno.serve(async (req) => {
     const canManage = callerRoles?.some((r: any) =>
       ["admin", "super_admin", "hr", "payroll"].includes(r.role)
     );
-    if (!canManage) {
+
+    const url = new URL(req.url);
+    const action = url.searchParams.get("action");
+
+    // Operations / IT onboard new employees, so they may send employee invites only.
+    const canInviteEmployees = canManage || callerRoles?.some((r: any) =>
+      ["operations", "it_manager"].includes(r.role)
+    );
+    const allowed = action === "invite" ? canInviteEmployees : canManage;
+    if (!allowed) {
       return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
-    const url = new URL(req.url);
-    const action = url.searchParams.get("action");
+
 
     // Helper: get caller's company IDs
     const getCallerCompanyIds = async () => {
