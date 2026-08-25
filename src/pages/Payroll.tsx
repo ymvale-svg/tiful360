@@ -351,7 +351,7 @@ function OverviewTab() {
 
   return (
     <div className="space-y-6">
-      <HrAttendanceReports />
+
 
       {/* Payslip batches */}
       <section className="bg-card rounded-xl border border-border/50 shadow-card overflow-hidden">
