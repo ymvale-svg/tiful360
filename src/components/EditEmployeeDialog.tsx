@@ -157,9 +157,23 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
         payload.hebrew_birth_month = null;
         payload.hebrew_birth_year = null;
       }
+      // Returning a leaving employee to active cancels the offboarding protocol
+      const revertingOffboarding =
+        employee?.status === "leaving" && payload.status === "active";
+      if (revertingOffboarding) {
+        delete payload.status;
+      }
+
       await update.mutateAsync({ id: employee.id, ...payload });
+
+      if (revertingOffboarding) {
+        await cancelOffboarding.mutateAsync(employee.id);
+      }
+
       queryClient.invalidateQueries({ queryKey: ["employees-full"] });
-      toast({ title: "פרטי העובד נשמרו" });
+      toast({
+        title: revertingOffboarding ? "העובד הוחזר לפעיל ופרוטוקול העזיבה בוטל" : "פרטי העובד נשמרו",
+      });
       onOpenChange(false);
     } catch (err: any) {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
