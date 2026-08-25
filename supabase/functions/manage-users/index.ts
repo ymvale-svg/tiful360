@@ -186,7 +186,8 @@ Deno.serve(async (req) => {
     if (req.method === "POST" && action === "invite") {
       const body = await req.json();
       const company_id: string | undefined = body.company_id;
-      const default_role: string = body.role || "employee";
+      // Ops/IT may only invite plain employees; role escalation stays with admins.
+      const default_role: string = canManage ? (body.role || "employee") : "employee";
       const employees: Array<{ employee_id?: string; email: string; full_name?: string }> =
         Array.isArray(body.employees) ? body.employees : [];
 
