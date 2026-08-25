@@ -212,12 +212,9 @@ export function HrAttendanceReports() {
   };
 
   const visibleDaily = dailyRows.filter(
-    (r) => matchesSearch(r) && (statusFilter === "all" || r.state === statusFilter ||
-      (statusFilter === "in" && r.state === "full") || (statusFilter === "out" && r.state === "full")),
+    (r) => matchesSearch(r) && (statusFilter === "all" || r.state === statusFilter),
   );
-  const visibleMonthly = monthlyRows.filter(
-    (r) => matchesSearch(r) && (statusFilter === "all" || statusFilter === "none" ? r.state === "none" || statusFilter === "all" : true),
-  );
+  const visibleMonthly = monthlyRows.filter((r) => matchesSearch(r));
 
   const counts = useMemo(() => ({
     total: dailyRows.length,
