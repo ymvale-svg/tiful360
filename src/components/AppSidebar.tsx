@@ -12,8 +12,6 @@ import {
   LogOut,
   Crown,
   Wallet,
-  UserPlus,
-  MapPin,
   Megaphone,
 } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
