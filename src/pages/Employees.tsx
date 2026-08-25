@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useEmployees } from "@/hooks/useData";
 import { useUpdateEmployee } from "@/hooks/useMutations";
-import { AddEmployeeDialog } from "@/components/AddEmployeeDialog";
+import { EmployeeSetupWizard } from "@/components/EmployeeSetupWizard";
 import { ImportExcelDialog } from "@/components/ImportExcelDialog";
 import { UsersAndRolesTab } from "@/components/UsersAndRolesTab";
 import { useAuth } from "@/hooks/useAuth";
@@ -432,7 +432,7 @@ export default function Employees() {
           )}
         </Tabs>
 
-        <AddEmployeeDialog open={addOpen} onOpenChange={setAddOpen} />
+        <EmployeeSetupWizard open={addOpen} onOpenChange={setAddOpen} />
         <ImportExcelDialog open={importOpen} onOpenChange={setImportOpen} mode="employees" />
       </div>
     </TooltipProvider>

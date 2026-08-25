@@ -17,7 +17,7 @@ import {
 import { getDomain, DOMAIN_META, type DomainKey } from "@/lib/assetDomains";
 import { resolveOwnerRole, OWNER_ROLE_OPTIONS, OWNER_ROLE_LABEL } from "@/lib/domainConfig";
 import { Send, Copy, UserPlus, CalendarDays, AlertCircle, X } from "lucide-react";
-import { AddEmployeeDialog } from "@/components/AddEmployeeDialog";
+import { EmployeeSetupWizard } from "@/components/EmployeeSetupWizard";
 
 interface Props {
   open: boolean;
@@ -553,7 +553,7 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
           </div>
         </DialogContent>
       </Dialog>
-      <AddEmployeeDialog
+      <EmployeeSetupWizard
         open={newEmployeeOpen}
         onOpenChange={setNewEmployeeOpen}
         onCreated={(employee) => {
