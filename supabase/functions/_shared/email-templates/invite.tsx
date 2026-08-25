@@ -18,33 +18,33 @@ interface InviteEmailProps {
   siteName: string
   siteUrl: string
   confirmationUrl: string
+  companyName?: string
 }
 
 export const InviteEmail = ({
   siteName,
   siteUrl,
   confirmationUrl,
+  companyName,
 }: InviteEmailProps) => (
-  <Html lang="en" dir="ltr">
+  <Html lang="he" dir="rtl">
     <Head />
-    <Preview>You've been invited to join {siteName}</Preview>
+    <Preview>הוזמנת להצטרף ל{companyName || siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>You've been invited</Heading>
+        <Heading style={h1}>הוזמנת להצטרף</Heading>
         <Text style={text}>
-          You've been invited to join{' '}
+          {companyName ? `${companyName} הזמינה אותך להצטרף ל` : 'הוזמנת להצטרף ל'}
           <Link href={siteUrl} style={link}>
             <strong>{siteName}</strong>
           </Link>
-          . Click the button below to accept the invitation and create your
-          account.
+          . לחצו על הכפתור למטה כדי לאשר את ההזמנה וליצור את החשבון שלכם.
         </Text>
         <Button style={button} href={confirmationUrl}>
-          Accept Invitation
+          אישור ההזמנה
         </Button>
         <Text style={footer}>
-          If you weren't expecting this invitation, you can safely ignore this
-          email.
+          אם לא ציפיתם להזמנה הזו, ניתן להתעלם מהודעה זו.
         </Text>
       </Container>
     </Body>
@@ -53,8 +53,12 @@ export const InviteEmail = ({
 
 export default InviteEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
+const main = {
+  backgroundColor: '#ffffff',
+  fontFamily: 'Arial, sans-serif',
+  direction: 'rtl' as const,
+}
+const container = { padding: '20px 25px', textAlign: 'right' as const }
 const h1 = {
   fontSize: '22px',
   fontWeight: 'bold' as const,

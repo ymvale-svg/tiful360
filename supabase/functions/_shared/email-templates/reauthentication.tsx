@@ -17,17 +17,16 @@ interface ReauthenticationEmailProps {
 }
 
 export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => (
-  <Html lang="en" dir="ltr">
+  <Html lang="he" dir="rtl">
     <Head />
-    <Preview>Your verification code</Preview>
+    <Preview>קוד האימות שלך</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Confirm reauthentication</Heading>
-        <Text style={text}>Use the code below to confirm your identity:</Text>
+        <Heading style={h1}>אישור זהות</Heading>
+        <Text style={text}>השתמשו בקוד הבא כדי לאשר את זהותכם:</Text>
         <Text style={codeStyle}>{token}</Text>
         <Text style={footer}>
-          This code will expire shortly. If you didn't request this, you can
-          safely ignore this email.
+          הקוד יפוג בקרוב. אם לא ביקשתם אותו, ניתן להתעלם מהודעה זו.
         </Text>
       </Container>
     </Body>
@@ -36,8 +35,12 @@ export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => 
 
 export default ReauthenticationEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
+const main = {
+  backgroundColor: '#ffffff',
+  fontFamily: 'Arial, sans-serif',
+  direction: 'rtl' as const,
+}
+const container = { padding: '20px 25px', textAlign: 'right' as const }
 const h1 = {
   fontSize: '22px',
   fontWeight: 'bold' as const,
@@ -56,5 +59,7 @@ const codeStyle = {
   fontWeight: 'bold' as const,
   color: '#000000',
   margin: '0 0 30px',
+  direction: 'ltr' as const,
+  letterSpacing: '4px',
 }
 const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }

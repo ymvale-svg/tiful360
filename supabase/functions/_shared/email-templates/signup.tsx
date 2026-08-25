@@ -27,31 +27,31 @@ export const SignupEmail = ({
   recipient,
   confirmationUrl,
 }: SignupEmailProps) => (
-  <Html lang="en" dir="ltr">
+  <Html lang="he" dir="rtl">
     <Head />
-    <Preview>Confirm your email for {siteName}</Preview>
+    <Preview>אימות כתובת האימייל שלך ב{siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Confirm your email</Heading>
+        <Heading style={h1}>אימות כתובת האימייל</Heading>
         <Text style={text}>
-          Thanks for signing up for{' '}
+          תודה שנרשמת ל
           <Link href={siteUrl} style={link}>
             <strong>{siteName}</strong>
           </Link>
           !
         </Text>
         <Text style={text}>
-          Please confirm your email address (
+          נא לאשר את כתובת האימייל שלך (
           <Link href={`mailto:${recipient}`} style={link}>
             {recipient}
           </Link>
-          ) by clicking the button below:
+          ) בלחיצה על הכפתור למטה:
         </Text>
         <Button style={button} href={confirmationUrl}>
-          Verify Email
+          אימות כתובת האימייל
         </Button>
         <Text style={footer}>
-          If you didn't create an account, you can safely ignore this email.
+          אם לא יצרתם חשבון, ניתן להתעלם מהודעה זו.
         </Text>
       </Container>
     </Body>
@@ -60,8 +60,12 @@ export const SignupEmail = ({
 
 export default SignupEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
+const main = {
+  backgroundColor: '#ffffff',
+  fontFamily: 'Arial, sans-serif',
+  direction: 'rtl' as const,
+}
+const container = { padding: '20px 25px', textAlign: 'right' as const }
 const h1 = {
   fontSize: '22px',
   fontWeight: 'bold' as const,
