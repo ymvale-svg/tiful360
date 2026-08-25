@@ -121,3 +121,30 @@ export function useStartOffboarding() {
     },
   });
 }
+
+/**
+ * Cancels an active offboarding protocol when an employee returns to 'active'.
+ * All the reversal work happens server-side in the cancel_offboarding function.
+ */
+export function useCancelOffboarding() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (employeeId: string) => {
+      const { data, error } = await supabase.rpc("cancel_offboarding" as any, {
+        _employee_id: employeeId,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      for (const key of [
+        "employee", "employees", "offboarding", "offboarding-process",
+        "offboarding-items", "offboarding-forms", "it-tickets",
+        "activity-log", "alerts", "dashboard-stats",
+      ]) {
+        queryClient.invalidateQueries({ queryKey: [key] });
+      }
+    },
+  });
+}
