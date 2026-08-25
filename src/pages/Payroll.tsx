@@ -20,6 +20,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Tax101AdminTab } from "@/components/payroll/Tax101AdminTab";
 import { AttendanceClockTab } from "@/components/payroll/AttendanceClockTab";
+import { HrAttendanceReports } from "@/components/payroll/HrAttendanceReports";
 
 const MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
 const TYPE_LABELS_PAYROLL: Record<string, string> = { vacation: "חופשה", sick: "מחלה", reserve: "מילואים", personal: "יום אישי", other: "אחר" };
@@ -350,6 +351,8 @@ function OverviewTab() {
 
   return (
     <div className="space-y-6">
+      <HrAttendanceReports />
+
       {/* Payslip batches */}
       <section className="bg-card rounded-xl border border-border/50 shadow-card overflow-hidden">
         <div className="p-4 border-b border-border/50 flex items-center justify-between">

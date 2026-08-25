@@ -26,6 +26,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSubEmployers } from "@/hooks/useSubEmployers";
 import { useAuth } from "@/hooks/useAuth";
+import { useCancelOffboarding } from "@/hooks/useOffboarding";
 
 interface Props {
   open: boolean;
@@ -36,6 +37,7 @@ interface Props {
 export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
   const { toast } = useToast();
   const update = useUpdateEmployee();
+  const cancelOffboarding = useCancelOffboarding();
   const { data: allEmployees } = useEmployees();
   const { activeCompanyId, activeCompany } = useCompany();
   const { data: subEmployers = [] } = useSubEmployers(true);
@@ -157,9 +159,23 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
         payload.hebrew_birth_month = null;
         payload.hebrew_birth_year = null;
       }
+      // Returning a leaving employee to active cancels the offboarding protocol
+      const revertingOffboarding =
+        employee?.status === "leaving" && payload.status === "active";
+      if (revertingOffboarding) {
+        delete payload.status;
+      }
+
       await update.mutateAsync({ id: employee.id, ...payload });
+
+      if (revertingOffboarding) {
+        await cancelOffboarding.mutateAsync(employee.id);
+      }
+
       queryClient.invalidateQueries({ queryKey: ["employees-full"] });
-      toast({ title: "פרטי העובד נשמרו" });
+      toast({
+        title: revertingOffboarding ? "העובד הוחזר לפעיל ופרוטוקול העזיבה בוטל" : "פרטי העובד נשמרו",
+      });
       onOpenChange(false);
     } catch (err: any) {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
