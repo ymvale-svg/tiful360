@@ -26,6 +26,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSubEmployers } from "@/hooks/useSubEmployers";
 import { useAuth } from "@/hooks/useAuth";
+import { useCancelOffboarding } from "@/hooks/useOffboarding";
 
 interface Props {
   open: boolean;
