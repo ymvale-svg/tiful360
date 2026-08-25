@@ -30,6 +30,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { HandoverFormsList } from "@/components/handover/HandoverFormsList";
 import { useEmployeeHandoverForms } from "@/hooks/useHandoverForms";
 import { getDomain, domainKeyToSlug } from "@/lib/assetDomains";
+import { EmployeeActivityTimeline } from "@/components/EmployeeActivityTimeline";
+
 
 
 const allTabs = [
