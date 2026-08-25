@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { usePersistentFilter } from "@/hooks/usePersistentFilter";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ChevronRight, ChevronDown, Search, Plus, ArrowRight, Users, AlertTriangle,
@@ -81,8 +82,8 @@ export default function AssetsDomainPage() {
   };
 
 
-  const [search, setSearch] = useState("");
-  const [sortMode, setSortMode] = useState<SortMode>("count");
+  const [search, setSearch] = usePersistentFilter<string>(`assets:${params.domain}:search`, "");
+  const [sortMode, setSortMode] = usePersistentFilter<SortMode>(`assets:${params.domain}:sort`, "count");
   const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
     if (typeof window === "undefined") return "grid";
     return (localStorage.getItem("assets-domain-view") as "grid" | "list") || "grid";
