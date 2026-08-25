@@ -3,8 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
-import { Wallet, FileText, Stethoscope, Calendar, Clock4, Upload, LayoutDashboard, FolderOpen, UserSearch, Settings as SettingsIcon, Save, Mail, Paperclip, AlertCircle } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Wallet, FileText, Stethoscope, Calendar, Clock4, Upload, LayoutDashboard, FolderOpen, UserSearch, Settings as SettingsIcon, Save, Mail, Paperclip, AlertCircle, ClipboardList, UserPlus, MapPin, ChevronRight } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { PayslipsUploadDialog } from "@/components/PayslipsUploadDialog";
 import { getPayslipSignedUrl, usePayslipBatches, useUnmatchedPayslips, useAssignPayslipToEmployee, useBatchPayslips, useDeletePayslip, useDeleteBatch } from "@/hooks/usePayslips";
@@ -25,19 +25,46 @@ import { HrAttendanceReports } from "@/components/payroll/HrAttendanceReports";
 const MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
 const TYPE_LABELS_PAYROLL: Record<string, string> = { vacation: "חופשה", sick: "מחלה", reserve: "מילואים", personal: "יום אישי", other: "אחר" };
 
+type HubTile = {
+  key: string;
+  label: string;
+  description: string;
+  icon: typeof Wallet;
+  to?: string;
+  roles?: string[];
+};
+
+const HUB_TILES: HubTile[] = [
+  { key: "overview", label: "סקירה", description: "תלושים אחרונים, מחלות, חופשות ותיקוני נוכחות", icon: LayoutDashboard },
+  { key: "reports", label: "דוחות נוכחות וחוסרים", description: "דוח יומי / חודשי, מי החתים ומי לא — כולל ייצוא לאקסל", icon: ClipboardList },
+  { key: "attendance", label: "שעוני נוכחות", description: "החתמות, שעונים פיזיים והחתמות ללא שיוך", icon: Clock4 },
+  { key: "onboarding", label: "קליטת עובדים", description: "תהליכי קליטה, טופס צרכים וצ'קליסט תפעול", icon: UserPlus, to: "/onboarding", roles: ["admin", "super_admin", "operations", "it_manager", "hr"] },
+  { key: "map", label: "מפת נוכחות חיה", description: "מיקומי GPS של עובדים שהחתימו היום", icon: MapPin, to: "/attendance-map", roles: ["admin", "super_admin", "payroll", "hr", "direct_manager"] },
+  { key: "tax101", label: "טפסי עובדים", description: "ניהול טפסי 101 ואישורים", icon: FileText },
+  { key: "batches", label: "ניהול תלושים", description: "העלאת אצוות תלושים ושיוך אוטומטי", icon: FolderOpen, roles: ["admin", "super_admin", "payroll"] },
+  { key: "employee", label: "תלושי עובד", description: "חיפוש וצפייה בתלושים של עובד מסוים", icon: UserSearch, roles: ["admin", "super_admin", "payroll"] },
+  { key: "settings", label: "הגדרות שכר", description: "כתובות דיווח, דוחות אוטומטיים והרצה ידנית", icon: SettingsIcon, roles: ["admin", "super_admin", "payroll", "hr"] },
+];
+
 export default function Payroll() {
-  const { activeCompanyId } = useCompany();
   const [searchParams, setSearchParams] = useSearchParams();
-  const tab = searchParams.get("tab") ?? "overview";
+  const { roles } = useAuth();
+  const tab = searchParams.get("tab");
   const now = new Date();
   const currentMonth = now.getMonth() + 1;
   const currentYear = now.getFullYear();
 
-  const setTab = (v: string) => {
+  const setTab = (v: string | null) => {
     const next = new URLSearchParams(searchParams);
-    next.set("tab", v);
-    setSearchParams(next, { replace: true });
+    if (v) next.set("tab", v);
+    else next.delete("tab");
+    setSearchParams(next);
   };
+
+  const visibleTiles = HUB_TILES.filter(
+    (t) => !t.roles || t.roles.some((r) => roles.includes(r as any)),
+  );
+  const active = visibleTiles.find((t) => t.key === tab && !t.to);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -46,66 +73,63 @@ export default function Payroll() {
           <Wallet className="w-5 h-5 text-primary" />
           משאבי אנוש
         </h1>
-        <p className="page-subtitle">דשבורד משאבי אנוש וחשבות שכר — {MONTHS[currentMonth - 1]} {currentYear}</p>
+        <p className="page-subtitle">
+          {active ? active.description : `דשבורד משאבי אנוש וחשבות שכר — ${MONTHS[currentMonth - 1]} ${currentYear}`}
+        </p>
       </div>
 
-      <Tabs value={tab} onValueChange={setTab} dir="rtl">
-        <div className="overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0 mb-4">
-          <TabsList className="inline-flex w-max min-w-full">
-            <TabsTrigger value="overview" className="gap-1.5 whitespace-nowrap">
-              <LayoutDashboard className="w-4 h-4" />
-              סקירה
-            </TabsTrigger>
-            <TabsTrigger value="batches" className="gap-1.5 whitespace-nowrap">
-              <FolderOpen className="w-4 h-4" />
-              ניהול תלושים
-            </TabsTrigger>
-            <TabsTrigger value="employee" className="gap-1.5 whitespace-nowrap">
-              <UserSearch className="w-4 h-4" />
-              תלושי עובד
-            </TabsTrigger>
-            <TabsTrigger value="tax101" className="gap-1.5 whitespace-nowrap">
-              <FileText className="w-4 h-4" />
-              טפסי עובדים
-            </TabsTrigger>
-            <TabsTrigger value="attendance" className="gap-1.5 whitespace-nowrap">
-              <Clock4 className="w-4 h-4" />
-              שעוני נוכחות
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="gap-1.5 whitespace-nowrap">
-              <SettingsIcon className="w-4 h-4" />
-              הגדרות שכר
-            </TabsTrigger>
-          </TabsList>
+      {!active ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {visibleTiles.map((tile) => {
+            const inner = (
+              <>
+                <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                  <tile.icon className="w-7 h-7" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="font-semibold text-base leading-tight">{tile.label}</h2>
+                  <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{tile.description}</p>
+                </div>
+              </>
+            );
+            const cls =
+              "group text-right bg-card rounded-xl border border-border/50 shadow-card p-5 min-h-[132px] flex items-start gap-4 hover:border-primary/40 hover:shadow-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+            return tile.to ? (
+              <Link key={tile.key} to={tile.to} className={cls}>
+                {inner}
+              </Link>
+            ) : (
+              <button key={tile.key} type="button" onClick={() => setTab(tile.key)} className={cls}>
+                {inner}
+              </button>
+            );
+          })}
         </div>
+      ) : (
+        <div className="space-y-4">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setTab(null)}>
+            <ChevronRight className="w-4 h-4" />
+            חזרה למשאבי אנוש
+          </Button>
 
-        <TabsContent value="overview">
-          <OverviewTab />
-        </TabsContent>
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <active.icon className="w-5 h-5 text-primary" />
+            {active.label}
+          </h2>
 
-        <TabsContent value="batches">
-          <BatchesManagementTab />
-        </TabsContent>
-
-        <TabsContent value="employee">
-          <EmployeeLookupTab />
-        </TabsContent>
-
-        <TabsContent value="tax101">
-          <Tax101AdminTab />
-        </TabsContent>
-
-        <TabsContent value="attendance">
-          <AttendanceClockTab />
-        </TabsContent>
-
-        <TabsContent value="settings">
-          <PayrollSettingsTab />
-        </TabsContent>
-      </Tabs>
+          {active.key === "overview" && <OverviewTab />}
+          {active.key === "reports" && <HrAttendanceReports />}
+          {active.key === "attendance" && <AttendanceClockTab />}
+          {active.key === "tax101" && <Tax101AdminTab />}
+          {active.key === "batches" && <BatchesManagementTab />}
+          {active.key === "employee" && <EmployeeLookupTab />}
+          {active.key === "settings" && <PayrollSettingsTab />}
+        </div>
+      )}
     </div>
   );
 }
+
 
 // ============================
 // Payroll Settings Tab
@@ -351,7 +375,7 @@ function OverviewTab() {
 
   return (
     <div className="space-y-6">
-      <HrAttendanceReports />
+
 
       {/* Payslip batches */}
       <section className="bg-card rounded-xl border border-border/50 shadow-card overflow-hidden">
