@@ -30,3 +30,4 @@
 - `src/pages/Payroll.tsx`: החלפת ה-`Tabs`/`TabsList` בתצוגת Hub (grid של כרטיסים כלחיצים) + רינדור תת-המסך הנבחר לפי `searchParams.tab`. רכיבי התוכן הקיימים (`OverviewTab`, `BatchesManagementTab`, `EmployeeLookupTab`, `Tax101AdminTab`, `AttendanceClockTab`, `HrAttendanceReports`, `PayrollSettingsTab`) נשארים כפי שהם.
 - הרשאות דרך `useAuth().roles` בהתאם לחוקי התפקידים הקיימים; אריחי הניווט מסתמכים על ה-`ProtectedRoute` הקיים ב-`/onboarding` ו-`/attendance-map`.
 - הוספת `hr`/`payroll` לרשימת התפקידים של מסלול הקליטה במידת הצורך כדי שאריח "קליטת עובדים" לא יוביל לחסימה.
+- `src/components/AppSidebar.tsx`: הסרת שתי הרשומות `/onboarding` ו-`/attendance-map` ממערך פריטי הניווט (וניקוי אייקונים שאינם בשימוש).
