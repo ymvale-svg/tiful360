@@ -314,7 +314,7 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
             const done = i < step;
             const active = i === step;
             return (
-              <li key={s.id} className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0">
+              <li key={s.id} className="flex items-center gap-1 sm:gap-2 min-w-0">
                 <button
                   type="button"
                   onClick={() => i < step && setStep(i)}
@@ -334,9 +334,9 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
                   )}>
                     {done ? <Check className="w-3.5 h-3.5" aria-hidden="true" /> : <Icon className="w-3.5 h-3.5" aria-hidden="true" />}
                   </span>
-                  <span className="text-[11px] sm:text-xs truncate">{s.label}</span>
+                  <span className="text-[11px] sm:text-xs whitespace-nowrap">{s.label}</span>
                 </button>
-                {i < STEPS.length - 1 && <span className="h-0.5 flex-1 bg-border rounded" aria-hidden="true" />}
+                {i < STEPS.length - 1 && <span className="h-0.5 w-2 sm:w-4 bg-border rounded shrink" aria-hidden="true" />}
               </li>
             );
           })}
