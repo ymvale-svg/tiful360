@@ -32,32 +32,29 @@ export const EmailChangeEmail = ({
   newEmail,
   confirmationUrl,
 }: EmailChangeEmailProps) => (
-  <Html lang="en" dir="ltr">
+  <Html lang="he" dir="rtl">
     <Head />
-    <Preview>Confirm your email change for {siteName}</Preview>
+    <Preview>אישור שינוי כתובת האימייל ב{siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Confirm your email change</Heading>
+        <Heading style={h1}>אישור שינוי כתובת אימייל</Heading>
         <Text style={text}>
-          You requested to change your email address for {siteName} from{' '}
+          ביקשתם לשנות את כתובת האימייל שלכם במערכת {siteName} מהכתובת{' '}
           <Link href={`mailto:${oldEmail}`} style={link}>
             {oldEmail}
           </Link>{' '}
-          to{' '}
+          לכתובת{' '}
           <Link href={`mailto:${newEmail}`} style={link}>
             {newEmail}
           </Link>
           .
         </Text>
-        <Text style={text}>
-          Click the button below to confirm this change:
-        </Text>
+        <Text style={text}>לחצו על הכפתור למטה כדי לאשר את השינוי:</Text>
         <Button style={button} href={confirmationUrl}>
-          Confirm Email Change
+          אישור שינוי הכתובת
         </Button>
         <Text style={footer}>
-          If you didn't request this change, please secure your account
-          immediately.
+          אם לא ביקשתם את השינוי, יש לאבטח את החשבון שלכם באופן מיידי.
         </Text>
       </Container>
     </Body>
@@ -66,8 +63,12 @@ export const EmailChangeEmail = ({
 
 export default EmailChangeEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
+const main = {
+  backgroundColor: '#ffffff',
+  fontFamily: 'Arial, sans-serif',
+  direction: 'rtl' as const,
+}
+const container = { padding: '20px 25px', textAlign: 'right' as const }
 const h1 = {
   fontSize: '22px',
   fontWeight: 'bold' as const,
