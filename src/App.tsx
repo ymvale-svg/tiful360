@@ -78,7 +78,9 @@ const App = () => (
                   <Route path="/employees/:id" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations", "direct_manager", "payroll", "hr", "finance"]}><EmployeeDetail /></ProtectedRoute>} />
                   <Route path="/assets" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin", "operations", "finance", "legal"]}><Assets /></ProtectedRoute>} />
                   <Route path="/assets-handover" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin", "operations", "finance", "legal"]}><UnassignedAssets /></ProtectedRoute>} />
+                  <Route path="/assets-subscriptions" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations", "finance", "payroll"]}><VehicleSubscriptions /></ProtectedRoute>} />
                   <Route path="/assets/:domain/:itemId?" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin", "operations", "finance", "legal"]}><AssetsDomainPage /></ProtectedRoute>} />
+
 
                   <Route path="/categories" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations", "legal"]}><CategoryManager /></ProtectedRoute>} />
                   <Route path="/it-tickets" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin", "operations"]}><ITTickets /></ProtectedRoute>} />
