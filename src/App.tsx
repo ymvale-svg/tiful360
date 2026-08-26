@@ -20,6 +20,7 @@ import AttendanceMap from "@/pages/AttendanceMap";
 const Assets = lazy(() => import("@/pages/Assets"));
 const AssetsDomainPage = lazy(() => import("@/pages/AssetsDomainPage"));
 const UnassignedAssets = lazy(() => import("@/pages/UnassignedAssets"));
+const VehicleSubscriptions = lazy(() => import("@/pages/VehicleSubscriptions"));
 const ITTickets = lazy(() => import("@/pages/ITTickets"));
 const Alerts = lazy(() => import("@/pages/Alerts"));
 const EmployeePortal = lazy(() => import("@/pages/EmployeePortal"));
