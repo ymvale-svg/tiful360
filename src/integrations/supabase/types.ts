@@ -1420,6 +1420,61 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_vehicles: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          id: string
+          license_plate: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          employee_id: string
+          id?: string
+          license_plate: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string
+          id?: string
+          license_plate?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_vehicles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_vehicles_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_vehicles_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           access_revoked_at: string | null
@@ -2783,6 +2838,70 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      vehicle_subscriptions: {
+        Row: {
+          asset_id: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          employee_vehicle_id: string | null
+          id: string
+          notes: string | null
+          provider: string
+          start_date: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          asset_id?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          employee_vehicle_id?: string | null
+          id?: string
+          notes?: string | null
+          provider: string
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          asset_id?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          employee_vehicle_id?: string | null
+          id?: string
+          notes?: string | null
+          provider?: string
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_subscriptions_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_subscriptions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_subscriptions_employee_vehicle_id_fkey"
+            columns: ["employee_vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "employee_vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
