@@ -16,28 +16,32 @@ interface Props {
   employee: any;
   canSeeSalary: boolean;
   hideBalances?: boolean;
-  /** When true (viewing someone else's payroll data) the data is masked until explicitly revealed. */
-  requiresReveal?: boolean;
+  /** True only when the viewer is the employee himself. Anyone else is blocked. */
+  isSelf?: boolean;
   /** Free-text context recorded in the audit email/log. */
   auditContext?: string;
 }
 
 const MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
 
-export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary, hideBalances, requiresReveal, auditContext }: Props) {
-  const [revealed, setRevealed] = useState(!requiresReveal);
-  const [revealing, setRevealing] = useState(false);
+export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary, hideBalances, isSelf, auditContext }: Props) {
+  const [unlocked, setUnlocked] = useState(false);
+  const [password, setPassword] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [pwError, setPwError] = useState<string | null>(null);
   const { data: payslips, isLoading } = useEmployeePayslips(employeeId);
   const { toast } = useToast();
   const [summaryPayslip, setSummaryPayslip] = useState<any | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
   const deleteMutation = useDeletePayslip();
 
-  // Re-arm the confidentiality gate whenever the viewed employee changes,
-  // so switching employees requires a fresh (audited) reveal.
+  // Re-arm the confidentiality gate whenever the viewed employee changes.
   useEffect(() => {
-    setRevealed(!requiresReveal);
-  }, [employeeId, requiresReveal]);
+    setUnlocked(false);
+    setPassword("");
+    setPwError(null);
+  }, [employeeId, isSelf]);
+
 
   // Fetch fresh employee record with balance fields (employees_public view doesn't expose balances)
   const { data: empFull } = useQuery({
