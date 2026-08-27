@@ -16,28 +16,32 @@ interface Props {
   employee: any;
   canSeeSalary: boolean;
   hideBalances?: boolean;
-  /** When true (viewing someone else's payroll data) the data is masked until explicitly revealed. */
-  requiresReveal?: boolean;
+  /** True only when the viewer is the employee himself. Anyone else is blocked. */
+  isSelf?: boolean;
   /** Free-text context recorded in the audit email/log. */
   auditContext?: string;
 }
 
 const MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
 
-export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary, hideBalances, requiresReveal, auditContext }: Props) {
-  const [revealed, setRevealed] = useState(!requiresReveal);
-  const [revealing, setRevealing] = useState(false);
+export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary, hideBalances, isSelf, auditContext }: Props) {
+  const [unlocked, setUnlocked] = useState(false);
+  const [password, setPassword] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [pwError, setPwError] = useState<string | null>(null);
   const { data: payslips, isLoading } = useEmployeePayslips(employeeId);
   const { toast } = useToast();
   const [summaryPayslip, setSummaryPayslip] = useState<any | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
   const deleteMutation = useDeletePayslip();
 
-  // Re-arm the confidentiality gate whenever the viewed employee changes,
-  // so switching employees requires a fresh (audited) reveal.
+  // Re-arm the confidentiality gate whenever the viewed employee changes.
   useEffect(() => {
-    setRevealed(!requiresReveal);
-  }, [employeeId, requiresReveal]);
+    setUnlocked(false);
+    setPassword("");
+    setPwError(null);
+  }, [employeeId, isSelf]);
+
 
   // Fetch fresh employee record with balance fields (employees_public view doesn't expose balances)
   const { data: empFull } = useQuery({
@@ -66,17 +70,31 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary, hideBa
     window.open(url, "_blank");
   };
 
-  const handleReveal = async () => {
-    setRevealing(true);
+  const handleVerifyPassword = async () => {
+    if (!password) return;
+    setVerifying(true);
+    setPwError(null);
+    const { data: sessionData } = await supabase.auth.getUser();
+    const email = sessionData.user?.email;
+    if (!email) {
+      setVerifying(false);
+      setPwError("לא נמצא משתמש מחובר");
+      return;
+    }
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    setVerifying(false);
+    if (error) {
+      setPwError("הסיסמה שגויה, נסה שוב");
+      return;
+    }
+    setPassword("");
+    setUnlocked(true);
     try {
       await supabase.functions.invoke("notify-payslip-access", {
-        body: { employee_id: employeeId, context: auditContext ?? "תיק עובד — תלושי שכר" },
+        body: { employee_id: employeeId, context: auditContext ?? "צפייה עצמית בתלושי שכר" },
       });
     } catch {
-      /* audit failure must not block an authorized view */
-    } finally {
-      setRevealing(false);
-      setRevealed(true);
+      /* audit failure must not block the employee's own view */
     }
   };
 
@@ -84,20 +102,47 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary, hideBa
     ? new Date(emp.balances_updated_at).toLocaleDateString("en-GB")
     : null;
 
-  if (!revealed) {
+  if (!isSelf) {
     return (
       <div className="animate-fade-in bg-card rounded-xl border border-border/50 shadow-card p-8 text-center max-w-xl mx-auto">
+        <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
+          <Lock className="w-6 h-6 text-destructive" />
+        </div>
+        <h2 className="text-base font-semibold">נתוני שכר חסויים</h2>
+        <p className="text-sm text-muted-foreground mt-2">
+          תלושי ונתוני השכר של {emp?.full_name ?? "העובד"} מוצגים לעובד עצמו בלבד, לאחר אימות סיסמה באזור האישי שלו.
+        </p>
+      </div>
+    );
+  }
+
+  if (!unlocked) {
+    return (
+      <div className="animate-fade-in bg-card rounded-xl border border-border/50 shadow-card p-8 max-w-md mx-auto text-center">
         <div className="w-12 h-12 rounded-full bg-warning/10 flex items-center justify-center mx-auto mb-4">
           <ShieldAlert className="w-6 h-6 text-warning" />
         </div>
-        <h2 className="text-base font-semibold">נתוני שכר מוסתרים</h2>
+        <h2 className="text-base font-semibold">אימות סיסמה נדרש</h2>
         <p className="text-sm text-muted-foreground mt-2">
-          נתוני השכר של {emp?.full_name ?? "העובד"} חסויים ואינם מוצגים באופן חופשי.
-          חשיפת הנתונים מתועדת, ומנהלי המערכת יקבלו על כך עדכון במייל.
+          נתוני השכר חסויים. להצגתם יש להזין מחדש את סיסמת המשתמש שלך.
         </p>
-        <Button className="mt-5 gap-2" onClick={handleReveal} disabled={revealing}>
+        <div className="mt-5 space-y-2 text-right">
+          <Label htmlFor="payslip-password" className="text-xs text-muted-foreground">סיסמה</Label>
+          <Input
+            id="payslip-password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleVerifyPassword(); }}
+            dir="ltr"
+            className="text-left"
+          />
+          {pwError && <p className="text-xs text-destructive">{pwError}</p>}
+        </div>
+        <Button className="mt-4 w-full gap-2" onClick={handleVerifyPassword} disabled={verifying || !password}>
           <Eye className="w-4 h-4" />
-          {revealing ? "מתעד גישה..." : "הצג נתוני שכר"}
+          {verifying ? "מאמת..." : "הצג נתוני שכר"}
         </Button>
       </div>
     );
@@ -105,12 +150,17 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary, hideBa
 
   return (
     <div className="space-y-4 animate-fade-in">
-      {requiresReveal && (
-        <div className="flex items-center gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
+      <div className="flex items-center justify-between gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
+        <span className="flex items-center gap-2">
           <ShieldAlert className="w-4 h-4 text-warning shrink-0" />
-          <span>הגישה לנתוני שכר של עובד זה תועדה ונשלח עדכון בקרה למנהלי המערכת.</span>
-        </div>
-      )}
+          נתוני שכר חסויים — נחשפו לאחר אימות סיסמה.
+        </span>
+        <Button size="sm" variant="ghost" className="h-7 gap-1" onClick={() => setUnlocked(false)}>
+          <Lock className="w-3.5 h-3.5" />
+          הסתר
+        </Button>
+      </div>
+
       {/* Summary cards */}
       {!hideBalances && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
