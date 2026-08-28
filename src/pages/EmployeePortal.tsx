@@ -693,7 +693,7 @@ export default function EmployeePortal() {
                 תלושי שכר
               </h3>
               {myEmployee ? (
-                <EmployeePayslipsTab employeeId={myEmployee.id} employee={myEmployee} canSeeSalary={true} hideBalances />
+                <EmployeePayslipsTab employeeId={myEmployee.id} employee={myEmployee} canSeeSalary={true} hideBalances isSelf auditContext="פורטל עובדים — תלושי שכר" />
               ) : (
                 <p className="text-center text-sm text-muted-foreground py-4">אין מידע זמין</p>
               )}

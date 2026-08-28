@@ -2,7 +2,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   ArrowRight, Shield, Key, Clock, AlertTriangle, UserMinus,
   FileText, RefreshCw, Package, User, Mail, Phone, Calendar, Building2, IdCard,
-  Pencil, Plus, Trash2, Upload, Unlink, CalendarDays, MapPin, Lock,
+  Pencil, Plus, Trash2, Upload, Unlink, CalendarDays, MapPin, Lock, Car,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,12 +31,14 @@ import { HandoverFormsList } from "@/components/handover/HandoverFormsList";
 import { useEmployeeHandoverForms } from "@/hooks/useHandoverForms";
 import { getDomain, domainKeyToSlug } from "@/lib/assetDomains";
 import { EmployeeActivityTimeline } from "@/components/EmployeeActivityTimeline";
+import { EmployeeVehiclesTab } from "@/components/vehicles/EmployeeVehiclesTab";
 
 
 
 const allTabs = [
   { id: "personal", label: "פרטים אישיים", icon: User },
   { id: "assets", label: "ציוד וגישות", icon: Package },
+  { id: "vehicles", label: "רכב ומנויים", icon: Car },
   { id: "documents", label: "מסמכים", icon: FileText },
   { id: "leave", label: "חופשה ומחלה", icon: CalendarDays },
   { id: "payslips", label: "תלושי שכר", icon: FileText },
@@ -74,7 +76,10 @@ function InfoRow({ icon: Icon, label, value, mono }: { icon: any; label: string;
 export default function EmployeeDetail() {
   const { id } = useParams();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("personal");
+  const [activeTab, setActiveTab] = useState(() => {
+    const t = new URLSearchParams(window.location.search).get("tab");
+    return t && ["personal", "assets", "vehicles", "documents", "leave", "payslips", "history"].includes(t) ? t : "personal";
+  });
   const [offboardingOpen, setOffboardingOpen] = useState(false);
   const [transferAsset, setTransferAsset] = useState<any>(null);
   const [editEmployeeOpen, setEditEmployeeOpen] = useState(false);
@@ -513,12 +518,22 @@ export default function EmployeeDetail() {
           employeeId={id!}
           employee={employee}
           canSeeSalary={isSuperAdmin || isAdmin || isPayroll || isHR}
-          requiresReveal={(employee as any).linked_user_id !== user?.id}
+          isSelf={(employee as any).linked_user_id === user?.id}
           auditContext="תיק עובד"
         />
       )}
 
+      {/* Vehicles & subscriptions tab */}
+      {activeTab === "vehicles" && (
+        <EmployeeVehiclesTab
+          employeeId={id!}
+          canEdit={isSuperAdmin || isAdmin || isOperations || isHR || isPayroll || isFinance}
+        />
+      )}
+
       {/* Digital access tab removed - now part of Assets tab via DACC category */}
+
+
 
       {/* History tab */}
       {activeTab === "history" && (

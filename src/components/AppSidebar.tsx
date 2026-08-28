@@ -13,6 +13,8 @@ import {
   Crown,
   Wallet,
   Megaphone,
+  UserPlus,
+  MapPin,
 } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
@@ -26,6 +28,8 @@ interface NavItem {
   icon: any;
   path: string;
   roles?: AppRole[];
+  /** When true, the super-admin bypass does not apply (item is only for the listed roles). */
+  strictRoles?: boolean;
   preload?: () => Promise<unknown>;
 }
 
@@ -38,6 +42,7 @@ const preload = {
   portal: () => import("@/pages/EmployeePortal"),
   companies: () => import("@/pages/Companies"),
   announcements: () => import("@/pages/Announcements"),
+  onboarding: () => import("@/pages/Onboarding"),
 };
 
 const mainNav: NavItem[] = [
@@ -46,6 +51,9 @@ const mainNav: NavItem[] = [
   { label: "משאבים", icon: Package, path: "/assets", roles: ["admin", "it_manager", "super_admin", "operations", "finance", "legal"], preload: preload.assets },
   { label: "משימות IT", icon: Shield, path: "/it-tickets", roles: ["admin", "it_manager", "super_admin", "operations"], preload: preload.itTickets },
   { label: "משאבי אנוש", icon: Wallet, path: "/payroll", roles: ["admin", "super_admin", "payroll", "hr"], preload: preload.payroll },
+  // Onboarding / attendance map live inside the HR hub, but roles without /payroll access keep a direct entry
+  { label: "קליטת עובדים", icon: UserPlus, path: "/onboarding", roles: ["operations", "it_manager"], strictRoles: true, preload: preload.onboarding },
+  { label: "מפת נוכחות", icon: MapPin, path: "/attendance-map", roles: ["direct_manager"], strictRoles: true },
 
   { label: "הודעות", icon: Megaphone, path: "/announcements", roles: ["admin", "super_admin", "ceo", "operations", "secretariat", "hr"], preload: preload.announcements },
 ];
@@ -120,6 +128,7 @@ export function AppSidebar({ mobileOpen = false, onMobileOpenChange }: AppSideba
 
   const canSee = (item: NavItem) => {
     if (!item.roles) return true;
+    if (item.strictRoles) return item.roles.some((r) => roles.includes(r));
     if (isSuperAdmin) return true;
     return item.roles.some((r) => roles.includes(r));
   };
