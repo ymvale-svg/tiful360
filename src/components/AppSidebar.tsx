@@ -42,6 +42,7 @@ const preload = {
   portal: () => import("@/pages/EmployeePortal"),
   companies: () => import("@/pages/Companies"),
   announcements: () => import("@/pages/Announcements"),
+  onboarding: () => import("@/pages/Onboarding"),
 };
 
 const mainNav: NavItem[] = [
