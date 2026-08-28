@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmployeePayslips, getPayslipSignedUrl, useDeletePayslip } from "@/hooks/usePayslips";
-import { Download, Calendar, TrendingUp, Stethoscope, FileText, Eye, Trash2, ShieldAlert } from "lucide-react";
+import { Download, Calendar, TrendingUp, Stethoscope, FileText, Eye, Trash2, ShieldAlert, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { PayslipSummaryDialog } from "@/components/PayslipSummaryDialog";
 import {
