@@ -76,7 +76,10 @@ function InfoRow({ icon: Icon, label, value, mono }: { icon: any; label: string;
 export default function EmployeeDetail() {
   const { id } = useParams();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("personal");
+  const [activeTab, setActiveTab] = useState(() => {
+    const t = new URLSearchParams(window.location.search).get("tab");
+    return t && ["personal", "assets", "vehicles", "documents", "leave", "payslips", "history"].includes(t) ? t : "personal";
+  });
   const [offboardingOpen, setOffboardingOpen] = useState(false);
   const [transferAsset, setTransferAsset] = useState<any>(null);
   const [editEmployeeOpen, setEditEmployeeOpen] = useState(false);
