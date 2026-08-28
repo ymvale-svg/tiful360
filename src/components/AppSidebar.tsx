@@ -128,6 +128,7 @@ export function AppSidebar({ mobileOpen = false, onMobileOpenChange }: AppSideba
 
   const canSee = (item: NavItem) => {
     if (!item.roles) return true;
+    if (item.strictRoles) return item.roles.some((r) => roles.includes(r));
     if (isSuperAdmin) return true;
     return item.roles.some((r) => roles.includes(r));
   };
