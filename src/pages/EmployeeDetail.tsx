@@ -2,7 +2,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   ArrowRight, Shield, Key, Clock, AlertTriangle, UserMinus,
   FileText, RefreshCw, Package, User, Mail, Phone, Calendar, Building2, IdCard,
-  Pencil, Plus, Trash2, Upload, Unlink, CalendarDays, MapPin, Lock,
+  Pencil, Plus, Trash2, Upload, Unlink, CalendarDays, MapPin, Lock, Car,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
