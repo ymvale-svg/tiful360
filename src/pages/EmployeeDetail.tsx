@@ -513,7 +513,7 @@ export default function EmployeeDetail() {
           employeeId={id!}
           employee={employee}
           canSeeSalary={isSuperAdmin || isAdmin || isPayroll || isHR}
-          requiresReveal={(employee as any).linked_user_id !== user?.id}
+          isSelf={(employee as any).linked_user_id === user?.id}
           auditContext="תיק עובד"
         />
       )}
