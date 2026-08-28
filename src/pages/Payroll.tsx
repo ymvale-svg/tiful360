@@ -918,7 +918,7 @@ function EmployeeLookupTab() {
       </div>
 
       {selected ? (
-        <EmployeePayslipsTab employeeId={selected.id} employee={selected} canSeeSalary={isSuperAdmin || isAdmin || isPayroll || isHR} requiresReveal={(selected as any).linked_user_id !== user?.id} auditContext="מסך חשבות שכר" />
+        <EmployeePayslipsTab employeeId={selected.id} employee={selected} canSeeSalary={isSuperAdmin || isAdmin || isPayroll || isHR} isSelf={(selected as any).linked_user_id === user?.id} auditContext="מסך חשבות שכר" />
       ) : (
         <div className="bg-card rounded-xl border border-border/50 shadow-card p-12 text-center text-sm text-muted-foreground">
           בחר עובד כדי לראות את תלושי השכר שלו
