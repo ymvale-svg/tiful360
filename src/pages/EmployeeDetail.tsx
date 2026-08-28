@@ -520,7 +520,17 @@ export default function EmployeeDetail() {
         />
       )}
 
+      {/* Vehicles & subscriptions tab */}
+      {activeTab === "vehicles" && (
+        <EmployeeVehiclesTab
+          employeeId={id!}
+          canEdit={isSuperAdmin || isAdmin || isOperations || isHR || isPayroll || isFinance}
+        />
+      )}
+
       {/* Digital access tab removed - now part of Assets tab via DACC category */}
+
+
 
       {/* History tab */}
       {activeTab === "history" && (
