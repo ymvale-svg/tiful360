@@ -13,6 +13,8 @@ import {
   Crown,
   Wallet,
   Megaphone,
+  UserPlus,
+  MapPin,
 } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
