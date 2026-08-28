@@ -37,6 +37,7 @@ import { EmployeeActivityTimeline } from "@/components/EmployeeActivityTimeline"
 const allTabs = [
   { id: "personal", label: "פרטים אישיים", icon: User },
   { id: "assets", label: "ציוד וגישות", icon: Package },
+  { id: "vehicles", label: "רכב ומנויים", icon: Car },
   { id: "documents", label: "מסמכים", icon: FileText },
   { id: "leave", label: "חופשה ומחלה", icon: CalendarDays },
   { id: "payslips", label: "תלושי שכר", icon: FileText },
