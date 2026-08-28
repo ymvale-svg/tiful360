@@ -28,6 +28,8 @@ interface NavItem {
   icon: any;
   path: string;
   roles?: AppRole[];
+  /** When true, the super-admin bypass does not apply (item is only for the listed roles). */
+  strictRoles?: boolean;
   preload?: () => Promise<unknown>;
 }
 
