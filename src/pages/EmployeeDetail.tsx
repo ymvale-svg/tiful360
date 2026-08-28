@@ -31,6 +31,7 @@ import { HandoverFormsList } from "@/components/handover/HandoverFormsList";
 import { useEmployeeHandoverForms } from "@/hooks/useHandoverForms";
 import { getDomain, domainKeyToSlug } from "@/lib/assetDomains";
 import { EmployeeActivityTimeline } from "@/components/EmployeeActivityTimeline";
+import { EmployeeVehiclesTab } from "@/components/vehicles/EmployeeVehiclesTab";
 
 
 
