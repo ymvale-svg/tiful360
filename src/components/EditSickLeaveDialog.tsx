@@ -37,6 +37,9 @@ export function EditSickLeaveDialog({ request, onClose }: Props) {
   const days = calcDays(request.start_date, end);
   const hasExistingAttachment = !!request.attachment_url;
   const alreadyClosed = !!request.end_date;
+  const isReserve = request.request_type === "reserve";
+  const docLabel = isReserve ? 'אישור שמ"פ' : "אישור מחלה";
+  const typeWord = isReserve ? "מילואים" : "מחלה";
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +48,7 @@ export function EditSickLeaveDialog({ request, onClose }: Props) {
       return;
     }
     if (!end && !file) {
-      toast({ title: "אין מה לעדכן", description: "בחר תאריך סיום או צרף אישור מחלה", variant: "destructive" });
+      toast({ title: "אין מה לעדכן", description: `בחר תאריך סיום או צרף ${docLabel}`, variant: "destructive" });
       return;
     }
     try {
@@ -57,8 +60,12 @@ export function EditSickLeaveDialog({ request, onClose }: Props) {
         attachment_file: file,
       });
       toast({
-        title: "המחלה עודכנה",
-        description: end && !alreadyClosed ? "נשלח עדכון למנהל, משאבי אנוש וחשבות שכר" : "הפרטים נשמרו",
+        title: `דיווח ה${typeWord} עודכן`,
+        description: file
+          ? `${docLabel} נשלח לחשבות השכר`
+          : end && !alreadyClosed
+            ? "נשלח עדכון למנהל, משאבי אנוש וחשבות שכר"
+            : "הפרטים נשמרו",
       });
       onClose();
     } catch (err: any) {
@@ -70,16 +77,16 @@ export function EditSickLeaveDialog({ request, onClose }: Props) {
     <Dialog open={!!request} onOpenChange={(v) => !v && onClose()}>
       <DialogContent dir="rtl" className="max-w-md">
         <DialogHeader>
-          <DialogTitle>עדכון דיווח מחלה</DialogTitle>
+          <DialogTitle>עדכון דיווח {typeWord}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={submit} className="space-y-3 text-sm">
           <p className="text-xs text-muted-foreground">
-            תחילת המחלה: <strong>{new Date(request.start_date).toLocaleDateString("en-GB")}</strong>
+            תחילת ה{typeWord}: <strong>{new Date(request.start_date).toLocaleDateString("en-GB")}</strong>
           </p>
 
           <div>
-            <Label htmlFor="sick-end">תאריך סיום מחלה</Label>
+            <Label htmlFor="sick-end">תאריך סיום {typeWord}</Label>
             <Input id="sick-end" type="date" value={end} min={request.start_date}
                    onChange={(e) => setEnd(e.target.value)} />
             {days > 0 && (
@@ -91,7 +98,7 @@ export function EditSickLeaveDialog({ request, onClose }: Props) {
 
           <div>
             <Label htmlFor="sick-file">
-              {hasExistingAttachment ? "החלפת אישור מחלה" : "העלאת אישור מחלה"}
+              {hasExistingAttachment ? `החלפת ${docLabel}` : `העלאת ${docLabel}`}
             </Label>
             {hasExistingAttachment && (
               <a href={request.attachment_url} target="_blank" rel="noopener noreferrer"
@@ -107,6 +114,7 @@ export function EditSickLeaveDialog({ request, onClose }: Props) {
                      onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
             </label>
           </div>
+
 
           <DialogFooter className="gap-2">
             <Button type="button" variant="outline" onClick={onClose}>ביטול</Button>
