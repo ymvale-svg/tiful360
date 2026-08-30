@@ -231,11 +231,11 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
         return [
           {
             title: cat?.category_name ?? "פריט",
-            owner_role: resolveOwnerRole(null, cat),
+            owner_role: entry.owners["_"] || resolveOwnerRole(null, cat),
             item_type: domain === "digital" ? "access" : domain === "licenses" ? "license" : "asset",
             catalog_ref_id: categoryId,
             selected_group_id: null,
-            notes: null,
+            notes: entry.notes["_"]?.trim() || null,
           },
         ];
       }
