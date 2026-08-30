@@ -115,7 +115,11 @@ export function LeaveRequestsList({ requests, showEmployee, allowCancel }: Props
                 onClick={() => setEditingSick(r)}
               >
                 <Pencil className="w-3 h-3" />
-                {sickOpen ? "סגור מחלה / הוסף אישור" : "הוסף אישור מחלה"}
+                {isReserve
+                  ? 'הוסף אישור שמ"פ'
+                  : sickOpen
+                    ? "סגור מחלה / הוסף אישור"
+                    : "הוסף אישור מחלה"}
               </Button>
             )}
             {allowCancel && (r.status === "pending" || (r.status === "approved" && new Date(r.start_date) > new Date())) && (
