@@ -1,0 +1,2 @@
+ALTER TABLE public.companies ALTER COLUMN michpal_absence_codes SET DEFAULT '{"vacation":"חפש","sick":"001","training":"002","unpaid":"חלת","reserve":"צבא","personal":"חפש","other":"חפש"}'::jsonb;
+UPDATE public.companies SET michpal_absence_codes = '{"vacation":"חפש","sick":"001","training":"002","unpaid":"חלת","reserve":"צבא","personal":"חפש","other":"חפש"}'::jsonb WHERE michpal_absence_codes IS NULL OR michpal_absence_codes::text LIKE '%"1"%';
