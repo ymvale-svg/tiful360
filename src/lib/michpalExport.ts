@@ -113,6 +113,16 @@ export type MichpalSource = "clock" | "remote" | "combined";
 /** מקורות ההחתמה הנחשבים "החתמה מרחוק" */
 export const REMOTE_SOURCES = ["portal_remote", "manual_self", "manual", "portal"];
 
+/**
+ * נירמול קוד עובד ל"זיהוי כרטיס" במיכפל.
+ * מסיר את הקידומת "EMP-" (למשל EMP-309 -> 309) ולוקח רק את המספר/הערך הפנימי.
+ */
+export function normalizeCardId(rawCode: string): string {
+  let code = (rawCode ?? "").trim();
+  if (code.toUpperCase().startsWith("EMP-")) code = code.slice(4).trim();
+  return code;
+}
+
 export function matchesSource(source: string, filter: MichpalSource): boolean {
   if (filter === "combined") return true;
   const isRemote = REMOTE_SOURCES.includes(source);
