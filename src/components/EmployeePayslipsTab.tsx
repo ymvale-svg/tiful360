@@ -31,6 +31,8 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary, hideBa
   const [password, setPassword] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [pwError, setPwError] = useState<string | null>(null);
+  // "password" | "oauth" | null (null = still detecting)
+  const [authMethod, setAuthMethod] = useState<"password" | "oauth" | null>(null);
   const { data: payslips, isLoading } = useEmployeePayslips(employeeId);
   const { toast } = useToast();
   const [summaryPayslip, setSummaryPayslip] = useState<any | null>(null);
@@ -43,6 +45,51 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary, hideBa
     setPassword("");
     setPwError(null);
   }, [employeeId, isSelf]);
+
+  // Detect whether the signed-in user has a password or signs in via Google only.
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      const providers: string[] = (data.user?.app_metadata?.providers as string[]) ?? [];
+      setAuthMethod(providers.includes("email") ? "password" : "oauth");
+    });
+  }, []);
+
+  // Complete a Google re-authentication round-trip: after the OAuth redirect
+  // back to this page, a fresh SIGNED_IN session unlocks the data.
+  useEffect(() => {
+    const pending = sessionStorage.getItem("payslip_google_reauth");
+    if (!pending || pending !== employeeId) return;
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        sessionStorage.removeItem("payslip_google_reauth");
+        setUnlocked(true);
+        supabase.functions.invoke("notify-payslip-access", {
+          body: { employee_id: employeeId, context: auditContext ?? "צפייה עצמית בתלושי שכר (אימות Google)" },
+        }).catch(() => { /* audit failure must not block the employee's own view */ });
+      }
+    });
+    return () => sub.subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employeeId]);
+
+  const handleGoogleVerify = async () => {
+    setVerifying(true);
+    setPwError(null);
+    sessionStorage.setItem("payslip_google_reauth", employeeId);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.href,
+        queryParams: { prompt: "select_account" },
+      },
+    });
+    if (error) {
+      sessionStorage.removeItem("payslip_google_reauth");
+      setVerifying(false);
+      setPwError("שגיאה בהתחברות ל-Google, נסה שוב");
+    }
+    // On success the browser redirects to Google — no further action here.
+  };
 
 
   // Fetch fresh employee record with balance fields (employees_public view doesn't expose balances)
@@ -124,28 +171,42 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary, hideBa
         <div className="w-12 h-12 rounded-full bg-warning/10 flex items-center justify-center mx-auto mb-4">
           <ShieldAlert className="w-6 h-6 text-warning" />
         </div>
-        <h2 className="text-base font-semibold">אימות סיסמה נדרש</h2>
+        <h2 className="text-base font-semibold">אימות זהות נדרש</h2>
         <p className="text-sm text-muted-foreground mt-2">
-          נתוני השכר חסויים. להצגתם יש להזין מחדש את סיסמת המשתמש שלך.
+          {authMethod === "oauth"
+            ? "נתוני השכר חסויים. להצגתם יש לאמת זהות מחדש באמצעות חשבון ה-Google שלך."
+            : "נתוני השכר חסויים. להצגתם יש להזין מחדש את סיסמת המשתמש שלך."}
         </p>
-        <div className="mt-5 space-y-2 text-right">
-          <Label htmlFor="payslip-password" className="text-xs text-muted-foreground">סיסמה</Label>
-          <Input
-            id="payslip-password"
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") handleVerifyPassword(); }}
-            dir="ltr"
-            className="text-left"
-          />
-          {pwError && <p className="text-xs text-destructive">{pwError}</p>}
-        </div>
-        <Button className="mt-4 w-full gap-2" onClick={handleVerifyPassword} disabled={verifying || !password}>
-          <Eye className="w-4 h-4" />
-          {verifying ? "מאמת..." : "הצג נתוני שכר"}
-        </Button>
+        {authMethod === "oauth" ? (
+          <>
+            {pwError && <p className="mt-4 text-xs text-destructive">{pwError}</p>}
+            <Button className="mt-4 w-full gap-2" onClick={handleGoogleVerify} disabled={verifying}>
+              <Eye className="w-4 h-4" />
+              {verifying ? "מעביר ל-Google..." : "אמת זהות עם Google"}
+            </Button>
+          </>
+        ) : (
+          <>
+            <div className="mt-5 space-y-2 text-right">
+              <Label htmlFor="payslip-password" className="text-xs text-muted-foreground">סיסמה</Label>
+              <Input
+                id="payslip-password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleVerifyPassword(); }}
+                dir="ltr"
+                className="text-left"
+              />
+              {pwError && <p className="text-xs text-destructive">{pwError}</p>}
+            </div>
+            <Button className="mt-4 w-full gap-2" onClick={handleVerifyPassword} disabled={verifying || !password || authMethod === null}>
+              <Eye className="w-4 h-4" />
+              {verifying ? "מאמת..." : "הצג נתוני שכר"}
+            </Button>
+          </>
+        )}
       </div>
     );
   }
@@ -155,7 +216,7 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary, hideBa
       <div className="flex items-center justify-between gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
         <span className="flex items-center gap-2">
           <ShieldAlert className="w-4 h-4 text-warning shrink-0" />
-          נתוני שכר חסויים — נחשפו לאחר אימות סיסמה.
+          נתוני שכר חסויים — נחשפו לאחר אימות זהות.
         </span>
         <Button size="sm" variant="ghost" className="h-7 gap-1" onClick={() => setUnlocked(false)}>
           <Lock className="w-3.5 h-3.5" />
