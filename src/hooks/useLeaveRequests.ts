@@ -146,7 +146,19 @@ export function useCreateLeaveRequest() {
         }
       }
 
+      // אישור מחלה / שמ"פ שצורף כבר בהגשה → נשלח לחשבות השכר
+      if (attachment_url && (input.request_type === "sick" || input.request_type === "reserve")) {
+        try {
+          await supabase.functions.invoke("send-leave-request-email", {
+            body: { request_id: inserted.id, event: "attachment-added" },
+          });
+        } catch (e) {
+          console.warn("send-leave-request-email (attachment) failed", e);
+        }
+      }
+
       return inserted;
+
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["my-leave-requests"] });
