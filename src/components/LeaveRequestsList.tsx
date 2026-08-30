@@ -41,8 +41,14 @@ export function LeaveRequestsList({ requests, showEmployee, allowCancel }: Props
     <div className="space-y-2">
       {requests.map((r: any) => {
         const isSick = r.request_type === "sick";
+        const isReserve = r.request_type === "reserve";
         const sickOpen = isSick && !r.end_date;
-        const canEditSick = allowCancel && isSick && r.status !== "cancelled" && (sickOpen || !r.attachment_url);
+        const canEditSick =
+          allowCancel &&
+          (isSick || isReserve) &&
+          r.status !== "cancelled" &&
+          (sickOpen || !r.attachment_url);
+
         return (
         <div key={r.id} className="bg-card rounded-xl border border-border/50 p-3 space-y-2">
           <div className="flex items-start justify-between gap-2">
