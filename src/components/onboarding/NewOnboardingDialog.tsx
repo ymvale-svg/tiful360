@@ -18,6 +18,7 @@ import { getDomain, DOMAIN_META, type DomainKey } from "@/lib/assetDomains";
 import { resolveOwnerRole, OWNER_ROLE_OPTIONS, OWNER_ROLE_LABEL } from "@/lib/domainConfig";
 import { Send, Copy, UserPlus, CalendarDays, AlertCircle, X } from "lucide-react";
 import { EmployeeSetupWizard } from "@/components/EmployeeSetupWizard";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   open: boolean;
@@ -269,7 +270,13 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
       return;
     }
     try {
-      await create.mutateAsync({ employee_id: employeeId, items, status });
+      const proc = await create.mutateAsync({ employee_id: employeeId, items, status });
+      if (status === "sent" && proc?.id) {
+        const { error: mailErr } = await supabase.functions.invoke("notify-onboarding-process", {
+          body: { process_id: proc.id },
+        });
+        if (mailErr) console.error("notify-onboarding-process failed", mailErr);
+      }
       toast({
         title: status === "sent" ? "נשלח לתפעול" : "נשמר כטיוטה",
         description: `${items.length} פריטים בתהליך הקליטה`,
