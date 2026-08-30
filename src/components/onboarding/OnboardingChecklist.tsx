@@ -17,7 +17,7 @@ import {
 } from "@/hooks/useOnboarding";
 import { getDomain, DOMAIN_META } from "@/lib/assetDomains";
 import { OWNER_ROLE_LABEL, OWNER_ROLE_OPTIONS } from "@/lib/domainConfig";
-import { CheckCircle2, Printer, Package } from "lucide-react";
+import { CheckCircle2, Printer, Package, StickyNote } from "lucide-react";
 
 interface Props {
   process: OnboardingProcess | null;
