@@ -113,6 +113,16 @@ export type MichpalSource = "clock" | "remote" | "combined";
 /** מקורות ההחתמה הנחשבים "החתמה מרחוק" */
 export const REMOTE_SOURCES = ["portal_remote", "manual_self", "manual", "portal"];
 
+/**
+ * נירמול קוד עובד ל"זיהוי כרטיס" במיכפל.
+ * מסיר את הקידומת "EMP-" (למשל EMP-309 -> 309) ולוקח רק את המספר/הערך הפנימי.
+ */
+export function normalizeCardId(rawCode: string): string {
+  let code = (rawCode ?? "").trim();
+  if (code.toUpperCase().startsWith("EMP-")) code = code.slice(4).trim();
+  return code;
+}
+
 export function matchesSource(source: string, filter: MichpalSource): boolean {
   if (filter === "combined") return true;
   const isRemote = REMOTE_SOURCES.includes(source);
@@ -148,7 +158,7 @@ export function punchesToMichpalRows(
     if (p.status === "rejected") continue;
     if (!matchesSource(p.source, filter)) continue;
     if (!p.employee_id) { skippedNoCode++; continue; }
-    const code = (codeByEmployee.get(p.employee_id) ?? "").trim();
+    const code = normalizeCardId(codeByEmployee.get(p.employee_id) ?? "");
     if (!code) { skippedNoCode++; continue; }
     if (p.direction !== "in" && p.direction !== "out") { skippedUnknownDirection++; continue; }
     rows.push({
@@ -188,7 +198,7 @@ export function leavesToMichpalRows(
 ): MichpalRow[] {
   const rows: MichpalRow[] = [];
   for (const l of leaves) {
-    const code = (codeByEmployee.get(l.employee_id) ?? "").trim();
+    const code = normalizeCardId(codeByEmployee.get(l.employee_id) ?? "");
     if (!code) continue;
     const absence = absenceCodes[l.request_type] ?? absenceCodes.other ?? "9";
     const start = l.start_date < from ? from : l.start_date;
