@@ -35,15 +35,22 @@ Deno.serve(async (req) => {
   try { body = req.method === 'POST' ? await req.json() : {} } catch {}
 
   const today = todayIL()
-  // Default: previous calendar month, in Asia/Jerusalem
+  // period: 'previous_month' (default) | 'current_month'
+  const period = String(body?.period ?? 'previous_month')
+  // recipients: 'company_emails' (default, companies.payroll_emails) | 'roles' (users with hr/payroll roles)
+  const recipientsMode = String(body?.recipients ?? 'company_emails')
+
   const firstOfCurrent = new Date(today.getFullYear(), today.getMonth(), 1)
   const lastOfPrev = new Date(firstOfCurrent.getTime() - 24 * 60 * 60 * 1000)
   const firstOfPrev = new Date(lastOfPrev.getFullYear(), lastOfPrev.getMonth(), 1)
+  const periodStart = period === 'current_month' ? firstOfCurrent : firstOfPrev
+  const periodEnd = period === 'current_month' ? today : lastOfPrev
 
-  const from = body?.from ? String(body.from) : toISO(firstOfPrev)
-  const to = body?.to ? String(body.to) : toISO(lastOfPrev)
+  const from = body?.from ? String(body.from) : toISO(periodStart)
+  const to = body?.to ? String(body.to) : toISO(periodEnd)
   const requestedCompany: string | undefined = body?.company_id
-  const monthLabel = `${String(lastOfPrev.getMonth() + 1).padStart(2, '0')}/${lastOfPrev.getFullYear()}`
+  const monthLabel = `${String(periodEnd.getMonth() + 1).padStart(2, '0')}/${periodEnd.getFullYear()}`
+
 
   // Enumerate dates in [from, to]
   const dates: string[] = []
