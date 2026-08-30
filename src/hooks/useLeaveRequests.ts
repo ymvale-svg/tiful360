@@ -216,6 +216,17 @@ export function useUpdateSickLeaveRequest() {
         .eq("id", input.request_id);
       if (error) throw error;
 
+      // אישור שהועלה (מחלה / שמ"פ) → נשלח במייל לחשבות השכר
+      if (input.attachment_file) {
+        try {
+          await supabase.functions.invoke("send-leave-request-email", {
+            body: { request_id: input.request_id, event: "attachment-added" },
+          });
+        } catch (e) {
+          console.warn("send-leave-request-email (attachment) failed", e);
+        }
+      }
+
       // If sick leave was just closed → notify payroll + refresh info to manager & HR
       if (wasClosed) {
         try {
@@ -233,6 +244,7 @@ export function useUpdateSickLeaveRequest() {
           console.warn("send-leave-request-email failed", e);
         }
       }
+
 
       return { request_id: input.request_id };
     },
