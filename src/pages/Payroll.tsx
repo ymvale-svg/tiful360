@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Tax101AdminTab } from "@/components/payroll/Tax101AdminTab";
 import { AttendanceClockTab } from "@/components/payroll/AttendanceClockTab";
 import { HrAttendanceReports } from "@/components/payroll/HrAttendanceReports";
+import { MichpalExportCard } from "@/components/payroll/MichpalExportCard";
 
 const MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
 const TYPE_LABELS_PAYROLL: Record<string, string> = { vacation: "חופשה", sick: "מחלה", reserve: "מילואים", personal: "יום אישי", other: "אחר" };
@@ -118,7 +119,12 @@ export default function Payroll() {
           </h2>
 
           {active.key === "overview" && <OverviewTab />}
-          {active.key === "reports" && <HrAttendanceReports />}
+          {active.key === "reports" && (
+            <div className="space-y-4">
+              <HrAttendanceReports />
+              <MichpalExportCard />
+            </div>
+          )}
           {active.key === "attendance" && <AttendanceClockTab />}
           {active.key === "tax101" && <Tax101AdminTab />}
           {active.key === "batches" && <BatchesManagementTab />}
