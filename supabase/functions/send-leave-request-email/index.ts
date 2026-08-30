@@ -151,6 +151,8 @@ Deno.serve(async (req) => {
 
     const hrList = parseEmailList((company as any)?.hr_emails);
     const secretariatList = parseEmailList((company as any)?.secretariat_emails);
+    const payrollEmails = parseEmailList((company as any)?.payroll_emails);
+
 
     let manager: any = null;
     if (employee?.direct_manager_id) {
@@ -236,6 +238,11 @@ Deno.serve(async (req) => {
       if (isRetroactive(anchor)) return false;
       const recipients = new Set<string>(secretariatList);
       if (manager?.email) recipients.add(manager.email);
+      // מילואים: הזימון נשלח גם לחשבות השכר
+      if (request.request_type === "reserve") {
+        for (const e of payrollEmails) recipients.add(e);
+      }
+
       if (recipients.size === 0) return false;
 
       const icsUrl = `${SUPABASE_URL}/functions/v1/leave-ics?id=${request.id}`;
@@ -297,6 +304,9 @@ Deno.serve(async (req) => {
         const recipients = new Set<string>();
         if (manager?.email) recipients.add(manager.email);
         for (const e of hrList) recipients.add(e);
+        // מחלה — לידיעת חשבות השכר
+        for (const e of payrollEmails) recipients.add(e);
+
         for (const to of recipients) {
           await enqueueEmail(supabase, to, subj, html, "leave-sick-submitted", `leave-sick-submitted-${request.id}-${to}`);
         }
@@ -357,7 +367,47 @@ Deno.serve(async (req) => {
     }
 
 
+    // ------- ATTACHMENT ADDED (אישור מחלה / אישור שמ"פ) -------
+    if (event === "attachment-added") {
+      if (!request.attachment_url) {
+        return new Response(JSON.stringify({ skipped: "no attachment" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const docLabel =
+        request.request_type === "reserve" ? 'אישור שמ"פ' : "אישור מחלה";
+      const html = baseLayout(
+        `${docLabel} התקבל`,
+        `<h2 style="margin:0 0 8px;font-size:18px;">📎 ${escapeHtml(docLabel)} — ${escapeHtml(employee?.full_name ?? "עובד")}</h2>
+         <p style="color:#475569;font-size:14px;">העובד/ת העלה/תה ${escapeHtml(docLabel)} במערכת. האישור מצורף בקישור להלן.</p>
+         ${detailsTable([...baseDetails, ["ת.ז.", employee?.id_number ?? "—"], ["מנהל ישיר", manager?.full_name ?? "—"]])}
+         <p style="margin:18px 0;">
+           <a href="${request.attachment_url}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:11px 22px;border-radius:8px;font-weight:600;font-size:14px;">📎 הורדת ${escapeHtml(docLabel)}</a>
+         </p>
+         ${ctaButton(reviewUrl, "צפייה בדיווח")}`,
+      );
+      const subj = `📎 ${docLabel} — ${employee?.full_name}`;
+      const attachRecipients = new Set<string>(payrollEmails);
+      for (const to of attachRecipients) {
+        await enqueueEmail(
+          supabase,
+          to,
+          subj,
+          html,
+          "leave-attachment-payroll",
+          `leave-attachment-payroll-${request.id}-${to}-${request.attachment_url.slice(-24)}`,
+        );
+      }
+      if (attachRecipients.size > 0) {
+        await supabase
+          .from("leave_requests")
+          .update({ payroll_notified_at: new Date().toISOString() })
+          .eq("id", request.id);
+      }
+    }
+
     // ------- APPROVED -------
+
     if (event === "approved") {
 
 
