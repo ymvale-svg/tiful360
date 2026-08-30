@@ -35,15 +35,22 @@ Deno.serve(async (req) => {
   try { body = req.method === 'POST' ? await req.json() : {} } catch {}
 
   const today = todayIL()
-  // Default: previous calendar month, in Asia/Jerusalem
+  // period: 'previous_month' (default) | 'current_month'
+  const period = String(body?.period ?? 'previous_month')
+  // recipients: 'company_emails' (default, companies.payroll_emails) | 'roles' (users with hr/payroll roles)
+  const recipientsMode = String(body?.recipients ?? 'company_emails')
+
   const firstOfCurrent = new Date(today.getFullYear(), today.getMonth(), 1)
   const lastOfPrev = new Date(firstOfCurrent.getTime() - 24 * 60 * 60 * 1000)
   const firstOfPrev = new Date(lastOfPrev.getFullYear(), lastOfPrev.getMonth(), 1)
+  const periodStart = period === 'current_month' ? firstOfCurrent : firstOfPrev
+  const periodEnd = period === 'current_month' ? today : lastOfPrev
 
-  const from = body?.from ? String(body.from) : toISO(firstOfPrev)
-  const to = body?.to ? String(body.to) : toISO(lastOfPrev)
+  const from = body?.from ? String(body.from) : toISO(periodStart)
+  const to = body?.to ? String(body.to) : toISO(periodEnd)
   const requestedCompany: string | undefined = body?.company_id
-  const monthLabel = `${String(lastOfPrev.getMonth() + 1).padStart(2, '0')}/${lastOfPrev.getFullYear()}`
+  const monthLabel = `${String(periodEnd.getMonth() + 1).padStart(2, '0')}/${periodEnd.getFullYear()}`
+
 
   // Enumerate dates in [from, to]
   const dates: string[] = []
@@ -119,19 +126,45 @@ Deno.serve(async (req) => {
     if (signErr || !urlData?.signedUrl) { errors.push(`sign ${companyId}: ${signErr?.message ?? 'no url'}`); continue }
     const downloadUrl = urlData.signedUrl
 
-    // Recipients: payroll_emails only
-    const { data: comp } = await admin
-      .from('companies')
-      .select('payroll_emails')
-      .eq('id', companyId)
-      .maybeSingle()
+    // Recipients
     const parseList = (raw: any): string[] =>
       String(raw ?? '')
         .split(/[,;\s]+/)
         .map((s) => s.trim())
         .filter((s) => /^\S+@\S+\.\S+$/.test(s))
-    const recipients = parseList((comp as any)?.payroll_emails)
+
+    let recipients: string[] = []
+    if (recipientsMode === 'roles') {
+      // Users of this company holding hr / payroll roles
+      const { data: access } = await admin
+        .from('user_company_access')
+        .select('user_id')
+        .eq('company_id', companyId)
+      const userIds = (access ?? []).map((a: any) => a.user_id)
+      if (userIds.length > 0) {
+        const { data: roleRows } = await admin
+          .from('user_roles')
+          .select('user_id')
+          .in('user_id', userIds)
+          .in('role', ['hr', 'payroll'])
+        const targetIds = [...new Set((roleRows ?? []).map((r: any) => r.user_id))]
+        for (const uid of targetIds) {
+          const { data: u } = await admin.auth.admin.getUserById(uid)
+          const email = u?.user?.email
+          if (email && /^\S+@\S+\.\S+$/.test(email)) recipients.push(email)
+        }
+      }
+      recipients = [...new Set(recipients)]
+    } else {
+      const { data: comp } = await admin
+        .from('companies')
+        .select('payroll_emails')
+        .eq('id', companyId)
+        .maybeSingle()
+      recipients = parseList((comp as any)?.payroll_emails)
+    }
     if (recipients.length === 0) continue
+
 
     for (const email of recipients) {
       const templateData = {
@@ -144,7 +177,7 @@ Deno.serve(async (req) => {
         employeeCount: empSet.size,
         downloadUrl,
       }
-      const idempotencyKey = `payroll-monthly-gaps-${companyId}-${email}-${from}-${to}`
+      const idempotencyKey = `payroll-monthly-gaps-${recipientsMode}-${companyId}-${email}-${from}-${to}`
       const result = await sendTemplateEmailLogged(admin, 'payroll-monthly-gaps', email, {
         templateData,
         idempotencyKey,
