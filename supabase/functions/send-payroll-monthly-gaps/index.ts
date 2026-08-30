@@ -177,7 +177,7 @@ Deno.serve(async (req) => {
         employeeCount: empSet.size,
         downloadUrl,
       }
-      const idempotencyKey = `payroll-monthly-gaps-${companyId}-${email}-${from}-${to}`
+      const idempotencyKey = `payroll-monthly-gaps-${recipientsMode}-${companyId}-${email}-${from}-${to}`
       const result = await sendTemplateEmailLogged(admin, 'payroll-monthly-gaps', email, {
         templateData,
         idempotencyKey,
