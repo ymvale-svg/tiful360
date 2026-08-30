@@ -151,6 +151,8 @@ Deno.serve(async (req) => {
 
     const hrList = parseEmailList((company as any)?.hr_emails);
     const secretariatList = parseEmailList((company as any)?.secretariat_emails);
+    const payrollEmails = parseEmailList((company as any)?.payroll_emails);
+
 
     let manager: any = null;
     if (employee?.direct_manager_id) {
