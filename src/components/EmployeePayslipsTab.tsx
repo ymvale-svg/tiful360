@@ -216,7 +216,7 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary, hideBa
       <div className="flex items-center justify-between gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
         <span className="flex items-center gap-2">
           <ShieldAlert className="w-4 h-4 text-warning shrink-0" />
-          נתוני שכר חסויים — נחשפו לאחר אימות סיסמה.
+          נתוני שכר חסויים — נחשפו לאחר אימות זהות.
         </span>
         <Button size="sm" variant="ghost" className="h-7 gap-1" onClick={() => setUnlocked(false)}>
           <Lock className="w-3.5 h-3.5" />
