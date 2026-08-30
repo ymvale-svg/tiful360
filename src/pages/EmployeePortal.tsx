@@ -193,12 +193,21 @@ export default function EmployeePortal() {
         .lte("published_at", nowIso)
         .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
         .order("published_at", { ascending: false })
-        .limit(5);
+        .limit(50);
       if (error) throw error;
       return data;
     },
     enabled: !!activeCompanyId,
   });
+
+  // Announcements published in the last 3 days are shown "open"; older ones go to the archive
+  const threeDaysAgo = Date.now() - 3 * 24 * 60 * 60 * 1000;
+  const freshAnnouncements = announcements.filter(
+    (a: any) => new Date(a.published_at).getTime() >= threeDaysAgo
+  );
+  const archivedAnnouncements = announcements.filter(
+    (a: any) => new Date(a.published_at).getTime() < threeDaysAgo
+  );
 
   // Fetch birthday employees this month via secure RPC
   const { data: birthdayEmployees = [] } = useQuery({
