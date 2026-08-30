@@ -158,7 +158,7 @@ export function punchesToMichpalRows(
     if (p.status === "rejected") continue;
     if (!matchesSource(p.source, filter)) continue;
     if (!p.employee_id) { skippedNoCode++; continue; }
-    const code = (codeByEmployee.get(p.employee_id) ?? "").trim();
+    const code = normalizeCardId(codeByEmployee.get(p.employee_id) ?? "");
     if (!code) { skippedNoCode++; continue; }
     if (p.direction !== "in" && p.direction !== "out") { skippedUnknownDirection++; continue; }
     rows.push({
@@ -198,7 +198,7 @@ export function leavesToMichpalRows(
 ): MichpalRow[] {
   const rows: MichpalRow[] = [];
   for (const l of leaves) {
-    const code = (codeByEmployee.get(l.employee_id) ?? "").trim();
+    const code = normalizeCardId(codeByEmployee.get(l.employee_id) ?? "");
     if (!code) continue;
     const absence = absenceCodes[l.request_type] ?? absenceCodes.other ?? "9";
     const start = l.start_date < from ? from : l.start_date;
