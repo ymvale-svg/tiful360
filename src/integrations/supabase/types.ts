@@ -993,6 +993,7 @@ export type Database = {
           id: string
           it_emails: string | null
           logo_url: string | null
+          michpal_absence_codes: Json
           name: string
           operations_emails: string | null
           payroll_emails: string | null
@@ -1018,6 +1019,7 @@ export type Database = {
           id?: string
           it_emails?: string | null
           logo_url?: string | null
+          michpal_absence_codes?: Json
           name: string
           operations_emails?: string | null
           payroll_emails?: string | null
@@ -1043,6 +1045,7 @@ export type Database = {
           id?: string
           it_emails?: string | null
           logo_url?: string | null
+          michpal_absence_codes?: Json
           name?: string
           operations_emails?: string | null
           payroll_emails?: string | null
