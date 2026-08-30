@@ -91,7 +91,8 @@ export function encodeWindows1255(text: string): Uint8Array {
 }
 
 export function michpalCsvBlob(csv: string): Blob {
-  return new Blob([encodeWindows1255(csv)], { type: "text/csv;charset=windows-1255" });
+  const bytes = encodeWindows1255(csv);
+  return new Blob([bytes.buffer as ArrayBuffer], { type: "text/csv;charset=windows-1255" });
 }
 
 export function downloadMichpalCsv(csv: string, fileName: string) {
