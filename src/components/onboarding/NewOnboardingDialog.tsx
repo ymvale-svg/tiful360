@@ -269,7 +269,13 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
       return;
     }
     try {
-      await create.mutateAsync({ employee_id: employeeId, items, status });
+      const proc = await create.mutateAsync({ employee_id: employeeId, items, status });
+      if (status === "sent" && proc?.id) {
+        const { error: mailErr } = await supabase.functions.invoke("notify-onboarding-process", {
+          body: { process_id: proc.id },
+        });
+        if (mailErr) console.error("notify-onboarding-process failed", mailErr);
+      }
       toast({
         title: status === "sent" ? "נשלח לתפעול" : "נשמר כטיוטה",
         description: `${items.length} פריטים בתהליך הקליטה`,
