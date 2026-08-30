@@ -304,6 +304,9 @@ Deno.serve(async (req) => {
         const recipients = new Set<string>();
         if (manager?.email) recipients.add(manager.email);
         for (const e of hrList) recipients.add(e);
+        // מחלה — לידיעת חשבות השכר
+        for (const e of payrollEmails) recipients.add(e);
+
         for (const to of recipients) {
           await enqueueEmail(supabase, to, subj, html, "leave-sick-submitted", `leave-sick-submitted-${request.id}-${to}`);
         }
