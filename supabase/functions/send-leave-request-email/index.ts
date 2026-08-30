@@ -238,6 +238,11 @@ Deno.serve(async (req) => {
       if (isRetroactive(anchor)) return false;
       const recipients = new Set<string>(secretariatList);
       if (manager?.email) recipients.add(manager.email);
+      // מילואים: הזימון נשלח גם לחשבות השכר
+      if (request.request_type === "reserve") {
+        for (const e of payrollEmails) recipients.add(e);
+      }
+
       if (recipients.size === 0) return false;
 
       const icsUrl = `${SUPABASE_URL}/functions/v1/leave-ics?id=${request.id}`;
