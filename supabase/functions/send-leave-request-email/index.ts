@@ -367,7 +367,47 @@ Deno.serve(async (req) => {
     }
 
 
+    // ------- ATTACHMENT ADDED (אישור מחלה / אישור שמ"פ) -------
+    if (event === "attachment-added") {
+      if (!request.attachment_url) {
+        return new Response(JSON.stringify({ skipped: "no attachment" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const docLabel =
+        request.request_type === "reserve" ? 'אישור שמ"פ' : "אישור מחלה";
+      const html = baseLayout(
+        `${docLabel} התקבל`,
+        `<h2 style="margin:0 0 8px;font-size:18px;">📎 ${escapeHtml(docLabel)} — ${escapeHtml(employee?.full_name ?? "עובד")}</h2>
+         <p style="color:#475569;font-size:14px;">העובד/ת העלה/תה ${escapeHtml(docLabel)} במערכת. האישור מצורף בקישור להלן.</p>
+         ${detailsTable([...baseDetails, ["ת.ז.", employee?.id_number ?? "—"], ["מנהל ישיר", manager?.full_name ?? "—"]])}
+         <p style="margin:18px 0;">
+           <a href="${request.attachment_url}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:11px 22px;border-radius:8px;font-weight:600;font-size:14px;">📎 הורדת ${escapeHtml(docLabel)}</a>
+         </p>
+         ${ctaButton(reviewUrl, "צפייה בדיווח")}`,
+      );
+      const subj = `📎 ${docLabel} — ${employee?.full_name}`;
+      const attachRecipients = new Set<string>(payrollEmails);
+      for (const to of attachRecipients) {
+        await enqueueEmail(
+          supabase,
+          to,
+          subj,
+          html,
+          "leave-attachment-payroll",
+          `leave-attachment-payroll-${request.id}-${to}-${request.attachment_url.slice(-24)}`,
+        );
+      }
+      if (attachRecipients.size > 0) {
+        await supabase
+          .from("leave_requests")
+          .update({ payroll_notified_at: new Date().toISOString() })
+          .eq("id", request.id);
+      }
+    }
+
     // ------- APPROVED -------
+
     if (event === "approved") {
 
 
