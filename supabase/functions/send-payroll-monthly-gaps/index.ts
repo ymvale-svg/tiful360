@@ -126,19 +126,45 @@ Deno.serve(async (req) => {
     if (signErr || !urlData?.signedUrl) { errors.push(`sign ${companyId}: ${signErr?.message ?? 'no url'}`); continue }
     const downloadUrl = urlData.signedUrl
 
-    // Recipients: payroll_emails only
-    const { data: comp } = await admin
-      .from('companies')
-      .select('payroll_emails')
-      .eq('id', companyId)
-      .maybeSingle()
+    // Recipients
     const parseList = (raw: any): string[] =>
       String(raw ?? '')
         .split(/[,;\s]+/)
         .map((s) => s.trim())
         .filter((s) => /^\S+@\S+\.\S+$/.test(s))
-    const recipients = parseList((comp as any)?.payroll_emails)
+
+    let recipients: string[] = []
+    if (recipientsMode === 'roles') {
+      // Users of this company holding hr / payroll roles
+      const { data: access } = await admin
+        .from('user_company_access')
+        .select('user_id')
+        .eq('company_id', companyId)
+      const userIds = (access ?? []).map((a: any) => a.user_id)
+      if (userIds.length > 0) {
+        const { data: roleRows } = await admin
+          .from('user_roles')
+          .select('user_id')
+          .in('user_id', userIds)
+          .in('role', ['hr', 'payroll'])
+        const targetIds = [...new Set((roleRows ?? []).map((r: any) => r.user_id))]
+        for (const uid of targetIds) {
+          const { data: u } = await admin.auth.admin.getUserById(uid)
+          const email = u?.user?.email
+          if (email && /^\S+@\S+\.\S+$/.test(email)) recipients.push(email)
+        }
+      }
+      recipients = [...new Set(recipients)]
+    } else {
+      const { data: comp } = await admin
+        .from('companies')
+        .select('payroll_emails')
+        .eq('id', companyId)
+        .maybeSingle()
+      recipients = parseList((comp as any)?.payroll_emails)
+    }
     if (recipients.length === 0) continue
+
 
     for (const email of recipients) {
       const templateData = {
