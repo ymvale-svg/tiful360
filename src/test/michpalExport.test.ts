@@ -60,6 +60,20 @@ describe("michpal export", () => {
     expect(res.skippedNoCode).toBe(1);
   });
 
+  it("strips the EMP- prefix from employee codes", () => {
+    const codes = new Map([["e1", "EMP-309"], ["e2", "emp-5"], ["e3", "626"]]);
+    const res = punchesToMichpalRows(
+      [
+        { employee_id: "e1", punch_at: "2026-05-01T05:30:00Z", direction: "in", source: "clock", status: "approved" },
+        { employee_id: "e2", punch_at: "2026-05-01T05:30:00Z", direction: "in", source: "clock", status: "approved" },
+        { employee_id: "e3", punch_at: "2026-05-01T05:30:00Z", direction: "in", source: "clock", status: "approved" },
+      ],
+      codes,
+      "combined",
+    );
+    expect(res.rows.map((r) => r.cardId)).toEqual(["309", "5", "626"]);
+  });
+
   it("expands approved leave into daily A rows clipped to range", () => {
     const rows = leavesToMichpalRows(
       [{ employee_id: "e1", request_type: "vacation", start_date: "2026-04-28", end_date: "2026-05-02" }],
