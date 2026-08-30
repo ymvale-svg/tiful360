@@ -451,14 +451,14 @@ export default function EmployeePortal() {
             );
           })()}
 
-          {announcements.length > 0 && (
+          {freshAnnouncements.length > 0 && (
             <div className="bg-card rounded-xl border border-border/50 p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Megaphone className="w-4 h-4 text-primary" />
                 <h3 className="font-semibold text-sm">הודעות חברה</h3>
               </div>
               <div className="space-y-2">
-                {announcements.slice(0, 2).map((ann) => (
+                {freshAnnouncements.slice(0, 3).map((ann: any) => (
                   <div key={ann.id} className="bg-muted/50 rounded-lg p-3">
                     <div className="flex items-start justify-between gap-2 mb-1">
                       <p className="text-sm font-medium">{ann.title}</p>
@@ -466,7 +466,13 @@ export default function EmployeePortal() {
                         {new Date(ann.published_at).toLocaleDateString("en-GB")}
                       </span>
                     </div>
-                    <p className="text-xs text-muted-foreground line-clamp-2">{ann.content}</p>
+                    <p className="text-xs text-muted-foreground whitespace-pre-line">{ann.content}</p>
+                    {ann.sender_name && (
+                      <p className="mt-2 pt-2 border-t border-border/40 text-[11px] text-muted-foreground">
+                        בברכה, {ann.sender_name}
+                        {ann.sender_role ? ` · ${ann.sender_role}` : ""}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
