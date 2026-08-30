@@ -729,23 +729,53 @@ export default function EmployeePortal() {
         {/* ===== NEWS TAB ===== */}
         {activeTab === "news" && (
           <div role="tabpanel" id="portal-tabpanel-news" aria-labelledby="portal-tab-news" className="space-y-3 animate-fade-in">
-            {announcements.length > 0 ? announcements.map((item) => (
-              <div key={item.id} className="bg-card rounded-xl border border-border/50 p-4">
-                <div className="flex items-start justify-between gap-2 mb-1">
-                  <h3 className="font-semibold text-sm">{item.title}</h3>
-                  <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-                    {new Date(item.published_at).toLocaleDateString("en-GB")}
-                  </span>
-                </div>
-                <p className="text-sm text-muted-foreground whitespace-pre-line">{item.content}</p>
-                {(item as any).sender_name && (
-                  <p className="mt-3 pt-2 border-t border-border/40 text-xs text-muted-foreground">
-                    בברכה, {(item as any).sender_name}
-                    {(item as any).sender_role ? ` · ${(item as any).sender_role}` : ""}
-                  </p>
+            {announcements.length > 0 ? (
+              <>
+                {freshAnnouncements.map((item: any) => (
+                  <div key={item.id} className="bg-card rounded-xl border border-border/50 p-4">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <h3 className="font-semibold text-sm">{item.title}</h3>
+                      <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                        {new Date(item.published_at).toLocaleDateString("en-GB")}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground whitespace-pre-line">{item.content}</p>
+                    {item.sender_name && (
+                      <p className="mt-3 pt-2 border-t border-border/40 text-xs text-muted-foreground">
+                        בברכה, {item.sender_name}
+                        {item.sender_role ? ` · ${item.sender_role}` : ""}
+                      </p>
+                    )}
+                  </div>
+                ))}
+                {archivedAnnouncements.length > 0 && (
+                  <details className="bg-card rounded-xl border border-border/50">
+                    <summary className="cursor-pointer p-4 text-sm font-medium text-muted-foreground select-none">
+                      ארכיון הודעות ({archivedAnnouncements.length})
+                    </summary>
+                    <div className="px-4 pb-4 space-y-3">
+                      {archivedAnnouncements.map((item: any) => (
+                        <div key={item.id} className="rounded-lg bg-muted/40 p-3">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <h4 className="font-medium text-sm">{item.title}</h4>
+                            <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                              {new Date(item.published_at).toLocaleDateString("en-GB")}
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground whitespace-pre-line">{item.content}</p>
+                          {item.sender_name && (
+                            <p className="mt-2 pt-2 border-t border-border/40 text-xs text-muted-foreground">
+                              בברכה, {item.sender_name}
+                              {item.sender_role ? ` · ${item.sender_role}` : ""}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </details>
                 )}
-              </div>
-            )) : (
+              </>
+            ) : (
               <p className="text-center text-sm text-muted-foreground py-8">אין הודעות כרגע</p>
             )}
           </div>
