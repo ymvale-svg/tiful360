@@ -193,12 +193,21 @@ export default function EmployeePortal() {
         .lte("published_at", nowIso)
         .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
         .order("published_at", { ascending: false })
-        .limit(5);
+        .limit(50);
       if (error) throw error;
       return data;
     },
     enabled: !!activeCompanyId,
   });
+
+  // Announcements published in the last 3 days are shown "open"; older ones go to the archive
+  const threeDaysAgo = Date.now() - 3 * 24 * 60 * 60 * 1000;
+  const freshAnnouncements = announcements.filter(
+    (a: any) => new Date(a.published_at).getTime() >= threeDaysAgo
+  );
+  const archivedAnnouncements = announcements.filter(
+    (a: any) => new Date(a.published_at).getTime() < threeDaysAgo
+  );
 
   // Fetch birthday employees this month via secure RPC
   const { data: birthdayEmployees = [] } = useQuery({
@@ -442,14 +451,14 @@ export default function EmployeePortal() {
             );
           })()}
 
-          {announcements.length > 0 && (
+          {freshAnnouncements.length > 0 && (
             <div className="bg-card rounded-xl border border-border/50 p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Megaphone className="w-4 h-4 text-primary" />
                 <h3 className="font-semibold text-sm">הודעות חברה</h3>
               </div>
               <div className="space-y-2">
-                {announcements.slice(0, 2).map((ann) => (
+                {freshAnnouncements.slice(0, 3).map((ann: any) => (
                   <div key={ann.id} className="bg-muted/50 rounded-lg p-3">
                     <div className="flex items-start justify-between gap-2 mb-1">
                       <p className="text-sm font-medium">{ann.title}</p>
@@ -457,7 +466,13 @@ export default function EmployeePortal() {
                         {new Date(ann.published_at).toLocaleDateString("en-GB")}
                       </span>
                     </div>
-                    <p className="text-xs text-muted-foreground line-clamp-2">{ann.content}</p>
+                    <p className="text-xs text-muted-foreground whitespace-pre-line">{ann.content}</p>
+                    {ann.sender_name && (
+                      <p className="mt-2 pt-2 border-t border-border/40 text-[11px] text-muted-foreground">
+                        בברכה, {ann.sender_name}
+                        {ann.sender_role ? ` · ${ann.sender_role}` : ""}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -714,23 +729,53 @@ export default function EmployeePortal() {
         {/* ===== NEWS TAB ===== */}
         {activeTab === "news" && (
           <div role="tabpanel" id="portal-tabpanel-news" aria-labelledby="portal-tab-news" className="space-y-3 animate-fade-in">
-            {announcements.length > 0 ? announcements.map((item) => (
-              <div key={item.id} className="bg-card rounded-xl border border-border/50 p-4">
-                <div className="flex items-start justify-between gap-2 mb-1">
-                  <h3 className="font-semibold text-sm">{item.title}</h3>
-                  <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-                    {new Date(item.published_at).toLocaleDateString("en-GB")}
-                  </span>
-                </div>
-                <p className="text-sm text-muted-foreground whitespace-pre-line">{item.content}</p>
-                {(item as any).sender_name && (
-                  <p className="mt-3 pt-2 border-t border-border/40 text-xs text-muted-foreground">
-                    בברכה, {(item as any).sender_name}
-                    {(item as any).sender_role ? ` · ${(item as any).sender_role}` : ""}
-                  </p>
+            {announcements.length > 0 ? (
+              <>
+                {freshAnnouncements.map((item: any) => (
+                  <div key={item.id} className="bg-card rounded-xl border border-border/50 p-4">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <h3 className="font-semibold text-sm">{item.title}</h3>
+                      <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                        {new Date(item.published_at).toLocaleDateString("en-GB")}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground whitespace-pre-line">{item.content}</p>
+                    {item.sender_name && (
+                      <p className="mt-3 pt-2 border-t border-border/40 text-xs text-muted-foreground">
+                        בברכה, {item.sender_name}
+                        {item.sender_role ? ` · ${item.sender_role}` : ""}
+                      </p>
+                    )}
+                  </div>
+                ))}
+                {archivedAnnouncements.length > 0 && (
+                  <details className="bg-card rounded-xl border border-border/50">
+                    <summary className="cursor-pointer p-4 text-sm font-medium text-muted-foreground select-none">
+                      ארכיון הודעות ({archivedAnnouncements.length})
+                    </summary>
+                    <div className="px-4 pb-4 space-y-3">
+                      {archivedAnnouncements.map((item: any) => (
+                        <div key={item.id} className="rounded-lg bg-muted/40 p-3">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <h4 className="font-medium text-sm">{item.title}</h4>
+                            <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                              {new Date(item.published_at).toLocaleDateString("en-GB")}
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground whitespace-pre-line">{item.content}</p>
+                          {item.sender_name && (
+                            <p className="mt-2 pt-2 border-t border-border/40 text-xs text-muted-foreground">
+                              בברכה, {item.sender_name}
+                              {item.sender_role ? ` · ${item.sender_role}` : ""}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </details>
                 )}
-              </div>
-            )) : (
+              </>
+            ) : (
               <p className="text-center text-sm text-muted-foreground py-8">אין הודעות כרגע</p>
             )}
           </div>
