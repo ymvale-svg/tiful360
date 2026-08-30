@@ -171,28 +171,42 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary, hideBa
         <div className="w-12 h-12 rounded-full bg-warning/10 flex items-center justify-center mx-auto mb-4">
           <ShieldAlert className="w-6 h-6 text-warning" />
         </div>
-        <h2 className="text-base font-semibold">אימות סיסמה נדרש</h2>
+        <h2 className="text-base font-semibold">אימות זהות נדרש</h2>
         <p className="text-sm text-muted-foreground mt-2">
-          נתוני השכר חסויים. להצגתם יש להזין מחדש את סיסמת המשתמש שלך.
+          {authMethod === "oauth"
+            ? "נתוני השכר חסויים. להצגתם יש לאמת זהות מחדש באמצעות חשבון ה-Google שלך."
+            : "נתוני השכר חסויים. להצגתם יש להזין מחדש את סיסמת המשתמש שלך."}
         </p>
-        <div className="mt-5 space-y-2 text-right">
-          <Label htmlFor="payslip-password" className="text-xs text-muted-foreground">סיסמה</Label>
-          <Input
-            id="payslip-password"
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") handleVerifyPassword(); }}
-            dir="ltr"
-            className="text-left"
-          />
-          {pwError && <p className="text-xs text-destructive">{pwError}</p>}
-        </div>
-        <Button className="mt-4 w-full gap-2" onClick={handleVerifyPassword} disabled={verifying || !password}>
-          <Eye className="w-4 h-4" />
-          {verifying ? "מאמת..." : "הצג נתוני שכר"}
-        </Button>
+        {authMethod === "oauth" ? (
+          <>
+            {pwError && <p className="mt-4 text-xs text-destructive">{pwError}</p>}
+            <Button className="mt-4 w-full gap-2" onClick={handleGoogleVerify} disabled={verifying}>
+              <Eye className="w-4 h-4" />
+              {verifying ? "מעביר ל-Google..." : "אמת זהות עם Google"}
+            </Button>
+          </>
+        ) : (
+          <>
+            <div className="mt-5 space-y-2 text-right">
+              <Label htmlFor="payslip-password" className="text-xs text-muted-foreground">סיסמה</Label>
+              <Input
+                id="payslip-password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleVerifyPassword(); }}
+                dir="ltr"
+                className="text-left"
+              />
+              {pwError && <p className="text-xs text-destructive">{pwError}</p>}
+            </div>
+            <Button className="mt-4 w-full gap-2" onClick={handleVerifyPassword} disabled={verifying || !password || authMethod === null}>
+              <Eye className="w-4 h-4" />
+              {verifying ? "מאמת..." : "הצג נתוני שכר"}
+            </Button>
+          </>
+        )}
       </div>
     );
   }
