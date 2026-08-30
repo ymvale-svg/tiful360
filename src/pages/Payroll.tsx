@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
-import { Wallet, FileText, Stethoscope, Calendar, Clock4, Upload, LayoutDashboard, FolderOpen, UserSearch, Settings as SettingsIcon, Save, Mail, Paperclip, AlertCircle, ClipboardList, UserPlus, MapPin, ChevronRight } from "lucide-react";
+import { Wallet, FileText, Stethoscope, Calendar, Clock4, Upload, LayoutDashboard, FolderOpen, UserSearch, Settings as SettingsIcon, Save, Mail, Paperclip, AlertCircle, ClipboardList, UserPlus, MapPin, ChevronRight, FileDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { PayslipsUploadDialog } from "@/components/PayslipsUploadDialog";
@@ -39,6 +39,7 @@ const HUB_TILES: HubTile[] = [
   { key: "overview", label: "סקירה", description: "תלושים אחרונים, מחלות, חופשות ותיקוני נוכחות", icon: LayoutDashboard },
   { key: "reports", label: "דוחות נוכחות וחוסרים", description: "דוח יומי / חודשי, מי החתים ומי לא — כולל ייצוא לאקסל", icon: ClipboardList },
   { key: "attendance", label: "שעוני נוכחות", description: "החתמות, שעונים פיזיים והחתמות ללא שיוך", icon: Clock4 },
+  { key: "michpal", label: "ייצוא למיכפל", description: "ייצוא נתוני נוכחות חודשיים לקובץ קליטה במיכפל (CSV)", icon: FileDown, roles: ["admin", "super_admin", "payroll", "hr"] },
   { key: "onboarding", label: "קליטת עובדים", description: "תהליכי קליטה, טופס צרכים וצ'קליסט תפעול", icon: UserPlus, to: "/onboarding", roles: ["admin", "super_admin", "operations", "it_manager", "hr"] },
   { key: "map", label: "מפת נוכחות חיה", description: "מיקומי GPS של עובדים שהחתימו היום", icon: MapPin, to: "/attendance-map", roles: ["admin", "super_admin", "payroll", "hr", "direct_manager"] },
   { key: "tax101", label: "טפסי עובדים", description: "ניהול טפסי 101 ואישורים", icon: FileText },
@@ -119,12 +120,8 @@ export default function Payroll() {
           </h2>
 
           {active.key === "overview" && <OverviewTab />}
-          {active.key === "reports" && (
-            <div className="space-y-4">
-              <HrAttendanceReports />
-              <MichpalExportCard />
-            </div>
-          )}
+          {active.key === "reports" && <HrAttendanceReports />}
+          {active.key === "michpal" && <MichpalExportCard />}
           {active.key === "attendance" && <AttendanceClockTab />}
           {active.key === "tax101" && <Tax101AdminTab />}
           {active.key === "batches" && <BatchesManagementTab />}
