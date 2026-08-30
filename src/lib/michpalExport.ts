@@ -180,12 +180,16 @@ export interface LeaveLike {
   end_date: string | null;
 }
 
+// קודי אירוע כפי שמוגדרים במיכפל:
+// חופשה = חפש, מחלה = 001, השתלמות = 002, חופשה ללא תשלום = חלת, מילואים = צבא
 export const DEFAULT_ABSENCE_CODES: Record<string, string> = {
-  vacation: "1",
-  sick: "2",
-  reserve: "3",
-  personal: "9",
-  other: "9",
+  vacation: "חפש",
+  sick: "001",
+  training: "002",
+  unpaid: "חלת",
+  reserve: "צבא",
+  personal: "חפש",
+  other: "חפש",
 };
 
 /** כל יום היעדרות מאושר בטווח -> שורת A בשעה 00:00:00 */

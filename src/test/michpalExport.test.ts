@@ -83,6 +83,6 @@ describe("michpal export", () => {
       "2026-05-31",
     );
     expect(rows.map((r) => r.date)).toEqual(["2026-05-01", "2026-05-02"]);
-    expect(rows[0]).toMatchObject({ action: "A", time: "00:00:00", absenceCode: "1" });
+    expect(rows[0]).toMatchObject({ action: "A", time: "00:00:00", absenceCode: "חפש" });
   });
 });
