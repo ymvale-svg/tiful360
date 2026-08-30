@@ -185,14 +185,19 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
                               />
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <span className={`text-sm ${item.status === "done" ? "line-through text-muted-foreground" : ""}`}>
+                                  <span className={`text-sm font-medium ${item.status === "done" ? "line-through text-muted-foreground" : ""}`}>
                                     {item.title}
                                   </span>
                                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">
                                     {OWNER_ROLE_LABEL[item.owner_role] ?? item.owner_role}
                                   </span>
                                 </div>
-                                {item.notes && <p className="text-xs text-muted-foreground mt-0.5">{item.notes}</p>}
+                                {item.notes && (
+                                  <p className="text-xs mt-1.5 px-2.5 py-1.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-foreground flex items-start gap-1.5">
+                                    <StickyNote className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-600" />
+                                    <span><span className="font-medium">הערה לתפעול: </span>{item.notes}</span>
+                                  </p>
+                                )}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
                                   <SearchableSelect
                                     value={item.fulfillment_type ?? ""}
@@ -207,6 +212,17 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
                                     placeholder="בחר פריט מהמלאי"
                                   />
                                 </div>
+                                {item.asset_id && (() => {
+                                  const a = (assets as any[]).find((x) => x.id === item.asset_id);
+                                  if (!a) return null;
+                                  return (
+                                    <div className="mt-2 text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-0.5">
+                                      <span>פריט: <span className="font-medium text-foreground">{a.asset_name}</span></span>
+                                      <span>מזהה: <span className="font-mono text-foreground">{a.asset_code}</span></span>
+                                      {a.serial_number && <span>סידורי: <span className="font-mono text-foreground">{a.serial_number}</span></span>}
+                                    </div>
+                                  );
+                                })()}
                               </div>
                             </div>
                           </div>
