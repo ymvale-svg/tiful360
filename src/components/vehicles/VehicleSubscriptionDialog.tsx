@@ -95,7 +95,17 @@ export function VehicleSubscriptionDialog({
               {SUBSCRIPTION_PROVIDERS.map((p) => (
                 <option key={p} value={p}>{p}</option>
               ))}
+              <option value={CUSTOM}>➕ ספק / כביש אגרה אחר…</option>
             </select>
+            {provider === CUSTOM && (
+              <Input
+                value={customProvider}
+                onChange={(e) => setCustomProvider(e.target.value)}
+                placeholder="הקלד שם ספק או כביש אגרה חדש"
+                className="w-full mt-2"
+                autoFocus
+              />
+            )}
           </div>
 
           <div>
