@@ -52,6 +52,11 @@ export function VehicleSubscriptionDialog({
   }, [open, subscription]);
 
   const handleSave = async () => {
+    const finalProvider = provider === CUSTOM ? customProvider.trim() : provider;
+    if (!finalProvider) {
+      toast({ title: "יש להזין שם ספק / כביש אגרה", variant: "destructive" });
+      return;
+    }
     try {
       await save.mutateAsync({
         id: subscription?.id,
