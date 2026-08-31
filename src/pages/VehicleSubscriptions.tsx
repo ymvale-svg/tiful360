@@ -125,17 +125,23 @@ export default function VehicleSubscriptions() {
       subsByVehicle.set(key, arr);
     });
 
-    return vehicleList.map((v) => ({
-      id: v.key,
-      employee_id: v.employee_id,
-      employee_name: v.employee_name,
-      department: v.department,
-      plate: v.plate,
-      vehicle_type: VEHICLE_TYPE_LABELS[v.typeKey],
-      employee_vehicle_id: v.employee_vehicle_id,
-      asset_id: v.asset_id,
-      subs: (subsByVehicle.get(v.key) ?? []).sort((a, b) => (b.start_date ?? "").localeCompare(a.start_date ?? "")),
-    }));
+    return vehicleList.map((v) => {
+      const subs = (subsByVehicle.get(v.key) ?? []).sort((a, b) =>
+        (b.start_date ?? "").localeCompare(a.start_date ?? "")
+      );
+      return {
+        id: v.key,
+        employee_id: v.employee_id,
+        employee_name: v.employee_name,
+        department: v.department,
+        plate: v.plate,
+        vehicle_type: VEHICLE_TYPE_LABELS[v.typeKey],
+        employee_vehicle_id: v.employee_vehicle_id,
+        asset_id: v.asset_id,
+        activeSubs: subs.filter((s) => isSubscriptionActive(s.status)),
+        subs,
+      };
+    });
   }, [vehicleList, subscriptions]);
 
   const orphanCount = useMemo(() => {
