@@ -343,11 +343,13 @@ export default function VehicleSubscriptions() {
                   <td className="px-4 py-3 font-mono">{r.plate}</td>
                   <td className="px-4 py-3">{r.vehicle_type}</td>
                   <td className="px-4 py-3">
-                    {r.subs.length === 0 ? (
-                      <span className="text-xs text-muted-foreground">ללא מנוי</span>
+                    {r.activeSubs.length === 0 ? (
+                      <span className="text-xs text-muted-foreground">
+                        ללא מנוי{r.subs.length > 0 ? " פעיל" : ""}
+                      </span>
                     ) : (
                       <div className="flex flex-wrap gap-1.5">
-                        {r.subs.map((s) => (
+                        {r.activeSubs.map((s) => (
                           <button
                             key={s.id}
                             type="button"
@@ -375,7 +377,7 @@ export default function VehicleSubscriptions() {
                     <div className="flex items-center gap-1 justify-end">
                       <Button
                         size="sm"
-                        variant={r.subs.length ? "ghost" : "outline"}
+                        variant={r.activeSubs.length ? "ghost" : "outline"}
                         className="gap-1"
                         title="הוספת מנוי לרכב זה"
                         onClick={(e) => {
