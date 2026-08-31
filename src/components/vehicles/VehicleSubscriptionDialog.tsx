@@ -33,13 +33,19 @@ export function VehicleSubscriptionDialog({
   const { toast } = useToast();
   const save = useSaveVehicleSubscription();
   const [provider, setProvider] = useState<string>(SUBSCRIPTION_PROVIDERS[0]);
+  const [customProvider, setCustomProvider] = useState("");
   const [startDate, setStartDate] = useState("");
   const [status, setStatus] = useState("active");
   const [notes, setNotes] = useState("");
 
+  const CUSTOM = "__custom__";
+
   useEffect(() => {
     if (!open) return;
-    setProvider(subscription?.provider ?? SUBSCRIPTION_PROVIDERS[0]);
+    const p = subscription?.provider ?? SUBSCRIPTION_PROVIDERS[0];
+    const known = (SUBSCRIPTION_PROVIDERS as readonly string[]).includes(p);
+    setProvider(known ? p : CUSTOM);
+    setCustomProvider(known ? "" : p);
     setStartDate(subscription?.start_date ?? "");
     setStatus(subscription?.status ?? "active");
     setNotes(subscription?.notes ?? "");
