@@ -186,15 +186,13 @@ export default function VehicleSubscriptions() {
   const noSubCount = rows.filter((r) => r.activeSubs.length === 0).length;
   const byProvider = useMemo(() => {
     const map = new Map<string, number>();
-    rows.forEach((r) =>
-      r.subs.filter((s) => s.status === "active").forEach((s) => map.set(s.provider, (map.get(s.provider) ?? 0) + 1))
-    );
+    rows.forEach((r) => r.activeSubs.forEach((s) => map.set(s.provider, (map.get(s.provider) ?? 0) + 1)));
     return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
   }, [rows]);
 
-  /** Excel: one line per vehicle, each subscription flattened into its own set of columns. */
+  /** Excel: one line per vehicle, each active subscription flattened into its own set of columns. */
   const handleExport = () => {
-    const maxSubs = Math.max(1, ...filtered.map((r) => r.subs.length));
+    const maxSubs = Math.max(1, ...filtered.map((r) => r.activeSubs.length));
     const headers = [
       { key: "employee_name", label: "עובד" },
       { key: "department", label: "מחלקה" },
@@ -216,9 +214,9 @@ export default function VehicleSubscriptions() {
         department: r.department,
         plate: r.plate,
         vehicle_type: r.vehicle_type,
-        subs_count: r.subs.length,
+        subs_count: r.activeSubs.length,
       };
-      r.subs.forEach((s, idx) => {
+      r.activeSubs.forEach((s, idx) => {
         const i = idx + 1;
         row[`p${i}`] = s.provider;
         row[`d${i}`] = fmtDate(s.start_date);
