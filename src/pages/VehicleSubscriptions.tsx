@@ -16,6 +16,7 @@ import {
   useVehicleSubscriptions,
   resolveVehiclePlate,
   vehicleTypeFromGroupName,
+  isSubscriptionActive,
   type VehicleSubscription,
   type VehicleTypeKey,
 } from "@/hooks/useVehicleSubscriptions";
