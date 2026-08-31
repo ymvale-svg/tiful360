@@ -284,6 +284,12 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
           mailWarning = "לא הוגדרו כתובות מייל לתפעול/IT בחברה — הטופס לא נשלח במייל";
         } else if (typeof mailData?.sent === "number" && mailData.sent === 0) {
           mailWarning = "המייל לתפעול לא נשלח — בדוק את הגדרות הנמענים";
+        } else if (
+          typeof mailData?.sent === "number" &&
+          typeof mailData?.total === "number" &&
+          mailData.sent < mailData.total
+        ) {
+          mailWarning = `המייל נשלח רק ל-${mailData.sent} מתוך ${mailData.total} נמענים`;
         }
       }
       toast({
