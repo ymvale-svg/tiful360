@@ -33,25 +33,36 @@ export function VehicleSubscriptionDialog({
   const { toast } = useToast();
   const save = useSaveVehicleSubscription();
   const [provider, setProvider] = useState<string>(SUBSCRIPTION_PROVIDERS[0]);
+  const [customProvider, setCustomProvider] = useState("");
   const [startDate, setStartDate] = useState("");
   const [status, setStatus] = useState("active");
   const [notes, setNotes] = useState("");
 
+  const CUSTOM = "__custom__";
+
   useEffect(() => {
     if (!open) return;
-    setProvider(subscription?.provider ?? SUBSCRIPTION_PROVIDERS[0]);
+    const p = subscription?.provider ?? SUBSCRIPTION_PROVIDERS[0];
+    const known = (SUBSCRIPTION_PROVIDERS as readonly string[]).includes(p);
+    setProvider(known ? p : CUSTOM);
+    setCustomProvider(known ? "" : p);
     setStartDate(subscription?.start_date ?? "");
     setStatus(subscription?.status ?? "active");
     setNotes(subscription?.notes ?? "");
   }, [open, subscription]);
 
   const handleSave = async () => {
+    const finalProvider = provider === CUSTOM ? customProvider.trim() : provider;
+    if (!finalProvider) {
+      toast({ title: "יש להזין שם ספק / כביש אגרה", variant: "destructive" });
+      return;
+    }
     try {
       await save.mutateAsync({
         id: subscription?.id,
         employee_vehicle_id: subscription ? subscription.employee_vehicle_id : employeeVehicleId ?? null,
         asset_id: subscription ? subscription.asset_id : assetId ?? null,
-        provider,
+        provider: finalProvider,
         start_date: startDate || null,
         status,
         notes: notes.trim() || null,
@@ -84,7 +95,17 @@ export function VehicleSubscriptionDialog({
               {SUBSCRIPTION_PROVIDERS.map((p) => (
                 <option key={p} value={p}>{p}</option>
               ))}
+              <option value={CUSTOM}>➕ ספק / כביש אגרה אחר…</option>
             </select>
+            {provider === CUSTOM && (
+              <Input
+                value={customProvider}
+                onChange={(e) => setCustomProvider(e.target.value)}
+                placeholder="הקלד שם ספק או כביש אגרה חדש"
+                className="w-full mt-2"
+                autoFocus
+              />
+            )}
           </div>
 
           <div>

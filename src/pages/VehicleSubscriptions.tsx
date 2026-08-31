@@ -143,6 +143,12 @@ export default function VehicleSubscriptions() {
     }).length;
   }, [subscriptions, vehicleList]);
 
+  const providerOptions = useMemo(() => {
+    const set = new Set<string>(SUBSCRIPTION_PROVIDERS);
+    (subscriptions ?? []).forEach((s) => set.add(s.provider));
+    return Array.from(set);
+  }, [subscriptions]);
+
   const departments = useMemo(
     () => Array.from(new Set(rows.map((r) => r.department).filter((d) => d && d !== "—"))).sort(),
     [rows]
@@ -285,7 +291,7 @@ export default function VehicleSubscriptions() {
         </select>
         <select className={selectClass} value={filters.provider} onChange={(e) => setFilters({ ...filters, provider: e.target.value })}>
           <option value="all">כל הספקים</option>
-          {SUBSCRIPTION_PROVIDERS.map((p) => <option key={p} value={p}>{p}</option>)}
+          {providerOptions.map((p) => <option key={p} value={p}>{p}</option>)}
         </select>
         <select className={selectClass} value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
           <option value="all">כל הסטטוסים</option>
