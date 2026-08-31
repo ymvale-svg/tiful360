@@ -143,6 +143,12 @@ export default function VehicleSubscriptions() {
     }).length;
   }, [subscriptions, vehicleList]);
 
+  const providerOptions = useMemo(() => {
+    const set = new Set<string>(SUBSCRIPTION_PROVIDERS);
+    (subscriptions ?? []).forEach((s) => set.add(s.provider));
+    return Array.from(set);
+  }, [subscriptions]);
+
   const departments = useMemo(
     () => Array.from(new Set(rows.map((r) => r.department).filter((d) => d && d !== "—"))).sort(),
     [rows]
