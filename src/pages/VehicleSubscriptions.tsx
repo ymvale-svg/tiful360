@@ -20,9 +20,9 @@ import {
 } from "@/hooks/useVehicleSubscriptions";
 
 const statusClass: Record<string, string> = {
-  active: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-  suspended: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  cancelled: "bg-muted text-muted-foreground",
+  active: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
+  suspended: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30",
+  cancelled: "bg-muted text-muted-foreground border-border",
 };
 
 type Row = {
@@ -32,17 +32,12 @@ type Row = {
   department: string;
   plate: string;
   vehicle_type: string;
-  provider: string;
-  start_date: string | null;
-  start_date_fmt: string;
-  status: string;
-  status_label: string;
-  notes: string;
-  hasSubscription: boolean;
-  subscription: VehicleSubscription | null;
   employee_vehicle_id: string | null;
   asset_id: string | null;
+  subs: VehicleSubscription[];
 };
+
+const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString("en-GB") : "");
 
 export default function VehicleSubscriptions() {
   const navigate = useNavigate();
@@ -117,6 +112,7 @@ export default function VehicleSubscriptions() {
     return list;
   }, [vehicles, assets, employees, groups]);
 
+  /** One row per vehicle; subscriptions attached as tags. */
   const rows: Row[] = useMemo(() => {
     const subsByVehicle = new Map<string, VehicleSubscription[]>();
     (subscriptions ?? []).forEach((s) => {
@@ -126,49 +122,17 @@ export default function VehicleSubscriptions() {
       subsByVehicle.set(key, arr);
     });
 
-    const out: Row[] = [];
-    vehicleList.forEach((v) => {
-      const subs = subsByVehicle.get(v.key) ?? [];
-      const base = {
-        employee_id: v.employee_id,
-        employee_name: v.employee_name,
-        department: v.department,
-        plate: v.plate,
-        vehicle_type: VEHICLE_TYPE_LABELS[v.typeKey],
-        employee_vehicle_id: v.employee_vehicle_id,
-        asset_id: v.asset_id,
-      };
-      if (subs.length === 0) {
-        out.push({
-          ...base,
-          id: v.key,
-          provider: "—",
-          start_date: null,
-          start_date_fmt: "",
-          status: "none",
-          status_label: "ללא מנוי",
-          notes: "",
-          hasSubscription: false,
-          subscription: null,
-        });
-        return;
-      }
-      subs.forEach((s) => {
-        out.push({
-          ...base,
-          id: s.id,
-          provider: s.provider,
-          start_date: s.start_date,
-          start_date_fmt: s.start_date ? new Date(s.start_date).toLocaleDateString("en-GB") : "",
-          status: s.status,
-          status_label: SUBSCRIPTION_STATUS_LABELS[s.status] ?? s.status,
-          notes: s.notes ?? "",
-          hasSubscription: true,
-          subscription: s,
-        });
-      });
-    });
-    return out;
+    return vehicleList.map((v) => ({
+      id: v.key,
+      employee_id: v.employee_id,
+      employee_name: v.employee_name,
+      department: v.department,
+      plate: v.plate,
+      vehicle_type: VEHICLE_TYPE_LABELS[v.typeKey],
+      employee_vehicle_id: v.employee_vehicle_id,
+      asset_id: v.asset_id,
+      subs: (subsByVehicle.get(v.key) ?? []).sort((a, b) => (b.start_date ?? "").localeCompare(a.start_date ?? "")),
+    }));
   }, [vehicleList, subscriptions]);
 
   const orphanCount = useMemo(() => {
@@ -189,24 +153,64 @@ export default function VehicleSubscriptions() {
     return rows
       .filter((r) => {
         if (q && !r.employee_name.toLowerCase().includes(q) && !r.plate.toLowerCase().includes(q)) return false;
-        if (filters.provider !== "all" && r.provider !== filters.provider) return false;
-        if (filters.status !== "all" && r.status !== filters.status) return false;
+        if (filters.provider !== "all" && !r.subs.some((s) => s.provider === filters.provider)) return false;
+        if (filters.status !== "all" && !r.subs.some((s) => s.status === filters.status)) return false;
         if (filters.vehicleType !== "all" && r.vehicle_type !== filters.vehicleType) return false;
         if (filters.department !== "all" && r.department !== filters.department) return false;
-        if (filters.coverage === "with" && !r.hasSubscription) return false;
-        if (filters.coverage === "without" && r.hasSubscription) return false;
+        if (filters.coverage === "with" && r.subs.length === 0) return false;
+        if (filters.coverage === "without" && r.subs.length > 0) return false;
         return true;
       })
-      .sort((a, b) => (b.start_date ?? "").localeCompare(a.start_date ?? ""));
+      .sort((a, b) => a.employee_name.localeCompare(b.employee_name, "he"));
   }, [rows, filters]);
 
-  const activeCount = rows.filter((r) => r.status === "active").length;
-  const noSubCount = rows.filter((r) => !r.hasSubscription).length;
+  const activeCount = rows.reduce((n, r) => n + r.subs.filter((s) => s.status === "active").length, 0);
+  const noSubCount = rows.filter((r) => r.subs.length === 0).length;
   const byProvider = useMemo(() => {
     const map = new Map<string, number>();
-    rows.filter((r) => r.status === "active").forEach((r) => map.set(r.provider, (map.get(r.provider) ?? 0) + 1));
+    rows.forEach((r) =>
+      r.subs.filter((s) => s.status === "active").forEach((s) => map.set(s.provider, (map.get(s.provider) ?? 0) + 1))
+    );
     return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
   }, [rows]);
+
+  /** Excel: one line per vehicle, each subscription flattened into its own set of columns. */
+  const handleExport = () => {
+    const maxSubs = Math.max(1, ...filtered.map((r) => r.subs.length));
+    const headers = [
+      { key: "employee_name", label: "עובד" },
+      { key: "department", label: "מחלקה" },
+      { key: "plate", label: "מס' רכב" },
+      { key: "vehicle_type", label: "סוג רכב" },
+      { key: "subs_count", label: "מס' מנויים" },
+    ];
+    for (let i = 1; i <= maxSubs; i++) {
+      headers.push(
+        { key: `p${i}`, label: `מנוי ${i} — ספק` },
+        { key: `d${i}`, label: `מנוי ${i} — תאריך התחלה` },
+        { key: `s${i}`, label: `מנוי ${i} — סטטוס` },
+        { key: `n${i}`, label: `מנוי ${i} — הערות` }
+      );
+    }
+    const data = filtered.map((r) => {
+      const row: Record<string, any> = {
+        employee_name: r.employee_name,
+        department: r.department,
+        plate: r.plate,
+        vehicle_type: r.vehicle_type,
+        subs_count: r.subs.length,
+      };
+      r.subs.forEach((s, idx) => {
+        const i = idx + 1;
+        row[`p${i}`] = s.provider;
+        row[`d${i}`] = fmtDate(s.start_date);
+        row[`s${i}`] = SUBSCRIPTION_STATUS_LABELS[s.status] ?? s.status;
+        row[`n${i}`] = s.notes ?? "";
+      });
+      return row;
+    });
+    exportToExcel(data, headers, "מנויי_רכב");
+  };
 
   const selectClass = "h-9 px-2 rounded-md border border-input bg-background text-sm";
 
@@ -225,28 +229,7 @@ export default function VehicleSubscriptions() {
             <ArrowRight className="w-4 h-4" />
             חזרה למשאבים
           </Button>
-          <Button
-            size="sm"
-            variant="secondary"
-            className="gap-1.5"
-            disabled={!filtered.length}
-            onClick={() =>
-              exportToExcel(
-                filtered,
-                [
-                  { key: "employee_name", label: "עובד" },
-                  { key: "department", label: "מחלקה" },
-                  { key: "plate", label: "מס' רכב" },
-                  { key: "vehicle_type", label: "סוג רכב" },
-                  { key: "provider", label: "ספק" },
-                  { key: "start_date_fmt", label: "תאריך התחלה" },
-                  { key: "status_label", label: "סטטוס" },
-                  { key: "notes", label: "הערות" },
-                ],
-                "מנויי_רכב"
-              )
-            }
-          >
+          <Button size="sm" variant="secondary" className="gap-1.5" disabled={!filtered.length} onClick={handleExport}>
             <Download className="w-4 h-4" />
             ייצוא לאקסל
           </Button>
@@ -326,75 +309,74 @@ export default function VehicleSubscriptions() {
               <th className="text-right font-medium px-4 py-3">עובד</th>
               <th className="text-right font-medium px-4 py-3">מס' רכב</th>
               <th className="text-right font-medium px-4 py-3">סוג רכב</th>
-              <th className="text-right font-medium px-4 py-3">ספק</th>
-              <th className="text-right font-medium px-4 py-3">תאריך התחלה</th>
-              <th className="text-right font-medium px-4 py-3">סטטוס</th>
-              <th className="text-right font-medium px-4 py-3">הערות</th>
+              <th className="text-right font-medium px-4 py-3">מנויים</th>
               <th className="text-right font-medium px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">לא נמצאו רכבים</td></tr>
+              <tr><td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">לא נמצאו רכבים</td></tr>
             ) : (
               filtered.map((r) => (
                 <tr
                   key={r.id}
                   onClick={() => r.employee_id && navigate(`/employees/${r.employee_id}?tab=vehicles`)}
-                  className="border-b border-border/60 last:border-0 hover:bg-muted/40 cursor-pointer"
+                  className="border-b border-border/60 last:border-0 hover:bg-muted/40 cursor-pointer align-top"
                 >
                   <td className="px-4 py-3 font-medium">{r.employee_name}</td>
                   <td className="px-4 py-3 font-mono">{r.plate}</td>
                   <td className="px-4 py-3">{r.vehicle_type}</td>
-                  <td className="px-4 py-3">{r.provider}</td>
-                  <td className="px-4 py-3">{r.start_date_fmt || "—"}</td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${statusClass[r.status] ?? "bg-muted text-muted-foreground"}`}>
-                      {r.status_label}
-                    </span>
+                    {r.subs.length === 0 ? (
+                      <span className="text-xs text-muted-foreground">ללא מנוי</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5">
+                        {r.subs.map((s) => (
+                          <button
+                            key={s.id}
+                            type="button"
+                            title={s.notes || undefined}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSubDialog({
+                                employeeVehicleId: r.employee_vehicle_id,
+                                assetId: r.asset_id,
+                                label: `${r.plate} · ${r.employee_name}`,
+                                subscription: s,
+                              });
+                            }}
+                            className={`text-xs px-2 py-1 rounded-full border transition-opacity hover:opacity-80 ${statusClass[s.status] ?? "bg-muted text-muted-foreground border-border"}`}
+                          >
+                            {s.provider}
+                            {s.start_date && <span className="opacity-70"> · {fmtDate(s.start_date)}</span>}
+                            <span className="opacity-70"> · {SUBSCRIPTION_STATUS_LABELS[s.status] ?? s.status}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground max-w-[18rem] truncate">{r.notes || "—"}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1 justify-end">
                       <Button
                         size="sm"
-                        variant={r.hasSubscription ? "ghost" : "outline"}
+                        variant={r.subs.length ? "ghost" : "outline"}
                         className="gap-1"
+                        title="הוספת מנוי לרכב זה"
                         onClick={(e) => {
                           e.stopPropagation();
                           setSubDialog({
                             employeeVehicleId: r.employee_vehicle_id,
                             assetId: r.asset_id,
                             label: `${r.plate} · ${r.employee_name}`,
-                            subscription: r.subscription,
+                            subscription: null,
                           });
                         }}
                       >
-                        {r.hasSubscription ? "עריכה" : (<><Plus className="w-3.5 h-3.5" />הוסף מנוי</>)}
+                        <Plus className="w-3.5 h-3.5" />
+                        {r.subs.length ? "מנוי נוסף" : "הוסף מנוי"}
                       </Button>
-                      {r.hasSubscription && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="gap-1"
-                          title="הוספת מנוי נוסף לרכב זה"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSubDialog({
-                              employeeVehicleId: r.employee_vehicle_id,
-                              assetId: r.asset_id,
-                              label: `${r.plate} · ${r.employee_name}`,
-                              subscription: null,
-                            });
-                          }}
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          מנוי נוסף
-                        </Button>
-                      )}
                     </div>
                   </td>
-
                 </tr>
               ))
             )}
