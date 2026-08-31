@@ -16,14 +16,14 @@ import {
   useVehicleSubscriptions,
   resolveVehiclePlate,
   vehicleTypeFromGroupName,
+  isSubscriptionActive,
   type VehicleSubscription,
   type VehicleTypeKey,
 } from "@/hooks/useVehicleSubscriptions";
 
 const statusClass: Record<string, string> = {
   active: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
-  suspended: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30",
-  cancelled: "bg-muted text-muted-foreground border-border",
+  inactive: "bg-muted text-muted-foreground border-border",
 };
 
 type Row = {
@@ -36,6 +36,8 @@ type Row = {
   employee_vehicle_id: string | null;
   asset_id: string | null;
   subs: VehicleSubscription[];
+  /** Active subscriptions only — what is rendered as tags. */
+  activeSubs: VehicleSubscription[];
 };
 
 const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString("en-GB") : "");
@@ -123,17 +125,23 @@ export default function VehicleSubscriptions() {
       subsByVehicle.set(key, arr);
     });
 
-    return vehicleList.map((v) => ({
-      id: v.key,
-      employee_id: v.employee_id,
-      employee_name: v.employee_name,
-      department: v.department,
-      plate: v.plate,
-      vehicle_type: VEHICLE_TYPE_LABELS[v.typeKey],
-      employee_vehicle_id: v.employee_vehicle_id,
-      asset_id: v.asset_id,
-      subs: (subsByVehicle.get(v.key) ?? []).sort((a, b) => (b.start_date ?? "").localeCompare(a.start_date ?? "")),
-    }));
+    return vehicleList.map((v) => {
+      const subs = (subsByVehicle.get(v.key) ?? []).sort((a, b) =>
+        (b.start_date ?? "").localeCompare(a.start_date ?? "")
+      );
+      return {
+        id: v.key,
+        employee_id: v.employee_id,
+        employee_name: v.employee_name,
+        department: v.department,
+        plate: v.plate,
+        vehicle_type: VEHICLE_TYPE_LABELS[v.typeKey],
+        employee_vehicle_id: v.employee_vehicle_id,
+        asset_id: v.asset_id,
+        activeSubs: subs.filter((s) => isSubscriptionActive(s.status)),
+        subs,
+      };
+    });
   }, [vehicleList, subscriptions]);
 
   const orphanCount = useMemo(() => {
@@ -161,29 +169,30 @@ export default function VehicleSubscriptions() {
       .filter((r) => {
         if (q && !r.employee_name.toLowerCase().includes(q) && !r.plate.toLowerCase().includes(q)) return false;
         if (filters.provider !== "all" && !r.subs.some((s) => s.provider === filters.provider)) return false;
-        if (filters.status !== "all" && !r.subs.some((s) => s.status === filters.status)) return false;
+        if (filters.status !== "all") {
+          if (filters.status === "active" && r.activeSubs.length === 0) return false;
+          if (filters.status === "inactive" && !r.subs.some((s) => !isSubscriptionActive(s.status))) return false;
+        }
         if (filters.vehicleType !== "all" && r.vehicle_type !== filters.vehicleType) return false;
         if (filters.department !== "all" && r.department !== filters.department) return false;
-        if (filters.coverage === "with" && r.subs.length === 0) return false;
-        if (filters.coverage === "without" && r.subs.length > 0) return false;
+        if (filters.coverage === "with" && r.activeSubs.length === 0) return false;
+        if (filters.coverage === "without" && r.activeSubs.length > 0) return false;
         return true;
       })
       .sort((a, b) => a.employee_name.localeCompare(b.employee_name, "he"));
   }, [rows, filters]);
 
-  const activeCount = rows.reduce((n, r) => n + r.subs.filter((s) => s.status === "active").length, 0);
-  const noSubCount = rows.filter((r) => r.subs.length === 0).length;
+  const activeCount = rows.reduce((n, r) => n + r.activeSubs.length, 0);
+  const noSubCount = rows.filter((r) => r.activeSubs.length === 0).length;
   const byProvider = useMemo(() => {
     const map = new Map<string, number>();
-    rows.forEach((r) =>
-      r.subs.filter((s) => s.status === "active").forEach((s) => map.set(s.provider, (map.get(s.provider) ?? 0) + 1))
-    );
+    rows.forEach((r) => r.activeSubs.forEach((s) => map.set(s.provider, (map.get(s.provider) ?? 0) + 1)));
     return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
   }, [rows]);
 
-  /** Excel: one line per vehicle, each subscription flattened into its own set of columns. */
+  /** Excel: one line per vehicle, each active subscription flattened into its own set of columns. */
   const handleExport = () => {
-    const maxSubs = Math.max(1, ...filtered.map((r) => r.subs.length));
+    const maxSubs = Math.max(1, ...filtered.map((r) => r.activeSubs.length));
     const headers = [
       { key: "employee_name", label: "עובד" },
       { key: "department", label: "מחלקה" },
@@ -205,9 +214,9 @@ export default function VehicleSubscriptions() {
         department: r.department,
         plate: r.plate,
         vehicle_type: r.vehicle_type,
-        subs_count: r.subs.length,
+        subs_count: r.activeSubs.length,
       };
-      r.subs.forEach((s, idx) => {
+      r.activeSubs.forEach((s, idx) => {
         const i = idx + 1;
         row[`p${i}`] = s.provider;
         row[`d${i}`] = fmtDate(s.start_date);
@@ -334,11 +343,13 @@ export default function VehicleSubscriptions() {
                   <td className="px-4 py-3 font-mono">{r.plate}</td>
                   <td className="px-4 py-3">{r.vehicle_type}</td>
                   <td className="px-4 py-3">
-                    {r.subs.length === 0 ? (
-                      <span className="text-xs text-muted-foreground">ללא מנוי</span>
+                    {r.activeSubs.length === 0 ? (
+                      <span className="text-xs text-muted-foreground">
+                        ללא מנוי{r.subs.length > 0 ? " פעיל" : ""}
+                      </span>
                     ) : (
                       <div className="flex flex-wrap gap-1.5">
-                        {r.subs.map((s) => (
+                        {r.activeSubs.map((s) => (
                           <button
                             key={s.id}
                             type="button"
@@ -366,7 +377,7 @@ export default function VehicleSubscriptions() {
                     <div className="flex items-center gap-1 justify-end">
                       <Button
                         size="sm"
-                        variant={r.subs.length ? "ghost" : "outline"}
+                        variant={r.activeSubs.length ? "ghost" : "outline"}
                         className="gap-1"
                         title="הוספת מנוי לרכב זה"
                         onClick={(e) => {
@@ -380,7 +391,7 @@ export default function VehicleSubscriptions() {
                         }}
                       >
                         <Plus className="w-3.5 h-3.5" />
-                        {r.subs.length ? "מנוי נוסף" : "הוסף מנוי"}
+                        {r.activeSubs.length ? "מנוי נוסף" : "הוסף מנוי"}
                       </Button>
                     </div>
                   </td>
