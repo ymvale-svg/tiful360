@@ -428,7 +428,7 @@ Deno.serve(async (req) => {
                   {
                     role: 'user',
                     content: [
-                      { type: 'text', text: 'חלץ את הנתונים מתלוש השכר המצורף. ודא שאתה מחזיר ימי עבודה (לא שעות) בשדה work_days, ושעות עבודה (לא ימים) בשדה work_hours.' },
+                      { type: 'text', text: 'חלץ את הנתונים מתלוש השכר המצורף. ודא שאתה מחזיר ימי עבודה (לא שעות) בשדה work_days, ושעות עבודה (לא ימים) בשדה work_hours. חשוב מאוד: בחשבון חופשה ובחשבון מחלה יש שתי יתרות — 'יתרה קודמת' (יתרה בתחילת התקופה) ו-'יתרה חדשה' (היתרה המעודכנת בסוף התקופה). החזר אך ורק את 'יתרה חדשה', ולעולם לא את 'יתרה קודמת'.' },
                       { type: 'image_url', image_url: { url: dataUrl } },
                     ],
                   },
@@ -450,8 +450,8 @@ Deno.serve(async (req) => {
                           net_salary: { type: ['number', 'null'], description: 'שכר נטו לתשלום' },
                           work_days: { type: ['number', 'null'], description: 'ימי עבודה בפועל (מספר ימים, בד"כ 17-26). אל תחזיר שעות כאן.' },
                           work_hours: { type: ['number', 'null'], description: 'סך שעות עבודה בפועל בחודש (בד"כ 100-200 שעות). אל תחזיר ימים כאן.' },
-                          vacation_balance: { type: ['number', 'null'], description: 'יתרת חופשה חדשה (בימים)' },
-                          sick_balance: { type: ['number', 'null'], description: 'יתרת מחלה חדשה (בימים)' },
+                          vacation_balance: { type: ['number', 'null'], description: 'יתרה חדשה של חופשה בלבד (בימים) — השורה המסומנת יתרה חדשה בתחשיב חופשה, לא יתרה קודמת' },
+                          sick_balance: { type: ['number', 'null'], description: 'יתרה חדשה של מחלה בלבד (בימים) — השורה המסומנת יתרה חדשה בתחשיב מחלה, לא יתרה קודמת' },
                         },
                         required: ['id_number', 'gross_salary', 'net_salary', 'vacation_balance', 'sick_balance'],
                         additionalProperties: false,
