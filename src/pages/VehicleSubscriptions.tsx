@@ -169,18 +169,21 @@ export default function VehicleSubscriptions() {
       .filter((r) => {
         if (q && !r.employee_name.toLowerCase().includes(q) && !r.plate.toLowerCase().includes(q)) return false;
         if (filters.provider !== "all" && !r.subs.some((s) => s.provider === filters.provider)) return false;
-        if (filters.status !== "all" && !r.subs.some((s) => s.status === filters.status)) return false;
+        if (filters.status !== "all") {
+          if (filters.status === "active" && r.activeSubs.length === 0) return false;
+          if (filters.status === "inactive" && !r.subs.some((s) => !isSubscriptionActive(s.status))) return false;
+        }
         if (filters.vehicleType !== "all" && r.vehicle_type !== filters.vehicleType) return false;
         if (filters.department !== "all" && r.department !== filters.department) return false;
-        if (filters.coverage === "with" && r.subs.length === 0) return false;
-        if (filters.coverage === "without" && r.subs.length > 0) return false;
+        if (filters.coverage === "with" && r.activeSubs.length === 0) return false;
+        if (filters.coverage === "without" && r.activeSubs.length > 0) return false;
         return true;
       })
       .sort((a, b) => a.employee_name.localeCompare(b.employee_name, "he"));
   }, [rows, filters]);
 
-  const activeCount = rows.reduce((n, r) => n + r.subs.filter((s) => s.status === "active").length, 0);
-  const noSubCount = rows.filter((r) => r.subs.length === 0).length;
+  const activeCount = rows.reduce((n, r) => n + r.activeSubs.length, 0);
+  const noSubCount = rows.filter((r) => r.activeSubs.length === 0).length;
   const byProvider = useMemo(() => {
     const map = new Map<string, number>();
     rows.forEach((r) =>
