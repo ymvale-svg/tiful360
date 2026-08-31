@@ -291,7 +291,7 @@ export default function VehicleSubscriptions() {
         </select>
         <select className={selectClass} value={filters.provider} onChange={(e) => setFilters({ ...filters, provider: e.target.value })}>
           <option value="all">כל הספקים</option>
-          {SUBSCRIPTION_PROVIDERS.map((p) => <option key={p} value={p}>{p}</option>)}
+          {providerOptions.map((p) => <option key={p} value={p}>{p}</option>)}
         </select>
         <select className={selectClass} value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
           <option value="all">כל הסטטוסים</option>
