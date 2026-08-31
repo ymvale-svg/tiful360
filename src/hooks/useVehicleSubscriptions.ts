@@ -13,9 +13,14 @@ export const SUBSCRIPTION_PROVIDERS = [
 
 export const SUBSCRIPTION_STATUS_LABELS: Record<string, string> = {
   active: "פעיל",
-  suspended: "מושהה",
-  cancelled: "בוטל",
+  inactive: "לא פעיל",
 };
+
+/** Whether a subscription counts as "active" for tag display / counts.
+ *  Anything that is not explicitly active is treated as inactive. */
+export function isSubscriptionActive(status?: string | null): boolean {
+  return status === "active";
+}
 
 /** Vehicle ownership type — derived, never entered manually. */
 export const VEHICLE_TYPE_LABELS = {
