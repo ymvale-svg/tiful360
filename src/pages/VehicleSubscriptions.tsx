@@ -391,7 +391,7 @@ export default function VehicleSubscriptions() {
                         }}
                       >
                         <Plus className="w-3.5 h-3.5" />
-                        {r.subs.length ? "מנוי נוסף" : "הוסף מנוי"}
+                        {r.activeSubs.length ? "מנוי נוסף" : "הוסף מנוי"}
                       </Button>
                     </div>
                   </td>
