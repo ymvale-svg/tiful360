@@ -355,23 +355,46 @@ export default function VehicleSubscriptions() {
                   </td>
                   <td className="px-4 py-3 text-muted-foreground max-w-[18rem] truncate">{r.notes || "—"}</td>
                   <td className="px-4 py-3">
-                    <Button
-                      size="sm"
-                      variant={r.hasSubscription ? "ghost" : "outline"}
-                      className="gap-1"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSubDialog({
-                          employeeVehicleId: r.employee_vehicle_id,
-                          assetId: r.asset_id,
-                          label: `${r.plate} · ${r.employee_name}`,
-                          subscription: r.subscription,
-                        });
-                      }}
-                    >
-                      {r.hasSubscription ? "עריכה" : (<><Plus className="w-3.5 h-3.5" />הוסף מנוי</>)}
-                    </Button>
+                    <div className="flex items-center gap-1 justify-end">
+                      <Button
+                        size="sm"
+                        variant={r.hasSubscription ? "ghost" : "outline"}
+                        className="gap-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSubDialog({
+                            employeeVehicleId: r.employee_vehicle_id,
+                            assetId: r.asset_id,
+                            label: `${r.plate} · ${r.employee_name}`,
+                            subscription: r.subscription,
+                          });
+                        }}
+                      >
+                        {r.hasSubscription ? "עריכה" : (<><Plus className="w-3.5 h-3.5" />הוסף מנוי</>)}
+                      </Button>
+                      {r.hasSubscription && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1"
+                          title="הוספת מנוי נוסף לרכב זה"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSubDialog({
+                              employeeVehicleId: r.employee_vehicle_id,
+                              assetId: r.asset_id,
+                              label: `${r.plate} · ${r.employee_name}`,
+                              subscription: null,
+                            });
+                          }}
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          מנוי נוסף
+                        </Button>
+                      )}
+                    </div>
                   </td>
+
                 </tr>
               ))
             )}
