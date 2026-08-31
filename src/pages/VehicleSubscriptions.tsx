@@ -36,6 +36,8 @@ type Row = {
   employee_vehicle_id: string | null;
   asset_id: string | null;
   subs: VehicleSubscription[];
+  /** Active subscriptions only — what is rendered as tags. */
+  activeSubs: VehicleSubscription[];
 };
 
 const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString("en-GB") : "");
