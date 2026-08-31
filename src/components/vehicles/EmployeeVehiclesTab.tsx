@@ -14,6 +14,7 @@ import {
   useDeleteEmployeeVehicle,
   useDeleteVehicleSubscription,
   useEmployeeVehicles,
+  resolveVehiclePlate,
   useSaveEmployeeVehicle,
   useVehicleSubscriptions,
   vehicleTypeFromGroupName,
@@ -227,7 +228,7 @@ export function EmployeeVehiclesTab({ employeeId, canEdit }: Props) {
           <div key={a.id} className="bg-card border border-border rounded-xl p-4">
             <div className="flex items-center gap-3 flex-wrap">
               <Car className="w-4 h-4 text-muted-foreground" />
-              <span className="font-mono font-semibold">{a.license_plate ?? a.asset_code}</span>
+              <span className="font-mono font-semibold">{resolveVehiclePlate(a)}</span>
               <span className="text-sm">{a.asset_name}</span>
               <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
                 {VEHICLE_TYPE_LABELS[typeKey]}
@@ -235,7 +236,7 @@ export function EmployeeVehiclesTab({ employeeId, canEdit }: Props) {
             </div>
             <SubscriptionsList
               subs={subsForAsset(a.id)}
-              onAdd={() => setSubDialog({ assetId: a.id, label: a.license_plate ?? a.asset_name })}
+              onAdd={() => setSubDialog({ assetId: a.id, label: resolveVehiclePlate(a) || a.asset_name })}
             />
           </div>
         );

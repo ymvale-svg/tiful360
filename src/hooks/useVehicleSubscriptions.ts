@@ -35,6 +35,22 @@ export function vehicleTypeFromGroupName(groupName?: string | null): VehicleType
   return "company_owned";
 }
 
+/** Resolves the real license plate for a vehicle asset: dedicated column first,
+ *  then common custom-field keys, and only then the internal asset code. */
+export function resolveVehiclePlate(asset: {
+  license_plate?: string | null;
+  asset_code?: string | null;
+  custom_fields?: Record<string, any> | null;
+}): string {
+  if (asset.license_plate) return asset.license_plate;
+  const cf = asset.custom_fields ?? {};
+  for (const k of ["מס׳ רישוי", "מס' רישוי", "מספר רישוי", "license_plate"]) {
+    const v = cf[k];
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return asset.asset_code ?? "";
+}
+
 export type EmployeeVehicle = {
   id: string;
   company_id: string;
