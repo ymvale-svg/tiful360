@@ -62,7 +62,7 @@ export function VehicleSubscriptionDialog({
         id: subscription?.id,
         employee_vehicle_id: subscription ? subscription.employee_vehicle_id : employeeVehicleId ?? null,
         asset_id: subscription ? subscription.asset_id : assetId ?? null,
-        provider,
+        provider: finalProvider,
         start_date: startDate || null,
         status,
         notes: notes.trim() || null,
