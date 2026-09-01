@@ -74,7 +74,7 @@ export default function Login() {
         }
       }
 
-      navigate("/select-company");
+      navigate(afterLogin);
     } catch (error: any) {
       const raw = (error?.message || "").toString();
       const isUnauthorized =
@@ -116,7 +116,7 @@ export default function Login() {
           return;
         }
       }
-      navigate("/select-company");
+      navigate(afterLogin);
     } catch (error: any) {
       toast({
         title: "שגיאה בהתחברות",
