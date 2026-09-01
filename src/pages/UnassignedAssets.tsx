@@ -96,6 +96,30 @@ export default function UnassignedAssets() {
     navigate(`/assets/${slug}/${a.id}`);
   };
 
+  // ---- Multi-handover selection (single domain only) ----
+  const domainOf = (a: any): DomainKey => getDomain(catById.get(a.category_id));
+  const selectedAssets = useMemo(
+    () => rows.filter((a: any) => selectedIds.includes(a.id)),
+    [rows, selectedIds],
+  );
+  const selectedDomain: DomainKey | null = selectedAssets.length ? domainOf(selectedAssets[0]) : null;
+
+  const toggleSelect = (a: any, checked: boolean) => {
+    if (!checked) {
+      setSelectedIds((prev) => prev.filter((id) => id !== a.id));
+      return;
+    }
+    if (selectedDomain && domainOf(a) !== selectedDomain) {
+      toast({
+        title: "מסירה מרובה אפשרית רק לפריטים מאותו דומיין",
+        description: `הבחירה הנוכחית היא מדומיין "${DOMAIN_META[selectedDomain].title}"`,
+        variant: "destructive",
+      });
+      return;
+    }
+    setSelectedIds((prev) => [...prev, a.id]);
+  };
+
   return (
     <div className="space-y-5 animate-fade-in" dir="rtl">
       <div className="flex items-start justify-between flex-wrap gap-3">
