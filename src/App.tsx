@@ -39,9 +39,7 @@ const Payroll = lazy(() => import("@/pages/Payroll"));
 const Onboarding = lazy(() => import("@/pages/Onboarding"));
 const Tax101TokenPage = lazy(() => import("@/pages/Tax101TokenPage"));
 const Announcements = lazy(() => import("@/pages/Announcements"));
-const OAuthConsent = lazy(() => import("@/pages/OAuthConsent"));
 const NotFound = lazy(() => import("./pages/NotFound"));
-
 
 const queryClient = new QueryClient();
 
@@ -63,9 +61,7 @@ const App = () => (
               <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
-                <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
                 <Route path="/welcome" element={<Welcome />} />
-
                 <Route path="/handover/:token" element={<SignHandover />} />
                 <Route path="/sign-offboarding/:token" element={<SignOffboarding />} />
                 <Route path="/portal/tax101/:token" element={<Tax101TokenPage />} />

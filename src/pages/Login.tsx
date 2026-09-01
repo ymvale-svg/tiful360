@@ -4,22 +4,14 @@ import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import logoImg from "@/assets/logo.png";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { translateAuthError } from "@/lib/authErrors";
 
 const UNAUTHORIZED_MESSAGE =
   "אין הרשאת גישה — האימייל שלך אינו רשום כמשתמש פעיל במערכת. פנה למנהל המערכת.";
 
-/** Only same-origin relative paths may be used as a post-login redirect. */
-function safeNext(value: string | null): string | null {
-  if (!value) return null;
-  if (!value.startsWith("/") || value.startsWith("//")) return null;
-  return value;
-}
-
 type Mode = "choose" | "password" | "forgot";
-
 
 export default function Login() {
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -30,9 +22,6 @@ export default function Login() {
   const [emailLoading, setEmailLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const nextPath = safeNext(searchParams.get("next"));
-  const afterLogin = nextPath ?? "/select-company";
   const { toast } = useToast();
 
   const verifyActiveEmployee = async (_userId: string, _userEmail: string | null | undefined) => {
@@ -48,12 +37,8 @@ export default function Login() {
     setGoogleLoading(true);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
-        // Carry the pending consent/deep-link target through the provider round-trip.
-        redirect_uri: nextPath
-          ? `${window.location.origin}/login?next=${encodeURIComponent(nextPath)}`
-          : window.location.origin,
+        redirect_uri: window.location.origin,
       });
-
 
       if (result.redirected) return;
 
@@ -74,7 +59,7 @@ export default function Login() {
         }
       }
 
-      navigate(afterLogin);
+      navigate("/select-company");
     } catch (error: any) {
       const raw = (error?.message || "").toString();
       const isUnauthorized =
@@ -116,7 +101,7 @@ export default function Login() {
           return;
         }
       }
-      navigate(afterLogin);
+      navigate("/select-company");
     } catch (error: any) {
       toast({
         title: "שגיאה בהתחברות",
