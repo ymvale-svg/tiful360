@@ -11,8 +11,9 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { SignaturePad, SignaturePadHandle } from "@/components/SignaturePad";
 import {
   FileSignature, Camera, Video, Gauge, Send, PenTool, Upload, X,
-  ChevronLeft, ChevronRight, Loader2, FileDown,
+  ChevronLeft, ChevronRight, Loader2, FileDown, Save, RotateCcw, Trash2,
 } from "lucide-react";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useEmployees } from "@/hooks/useData";
 import { useCompany } from "@/hooks/useCompany";
