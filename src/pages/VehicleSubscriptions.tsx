@@ -430,7 +430,7 @@ export default function VehicleSubscriptions() {
                             onClick={(e) => {
                               e.stopPropagation();
                               if (s.source === "asset") {
-                                navigate(`/assets/${s.source_asset_id}`);
+                                navigate(`/assets/licenses/${s.source_asset_id}`);
                                 return;
                               }
                               setSubDialog({
