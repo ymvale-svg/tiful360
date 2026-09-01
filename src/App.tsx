@@ -63,7 +63,9 @@ const App = () => (
               <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
                 <Route path="/welcome" element={<Welcome />} />
+
                 <Route path="/handover/:token" element={<SignHandover />} />
                 <Route path="/sign-offboarding/:token" element={<SignOffboarding />} />
                 <Route path="/portal/tax101/:token" element={<Tax101TokenPage />} />
