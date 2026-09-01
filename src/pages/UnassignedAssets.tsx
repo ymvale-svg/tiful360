@@ -11,7 +11,7 @@ import { useAssets, useAssetCategories } from "@/hooks/useData";
 import { useAssetGroups } from "@/hooks/useAssetGroups";
 import { HandoverFlow } from "@/components/handover/HandoverFlow";
 import { MultiHandoverFlow } from "@/components/handover/MultiHandoverFlow";
-import { DOMAIN_META, DOMAIN_ORDER, getDomain, domainKeyToSlug, type DomainKey } from "@/lib/assetDomains";
+import { DOMAIN_META, getDomain, domainKeyToSlug, type DomainKey } from "@/lib/assetDomains";
 import { cn } from "@/lib/utils";
 import { usePersistentFilter } from "@/hooks/usePersistentFilter";
 import { useToast } from "@/hooks/use-toast";
@@ -30,7 +30,6 @@ export default function UnassignedAssets() {
   const { data: groups } = useAssetGroups();
 
   const [q, setQ] = usePersistentFilter<string>("unassigned:q", "");
-  const [domain, setDomain] = usePersistentFilter<"all" | DomainKey>("unassigned:domain", "all");
   const [categoryId, setCategoryId] = usePersistentFilter<string>("unassigned:cat", "all");
   const [groupId, setGroupId] = usePersistentFilter<string>("unassigned:group", "all");
   const [status, setStatus] = usePersistentFilter<string>("unassigned:status", "all");
@@ -46,9 +45,11 @@ export default function UnassignedAssets() {
   }, [categories]);
 
   const visibleCategories = useMemo(() => {
-    const list = ((categories ?? []) as any[]).filter((c) => c.is_assignable !== false);
-    return domain === "all" ? list : list.filter((c) => getDomain(c) === domain);
-  }, [categories, domain]);
+    // Physical domain only — this screen manages stock equipment.
+    return ((categories ?? []) as any[]).filter(
+      (c) => c.is_assignable !== false && getDomain(c) === "physical",
+    );
+  }, [categories]);
 
   const visibleGroups = useMemo(
     () => ((groups ?? []) as any[]).filter((g) => categoryId === "all" || g.category_id === categoryId),
@@ -61,7 +62,9 @@ export default function UnassignedAssets() {
       if (a.current_owner_id) return false;
       const cat = catById.get(a.category_id);
       if (cat?.is_assignable === false) return false;
-      if (domain !== "all" && getDomain(cat) !== domain) return false;
+      // Only physical equipment is stock-managed; other domains (digital, training,
+      // insurance, real-estate…) aren't inventory and are handled from the item itself.
+      if (getDomain(cat) !== "physical") return false;
       if (categoryId !== "all" && a.category_id !== categoryId) return false;
       if (groupId !== "all" && a.group_id !== groupId) return false;
       if (status !== "all" && a.status !== status) return false;
@@ -89,7 +92,7 @@ export default function UnassignedAssets() {
       }
     });
     return list;
-  }, [assets, catById, q, domain, categoryId, groupId, status, sort]);
+  }, [assets, catById, q, categoryId, groupId, status, sort]);
 
   const openAsset = (a: any) => {
     const slug = domainKeyToSlug(getDomain(catById.get(a.category_id)));
@@ -125,7 +128,7 @@ export default function UnassignedAssets() {
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div className="page-header">
           <h1 className="page-title">בצע מסירה</h1>
-          <p className="page-subtitle">כל הפריטים שאינם משויכים לעובדים — סינון, מיון ומסירה מהירה</p>
+          <p className="page-subtitle">ציוד פיזי במלאי שטרם שויך לעובד — סינון, מיון ומסירה מהירה</p>
         </div>
         <Button variant="outline" size="sm" className="gap-1.5" onClick={() => navigate("/assets")}>
           <ArrowRight className="w-4 h-4" />
@@ -145,16 +148,6 @@ export default function UnassignedAssets() {
             aria-label="חיפוש פריטים"
           />
         </div>
-
-        <Select value={domain} onValueChange={(v) => { setDomain(v as any); setCategoryId("all"); setGroupId("all"); }}>
-          <SelectTrigger className="w-[170px]"><SelectValue placeholder="דומיין" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">כל הדומיינים</SelectItem>
-            {DOMAIN_ORDER.map((d) => (
-              <SelectItem key={d} value={d}>{DOMAIN_META[d].title}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
 
         <Select value={categoryId} onValueChange={(v) => { setCategoryId(v); setGroupId("all"); }}>
           <SelectTrigger className="w-[180px]"><SelectValue placeholder="קטגוריה" /></SelectTrigger>
