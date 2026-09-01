@@ -4,14 +4,22 @@ import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import logoImg from "@/assets/logo.png";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { translateAuthError } from "@/lib/authErrors";
 
 const UNAUTHORIZED_MESSAGE =
   "אין הרשאת גישה — האימייל שלך אינו רשום כמשתמש פעיל במערכת. פנה למנהל המערכת.";
 
+/** Only same-origin relative paths may be used as a post-login redirect. */
+function safeNext(value: string | null): string | null {
+  if (!value) return null;
+  if (!value.startsWith("/") || value.startsWith("//")) return null;
+  return value;
+}
+
 type Mode = "choose" | "password" | "forgot";
+
 
 export default function Login() {
   const [googleLoading, setGoogleLoading] = useState(false);
