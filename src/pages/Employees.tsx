@@ -304,11 +304,11 @@ export default function Employees() {
             </div>
 
             {/* Table */}
-            <div className="bg-card rounded-xl border border-border/50 shadow-card overflow-hidden">
+            <div className="bg-card rounded-xl border border-border/50 shadow-card overflow-auto">
               {isLoading ? (
                 <div className="p-8 text-center text-muted-foreground">טוען...</div>
               ) : (
-                <table className="data-table">
+                <table className="data-table data-table-lg">
                   <thead>
                     <tr>
                       {canManageUsers && (

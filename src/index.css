@@ -142,6 +142,20 @@
 
   .data-table {
     @apply w-full text-sm;
+    /* Below this the card scrolls horizontally instead of squashing columns.
+       The cards holding a data-table use overflow-auto so the scroll happens
+       inside the rounded container. Override per table with .data-table-sm. */
+    min-width: var(--data-table-min-width, 44rem);
+  }
+
+  /* For tables of four columns or fewer, which stay readable much narrower. */
+  .data-table-sm {
+    --data-table-min-width: 30rem;
+  }
+
+  /* For wide tables (eight columns or more) so scrolled columns stay legible. */
+  .data-table-lg {
+    --data-table-min-width: 60rem;
   }
 
   .data-table th {

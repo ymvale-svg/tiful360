@@ -381,7 +381,7 @@ function OverviewTab() {
 
 
       {/* Payslip batches */}
-      <section className="bg-card rounded-xl border border-border/50 shadow-card overflow-hidden">
+      <section className="bg-card rounded-xl border border-border/50 shadow-card overflow-auto">
         <div className="p-4 border-b border-border/50 flex items-center justify-between">
           <h2 className="text-base font-semibold flex items-center gap-2">
             <FileText className="w-4 h-4 text-primary" />
@@ -490,7 +490,7 @@ function OverviewTab() {
         </section>
       </div>
 
-      <section className="bg-card rounded-xl border border-border/50 shadow-card overflow-hidden">
+      <section className="bg-card rounded-xl border border-border/50 shadow-card overflow-auto">
         <div className="p-4 border-b border-border/50">
           <h2 className="text-base font-semibold flex items-center gap-2">
             <Clock4 className="w-4 h-4 text-primary" />
@@ -500,7 +500,7 @@ function OverviewTab() {
         {corrections.length === 0 ? (
           <div className="p-6 text-center text-sm text-muted-foreground">אין תיקוני שעון מאושרים</div>
         ) : (
-          <table className="data-table">
+          <table className="data-table data-table-sm">
             <thead><tr><th>עובד</th><th>תאריך</th><th>מקורי</th><th>מתוקן</th></tr></thead>
             <tbody>
               {corrections.map((c: any) => (
@@ -580,7 +580,7 @@ function BatchesManagementTab() {
           </select>
         </div>
 
-        <div className="border border-border rounded-lg overflow-hidden">
+        <div className="border border-border rounded-lg overflow-auto">
           <table className="data-table">
             <thead>
               <tr>
