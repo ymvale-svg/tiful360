@@ -3,7 +3,7 @@ import { FileSignature, FileDown, Clock, Eye, ExternalLink, Images, Play } from 
 import type { HandoverFormRow } from "@/hooks/useHandoverForms";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { buildProtocolPdf } from "@/lib/pdf/buildProtocolPdf";
+import { buildProtocolPdf } from "@/lib/pdf/lazy";
 import { isProtocolSnapshot, protocolDataFromSnapshot } from "@/lib/pdf/protocolSnapshot";
 import type { ProtocolMedia } from "@/lib/pdf/types";
 import { getHandoverSignedUrl, openHandoverFile, useHandoverSignedUrls } from "@/lib/handoverUrl";

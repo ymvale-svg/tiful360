@@ -11,7 +11,7 @@ import { useAuth, AppRole } from "@/hooks/useAuth";
 import { useEmployees } from "@/hooks/useData";
 import { useQueryClient } from "@tanstack/react-query";
 import { Switch } from "@/components/ui/switch";
-import * as XLSX from "xlsx";
+import { loadXlsx, type XlsxModule } from "@/lib/xlsx";
 
 interface Props {
   open: boolean;
@@ -90,7 +90,7 @@ function normalizeColumnName(name: string): string | undefined {
   return undefined;
 }
 
-function parseExcelDate(value: any): string | undefined {
+function parseExcelDate(value: any, XLSX: XlsxModule): string | undefined {
   if (!value) return undefined;
   if (typeof value === "number") {
     const date = XLSX.SSF.parse_date_code(value);
@@ -150,8 +150,9 @@ export function ImportExcelDialog({ open, onOpenChange, mode }: Props) {
     setResult(null);
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+      const XLSX = await loadXlsx();
       const wb = XLSX.read(data, { type: "array" });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json<Record<string, any>>(ws);
@@ -164,11 +165,11 @@ export function ImportExcelDialog({ open, onOpenChange, mode }: Props) {
         }
         if (mapped.start_date) {
           const originalValue = Object.entries(row).find(([k]) => normalizeColumnName(k) === "start_date")?.[1];
-          mapped.start_date = parseExcelDate(originalValue) || mapped.start_date;
+          mapped.start_date = parseExcelDate(originalValue, XLSX) || mapped.start_date;
         }
         if (mapped.birth_date) {
           const originalValue = Object.entries(row).find(([k]) => normalizeColumnName(k) === "birth_date")?.[1];
-          mapped.birth_date = parseExcelDate(originalValue) || mapped.birth_date;
+          mapped.birth_date = parseExcelDate(originalValue, XLSX) || mapped.birth_date;
         }
         const status = mapped.status?.toLowerCase();
         mapped.status = status && ["active", "onboarding", "leaving", "inactive"].includes(status) ? status : "active";
@@ -322,7 +323,8 @@ export function ImportExcelDialog({ open, onOpenChange, mode }: Props) {
     }
   };
 
-  const downloadTemplate = () => {
+  const downloadTemplate = async () => {
+    const XLSX = await loadXlsx();
     if (mode === "employees") {
       const headers = EMPLOYEE_COLUMNS.map((c) => c.label);
       const example = [

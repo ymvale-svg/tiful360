@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAssetCategories } from "@/hooks/useData";
-import * as XLSX from "xlsx";
+import { loadXlsx, type XlsxModule } from "@/lib/xlsx";
 
 interface Props {
   open: boolean;
@@ -89,7 +89,7 @@ function normalizeColumnName(name: string): string | undefined {
   return undefined;
 }
 
-function parseExcelDate(value: any): string | undefined {
+function parseExcelDate(value: any, XLSX: XlsxModule): string | undefined {
   if (!value) return undefined;
   if (typeof value === "number") {
     const date = XLSX.SSF.parse_date_code(value);
@@ -126,8 +126,9 @@ export function ImportAssetsExcelDialog({ open, onOpenChange }: Props) {
     setResult(null);
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+      const XLSX = await loadXlsx();
       const wb = XLSX.read(data, { type: "array" });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json<Record<string, any>>(ws);
@@ -140,7 +141,7 @@ export function ImportAssetsExcelDialog({ open, onOpenChange }: Props) {
         }
         if (mapped.expiry_date) {
           const originalValue = Object.entries(row).find(([k]) => normalizeColumnName(k) === "expiry_date")?.[1];
-          mapped.expiry_date = parseExcelDate(originalValue) || mapped.expiry_date;
+          mapped.expiry_date = parseExcelDate(originalValue, XLSX) || mapped.expiry_date;
         }
         if (mapped.status) {
           mapped.status = STATUS_MAP[mapped.status.trim()] || "in_stock";
@@ -207,7 +208,8 @@ export function ImportAssetsExcelDialog({ open, onOpenChange }: Props) {
     }
   };
 
-  const downloadTemplate = () => {
+  const downloadTemplate = async () => {
+    const XLSX = await loadXlsx();
     const headers = ASSET_COLUMNS.map((c) => c.label);
     const example = ["IT-001", "מחשב נייד Dell", "מחשבים", "SN-12345", "במלאי", "2026-12-31", "חדש"];
     const ws = XLSX.utils.aoa_to_sheet([headers, example]);

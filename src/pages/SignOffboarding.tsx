@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, FileSignature, Upload } from "lucide-react";
 import type { OffboardingFormData } from "@/lib/pdf/types";
 import { SignaturePad, SignaturePadHandle } from "@/components/SignaturePad";
-import { buildOffboardingPdf } from "@/lib/pdf/buildOffboardingPdf";
+import { buildOffboardingPdf } from "@/lib/pdf/lazy";
 import { uploadViaSignedToken } from "@/lib/signedFormUpload";
 import { useToast } from "@/hooks/use-toast";
 

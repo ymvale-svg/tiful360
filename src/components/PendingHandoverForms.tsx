@@ -7,7 +7,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import type { HandoverFormData } from "@/lib/pdf/types";
-import { buildHandoverPdf } from "@/lib/pdf/buildHandoverPdf";
+import { buildHandoverPdf } from "@/lib/pdf/lazy";
 import { SignaturePad, SignaturePadHandle } from "./SignaturePad";
 import { useToast } from "@/hooks/use-toast";
 

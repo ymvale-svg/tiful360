@@ -26,7 +26,7 @@ import {
 import {
   buildCandidateFields, buildPlaceholderValues, DEFAULT_FIELD_KEYS, type HandoverAssetLike,
 } from "@/lib/handoverFields";
-import { buildProtocolPdf } from "@/lib/pdf/buildProtocolPdf";
+import { buildProtocolPdf } from "@/lib/pdf/lazy";
 import type { ProtocolDirection, ProtocolMedia } from "@/lib/pdf/types";
 import { uploadProtocolFile, compressImage, describeUploadError } from "@/lib/protocolUpload";
 import { compressVideo, VIDEO_TARGET_BYTES } from "@/lib/videoCompress";

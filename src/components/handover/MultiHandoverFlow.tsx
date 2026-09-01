@@ -21,7 +21,7 @@ import {
   useProtocolTemplates, resolveTemplate, deriveProtocolTypeFromCategory, substitutePlaceholders,
 } from "@/hooks/useProtocolTemplates";
 import { buildPlaceholderValues } from "@/lib/handoverFields";
-import { buildProtocolPdf } from "@/lib/pdf/buildProtocolPdf";
+import { buildProtocolPdf } from "@/lib/pdf/lazy";
 import type { ProtocolMedia } from "@/lib/pdf/types";
 import { uploadProtocolFile, compressImage, describeUploadError } from "@/lib/protocolUpload";
 import { getDomain, type DomainKey } from "@/lib/assetDomains";

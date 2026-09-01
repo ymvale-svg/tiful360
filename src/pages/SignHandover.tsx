@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, FileSignature, Upload } from "lucide-react";
 import type { HandoverFormData, ProtocolPdfData } from "@/lib/pdf/types";
 import { SignaturePad, SignaturePadHandle } from "@/components/SignaturePad";
-import { buildHandoverPdf } from "@/lib/pdf/buildHandoverPdf";
-import { buildProtocolPdf } from "@/lib/pdf/buildProtocolPdf";
+import { buildHandoverPdf } from "@/lib/pdf/lazy";
+import { buildProtocolPdf } from "@/lib/pdf/lazy";
 import { uploadViaSignedToken } from "@/lib/signedFormUpload";
 import { useToast } from "@/hooks/use-toast";
 
