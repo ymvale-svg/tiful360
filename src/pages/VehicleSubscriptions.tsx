@@ -381,7 +381,9 @@ export default function VehicleSubscriptions() {
         <select className={selectClass} value={filters.vehicleType} onChange={(e) => setFilters({ ...filters, vehicleType: e.target.value })}>
           <option value="all">כל סוגי הרכב</option>
           {Object.values(VEHICLE_TYPE_LABELS).map((v) => <option key={v} value={v}>{v}</option>)}
+          <option value="ללא רכב">ללא רכב</option>
         </select>
+
         <select className={selectClass} value={filters.department} onChange={(e) => setFilters({ ...filters, department: e.target.value })}>
           <option value="all">כל המחלקות</option>
           {departments.map((d) => <option key={d} value={d}>{d}</option>)}
