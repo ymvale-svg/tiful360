@@ -26,6 +26,14 @@ const statusClass: Record<string, string> = {
   inactive: "bg-muted text-muted-foreground border-border",
 };
 
+/** A subscription tag: either a real vehicle_subscriptions row, or one derived
+ *  from a subscription asset (דומיין רישיונות ותוכנות > שירותי מנוי) held by the employee. */
+type SubItem = VehicleSubscription & {
+  source: "record" | "asset";
+  /** For source === "asset": the asset id, so the tag links to the item card. */
+  source_asset_id?: string;
+};
+
 type Row = {
   id: string;
   employee_id: string | null;
@@ -35,10 +43,11 @@ type Row = {
   vehicle_type: string;
   employee_vehicle_id: string | null;
   asset_id: string | null;
-  subs: VehicleSubscription[];
+  subs: SubItem[];
   /** Active subscriptions only — what is rendered as tags. */
-  activeSubs: VehicleSubscription[];
+  activeSubs: SubItem[];
 };
+
 
 const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString("en-GB") : "");
 
