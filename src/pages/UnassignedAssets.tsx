@@ -148,6 +148,23 @@ export default function UnassignedAssets() {
           />
         </div>
 
+        <Select
+          value={domain}
+          onValueChange={(v) => {
+            setDomain(v as DomainKey);
+            setCategoryId("all");
+            setGroupId("all");
+            setSelectedIds([]);
+          }}
+        >
+          <SelectTrigger className="w-[180px]"><SelectValue placeholder="דומיין" /></SelectTrigger>
+          <SelectContent>
+            {DOMAIN_ORDER.map((d) => (
+              <SelectItem key={d} value={d}>{DOMAIN_META[d].title}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         <Select value={categoryId} onValueChange={(v) => { setCategoryId(v); setGroupId("all"); }}>
           <SelectTrigger className="w-[180px]"><SelectValue placeholder="קטגוריה" /></SelectTrigger>
           <SelectContent>
