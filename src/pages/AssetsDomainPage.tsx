@@ -3,7 +3,7 @@ import { usePersistentFilter } from "@/hooks/usePersistentFilter";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ChevronRight, ChevronDown, Search, Plus, ArrowRight, Users, AlertTriangle,
-  ArrowUpDown, LayoutGrid, List, FolderPlus, Check, X, Link2, Trash2,
+  ArrowUpDown, LayoutGrid, List, FolderPlus, Check, X, Link2, Trash2, FileSignature,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import { useAssetGroups, useCreateAssetGroup, useAssignAssetsToGroup, useDeleteA
 import { useExpiringAssets } from "@/hooks/useExpiringAssets";
 import { AssetDetailView } from "@/components/assets/AssetDetailView";
 import { AddAssetDialog } from "@/components/AddAssetDialog";
+import { MultiHandoverFlow } from "@/components/handover/MultiHandoverFlow";
 import { getCategoryIcon, getCategoryColor } from "@/lib/categoryIcons";
 import { resolveOwnerRole, OWNER_ROLE_LABEL } from "@/lib/domainConfig";
 import {
@@ -90,6 +91,7 @@ export default function AssetsDomainPage() {
   });
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set());
   const [addOpen, setAddOpen] = useState(false);
+  const [handoverOpen, setHandoverOpen] = useState(false);
   const [addCategoryId, setAddCategoryId] = useState<string | undefined>(undefined);
   const [addGroupId, setAddGroupId] = useState<string | undefined>(undefined);
   const [newSubFor, setNewSubFor] = useState<string | null>(null);
@@ -496,6 +498,19 @@ export default function AssetsDomainPage() {
               </Button>
             </div>
           )}
+          {selectedIds.size > 0 && (
+            <div className="sticky bottom-3 z-20 bg-card border border-primary/40 shadow-lg rounded-xl p-3 flex flex-wrap items-center gap-2">
+              <span className="text-sm font-medium">{selectedIds.size} פריטים נבחרו</span>
+              <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())} className="gap-1">
+                <X className="w-3.5 h-3.5" /> נקה בחירה
+              </Button>
+              <div className="flex-1" />
+              <Button size="sm" className="gap-1.5" onClick={() => setHandoverOpen(true)}>
+                <FileSignature className="w-4 h-4" />
+                מסור {selectedIds.size} פריטים
+              </Button>
+            </div>
+          )}
           {drilledItems.length === 0 ? (
             <div className="bg-card border border-dashed border-border rounded-2xl p-8 text-center">
               <p className="text-muted-foreground">לא נמצאו פריטים</p>
@@ -504,7 +519,7 @@ export default function AssetsDomainPage() {
             <InstancesTable
               items={drilledItems}
               domain={domain}
-              selectable={subParam === NO_SUBCATEGORY_KEY}
+              selectable
               selectedIds={selectedIds}
               onToggleSelect={(id) => setSelectedIds((prev) => {
                 const next = new Set(prev);
@@ -647,6 +662,19 @@ export default function AssetsDomainPage() {
         </div>
       )}
 
+      <MultiHandoverFlow
+
+        open={handoverOpen}
+
+        assets={drilledItems.filter((a: any) => selectedIds.has(a.id))}
+
+        onOpenChange={(o) => { setHandoverOpen(o); if (!o) setSelectedIds(new Set()); }}
+
+        onAssigned={() => setSelectedIds(new Set())}
+
+      />
+
+
       <AddAssetDialog
         open={addOpen}
         onOpenChange={(v) => {
@@ -767,7 +795,7 @@ function InstancesTable({
         ) : (
           <>
             <div className="col-span-3 text-right">קוד</div>
-            <div className="col-span-3 text-right">מס׳ סידורי</div>
+            <div className="col-span-3 text-right">{domain === "digital" ? "שם משתמש" : domain === "licenses" ? "ספק" : "מס׳ סידורי"}</div>
             <div className="col-span-3 text-right">עובד</div>
             <div className="col-span-2 text-right">{domain === "physical" ? "סטטוס" : "תפוגה"}</div>
             <div className="col-span-1 text-left"></div>
@@ -821,7 +849,9 @@ function InstancesTable({
             className="w-full grid grid-cols-12 gap-2 px-4 py-3 text-sm border-t border-border hover:bg-muted/40 text-right items-center transition-colors cursor-pointer"
           >
             <div className="col-span-3 font-mono text-xs flex items-center">{checkbox}{a.asset_code}</div>
-            <div className="col-span-3 text-xs text-muted-foreground truncate">{a.serial_number ?? "—"}</div>
+            <div className="col-span-3 text-xs text-muted-foreground truncate" dir={domain === "digital" ? "ltr" : undefined}>
+              {(domain === "digital" ? a.account_username : domain === "licenses" ? (a.custom_fields?.["ספק"] ?? a.manufacturer_model) : a.serial_number) ?? "—"}
+            </div>
             <div className="col-span-3 truncate">{a.employees?.full_name ?? <span className="text-muted-foreground">—</span>}</div>
             <div className="col-span-2">
               {domain === "physical" ? (
