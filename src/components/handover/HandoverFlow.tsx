@@ -29,6 +29,12 @@ import {
 import { buildProtocolPdf } from "@/lib/pdf/buildProtocolPdf";
 import type { ProtocolDirection, ProtocolMedia } from "@/lib/pdf/types";
 import { uploadProtocolFile, compressImage, describeUploadError } from "@/lib/protocolUpload";
+import { compressVideo, VIDEO_TARGET_BYTES } from "@/lib/videoCompress";
+import {
+  saveHandoverDraft, loadHandoverDraft, deleteHandoverDraft, draftKeyForAsset, formatDraftTime,
+  type HandoverDraft,
+} from "@/lib/handoverDraft";
+
 
 interface AssetLike extends HandoverAssetLike {
   id: string;
