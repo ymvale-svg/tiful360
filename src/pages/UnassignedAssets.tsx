@@ -258,6 +258,7 @@ export default function UnassignedAssets() {
             <table className="w-full text-sm">
               <thead className="bg-muted/40 text-muted-foreground text-xs">
                 <tr>
+                  <th className="px-3 py-2 w-10" aria-label="בחירה למסירה מרובה" />
                   <th className="text-right font-medium px-4 py-2">מזהה</th>
                   <th className="text-right font-medium px-4 py-2">שם פריט</th>
                   <th className="text-right font-medium px-4 py-2">קטגוריה</th>
@@ -268,7 +269,14 @@ export default function UnassignedAssets() {
               </thead>
               <tbody>
                 {rows.map((a: any) => (
-                  <tr key={a.id} className="border-t border-border/60 hover:bg-muted/40">
+                  <tr key={a.id} className={cn("border-t border-border/60 hover:bg-muted/40", selectedIds.includes(a.id) && "bg-primary/5")}>
+                    <td className="px-3 py-2">
+                      <Checkbox
+                        checked={selectedIds.includes(a.id)}
+                        onCheckedChange={(c) => toggleSelect(a, c === true)}
+                        aria-label={`בחר ${a.asset_name} למסירה מרובה`}
+                      />
+                    </td>
                     <td className="px-4 py-2 font-mono text-xs text-muted-foreground">{a.asset_code}</td>
                     <td className="px-4 py-2">
                       <button className="font-medium hover:underline" onClick={() => openAsset(a)}>
@@ -304,6 +312,12 @@ export default function UnassignedAssets() {
         open={!!handoverAsset}
         onOpenChange={(v) => { if (!v) setHandoverAsset(null); }}
         asset={handoverAsset}
+      />
+      <MultiHandoverFlow
+        open={multiOpen}
+        onOpenChange={setMultiOpen}
+        assets={selectedAssets}
+        onAssigned={() => setSelectedIds([])}
       />
     </div>
   );
