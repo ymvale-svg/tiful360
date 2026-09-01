@@ -11,7 +11,7 @@ import { useAssets, useAssetCategories } from "@/hooks/useData";
 import { useAssetGroups } from "@/hooks/useAssetGroups";
 import { HandoverFlow } from "@/components/handover/HandoverFlow";
 import { MultiHandoverFlow } from "@/components/handover/MultiHandoverFlow";
-import { DOMAIN_META, DOMAIN_ORDER, getDomain, domainKeyToSlug, type DomainKey } from "@/lib/assetDomains";
+import { DOMAIN_META, getDomain, domainKeyToSlug, type DomainKey } from "@/lib/assetDomains";
 import { cn } from "@/lib/utils";
 import { usePersistentFilter } from "@/hooks/usePersistentFilter";
 import { useToast } from "@/hooks/use-toast";
@@ -65,7 +65,6 @@ export default function UnassignedAssets() {
       // Only physical equipment is stock-managed; other domains (digital, training,
       // insurance, real-estate…) aren't inventory and are handled from the item itself.
       if (getDomain(cat) !== "physical") return false;
-      if (domain !== "all" && getDomain(cat) !== domain) return false;
       if (categoryId !== "all" && a.category_id !== categoryId) return false;
       if (groupId !== "all" && a.group_id !== groupId) return false;
       if (status !== "all" && a.status !== status) return false;
@@ -93,7 +92,7 @@ export default function UnassignedAssets() {
       }
     });
     return list;
-  }, [assets, catById, q, domain, categoryId, groupId, status, sort]);
+  }, [assets, catById, q, categoryId, groupId, status, sort]);
 
   const openAsset = (a: any) => {
     const slug = domainKeyToSlug(getDomain(catById.get(a.category_id)));
