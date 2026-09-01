@@ -1,17 +1,20 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, FileSignature, Search, Package } from "lucide-react";
+import { ArrowRight, FileSignature, Search, Package, Layers, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useAssets, useAssetCategories } from "@/hooks/useData";
 import { useAssetGroups } from "@/hooks/useAssetGroups";
 import { HandoverFlow } from "@/components/handover/HandoverFlow";
+import { MultiHandoverFlow } from "@/components/handover/MultiHandoverFlow";
 import { DOMAIN_META, DOMAIN_ORDER, getDomain, domainKeyToSlug, type DomainKey } from "@/lib/assetDomains";
 import { cn } from "@/lib/utils";
 import { usePersistentFilter } from "@/hooks/usePersistentFilter";
+import { useToast } from "@/hooks/use-toast";
 
 const statusLabels: Record<string, string> = {
   in_use: "בשימוש", in_stock: "במלאי", in_repair: "בתיקון", lost: "אבד",
@@ -21,6 +24,7 @@ type SortKey = "name" | "code" | "category" | "created_desc" | "created_asc";
 
 export default function UnassignedAssets() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { data: assets, isLoading } = useAssets();
   const { data: categories } = useAssetCategories();
   const { data: groups } = useAssetGroups();
@@ -32,6 +36,8 @@ export default function UnassignedAssets() {
   const [status, setStatus] = usePersistentFilter<string>("unassigned:status", "all");
   const [sort, setSort] = usePersistentFilter<SortKey>("unassigned:sort", "created_desc");
   const [handoverAsset, setHandoverAsset] = useState<any | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [multiOpen, setMultiOpen] = useState(false);
 
   const catById = useMemo(() => {
     const m = new Map<string, any>();
@@ -88,6 +94,30 @@ export default function UnassignedAssets() {
   const openAsset = (a: any) => {
     const slug = domainKeyToSlug(getDomain(catById.get(a.category_id)));
     navigate(`/assets/${slug}/${a.id}`);
+  };
+
+  // ---- Multi-handover selection (single domain only) ----
+  const domainOf = (a: any): DomainKey => getDomain(catById.get(a.category_id));
+  const selectedAssets = useMemo(
+    () => rows.filter((a: any) => selectedIds.includes(a.id)),
+    [rows, selectedIds],
+  );
+  const selectedDomain: DomainKey | null = selectedAssets.length ? domainOf(selectedAssets[0]) : null;
+
+  const toggleSelect = (a: any, checked: boolean) => {
+    if (!checked) {
+      setSelectedIds((prev) => prev.filter((id) => id !== a.id));
+      return;
+    }
+    if (selectedDomain && domainOf(a) !== selectedDomain) {
+      toast({
+        title: "מסירה מרובה אפשרית רק לפריטים מאותו דומיין",
+        description: `הבחירה הנוכחית היא מדומיין "${DOMAIN_META[selectedDomain].title}"`,
+        variant: "destructive",
+      });
+      return;
+    }
+    setSelectedIds((prev) => [...prev, a.id]);
   };
 
   return (
@@ -168,7 +198,26 @@ export default function UnassignedAssets() {
         </Select>
       </div>
 
-      <div className="text-sm text-muted-foreground">{rows.length} פריטים לא משויכים</div>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="text-sm text-muted-foreground">{rows.length} פריטים לא משויכים</div>
+        {selectedAssets.length > 0 && (
+          <div className="flex items-center gap-2 bg-primary/5 border border-primary/20 rounded-full px-3 py-1.5">
+            <span className="text-sm font-medium">{selectedAssets.length} פריטים נבחרו</span>
+            <Button size="sm" className="gap-1.5 rounded-full" onClick={() => setMultiOpen(true)}>
+              <Layers className="w-4 h-4" /> מסירה מרובה
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="rounded-full"
+              onClick={() => setSelectedIds([])}
+              aria-label="נקה בחירה"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
+      </div>
 
       {isLoading ? (
         <div className="p-8 text-center text-muted-foreground">טוען...</div>
@@ -182,6 +231,14 @@ export default function UnassignedAssets() {
           <div className="grid gap-3 sm:hidden">
             {rows.map((a: any) => (
               <div key={a.id} className="bg-card border border-border rounded-2xl p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={selectedIds.includes(a.id)}
+                    onCheckedChange={(c) => toggleSelect(a, c === true)}
+                    aria-label={`בחר ${a.asset_name} למסירה מרובה`}
+                  />
+                  <span className="text-xs text-muted-foreground">בחר למסירה מרובה</span>
+                </div>
                 <button className="w-full text-right" onClick={() => openAsset(a)}>
                   <div className="font-semibold">{a.asset_name}</div>
                   <div className="text-xs text-muted-foreground font-mono">{a.asset_code}</div>
@@ -201,6 +258,7 @@ export default function UnassignedAssets() {
             <table className="w-full text-sm">
               <thead className="bg-muted/40 text-muted-foreground text-xs">
                 <tr>
+                  <th className="px-3 py-2 w-10" aria-label="בחירה למסירה מרובה" />
                   <th className="text-right font-medium px-4 py-2">מזהה</th>
                   <th className="text-right font-medium px-4 py-2">שם פריט</th>
                   <th className="text-right font-medium px-4 py-2">קטגוריה</th>
@@ -211,7 +269,14 @@ export default function UnassignedAssets() {
               </thead>
               <tbody>
                 {rows.map((a: any) => (
-                  <tr key={a.id} className="border-t border-border/60 hover:bg-muted/40">
+                  <tr key={a.id} className={cn("border-t border-border/60 hover:bg-muted/40", selectedIds.includes(a.id) && "bg-primary/5")}>
+                    <td className="px-3 py-2">
+                      <Checkbox
+                        checked={selectedIds.includes(a.id)}
+                        onCheckedChange={(c) => toggleSelect(a, c === true)}
+                        aria-label={`בחר ${a.asset_name} למסירה מרובה`}
+                      />
+                    </td>
                     <td className="px-4 py-2 font-mono text-xs text-muted-foreground">{a.asset_code}</td>
                     <td className="px-4 py-2">
                       <button className="font-medium hover:underline" onClick={() => openAsset(a)}>
@@ -247,6 +312,12 @@ export default function UnassignedAssets() {
         open={!!handoverAsset}
         onOpenChange={(v) => { if (!v) setHandoverAsset(null); }}
         asset={handoverAsset}
+      />
+      <MultiHandoverFlow
+        open={multiOpen}
+        onOpenChange={setMultiOpen}
+        assets={selectedAssets}
+        onAssigned={() => setSelectedIds([])}
       />
     </div>
   );
