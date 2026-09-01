@@ -38,7 +38,7 @@ export interface MultiAssetLike {
   account_url?: string | null;
   license_expires_at?: string | null;
   password_expires_at?: string | null;
-  custom_fields?: Record<string, any> | null;
+  custom_fields?: any;
   asset_categories?: {
     category_name?: string | null;
     protocol_type?: string | null;
