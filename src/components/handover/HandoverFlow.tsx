@@ -282,8 +282,20 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
       out.push({ url: await uploadImage(p), type: "image", label: null, captured_at: now });
     }
     if (videoFile) {
-      out.push({ url: await uploadFile(videoFile, videoFile.name), type: "video", label: "סרטון מסירה", captured_at: now });
+      setVideoProgress(0);
+      try {
+        const compressed = await compressVideo(videoFile, VIDEO_TARGET_BYTES, (r) => setVideoProgress(r));
+        out.push({
+          url: await uploadFile(compressed.blob, compressed.fileName, compressed.contentType),
+          type: "video",
+          label: "סרטון מסירה",
+          captured_at: now,
+        });
+      } finally {
+        setVideoProgress(null);
+      }
     }
+
     return out;
   };
 
