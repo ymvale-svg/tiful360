@@ -434,6 +434,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
         description: `${assets.length} פריטים שויכו לעובד, המסמך נוסף לאזור האישי ונשלח במייל`,
       });
       invalidate();
+      if (draftKey) await deleteHandoverDraft(draftKey);
       onAssigned?.();
       close();
     } catch (e: any) {
@@ -457,6 +458,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
       await applyAssetsUpdate();
       toast({ title: "נשלח לחתימה", description: `${assets.length} פרוטוקולים ממתינים לעובד בפורטל` });
       invalidate();
+      if (draftKey) await deleteHandoverDraft(draftKey);
       onAssigned?.();
       close();
     } catch (e: any) {
@@ -496,7 +498,32 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
           </DialogDescription>
         </DialogHeader>
 
+        {foundDraft && (
+          <div className="rounded-lg border border-primary/40 bg-primary/5 p-3 space-y-2">
+            <p className="text-sm">
+              נמצאה טיוטה שמורה מ־{formatDraftTime(foundDraft.savedAt)}. לשחזר ולהמשיך מהמקום שבו הפסקת?
+            </p>
+            <div className="flex gap-2">
+              <Button size="sm" className="gap-1.5" onClick={restoreDraft}>
+                <RotateCcw className="w-4 h-4" /> שחזר טיוטה
+              </Button>
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={discardDraft}>
+                <Trash2 className="w-4 h-4" /> מחק טיוטה
+              </Button>
+            </div>
+          </div>
+        )}
+
         <StepBar step={step} withMedia={isPhysical} />
+
+        <div className="flex items-center justify-between gap-2 -mt-1">
+          <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={handleSaveDraft}>
+            <Save className="w-4 h-4" /> שמור כטיוטה
+          </Button>
+          {draftSavedAt && (
+            <span className="text-[11px] text-muted-foreground">נשמר {formatDraftTime(draftSavedAt)}</span>
+          )}
+        </div>
 
         {step === "details" && (
           <div className="space-y-4">
@@ -592,6 +619,9 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
                 capture="environment"
                 onFiles={(files) => setVideoFile(files[0] ?? null)}
               />
+              <p className="text-[11px] text-muted-foreground">
+                הסרטון יכווץ אוטומטית לכ‑3 מ"ב לפני השמירה.
+              </p>
             </div>
 
             <div className="flex gap-2 pt-1">
@@ -641,7 +671,11 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
                 disabled={busy}
                 onClick={mode === "remote_sign" ? handleSendRemote : handleSignNow}
               >
-                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : mode === "remote_sign" ? "שלח לחתימה" : "סיים ושמור"}
+                {busy ? (
+                  videoProgress !== null
+                    ? <span className="text-xs">מכווץ סרטון… {Math.round(videoProgress * 100)}%</span>
+                    : <Loader2 className="w-4 h-4 animate-spin" />
+                ) : mode === "remote_sign" ? "שלח לחתימה" : "סיים ושמור"}
               </Button>
             </div>
           </div>
