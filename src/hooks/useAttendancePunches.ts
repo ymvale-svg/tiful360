@@ -271,23 +271,22 @@ export function useCreateRemotePunch() {
       note?: string;
       geo?: { lat: number; lng: number; accuracy?: number } | null;
     }) => {
-      const { error } = await supabase.from("attendance_punches").insert({
-        company_id: params.companyId,
-        employee_id: params.employeeId,
-        employee_code_raw: params.employeeCode,
-        punch_at: new Date().toISOString(),
-        direction: params.direction,
-        source: "portal_remote",
-        status: "pending",
-        raw_payload: {
-          signature_data_url: params.signatureDataUrl ?? null,
-          note: params.note ?? null,
-          geo: params.geo ?? null,
-          user_agent: navigator.userAgent,
-        },
+      const { error } = await supabase.rpc("add_own_remote_punch" as any, {
+        _direction: params.direction,
+        _signature: params.signatureDataUrl ?? null,
+        _note: params.note ?? null,
+        _geo: params.geo ?? null,
+        _user_agent: navigator.userAgent,
       });
-      if (error) throw error;
+      if (error) {
+        const msg = error.message || "";
+        if (/row-level security|42501|Unauthorized/i.test(msg) && !/הרשאה|כרטיס/.test(msg)) {
+          throw new Error("אין הרשאה להחתמת נוכחות מרחוק. פנה למשאבי אנוש");
+        }
+        throw new Error(msg || "שגיאה בשליחת ההחתמה");
+      }
     },
+
     onSuccess: () => qc.invalidateQueries({ queryKey: ["attendance_punches"] }),
   });
 }
