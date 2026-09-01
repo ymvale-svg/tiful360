@@ -708,7 +708,12 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
                     capture="environment"
                     onFiles={(files) => setVideoFile(files[0] ?? null)}
                   />
+                  <p className="text-[11px] text-muted-foreground">
+                    הסרטון יכווץ אוטומטית לכ‑3 מ"ב לפני השמירה.
+                  </p>
                 </div>
+
+
 
                 <div className="flex gap-2 pt-1">
                   <Button variant="outline" className="flex-1 gap-1" onClick={() => setStep("details")}>
