@@ -175,8 +175,62 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
         : null) ??
       DEFAULT_FIELD_KEYS;
     setSelectedKeys(candidateFields.filter((f) => defaults.includes(f.key)).map((f) => f.key));
+    setVideoProgress(null);
+    setDraftSavedAt(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, asset?.id, template?.id, fullAsset]);
+
+  // ---- Draft (save mid-process / resume) ----
+  const draftKey = asset?.id ? draftKeyForAsset(asset.id, direction) : null;
+
+  useEffect(() => {
+    if (!open || !draftKey) { setFoundDraft(null); return; }
+    let cancelled = false;
+    (async () => {
+      const d = await loadHandoverDraft(draftKey);
+      if (!cancelled) setFoundDraft(d);
+    })();
+    return () => { cancelled = true; };
+  }, [open, draftKey]);
+
+  const handleSaveDraft = async () => {
+    if (!draftKey) return;
+    await saveHandoverDraft({
+      key: draftKey,
+      savedAt: new Date().toISOString(),
+      label: `${asset?.asset_name ?? ""} ${asset?.asset_code ? `(${asset.asset_code})` : ""}`.trim(),
+      state: { step, mode, employeeId, selectedKeys, freeText, odometer },
+      photos,
+      video: videoFile,
+      odometerPhoto,
+    });
+    setDraftSavedAt(new Date().toISOString());
+    setFoundDraft(null);
+    toast({ title: "הטיוטה נשמרה", description: "אפשר להמשיך את המסירה מאוחר יותר מאותו פריט" });
+  };
+
+  const restoreDraft = () => {
+    if (!foundDraft) return;
+    const s = foundDraft.state ?? {};
+    setStep((s.step as Step) ?? "details");
+    setMode((s.mode as Mode) ?? "on_site");
+    if (s.employeeId) setEmployeeId(s.employeeId);
+    if (Array.isArray(s.selectedKeys)) setSelectedKeys(s.selectedKeys);
+    setFreeText(s.freeText ?? "");
+    setOdometer(s.odometer ?? "");
+    setPhotos(foundDraft.photos ?? []);
+    setVideoFile(foundDraft.video ?? null);
+    setOdometerPhoto(foundDraft.odometerPhoto ?? null);
+    setFoundDraft(null);
+    toast({ title: "הטיוטה שוחזרה" });
+  };
+
+  const discardDraft = async () => {
+    if (draftKey) await deleteHandoverDraft(draftKey);
+    setFoundDraft(null);
+  };
+
+
 
 
   const toggleKey = (key: string) =>
