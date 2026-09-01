@@ -12,6 +12,7 @@ import { AttendanceMissingCard } from "@/components/dashboard/AttendanceMissingC
 import { Tax101StatusCard } from "@/components/dashboard/Tax101StatusCard";
 import { hasDualAccess } from "@/lib/dualAccess";
 import { resolveDashboardConfig, type KpiKey } from "@/lib/dashboardConfig";
+import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
   const { roles, loading } = useAuth();
@@ -68,19 +69,32 @@ export default function Dashboard() {
       {/* KPI Cards */}
       {statCards.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {statCards.map((stat) => (
-            <div key={stat.key} className="stat-card">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  <p className="kpi-number mt-1">{stat.value}</p>
-                </div>
-                <div className={`${stat.bg} ${stat.color} p-2.5 rounded-lg`}>
-                  <stat.icon className="w-5 h-5" />
+          {statCards.map((stat) => {
+            // A zero has nothing to act on. Keep the card so the grid stays
+            // stable, but drop the colour — otherwise "0 התראות פתוחות" shouts
+            // as loudly as the counts that actually need attention.
+            const isZero = stat.value === 0;
+            return (
+              <div key={stat.key} className="stat-card">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                    <p className={cn("kpi-number mt-1", isZero && "text-muted-foreground/70")}>
+                      {stat.value}
+                    </p>
+                  </div>
+                  <div
+                    className={cn(
+                      "p-2.5 rounded-lg",
+                      isZero ? "bg-muted text-muted-foreground/70" : `${stat.bg} ${stat.color}`,
+                    )}
+                  >
+                    <stat.icon className="w-5 h-5" />
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

@@ -83,7 +83,21 @@ export function expiryUrgency(daysLeft: number): {
   label: string;
   border: string;
 } {
-  if (daysLeft <= 0) return { color: "text-destructive", bg: "bg-destructive/10", border: "border-destructive/30", label: "פג תוקף!" };
+  // Every lapsed item used to read "פג תוקף!" whether it expired yesterday or
+  // four months ago, which hid how far behind the list had drifted.
+  if (daysLeft <= 0) {
+    const overdue = Math.abs(daysLeft);
+    const months = Math.floor(overdue / 30);
+    const label =
+      overdue === 0 ? "פג היום"
+      : overdue === 1 ? "פג אתמול"
+      : overdue === 2 ? "פג לפני יומיים"
+      : overdue < 31 ? `פג לפני ${overdue} ימים`
+      : months === 1 ? "פג לפני חודש"
+      : months === 2 ? "פג לפני חודשיים"
+      : `פג לפני ${months} חודשים`;
+    return { color: "text-destructive", bg: "bg-destructive/10", border: "border-destructive/30", label };
+  }
   if (daysLeft <= 3) return { color: "text-orange-600 dark:text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/30", label: `${daysLeft} ימים` };
   return { color: "text-yellow-700 dark:text-yellow-400", bg: "bg-yellow-500/10", border: "border-yellow-500/30", label: `${daysLeft} ימים` };
 }
