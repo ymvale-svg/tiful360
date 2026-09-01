@@ -124,20 +124,60 @@ export default function VehicleSubscriptions() {
     return list;
   }, [vehicles, assets, employees, groups]);
 
+  /** Subscriptions that exist as assets (רישיונות ותוכנות > שירותי מנוי) assigned to employees. */
+  const assetSubsByEmployee = useMemo(() => {
+    const groupName = (gid?: string | null) => (groups ?? []).find((g) => g.id === gid)?.name ?? null;
+    const map = new Map<string, SubItem[]>();
+    (assets ?? [])
+      .filter((a: any) => {
+        if (!a.current_owner_id) return false;
+        const cat = a.asset_categories;
+        if (!cat) return false;
+        return cat.prefix === "MAN" || (cat.category_name ?? "").includes("מנוי");
+      })
+      .forEach((a: any) => {
+        const provider = groupName(a.group_id) ?? a.asset_name ?? "מנוי";
+        const item: SubItem = {
+          id: `asset:${a.id}`,
+          company_id: a.company_id,
+          employee_vehicle_id: null,
+          asset_id: null,
+          provider,
+          start_date: a.created_at ?? null,
+          status: a.status === "in_use" ? "active" : "inactive",
+          notes: a.notes ?? null,
+          created_at: a.created_at,
+          source: "asset",
+          source_asset_id: a.id,
+        };
+        const arr = map.get(a.current_owner_id) ?? [];
+        arr.push(item);
+        map.set(a.current_owner_id, arr);
+      });
+    return map;
+  }, [assets, groups]);
+
   /** One row per vehicle; subscriptions attached as tags. */
   const rows: Row[] = useMemo(() => {
-    const subsByVehicle = new Map<string, VehicleSubscription[]>();
+    const subsByVehicle = new Map<string, SubItem[]>();
     (subscriptions ?? []).forEach((s) => {
       const key = s.employee_vehicle_id ? `v:${s.employee_vehicle_id}` : s.asset_id ? `a:${s.asset_id}` : "orphan";
       const arr = subsByVehicle.get(key) ?? [];
-      arr.push(s);
+      arr.push({ ...s, source: "record" });
       subsByVehicle.set(key, arr);
     });
 
-    return vehicleList.map((v) => {
-      const subs = (subsByVehicle.get(v.key) ?? []).sort((a, b) =>
-        (b.start_date ?? "").localeCompare(a.start_date ?? "")
-      );
+    const empById = new Map((employees ?? []).map((e: any) => [e.id, e]));
+    const usedEmployees = new Set<string>();
+
+    const out: Row[] = vehicleList.map((v) => {
+      let subs = subsByVehicle.get(v.key) ?? [];
+      // Asset-based subscriptions belong to the employee — attach them to their first vehicle row.
+      if (v.employee_id && !usedEmployees.has(v.employee_id)) {
+        usedEmployees.add(v.employee_id);
+        subs = [...subs, ...(assetSubsByEmployee.get(v.employee_id) ?? [])];
+      }
+      subs = [...subs].sort((a, b) => (b.start_date ?? "").localeCompare(a.start_date ?? ""));
       return {
         id: v.key,
         employee_id: v.employee_id,
@@ -151,7 +191,27 @@ export default function VehicleSubscriptions() {
         subs,
       };
     });
-  }, [vehicleList, subscriptions]);
+
+    // Employees holding subscription assets but with no vehicle attached — still show them.
+    assetSubsByEmployee.forEach((subs, empId) => {
+      if (usedEmployees.has(empId)) return;
+      const emp: any = empById.get(empId);
+      out.push({
+        id: `e:${empId}`,
+        employee_id: empId,
+        employee_name: emp?.full_name ?? "—",
+        department: emp?.department ?? "—",
+        plate: "—",
+        vehicle_type: "ללא רכב",
+        employee_vehicle_id: null,
+        asset_id: null,
+        activeSubs: subs.filter((s) => isSubscriptionActive(s.status)),
+        subs,
+      });
+    });
+
+    return out;
+  }, [vehicleList, subscriptions, assetSubsByEmployee, employees]);
 
   const orphanCount = useMemo(() => {
     const known = new Set(vehicleList.map((v) => v.key));
@@ -164,8 +224,10 @@ export default function VehicleSubscriptions() {
   const providerOptions = useMemo(() => {
     const set = new Set<string>(SUBSCRIPTION_PROVIDERS);
     (subscriptions ?? []).forEach((s) => set.add(s.provider));
+    assetSubsByEmployee.forEach((subs) => subs.forEach((s) => set.add(s.provider)));
     return Array.from(set);
-  }, [subscriptions]);
+  }, [subscriptions, assetSubsByEmployee]);
+
 
   const departments = useMemo(
     () => Array.from(new Set(rows.map((r) => r.department).filter((d) => d && d !== "—"))).sort(),
