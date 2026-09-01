@@ -23,6 +23,7 @@ import {
 import { buildPlaceholderValues } from "@/lib/handoverFields";
 import { buildProtocolPdf } from "@/lib/pdf/buildProtocolPdf";
 import type { ProtocolMedia } from "@/lib/pdf/types";
+import { uploadProtocolFile, compressImage, describeUploadError } from "@/lib/protocolUpload";
 
 export interface MultiAssetLike {
   id: string;
@@ -327,7 +328,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
       onAssigned?.();
       close();
     } catch (e: any) {
-      toast({ title: "שגיאה", description: e.message, variant: "destructive" });
+      toast({ title: "שגיאה בשמירת הפרוטוקול", description: describeUploadError(e), variant: "destructive" });
     } finally {
       setBusy(false);
     }
@@ -350,7 +351,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
       onAssigned?.();
       close();
     } catch (e: any) {
-      toast({ title: "שגיאה", description: e.message, variant: "destructive" });
+      toast({ title: "שגיאה בשמירת הפרוטוקול", description: describeUploadError(e), variant: "destructive" });
     } finally {
       setBusy(false);
     }
