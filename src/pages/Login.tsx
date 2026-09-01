@@ -30,6 +30,9 @@ export default function Login() {
   const [emailLoading, setEmailLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const nextPath = safeNext(searchParams.get("next"));
+  const afterLogin = nextPath ?? "/select-company";
   const { toast } = useToast();
 
   const verifyActiveEmployee = async (_userId: string, _userEmail: string | null | undefined) => {
@@ -45,8 +48,12 @@ export default function Login() {
     setGoogleLoading(true);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+        // Carry the pending consent/deep-link target through the provider round-trip.
+        redirect_uri: nextPath
+          ? `${window.location.origin}/login?next=${encodeURIComponent(nextPath)}`
+          : window.location.origin,
       });
+
 
       if (result.redirected) return;
 
