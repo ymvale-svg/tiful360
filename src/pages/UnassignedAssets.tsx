@@ -198,7 +198,26 @@ export default function UnassignedAssets() {
         </Select>
       </div>
 
-      <div className="text-sm text-muted-foreground">{rows.length} פריטים לא משויכים</div>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="text-sm text-muted-foreground">{rows.length} פריטים לא משויכים</div>
+        {selectedAssets.length > 0 && (
+          <div className="flex items-center gap-2 bg-primary/5 border border-primary/20 rounded-full px-3 py-1.5">
+            <span className="text-sm font-medium">{selectedAssets.length} פריטים נבחרו</span>
+            <Button size="sm" className="gap-1.5 rounded-full" onClick={() => setMultiOpen(true)}>
+              <Layers className="w-4 h-4" /> מסירה מרובה
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="rounded-full"
+              onClick={() => setSelectedIds([])}
+              aria-label="נקה בחירה"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
+      </div>
 
       {isLoading ? (
         <div className="p-8 text-center text-muted-foreground">טוען...</div>
@@ -212,6 +231,14 @@ export default function UnassignedAssets() {
           <div className="grid gap-3 sm:hidden">
             {rows.map((a: any) => (
               <div key={a.id} className="bg-card border border-border rounded-2xl p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={selectedIds.includes(a.id)}
+                    onCheckedChange={(c) => toggleSelect(a, c === true)}
+                    aria-label={`בחר ${a.asset_name} למסירה מרובה`}
+                  />
+                  <span className="text-xs text-muted-foreground">בחר למסירה מרובה</span>
+                </div>
                 <button className="w-full text-right" onClick={() => openAsset(a)}>
                   <div className="font-semibold">{a.asset_name}</div>
                   <div className="text-xs text-muted-foreground font-mono">{a.asset_code}</div>
