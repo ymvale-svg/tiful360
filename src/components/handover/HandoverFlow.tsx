@@ -112,6 +112,10 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
   const [attachment, setAttachment] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [videoProgress, setVideoProgress] = useState<number | null>(null);
+  const [foundDraft, setFoundDraft] = useState<HandoverDraft | null>(null);
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+
 
   const issuerSigRef = useRef<SignaturePadHandle>(null);
   const receiverSigRef = useRef<SignaturePadHandle>(null);
