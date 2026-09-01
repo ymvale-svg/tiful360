@@ -14,9 +14,11 @@ import { AppLayout } from "@/components/AppLayout";
 import Dashboard from "@/pages/Dashboard";
 import Employees from "@/pages/Employees";
 import EmployeeDetail from "@/pages/EmployeeDetail";
-import AttendanceMap from "@/pages/AttendanceMap";
 
 // Lazy: less-frequent pages — split into separate chunks loaded on demand
+// AttendanceMap is here rather than in the eager list above because it is the
+// only page importing leaflet, and a map screen is a specialist destination.
+const AttendanceMap = lazy(() => import("@/pages/AttendanceMap"));
 const Assets = lazy(() => import("@/pages/Assets"));
 const AssetsDomainPage = lazy(() => import("@/pages/AssetsDomainPage"));
 const UnassignedAssets = lazy(() => import("@/pages/UnassignedAssets"));

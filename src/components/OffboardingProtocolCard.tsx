@@ -3,7 +3,7 @@ import { UserMinus, ShieldOff, Package, Calendar, CheckCircle2, Download, Loader
 import { Button } from "@/components/ui/button";
 import { useCompany } from "@/hooks/useCompany";
 import { useToast } from "@/hooks/use-toast";
-import { buildOffboardingProtocolPdf } from "@/lib/pdf/buildOffboardingProtocolPdf";
+import { buildOffboardingProtocolPdf } from "@/lib/pdf/lazy";
 import { useEmployeeResourceHistory } from "@/hooks/useEmployeeResourceHistory";
 
 interface Props {
