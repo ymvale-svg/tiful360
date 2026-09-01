@@ -766,7 +766,12 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
                     disabled={busy}
                     onClick={mode === "remote_sign" ? handleSendRemote : handleSignNow}
                   >
-                    {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : mode === "remote_sign" ? "שלח לחתימה" : "סיים ושמור"}
+                    {busy ? (
+                      videoProgress !== null
+                        ? <span className="text-xs">מכווץ סרטון… {Math.round(videoProgress * 100)}%</span>
+                        : <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : mode === "remote_sign" ? "שלח לחתימה" : "סיים ושמור"}
+
                   </Button>
                 </div>
               </div>
