@@ -15,6 +15,16 @@ interface PunchPayload {
   raw?: unknown;
 }
 
+/** Constant-time compare so a shared secret can't be recovered byte by byte. */
+function tokenMatches(given: string, expected: string): boolean {
+  const a = new TextEncoder().encode(given);
+  const b = new TextEncoder().encode(expected);
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+  return diff === 0;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -26,7 +36,7 @@ Deno.serve(async (req) => {
 
     const auth = req.headers.get("authorization") ?? "";
     const token = auth.replace(/^Bearer\s+/i, "").trim();
-    if (!token || token !== expectedToken) {
+    if (!token || !tokenMatches(token, expectedToken)) {
       return json({ error: "unauthorized" }, 401);
     }
 

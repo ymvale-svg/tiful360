@@ -201,7 +201,9 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
       .from("handover-forms")
       .upload(path, file, { contentType: contentType ?? (file as File).type, upsert: true });
     if (error) throw error;
-    return supabase.storage.from("handover-forms").getPublicUrl(path).data.publicUrl;
+    // Store the object path. The bucket is private, so a URL captured here
+    // would be a permanent unauthenticated link; readers sign on demand.
+    return path;
   };
 
   const uploadMedia = async (): Promise<ProtocolMedia[]> => {

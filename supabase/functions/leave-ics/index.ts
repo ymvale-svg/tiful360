@@ -10,14 +10,6 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const TYPE_LABELS: Record<string, string> = {
-  vacation: "חופשה",
-  sick: "מחלה",
-  reserve: "מילואים",
-  personal: "יום אישי",
-  other: "היעדרות",
-};
-
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Format a date as YYYYMMDD using UTC parts (date strings parse as UTC midnight). */
@@ -61,14 +53,16 @@ Deno.serve(async (req) => {
       .eq("id", request.employee_id)
       .maybeSingle();
 
-    const typeLabel = TYPE_LABELS[request.request_type] ?? "היעדרות";
     // Open-ended reports (sick without an end date) become a single-day event.
     const start = new Date(`${request.start_date}T00:00:00Z`);
     const endEx = new Date(`${request.end_date ?? request.start_date}T00:00:00Z`);
     endEx.setUTCDate(endEx.getUTCDate() + 1);
 
-    const title = `${employee?.full_name ?? "עובד"} — ${typeLabel}`;
-    const description = `${typeLabel}${employee?.department ? ` · ${employee.department}` : ""}`;
+    // Anyone holding the link can read this and the link never expires, so the
+    // event stays generic. request_type would reveal sick leave or reserve duty
+    // — health and military-service data — to whoever the link reached.
+    const title = `${employee?.full_name ?? "עובד"} — היעדרות`;
+    const description = employee?.department ? `היעדרות · ${employee.department}` : "היעדרות";
     const stamp = new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
     // Bump SEQUENCE on every update so calendars replace the existing event
     // (same UID) instead of creating a duplicate — e.g. when a sick report is closed.

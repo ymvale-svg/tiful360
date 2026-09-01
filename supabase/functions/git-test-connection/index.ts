@@ -1,4 +1,5 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const USERNAME = Deno.env.get('GIT_API_USERNAME') ?? '';
 const PASSWORD = Deno.env.get('GIT_API_PASSWORD') ?? '';
@@ -31,13 +32,16 @@ async function tryRequest(url: string, method: string, authMode: 'basic' | 'none
     });
     const ct = res.headers.get('content-type') ?? '';
     const text = await res.text();
+    // Shape only — never the upstream body. Enough to tell "correct base URL,
+    // wrong credentials" from "hit the HTML portal instead of the API".
+    const shape = ct.includes('json') ? 'json' : ct.includes('html') ? 'html' : 'other';
     return {
       url,
       method,
       auth: authMode,
       status: res.status,
       contentType: ct,
-      bodyPreview: text.slice(0, 400),
+      bodyPreview: `${shape}, ${text.length} bytes`,
       ok: res.ok,
     };
   } catch (e) {
@@ -52,6 +56,38 @@ async function tryRequest(url: string, method: string, authMode: 'basic' | 'none
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+
+  // Diagnostic endpoint: it probes an internal API with the organisation's
+  // Basic credentials and reports what came back. Any authenticated user used
+  // to reach it, which made it a credential-disclosing proxy for every
+  // employee. Restricted to super_admin, and it no longer echoes the
+  // username or upstream response bodies.
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+  const authClient = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_ANON_KEY')!,
+    { global: { headers: { Authorization: authHeader } } },
+  );
+  const { data: { user } } = await authClient.auth.getUser();
+  if (!user) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+  const { data: roleRows } = await createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+  ).from('user_roles').select('role').eq('user_id', user.id);
+  if (!(roleRows ?? []).some((r: { role: string }) => r.role === 'super_admin')) {
+    return new Response(JSON.stringify({ error: 'Forbidden' }), {
+      status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
 
   if (!USERNAME || !PASSWORD) {
     return new Response(JSON.stringify({ error: 'Missing GIT_API_USERNAME / GIT_API_PASSWORD' }), {
@@ -93,7 +129,6 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({
           success: true,
           working_endpoint: { base, path, full_url: url },
-          response_sample: r.bodyPreview,
           all_attempts: attempts,
         }, null, 2), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -107,7 +142,6 @@ Deno.serve(async (req) => {
     message: 'No working endpoint found. Review attempts to identify correct base URL.',
     note: 'A 401 with JSON content-type usually means base URL is correct but auth/credentials are wrong. 404 means wrong path. HTML response means hitting the web portal, not the API.',
     base_url_provided: BASE_URL_RAW,
-    username: USERNAME,
     attempts,
   }, null, 2), {
     status: 200,

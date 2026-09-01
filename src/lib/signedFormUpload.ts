@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 /**
  * For unauthenticated signing flows: requests a short-lived signed upload URL
  * from the edge function (which validates the sign_token), then uploads the file.
- * Returns the public URL of the uploaded object.
+ * Returns the storage object path; read it back with `getHandoverSignedUrl`.
  */
 export async function uploadViaSignedToken(params: {
   sign_token: string;
@@ -34,5 +34,5 @@ export async function uploadViaSignedToken(params: {
       upsert: true,
     });
   if (upErr) throw upErr;
-  return data.public_url as string;
+  return data.path as string;
 }

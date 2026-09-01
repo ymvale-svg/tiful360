@@ -23,6 +23,13 @@ dist-ssr
 *.sln
 *.sw?
 
+# Local env overrides. The tracked .env holds only VITE_* values, which ship to
+# the browser anyway and which the Vercel build reads at build time — do not put
+# a real secret in it. Anything private belongs in the hosting provider's env
+# settings, never in a file here.
+.env.local
+.env.*.local
+
 agent-py/.env
 agent-py/state.json
 agent-py/logs/

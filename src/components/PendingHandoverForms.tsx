@@ -78,8 +78,8 @@ export function PendingHandoverForms({ employeeId }: Props) {
         .from("handover-forms")
         .upload(pdfPath, blob, { contentType: "application/pdf", upsert: true });
       if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from("handover-forms").getPublicUrl(pdfPath);
-      const pdfUrl = pub.publicUrl;
+      // Private bucket: persist the path, not a public URL.
+      const pdfUrl = pdfPath;
 
       const { error } = await supabase
         .from("asset_handover_forms")
