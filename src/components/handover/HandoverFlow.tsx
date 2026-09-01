@@ -484,6 +484,7 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
       qc.invalidateQueries({ queryKey: ["activity-log"] });
       qc.invalidateQueries({ queryKey: ["handover-forms"] });
       qc.invalidateQueries({ queryKey: ["pending-handover"] });
+      if (draftKey) await deleteHandoverDraft(draftKey);
       onAssigned?.();
       close();
     } catch (e: any) {
@@ -510,6 +511,7 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
       qc.invalidateQueries({ queryKey: ["activity-log"] });
       qc.invalidateQueries({ queryKey: ["handover-forms"] });
       qc.invalidateQueries({ queryKey: ["pending-handover"] });
+      if (draftKey) await deleteHandoverDraft(draftKey);
       onAssigned?.();
       close();
     } catch (e: any) {
