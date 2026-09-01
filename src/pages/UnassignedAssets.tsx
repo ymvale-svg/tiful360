@@ -30,7 +30,6 @@ export default function UnassignedAssets() {
   const { data: groups } = useAssetGroups();
 
   const [q, setQ] = usePersistentFilter<string>("unassigned:q", "");
-  const [domain, setDomain] = usePersistentFilter<"all" | DomainKey>("unassigned:domain", "all");
   const [categoryId, setCategoryId] = usePersistentFilter<string>("unassigned:cat", "all");
   const [groupId, setGroupId] = usePersistentFilter<string>("unassigned:group", "all");
   const [status, setStatus] = usePersistentFilter<string>("unassigned:status", "all");
