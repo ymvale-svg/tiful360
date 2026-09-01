@@ -11,7 +11,7 @@ import { useAssets, useAssetCategories } from "@/hooks/useData";
 import { useAssetGroups } from "@/hooks/useAssetGroups";
 import { HandoverFlow } from "@/components/handover/HandoverFlow";
 import { MultiHandoverFlow } from "@/components/handover/MultiHandoverFlow";
-import { DOMAIN_META, getDomain, domainKeyToSlug, type DomainKey } from "@/lib/assetDomains";
+import { DOMAIN_META, DOMAIN_ORDER, getDomain, domainKeyToSlug, type DomainKey } from "@/lib/assetDomains";
 import { cn } from "@/lib/utils";
 import { usePersistentFilter } from "@/hooks/usePersistentFilter";
 import { useToast } from "@/hooks/use-toast";
