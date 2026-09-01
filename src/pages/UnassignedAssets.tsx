@@ -61,6 +61,9 @@ export default function UnassignedAssets() {
       if (a.current_owner_id) return false;
       const cat = catById.get(a.category_id);
       if (cat?.is_assignable === false) return false;
+      // Only physical equipment is stock-managed; other domains (digital, training,
+      // insurance, real-estate…) aren't inventory and are handled from the item itself.
+      if (getDomain(cat) !== "physical") return false;
       if (domain !== "all" && getDomain(cat) !== domain) return false;
       if (categoryId !== "all" && a.category_id !== categoryId) return false;
       if (groupId !== "all" && a.group_id !== groupId) return false;
