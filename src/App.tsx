@@ -41,6 +41,8 @@ const Tax101TokenPage = lazy(() => import("@/pages/Tax101TokenPage"));
 const Announcements = lazy(() => import("@/pages/Announcements"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
+import { ThemeProvider } from "next-themes";
+
 const queryClient = new QueryClient();
 
 const PageLoader = () => (
@@ -51,6 +53,9 @@ const PageLoader = () => (
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
+    {/* attribute="class" matches darkMode: ["class"] in tailwind.config.ts.
+        Defaults to the OS preference; the header switch overrides and stores it. */}
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
     <TooltipProvider>
       <Toaster />
       <Sonner />
@@ -102,6 +107,7 @@ const App = () => (
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 

@@ -3,6 +3,7 @@ import { Outlet, useNavigate, useLocation, useSearchParams } from "react-router-
 import { AppSidebar } from "./AppSidebar";
 import { CompanySelector } from "./CompanySelector";
 import { Bell, Search, LogOut, Menu, UserRound } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useData";
 import { hasDualAccess } from "@/lib/dualAccess";
@@ -97,6 +98,7 @@ export function AppLayout() {
                 <span className="hidden sm:inline">פורטל עובדים</span>
               </button>
             )}
+            <ThemeToggle />
             <button
               type="button"
               className="relative p-2 rounded-lg hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
