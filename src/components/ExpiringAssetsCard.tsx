@@ -31,10 +31,17 @@ export function ExpiringAssetsCard({ domains, title }: ExpiringAssetsCardProps =
     ? allItems.filter((i) => domains.includes(i.domain))
     : allItems;
 
+  // get_expiring_assets filters on `expiry_date - CURRENT_DATE <= _days_ahead`
+  // with no lower bound, so the list mixes items lapsing in the next 14 days
+  // with items that lapsed long ago. Both belong here — an expired insurance is
+  // the most urgent thing on the page — but the heading has to admit it.
+  const overdue = items.filter((i) => i.days_left <= 0);
+  const upcoming = items.filter((i) => i.days_left > 0);
+
   const heading = title
     ?? (domains && domains.length === 1
-      ? `${DOMAIN_LABELS[domains[0]]} לחידוש (14 יום)`
-      : "תוקפים מתקרבים (14 יום)");
+      ? `${DOMAIN_LABELS[domains[0]]} לחידוש`
+      : "תוקפים לטיפול");
 
   return (
     <div className="bg-card rounded-xl border border-border/50 shadow-card">
@@ -44,17 +51,24 @@ export function ExpiringAssetsCard({ domains, title }: ExpiringAssetsCardProps =
           {heading}
         </h2>
 
-        {items.length > 0 && (
-          <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-md">
-            {items.length}
-          </span>
-        )}
+        <div className="flex items-center gap-1.5">
+          {overdue.length > 0 && (
+            <span className="text-xs bg-destructive/10 text-destructive px-2 py-0.5 rounded-md">
+              {overdue.length} פג תוקף
+            </span>
+          )}
+          {upcoming.length > 0 && (
+            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-md">
+              {upcoming.length} תוך 14 יום
+            </span>
+          )}
+        </div>
       </div>
       <div className="divide-y divide-border/50 max-h-96 overflow-y-auto">
         {isLoading ? (
           <div className="p-6 text-center text-sm text-muted-foreground">טוען...</div>
         ) : items.length === 0 ? (
-          <div className="p-6 text-center text-sm text-muted-foreground">אין תוקפים מתקרבים 🎉</div>
+          <div className="p-6 text-center text-sm text-muted-foreground">אין תוקפים לטיפול 🎉</div>
         ) : (
           items.map((item) => {
             const urgency = expiryUrgency(item.days_left);
