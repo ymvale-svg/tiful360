@@ -129,7 +129,7 @@ export default function UnassignedAssets() {
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div className="page-header">
           <h1 className="page-title">בצע מסירה</h1>
-          <p className="page-subtitle">כל הפריטים שאינם משויכים לעובדים — סינון, מיון ומסירה מהירה</p>
+          <p className="page-subtitle">ציוד פיזי במלאי שטרם שויך לעובד — סינון, מיון ומסירה מהירה</p>
         </div>
         <Button variant="outline" size="sm" className="gap-1.5" onClick={() => navigate("/assets")}>
           <ArrowRight className="w-4 h-4" />
@@ -149,16 +149,6 @@ export default function UnassignedAssets() {
             aria-label="חיפוש פריטים"
           />
         </div>
-
-        <Select value={domain} onValueChange={(v) => { setDomain(v as any); setCategoryId("all"); setGroupId("all"); }}>
-          <SelectTrigger className="w-[170px]"><SelectValue placeholder="דומיין" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">כל הדומיינים</SelectItem>
-            {DOMAIN_ORDER.map((d) => (
-              <SelectItem key={d} value={d}>{DOMAIN_META[d].title}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
 
         <Select value={categoryId} onValueChange={(v) => { setCategoryId(v); setGroupId("all"); }}>
           <SelectTrigger className="w-[180px]"><SelectValue placeholder="קטגוריה" /></SelectTrigger>
