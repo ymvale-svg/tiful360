@@ -566,7 +566,34 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
           </div>
         ) : (
           <>
+            {foundDraft && (
+              <div className="rounded-lg border border-primary/40 bg-primary/5 p-3 space-y-2">
+                <p className="text-sm">
+                  נמצאה טיוטה שמורה מ־{formatDraftTime(foundDraft.savedAt)}. לשחזר ולהמשיך מהמקום שבו הפסקת?
+                </p>
+                <div className="flex gap-2">
+                  <Button size="sm" className="gap-1.5" onClick={restoreDraft}>
+                    <RotateCcw className="w-4 h-4" /> שחזר טיוטה
+                  </Button>
+                  <Button size="sm" variant="outline" className="gap-1.5" onClick={discardDraft}>
+                    <Trash2 className="w-4 h-4" /> מחק טיוטה
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <StepBar step={step} />
+
+            <div className="flex items-center justify-between gap-2 -mt-1">
+              <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={handleSaveDraft}>
+                <Save className="w-4 h-4" /> שמור כטיוטה
+              </Button>
+              {draftSavedAt && (
+                <span className="text-[11px] text-muted-foreground">נשמר {formatDraftTime(draftSavedAt)}</span>
+              )}
+            </div>
+
+
 
             {step === "details" && (
               <div className="space-y-4">
