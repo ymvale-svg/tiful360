@@ -1,17 +1,20 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, FileSignature, Search, Package } from "lucide-react";
+import { ArrowRight, FileSignature, Search, Package, Layers, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useAssets, useAssetCategories } from "@/hooks/useData";
 import { useAssetGroups } from "@/hooks/useAssetGroups";
 import { HandoverFlow } from "@/components/handover/HandoverFlow";
+import { MultiHandoverFlow } from "@/components/handover/MultiHandoverFlow";
 import { DOMAIN_META, DOMAIN_ORDER, getDomain, domainKeyToSlug, type DomainKey } from "@/lib/assetDomains";
 import { cn } from "@/lib/utils";
 import { usePersistentFilter } from "@/hooks/usePersistentFilter";
+import { useToast } from "@/hooks/use-toast";
 
 const statusLabels: Record<string, string> = {
   in_use: "בשימוש", in_stock: "במלאי", in_repair: "בתיקון", lost: "אבד",
@@ -21,6 +24,7 @@ type SortKey = "name" | "code" | "category" | "created_desc" | "created_asc";
 
 export default function UnassignedAssets() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { data: assets, isLoading } = useAssets();
   const { data: categories } = useAssetCategories();
   const { data: groups } = useAssetGroups();
@@ -32,6 +36,8 @@ export default function UnassignedAssets() {
   const [status, setStatus] = usePersistentFilter<string>("unassigned:status", "all");
   const [sort, setSort] = usePersistentFilter<SortKey>("unassigned:sort", "created_desc");
   const [handoverAsset, setHandoverAsset] = useState<any | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [multiOpen, setMultiOpen] = useState(false);
 
   const catById = useMemo(() => {
     const m = new Map<string, any>();
