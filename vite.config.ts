@@ -30,7 +30,9 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       react(),
+      mcpPlugin(),
       mode === "development" && componentTagger(),
+
       VitePWA({
         // The manifest is hand-maintained in public/manifest.webmanifest and
         // already linked from index.html — the plugin only adds the worker.
