@@ -24,6 +24,7 @@ import { buildPlaceholderValues } from "@/lib/handoverFields";
 import { buildProtocolPdf } from "@/lib/pdf/buildProtocolPdf";
 import type { ProtocolMedia } from "@/lib/pdf/types";
 import { uploadProtocolFile, compressImage, describeUploadError } from "@/lib/protocolUpload";
+import { getDomain, type DomainKey } from "@/lib/assetDomains";
 
 export interface MultiAssetLike {
   id: string;
@@ -33,9 +34,15 @@ export interface MultiAssetLike {
   category_id?: string | null;
   group_id?: string | null;
   company_id?: string | null;
+  account_username?: string | null;
+  account_url?: string | null;
+  license_expires_at?: string | null;
+  password_expires_at?: string | null;
+  custom_fields?: any;
   asset_categories?: {
     category_name?: string | null;
     protocol_type?: string | null;
+    domain?: string | null;
   } | null;
 }
 
@@ -50,10 +57,31 @@ interface Props {
 type Step = "details" | "media" | "sign";
 type Mode = "on_site" | "remote_sign" | "manual_upload";
 
-const QUICK_TEXTS = [
+const PHYSICAL_QUICK_TEXTS = [
   "הפריטים נמסרו תקינים ובמצב עבודה מלא",
   "הציוד נמסר עם כל האביזרים הנלווים",
 ];
+
+const NON_PHYSICAL_QUICK_TEXTS: Partial<Record<DomainKey, string[]>> = {
+  digital: [
+    "הגישה נמסרה והמשתמש התבקש להחליף סיסמה בכניסה ראשונה",
+    "המשתמש מאשר שימוש בהתאם למדיניות אבטחת המידע של החברה",
+    "אין להעביר את פרטי הגישה לגורם אחר",
+  ],
+  licenses: [
+    "הרישיון הוקצה לשימוש אישי בלבד",
+    "המשתמש מאשר שימוש בהתאם לתנאי הרישיון של הספק",
+  ],
+};
+
+/** Domain-specific wording for the dialog / protocol. */
+const DOMAIN_COPY: Partial<Record<DomainKey, { dialogTitle: string; pdfTitle: string; itemsLabel: string }>> = {
+  digital: { dialogTitle: "מסירת גישות דיגיטליות", pdfTitle: "פרוטוקול הענקת גישה", itemsLabel: "הגישות בפרוטוקול" },
+  licenses: { dialogTitle: "מסירת רישיונות", pdfTitle: "פרוטוקול הקצאת רישיון", itemsLabel: "הרישיונות בפרוטוקול" },
+  training: { dialogTitle: "רישום הדרכות", pdfTitle: "פרוטוקול הדרכה", itemsLabel: "ההדרכות בפרוטוקול" },
+  insurance: { dialogTitle: "מסירת פוליסות", pdfTitle: "פרוטוקול מסירת פוליסה", itemsLabel: "הפוליסות בפרוטוקול" },
+  real_estate: { dialogTitle: "מסירת נכסים", pdfTitle: "פרוטוקול מסירת נכס", itemsLabel: "הנכסים בפרוטוקול" },
+};
 
 export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Props) {
   const { data: employees } = useEmployees();
@@ -91,6 +119,10 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
 
   const firstAsset = assets[0] ?? null;
   const categoryName = firstAsset?.asset_categories?.category_name ?? "";
+  const domain: DomainKey = getDomain(firstAsset?.asset_categories as any);
+  const isPhysical = domain === "physical";
+  const copy = DOMAIN_COPY[domain];
+  const quickTexts = isPhysical ? PHYSICAL_QUICK_TEXTS : (NON_PHYSICAL_QUICK_TEXTS[domain] ?? []);
 
   // Template resolution from the first item's category / sub-category
   const { data: templates = [] } = useProtocolTemplates(activeCompanyId);
@@ -114,14 +146,29 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
     const rows: { key: string; label: string; value: string }[] = [];
     assets.forEach((a, i) => {
       const prefix = assets.length > 1 ? `פריט ${i + 1} — ` : "";
-      rows.push({ key: `item_${i}_name`, label: `${prefix}שם פריט`, value: a.asset_name ?? "" });
+      rows.push({
+        key: `item_${i}_name`,
+        label: `${prefix}${isPhysical ? "שם פריט" : domain === "digital" ? "מערכת / שירות" : "שם"}`,
+        value: a.asset_name ?? "",
+      });
       if (a.asset_code) rows.push({ key: `item_${i}_code`, label: `${prefix}מזהה`, value: a.asset_code });
-      if (a.serial_number) rows.push({ key: `item_${i}_serial`, label: `${prefix}מס׳ סידורי`, value: a.serial_number });
+      if (isPhysical && a.serial_number)
+        rows.push({ key: `item_${i}_serial`, label: `${prefix}מס׳ סידורי`, value: a.serial_number });
       if (a.asset_categories?.category_name)
         rows.push({ key: `item_${i}_cat`, label: `${prefix}קטגוריה`, value: a.asset_categories.category_name });
+      if (domain === "digital") {
+        if (a.account_username) rows.push({ key: `item_${i}_user`, label: `${prefix}שם משתמש`, value: a.account_username });
+        if (a.account_url) rows.push({ key: `item_${i}_url`, label: `${prefix}כתובת המערכת`, value: a.account_url });
+        const perm = (a.custom_fields as any)?.["רמת הרשאה"] ?? (a.custom_fields as any)?.permission_level;
+        if (perm) rows.push({ key: `item_${i}_perm`, label: `${prefix}רמת הרשאה`, value: String(perm) });
+        if (a.password_expires_at)
+          rows.push({ key: `item_${i}_pwd`, label: `${prefix}תוקף סיסמה`, value: a.password_expires_at });
+      }
+      if ((domain === "digital" || domain === "licenses") && a.license_expires_at)
+        rows.push({ key: `item_${i}_lic`, label: `${prefix}תוקף רישיון`, value: a.license_expires_at });
     });
     return rows.filter((f) => f.value.trim() !== "");
-  }, [assets]);
+  }, [assets, domain, isPhysical]);
 
   const renderedBody = useMemo(() => {
     if (!template || !firstAsset) return null;
@@ -161,7 +208,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
   const buildPdf = async (media: ProtocolMedia[], employeeSig: string | null, issuerSig: string | null) =>
     buildProtocolPdf({
       direction: "handover",
-      title: template?.display_name ?? `פרוטוקול משיכה — ${assets.length} פריטים`,
+      title: template?.display_name ?? `${copy?.pdfTitle ?? "פרוטוקול משיכה"} — ${assets.length} פריטים`,
       companyName: activeCompany?.name ?? "",
       companyLogoUrl: activeCompany?.logo_url ?? null,
       employeeName: employee?.full_name ?? "",
@@ -375,7 +422,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
             <FileSignature className="w-5 h-5 text-primary" />
-            מסירה מרובה — {assets.length} פריטים
+            {copy?.dialogTitle ?? "מסירה מרובה"} — {assets.length} פריטים
           </DialogTitle>
           <DialogDescription className="text-xs sm:text-sm">
             פרוטוקול אחד חתום עבור כל הפריטים
@@ -383,7 +430,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
           </DialogDescription>
         </DialogHeader>
 
-        <StepBar step={step} />
+        <StepBar step={step} withMedia={isPhysical} />
 
         {step === "details" && (
           <div className="space-y-4">
@@ -400,15 +447,18 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
             </div>
 
             <div>
-              <Label className="text-sm mb-2 block">הפריטים בפרוטוקול</Label>
+              <Label className="text-sm mb-2 block">{copy?.itemsLabel ?? "הפריטים בפרוטוקול"}</Label>
               <div className="space-y-1.5 max-h-56 overflow-y-auto rounded-lg border p-2">
                 {assets.map((a, i) => (
                   <div key={a.id} className="flex items-center gap-2 py-1 px-1 text-sm">
                     <Package className="w-4 h-4 text-muted-foreground shrink-0" />
                     <span className="font-medium">{i + 1}. {a.asset_name}</span>
                     <span className="text-muted-foreground font-mono text-xs">{a.asset_code}</span>
-                    {a.serial_number && (
+                    {isPhysical && a.serial_number && (
                       <span className="text-muted-foreground text-xs">סידורי: {a.serial_number}</span>
+                    )}
+                    {domain === "digital" && a.account_username && (
+                      <span className="text-muted-foreground text-xs" dir="ltr">{a.account_username}</span>
                     )}
                   </div>
                 ))}
@@ -419,7 +469,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
               <Label className="text-sm mb-1.5 block">הערות</Label>
               <Textarea value={freeText} onChange={(e) => setFreeText(e.target.value)} rows={3} dir="rtl" />
               <div className="flex flex-wrap gap-1.5 mt-2">
-                {QUICK_TEXTS.map((t) => (
+                {quickTexts.map((t) => (
                   <button
                     key={t}
                     type="button"
@@ -434,14 +484,14 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
 
             <div className="flex gap-2 pt-1">
               <Button variant="outline" className="flex-1" onClick={close}>ביטול</Button>
-              <Button className="flex-1 gap-1" disabled={!employeeId} onClick={() => setStep("media")}>
+              <Button className="flex-1 gap-1" disabled={!employeeId} onClick={() => setStep(isPhysical ? "media" : "sign")}>
                 המשך <ChevronLeft className="w-4 h-4" />
               </Button>
             </div>
           </div>
         )}
 
-        {step === "media" && (
+        {isPhysical && step === "media" && (
           <div className="space-y-4">
             <div className="space-y-2">
               <FilePickerButton
@@ -502,7 +552,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
             </Button>
 
             {mode !== "manual_upload" && (
-              <SignaturePad ref={issuerSigRef} label="חתימת נציג התפעול" height={140} />
+              <SignaturePad ref={issuerSigRef} label={isPhysical ? "חתימת נציג התפעול" : "חתימת נותן הגישה"} height={140} />
             )}
             {mode === "on_site" && (
               <SignaturePad ref={receiverSigRef} label="חתימת העובד המקבל" height={140} />
@@ -517,7 +567,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
             )}
 
             <div className="flex gap-2 pt-1">
-              <Button variant="outline" className="flex-1 gap-1" onClick={() => setStep("media")}>
+              <Button variant="outline" className="flex-1 gap-1" onClick={() => setStep(isPhysical ? "media" : "details")}>
                 <ChevronRight className="w-4 h-4" /> חזרה
               </Button>
               <Button
@@ -535,10 +585,10 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
   );
 }
 
-function StepBar({ step }: { step: Step }) {
+function StepBar({ step, withMedia = true }: { step: Step; withMedia?: boolean }) {
   const steps: { key: Step; label: string }[] = [
     { key: "details", label: "פרטים" },
-    { key: "media", label: "תיעוד" },
+    ...(withMedia ? [{ key: "media" as Step, label: "תיעוד" }] : []),
     { key: "sign", label: "חתימות" },
   ];
   const idx = steps.findIndex((s) => s.key === step);
