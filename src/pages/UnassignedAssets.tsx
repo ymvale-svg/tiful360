@@ -46,9 +46,11 @@ export default function UnassignedAssets() {
   }, [categories]);
 
   const visibleCategories = useMemo(() => {
-    const list = ((categories ?? []) as any[]).filter((c) => c.is_assignable !== false);
-    return domain === "all" ? list : list.filter((c) => getDomain(c) === domain);
-  }, [categories, domain]);
+    // Physical domain only — this screen manages stock equipment.
+    return ((categories ?? []) as any[]).filter(
+      (c) => c.is_assignable !== false && getDomain(c) === "physical",
+    );
+  }, [categories]);
 
   const visibleGroups = useMemo(
     () => ((groups ?? []) as any[]).filter((g) => categoryId === "all" || g.category_id === categoryId),
