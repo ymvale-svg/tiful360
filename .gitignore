@@ -34,3 +34,12 @@ agent-py/.env
 agent-py/state.json
 agent-py/logs/
 agent-py/__pycache__/
+
+# Android TWA build output. The keystore must never reach the repo — losing it
+# means no further app updates, and committing it lets anyone sign as this app.
+android.keystore
+*.keystore
+*.jks
+/twa/
+app-release-signed.apk
+app-release-bundle.aab

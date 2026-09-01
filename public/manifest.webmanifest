@@ -1,17 +1,19 @@
 {
-  "name": "אשל שלי",
-  "short_name": "אשל שלי",
-  "description": "פורטל אשל שלי - נוכחות, חופשות, תלושי שכר ועוד",
-  "start_url": "/portal?source=pwa",
+  "name": "תפעול 360",
+  "short_name": "תפעול 360",
+  "description": "תפעול 360 — נוכחות, חופשות, תלושי שכר, נכסים וניהול",
+  "start_url": "/select-experience?source=pwa",
   "scope": "/",
   "id": "/portal",
   "display": "standalone",
-  "orientation": "portrait",
   "background_color": "#ffffff",
   "theme_color": "#1e40af",
   "lang": "he",
   "dir": "rtl",
-  "categories": ["business", "productivity"],
+  "categories": [
+    "business",
+    "productivity"
+  ],
   "icons": [
     {
       "src": "/icon-192.png",
@@ -37,13 +39,23 @@
       "name": "החתמת נוכחות",
       "short_name": "נוכחות",
       "url": "/portal?tab=attendance",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "בקשת חופשה",
       "short_name": "חופשה",
       "url": "/portal?tab=leave",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }
