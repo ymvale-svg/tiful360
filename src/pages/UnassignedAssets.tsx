@@ -127,7 +127,7 @@ export default function UnassignedAssets() {
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div className="page-header">
           <h1 className="page-title">בצע מסירה</h1>
-          <p className="page-subtitle">ציוד פיזי במלאי שטרם שויך לעובד — סינון, מיון ומסירה מהירה</p>
+          <p className="page-subtitle">פריטים שטרם שויכו לעובד — בחירת דומיין, סינון, מיון ומסירה מרובה</p>
         </div>
         <Button variant="outline" size="sm" className="gap-1.5" onClick={() => navigate("/assets")}>
           <ArrowRight className="w-4 h-4" />
