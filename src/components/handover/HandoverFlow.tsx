@@ -11,8 +11,9 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { SignaturePad, SignaturePadHandle } from "@/components/SignaturePad";
 import {
   FileSignature, Camera, Video, Gauge, Send, PenTool, Upload, X,
-  ChevronLeft, ChevronRight, Loader2, FileDown,
+  ChevronLeft, ChevronRight, Loader2, FileDown, Save, RotateCcw, Trash2,
 } from "lucide-react";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useEmployees } from "@/hooks/useData";
 import { useCompany } from "@/hooks/useCompany";
@@ -28,6 +29,12 @@ import {
 import { buildProtocolPdf } from "@/lib/pdf/buildProtocolPdf";
 import type { ProtocolDirection, ProtocolMedia } from "@/lib/pdf/types";
 import { uploadProtocolFile, compressImage, describeUploadError } from "@/lib/protocolUpload";
+import { compressVideo, VIDEO_TARGET_BYTES } from "@/lib/videoCompress";
+import {
+  saveHandoverDraft, loadHandoverDraft, deleteHandoverDraft, draftKeyForAsset, formatDraftTime,
+  type HandoverDraft,
+} from "@/lib/handoverDraft";
+
 
 interface AssetLike extends HandoverAssetLike {
   id: string;
@@ -105,6 +112,10 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
   const [attachment, setAttachment] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [videoProgress, setVideoProgress] = useState<number | null>(null);
+  const [foundDraft, setFoundDraft] = useState<HandoverDraft | null>(null);
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+
 
   const issuerSigRef = useRef<SignaturePadHandle>(null);
   const receiverSigRef = useRef<SignaturePadHandle>(null);
@@ -164,8 +175,62 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
         : null) ??
       DEFAULT_FIELD_KEYS;
     setSelectedKeys(candidateFields.filter((f) => defaults.includes(f.key)).map((f) => f.key));
+    setVideoProgress(null);
+    setDraftSavedAt(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, asset?.id, template?.id, fullAsset]);
+
+  // ---- Draft (save mid-process / resume) ----
+  const draftKey = asset?.id ? draftKeyForAsset(asset.id, direction) : null;
+
+  useEffect(() => {
+    if (!open || !draftKey) { setFoundDraft(null); return; }
+    let cancelled = false;
+    (async () => {
+      const d = await loadHandoverDraft(draftKey);
+      if (!cancelled) setFoundDraft(d);
+    })();
+    return () => { cancelled = true; };
+  }, [open, draftKey]);
+
+  const handleSaveDraft = async () => {
+    if (!draftKey) return;
+    await saveHandoverDraft({
+      key: draftKey,
+      savedAt: new Date().toISOString(),
+      label: `${asset?.asset_name ?? ""} ${asset?.asset_code ? `(${asset.asset_code})` : ""}`.trim(),
+      state: { step, mode, employeeId, selectedKeys, freeText, odometer },
+      photos,
+      video: videoFile,
+      odometerPhoto,
+    });
+    setDraftSavedAt(new Date().toISOString());
+    setFoundDraft(null);
+    toast({ title: "הטיוטה נשמרה", description: "אפשר להמשיך את המסירה מאוחר יותר מאותו פריט" });
+  };
+
+  const restoreDraft = () => {
+    if (!foundDraft) return;
+    const s = foundDraft.state ?? {};
+    setStep((s.step as Step) ?? "details");
+    setMode((s.mode as Mode) ?? "on_site");
+    if (s.employeeId) setEmployeeId(s.employeeId);
+    if (Array.isArray(s.selectedKeys)) setSelectedKeys(s.selectedKeys);
+    setFreeText(s.freeText ?? "");
+    setOdometer(s.odometer ?? "");
+    setPhotos(foundDraft.photos ?? []);
+    setVideoFile(foundDraft.video ?? null);
+    setOdometerPhoto(foundDraft.odometerPhoto ?? null);
+    setFoundDraft(null);
+    toast({ title: "הטיוטה שוחזרה" });
+  };
+
+  const discardDraft = async () => {
+    if (draftKey) await deleteHandoverDraft(draftKey);
+    setFoundDraft(null);
+  };
+
+
 
 
   const toggleKey = (key: string) =>
@@ -217,8 +282,20 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
       out.push({ url: await uploadImage(p), type: "image", label: null, captured_at: now });
     }
     if (videoFile) {
-      out.push({ url: await uploadFile(videoFile, videoFile.name), type: "video", label: "סרטון מסירה", captured_at: now });
+      setVideoProgress(0);
+      try {
+        const compressed = await compressVideo(videoFile, VIDEO_TARGET_BYTES, (r) => setVideoProgress(r));
+        out.push({
+          url: await uploadFile(compressed.blob, compressed.fileName, compressed.contentType),
+          type: "video",
+          label: "סרטון מסירה",
+          captured_at: now,
+        });
+      } finally {
+        setVideoProgress(null);
+      }
     }
+
     return out;
   };
 
@@ -407,6 +484,7 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
       qc.invalidateQueries({ queryKey: ["activity-log"] });
       qc.invalidateQueries({ queryKey: ["handover-forms"] });
       qc.invalidateQueries({ queryKey: ["pending-handover"] });
+      if (draftKey) await deleteHandoverDraft(draftKey);
       onAssigned?.();
       close();
     } catch (e: any) {
@@ -433,6 +511,7 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
       qc.invalidateQueries({ queryKey: ["activity-log"] });
       qc.invalidateQueries({ queryKey: ["handover-forms"] });
       qc.invalidateQueries({ queryKey: ["pending-handover"] });
+      if (draftKey) await deleteHandoverDraft(draftKey);
       onAssigned?.();
       close();
     } catch (e: any) {
@@ -487,7 +566,34 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
           </div>
         ) : (
           <>
+            {foundDraft && (
+              <div className="rounded-lg border border-primary/40 bg-primary/5 p-3 space-y-2">
+                <p className="text-sm">
+                  נמצאה טיוטה שמורה מ־{formatDraftTime(foundDraft.savedAt)}. לשחזר ולהמשיך מהמקום שבו הפסקת?
+                </p>
+                <div className="flex gap-2">
+                  <Button size="sm" className="gap-1.5" onClick={restoreDraft}>
+                    <RotateCcw className="w-4 h-4" /> שחזר טיוטה
+                  </Button>
+                  <Button size="sm" variant="outline" className="gap-1.5" onClick={discardDraft}>
+                    <Trash2 className="w-4 h-4" /> מחק טיוטה
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <StepBar step={step} />
+
+            <div className="flex items-center justify-between gap-2 -mt-1">
+              <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={handleSaveDraft}>
+                <Save className="w-4 h-4" /> שמור כטיוטה
+              </Button>
+              {draftSavedAt && (
+                <span className="text-[11px] text-muted-foreground">נשמר {formatDraftTime(draftSavedAt)}</span>
+              )}
+            </div>
+
+
 
             {step === "details" && (
               <div className="space-y-4">
@@ -602,7 +708,12 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
                     capture="environment"
                     onFiles={(files) => setVideoFile(files[0] ?? null)}
                   />
+                  <p className="text-[11px] text-muted-foreground">
+                    הסרטון יכווץ אוטומטית לכ‑3 מ"ב לפני השמירה.
+                  </p>
                 </div>
+
+
 
                 <div className="flex gap-2 pt-1">
                   <Button variant="outline" className="flex-1 gap-1" onClick={() => setStep("details")}>
@@ -655,7 +766,12 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
                     disabled={busy}
                     onClick={mode === "remote_sign" ? handleSendRemote : handleSignNow}
                   >
-                    {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : mode === "remote_sign" ? "שלח לחתימה" : "סיים ושמור"}
+                    {busy ? (
+                      videoProgress !== null
+                        ? <span className="text-xs">מכווץ סרטון… {Math.round(videoProgress * 100)}%</span>
+                        : <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : mode === "remote_sign" ? "שלח לחתימה" : "סיים ושמור"}
+
                   </Button>
                 </div>
               </div>
