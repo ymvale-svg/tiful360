@@ -141,20 +141,16 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
 
   const close = () => onOpenChange(false);
 
-  const uploadFile = async (file: Blob, name: string, contentType?: string) => {
-    const path = `${activeCompanyId}/multi/${Date.now()}-${name}`;
-    const { error } = await supabase.storage
-      .from("handover-forms")
-      .upload(path, file, { contentType: contentType ?? (file as File).type, upsert: true });
-    if (error) throw error;
-    return supabase.storage.from("handover-forms").getPublicUrl(path).data.publicUrl;
-  };
+  const uploadFile = async (file: Blob, name: string, contentType?: string) =>
+    uploadProtocolFile("handover-forms", `${activeCompanyId}/multi/${Date.now()}-${name}`, file, contentType, name);
+
+  const uploadImage = async (file: File) => uploadFile(await compressImage(file), file.name, "image/jpeg");
 
   const uploadMedia = async (): Promise<ProtocolMedia[]> => {
     const out: ProtocolMedia[] = [];
     const now = new Date().toISOString();
     for (const p of photos) {
-      out.push({ url: await uploadFile(p, p.name), type: "image", label: null, captured_at: now });
+      out.push({ url: await uploadImage(p), type: "image", label: null, captured_at: now });
     }
     if (videoFile) {
       out.push({ url: await uploadFile(videoFile, videoFile.name), type: "video", label: "סרטון מסירה", captured_at: now });
