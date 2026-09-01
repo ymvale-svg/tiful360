@@ -51,7 +51,7 @@ export function SubEmployersTab() {
         </div>
       </div>
 
-      <div className="bg-card rounded-xl border border-border/50 shadow-card overflow-hidden">
+      <div className="bg-card rounded-xl border border-border/50 shadow-card overflow-auto">
         {isLoading ? (
           <div className="p-8 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" /></div>
         ) : subEmployers.length === 0 ? (

@@ -82,7 +82,7 @@ export function Tax101AdminTab() {
         </div>
       </div>
 
-      <div className="bg-card rounded-xl border border-border/50 shadow-card overflow-hidden">
+      <div className="bg-card rounded-xl border border-border/50 shadow-card overflow-auto">
         <div className="p-3 border-b border-border/50 flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Filter className="w-3.5 h-3.5" />

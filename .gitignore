@@ -43,3 +43,6 @@ android.keystore
 /twa/
 app-release-signed.apk
 app-release-bundle.aab
+
+# Local preview-tool config, not part of the project
+.claude/launch.json
