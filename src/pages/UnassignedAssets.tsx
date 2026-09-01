@@ -91,7 +91,7 @@ export default function UnassignedAssets() {
       }
     });
     return list;
-  }, [assets, catById, q, categoryId, groupId, status, sort]);
+  }, [assets, catById, q, domain, categoryId, groupId, status, sort]);
 
   const openAsset = (a: any) => {
     const slug = domainKeyToSlug(getDomain(catById.get(a.category_id)));
