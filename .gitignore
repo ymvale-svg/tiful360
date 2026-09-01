@@ -23,7 +23,23 @@ dist-ssr
 *.sln
 *.sw?
 
+# Local env overrides. The tracked .env holds only VITE_* values, which ship to
+# the browser anyway and which the Vercel build reads at build time — do not put
+# a real secret in it. Anything private belongs in the hosting provider's env
+# settings, never in a file here.
+.env.local
+.env.*.local
+
 agent-py/.env
 agent-py/state.json
 agent-py/logs/
 agent-py/__pycache__/
+
+# Android TWA build output. The keystore must never reach the repo — losing it
+# means no further app updates, and committing it lets anyone sign as this app.
+android.keystore
+*.keystore
+*.jks
+/twa/
+app-release-signed.apk
+app-release-bundle.aab

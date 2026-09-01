@@ -108,9 +108,21 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary, hideBa
   const emp: any = { ...(employee ?? {}), ...(empFull ?? {}) };
 
   const openPayslip = async (p: any) => {
-    const usingSplit = !!p.pdf_url && p.pdf_url !== p.source_pdf_url;
-    const path = p.pdf_url ?? p.source_pdf_url;
-    if (!path) return;
+    // source_pdf_url is the whole submitted batch — every employee's payslip in
+    // one file. #page=N is only a viewer hint, so falling back to it for an
+    // employee handed them the entire company's payroll. Staff reviewing a batch
+    // may still open it; an employee gets their own split file or nothing.
+    // Storage RLS enforces the same rule server-side.
+    const path = p.pdf_url ?? (isSelf ? null : p.source_pdf_url);
+    if (!path) {
+      toast({
+        title: "התלוש אינו זמין לצפייה",
+        description: "הקובץ האישי טרם הופק. יש לפנות לחשבות השכר להפקה מחדש.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const usingSplit = path === p.pdf_url;
     const url = await getPayslipSignedUrl(path, p.page_indices, !usingSplit);
     if (!url) {
       toast({ title: "שגיאה בהורדת התלוש", variant: "destructive" });

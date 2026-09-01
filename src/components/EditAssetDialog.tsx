@@ -18,6 +18,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { ManufacturerModelInput } from "@/components/assets/ManufacturerModelInput";
+import { openHandoverFile } from "@/lib/handoverUrl";
 
 
 const INSURANCE_TYPES = ["רכב", "דירקטורים", "צד ג׳", "קבלני"];
@@ -441,15 +442,14 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                         </div>
                       </div>
                       {p.document_url && (
-                        <a
-                          href={p.document_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <button
+                          type="button"
+                          onClick={() => void openHandoverFile(p.document_url!)}
                           className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground shrink-0"
                           title="צפה בטופס"
                         >
                           <FileText className="w-4 h-4" />
-                        </a>
+                        </button>
                       )}
                     </li>
                   ))}

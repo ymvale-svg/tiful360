@@ -236,9 +236,10 @@ Deno.serve(async (req) => {
     }
     const effectivePages = Math.max(totalPages, allTexts.length);
 
+    // Counts only — page text is payslip content and these logs are readable
+    // by anyone with project access.
     console.log('split-payslips: totalPages=', totalPages,
-      'extractedTexts=', allTexts.length,
-      'page1 first 300 chars:', (allTexts[0] ?? '').slice(0, 300));
+      'extractedTexts=', allTexts.length);
 
     const fallbackPeriod = { year: period_year, month: period_month };
     const pages: PageInfo[] = [];
@@ -246,7 +247,8 @@ Deno.serve(async (req) => {
       const pageText = allTexts[i] ?? '';
       const fields = extractFields(pageText, fallbackPeriod);
       pages.push({ pageIndex: i, text: pageText, ...fields });
-      console.log(`split-payslips: page ${i} idDetected=${fields.idNumber} period=${fields.month}/${fields.year} firstChars=${pageText.slice(0, 150)}`);
+      // Log whether an ID was found, never the ID itself or the page text.
+      console.log(`split-payslips: page ${i} idDetected=${fields.idNumber ? 'yes' : 'no'} period=${fields.month}/${fields.year}`);
     }
 
     // Group consecutive pages by idNumber
@@ -529,7 +531,11 @@ Deno.serve(async (req) => {
         const normalizedId = group.idNumber;
         const matched = idMap.get(normalizedId);
         const pageIndices = group.pageIndices;
-        const groupPdfPath = groupPdfPaths.get(gi) ?? sourcePath;
+        // Never fall back to sourcePath. That file is the whole submitted
+        // batch — every employee's payslip — and storing it as this row's
+        // pdf_url used to let the employee open all of it from their portal.
+        // null means "no per-employee PDF yet"; payroll can re-run the split.
+        const groupPdfPath = groupPdfPaths.get(gi) ?? null;
         // Use detected period when available, otherwise the form's period.
         const recordYear = group.primary.year ?? period_year;
         const recordMonth = group.primary.month ?? period_month;
@@ -645,7 +651,7 @@ Deno.serve(async (req) => {
             period_month: group.primary?.month ?? period_month,
             source_pdf_url: sourcePath,
             page_indices: group.pageIndices,
-            pdf_url: groupPdfPaths.get(gi) ?? sourcePath,
+            pdf_url: groupPdfPaths.get(gi) ?? null,
             vacation_balance: group.primary?.vacationBalance ?? null,
             sick_balance: group.primary?.sickBalance ?? null,
             gross_salary: group.primary?.grossSalary ?? null,

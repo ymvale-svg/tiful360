@@ -48,6 +48,17 @@ Deno.serve(async (req) => {
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
+    // Roles a non-super-admin may hand out, whichever action they use.
+    // adminClient is a service-role client and bypasses RLS, so this list is
+    // the only thing standing between a caller and any role in app_role —
+    // super_admin included. Every action that writes user_roles must consult it.
+    const ADMIN_ASSIGNABLE_ROLES = new Set([
+      "employee",
+      "operations",
+      "direct_manager",
+      "finance",
+      "legal",
+    ]);
 
     // Helper: get caller's company IDs
     const getCallerCompanyIds = async () => {
@@ -144,15 +155,8 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: "user_id and role required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // Server-side allowlist: non-super-admins may only manage a restricted set of roles.
-      // Admin/payroll/it_manager/super_admin must only be assignable by super_admin.
-      const ADMIN_ASSIGNABLE_ROLES = new Set([
-        "operations",
-        "direct_manager",
-        "finance",
-        "legal",
-        "employee",
-      ]);
+      // Server-side allowlist (shared with the invite action above):
+      // admin/payroll/it_manager/super_admin stay assignable by super_admin only.
       if (!callerIsSuperAdmin && !ADMIN_ASSIGNABLE_ROLES.has(role)) {
         return new Response(
           JSON.stringify({ error: "Only super_admin can assign this role" }),
@@ -188,6 +192,16 @@ Deno.serve(async (req) => {
       const company_id: string | undefined = body.company_id;
       // Ops/IT may only invite plain employees; role escalation stays with admins.
       const default_role: string = canManage ? (body.role || "employee") : "employee";
+
+      // Same allowlist the other actions enforce. Without it, an admin/hr/payroll
+      // caller could invite an address that already has an account — their own —
+      // and have the service-role upsert below grant it super_admin.
+      if (!callerIsSuperAdmin && !ADMIN_ASSIGNABLE_ROLES.has(default_role)) {
+        return new Response(
+          JSON.stringify({ error: "Only super_admin can assign this role" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
       const employees: Array<{ employee_id?: string; email: string; full_name?: string }> =
         Array.isArray(body.employees) ? body.employees : [];
 
@@ -256,6 +270,15 @@ Deno.serve(async (req) => {
             }
             userId = invited.user.id;
             results.push({ email, status: "invited", employee_id: emp.employee_id });
+          }
+
+          // Inviting is for other people. A caller must never be able to
+          // re-grant their own roles here — set-role blocks self-edits too.
+          if (userId && userId === caller.id && !callerIsSuperAdmin) {
+            results[results.length - 1] = {
+              email, status: "skipped", error: "cannot change your own roles", employee_id: emp.employee_id,
+            };
+            continue;
           }
 
           if (userId) {

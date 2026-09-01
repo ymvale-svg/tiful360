@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { buildProtocolPdf } from "@/lib/pdf/buildProtocolPdf";
 import { isProtocolSnapshot, protocolDataFromSnapshot } from "@/lib/pdf/protocolSnapshot";
 import type { ProtocolMedia } from "@/lib/pdf/types";
+import { getHandoverSignedUrl, openHandoverFile, useHandoverSignedUrls } from "@/lib/handoverUrl";
 
 interface Props {
   forms: HandoverFormRow[];
@@ -34,7 +35,8 @@ export function HandoverFormsList({ forms, context, emptyText = "אין עדיי
   const openPreview = async (form: HandoverFormRow, title: string, fallbackUrl: string) => {
     const snapshot = (form.form_snapshot ?? {}) as Record<string, any>;
     if (!isProtocolSnapshot(snapshot)) {
-      setPreview({ url: fallbackUrl, title });
+      // fallbackUrl is a storage path in the private bucket — sign it first.
+      setPreview({ url: await getHandoverSignedUrl(fallbackUrl), title });
       return;
     }
     setCreatingPreview(true);
@@ -111,16 +113,14 @@ export function HandoverFormsList({ forms, context, emptyText = "אין עדיי
                   <Eye className="w-3.5 h-3.5" />
                   צפייה
                 </Button>
-                <a
-                  href={url}
-                  download
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={() => void openHandoverFile(url)}
                   className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary hover:underline"
                 >
                   <FileDown className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">הורדה</span>
-                </a>
+                </button>
               </div>
               )}
             </div>
@@ -164,26 +164,51 @@ export function HandoverFormsList({ forms, context, emptyText = "אין עדיי
           <DialogHeader>
             <DialogTitle>{mediaPreview?.title} · תיעוד מצולם</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {mediaPreview?.items.map((item, index) => (
-              <div key={`${item.url}-${index}`} className="overflow-hidden rounded-lg border bg-muted/20">
-                {item.type === "video" ? (
-                  <video src={item.url} controls playsInline preload="metadata" className="aspect-video w-full bg-foreground/10 object-contain" />
-                ) : (
-                  <a href={item.url} target="_blank" rel="noopener noreferrer">
-                    <img src={item.url} alt={item.label || `תיעוד ${index + 1}`} loading="lazy" className="aspect-video w-full object-contain" />
-                  </a>
-                )}
-                <div className="flex items-center gap-2 p-2 text-sm">
-                  {item.type === "video" && <Play className="h-4 w-4 text-primary" />}
-                  <span>{item.label || (item.type === "video" ? "סרטון מסירה" : `תמונה ${index + 1}`)}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+          <MediaGallery items={mediaPreview?.items ?? []} />
         </DialogContent>
       </Dialog>
     </div>
   );
 
+}
+
+
+/**
+ * Protocol photos and video. The bucket is private, so each item is rendered
+ * through a signed URL that refreshes while the dialog stays open.
+ */
+function MediaGallery({ items }: { items: ProtocolMedia[] }) {
+  const { data: signed, isLoading } = useHandoverSignedUrls(items.map((i) => i.url));
+
+  if (items.length === 0) return null;
+  if (isLoading) {
+    return <p className="py-6 text-center text-sm text-muted-foreground">טוען תיעוד…</p>;
+  }
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      {items.map((item, index) => {
+        const src = signed?.[index] ?? null;
+        return (
+          <div key={`${item.url}-${index}`} className="overflow-hidden rounded-lg border bg-muted/20">
+            {!src ? (
+              <div className="flex aspect-video w-full items-center justify-center bg-muted/40 text-sm text-muted-foreground">
+                הקובץ אינו זמין
+              </div>
+            ) : item.type === "video" ? (
+              <video src={src} controls playsInline preload="metadata" className="aspect-video w-full bg-foreground/10 object-contain" />
+            ) : (
+              <a href={src} target="_blank" rel="noopener noreferrer">
+                <img src={src} alt={item.label || `תיעוד ${index + 1}`} loading="lazy" className="aspect-video w-full object-contain" />
+              </a>
+            )}
+            <div className="flex items-center gap-2 p-2 text-sm">
+              {item.type === "video" && <Play className="h-4 w-4 text-primary" />}
+              <span>{item.label || (item.type === "video" ? "סרטון מסירה" : `תמונה ${index + 1}`)}</span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 }

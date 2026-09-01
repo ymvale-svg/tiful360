@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useCompany } from "@/hooks/useCompany";
+import { openHandoverFile } from "@/lib/handoverUrl";
 
 interface Asset {
   id: string;
@@ -271,12 +272,10 @@ export function OffboardingFormsManager({ employee, assets }: Props) {
                         variant="outline"
                         size="sm"
                         className="h-8 gap-1"
-                        asChild
+                        onClick={() => void openHandoverFile(f.pdf_url!)}
                       >
-                        <a href={f.pdf_url} target="_blank" rel="noreferrer">
-                          <Download className="w-3 h-3" />
-                          PDF
-                        </a>
+                        <Download className="w-3 h-3" />
+                        PDF
                       </Button>
                     )}
                   </div>

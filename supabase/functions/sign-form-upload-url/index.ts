@@ -64,13 +64,12 @@ Deno.serve(async (req) => {
 
     if (signErr || !signed) return json({ error: "sign_failed", details: signErr?.message }, 500);
 
-    const { data: pub } = admin.storage.from("handover-forms").getPublicUrl(path);
-
+    // The bucket is private: return the object path only. A public URL here
+    // would be a permanent unauthenticated link to a signed protocol.
     return json({
       path,
       token: signed.token,
       signed_url: signed.signedUrl,
-      public_url: pub.publicUrl,
     });
   } catch (e) {
     console.error("unhandled", e);

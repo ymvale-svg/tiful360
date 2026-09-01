@@ -43,6 +43,19 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+
+  // Cron-only endpoint: config.toml sets verify_jwt = false, so without this
+  // guard anyone on the internet could trigger it. The from/to window is caller
+  // supplied and feeds the idempotency key, so an unguarded caller could vary it
+  // to defeat send-dedupe and flood the HR/payroll mailboxes.
+  // Same shared-secret check as notify-expiring-assets.
+  const authHeader = req.headers.get('Authorization') ?? ''
+  if (authHeader !== `Bearer ${serviceKey}`) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
   const admin = createClient(supabaseUrl, serviceKey)
 
   let body: any = {}

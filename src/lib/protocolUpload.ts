@@ -72,5 +72,8 @@ export async function uploadProtocolFile(
   } catch (e) {
     throw new Error(describeUploadError(e, fileName));
   }
-  return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+  // Return the object path, not a public URL. handover-forms is a private
+  // bucket, and a URL captured here would be a permanent unauthenticated link
+  // to a signed protocol. Readers sign on demand via `getHandoverSignedUrl`.
+  return path;
 }
