@@ -30,6 +30,7 @@ import { InstallAppBanner } from "@/components/InstallAppBanner";
 import { BirthdayPreferenceCard } from "@/components/portal/BirthdayPreferenceCard";
 import { WelcomeDateTime } from "@/components/portal/WelcomeDateTime";
 import { processBirthdaysForCurrentMonth } from "@/lib/hebrewBirthday";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const portalTabs = [
   { id: "assets", label: "הציוד שלי", icon: Package },
@@ -395,6 +396,7 @@ export default function EmployeePortal() {
               <span className="hidden sm:inline">תפעול 360</span>
             </button>
           )}
+          <ThemeToggle />
           <button
             type="button"
             onClick={handleSignOut}
