@@ -1,14 +1,21 @@
-import { 
-  Shield, CheckCircle2, User, 
-  Timer, ChevronLeft, Lock, Plus
+import { useEffect, useState } from "react";
+import {
+  Wrench, CheckCircle2, User, Timer, ChevronLeft, Plus, Package,
+  MapPin, Phone, Paperclip, CalendarClock, AlertTriangle,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useITTickets } from "@/hooks/useData";
+import { useUpdateTicketStatus } from "@/hooks/useServiceTickets";
 import { NewITTicketDialog } from "@/components/NewITTicketDialog";
 import { ExportExcelButton } from "@/components/ExcelActionButtons";
 import { exportToExcel } from "@/lib/exportExcel";
+import { toast } from "sonner";
+import {
+  PRIORITY_LABELS, STATUS_CLASSES, STATUS_LABELS, slaRemaining, subjectLabel,
+} from "@/lib/serviceTickets";
 
 const priorityColors: Record<string, string> = {
   critical: "bg-destructive text-destructive-foreground",
@@ -16,76 +23,100 @@ const priorityColors: Record<string, string> = {
   medium: "bg-info text-info-foreground",
   low: "bg-muted text-muted-foreground",
 };
-const priorityLabels: Record<string, string> = {
-  critical: "קריטי", high: "גבוה", medium: "בינוני", low: "נמוך",
-};
+
+function SlaBadge({ deadline, done }: { deadline: string | null; done: boolean }) {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 60000);
+    return () => clearInterval(id);
+  }, []);
+  if (!deadline || done) return null;
+  const sla = slaRemaining(deadline);
+  if (!sla) return null;
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-1 text-xs font-mono px-2 py-1 rounded-md",
+        sla.breached ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground",
+      )}
+    >
+      {sla.breached ? <AlertTriangle className="w-3 h-3" aria-hidden="true" /> : <Timer className="w-3 h-3" aria-hidden="true" />}
+      {sla.breached ? `חריגה ${sla.label}` : sla.label}
+    </div>
+  );
+}
 
 export default function ITTickets() {
   const { data: tickets, isLoading } = useITTickets();
+  const updateStatus = useUpdateTicketStatus();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [localChecklist, setLocalChecklist] = useState<{ label: string; done: boolean }[]>([]);
   const [newOpen, setNewOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>("open_all");
 
-  const selectedTicket = tickets?.find(t => t.id === selectedId);
+  const filtered = (tickets ?? []).filter((t: any) =>
+    statusFilter === "all" ? true : statusFilter === "open_all" ? t.status !== "done" : t.status === statusFilter,
+  );
+  const selectedTicket: any = tickets?.find((t: any) => t.id === selectedId);
+  const attachments: { name: string; url: string }[] = Array.isArray(selectedTicket?.attachments)
+    ? (selectedTicket.attachments as any[])
+    : [];
 
-  const openTicket = (ticket: any) => {
-    setSelectedId(ticket.id);
-    setLocalChecklist(Array.isArray(ticket.checklist) ? [...(ticket.checklist as any[])] : []);
-  };
-
-  const toggleCheck = (index: number) => {
-    setLocalChecklist(prev => prev.map((item, i) => i === index ? { ...item, done: !item.done } : item));
-  };
-
-  const allChecked = localChecklist.length > 0 && localChecklist.every(c => c.done);
-
-  const getSlaRemaining = (deadline: string | null) => {
-    if (!deadline) return null;
-    const diff = new Date(deadline).getTime() - Date.now();
-    if (diff <= 0) return "00:00:00";
-    const h = Math.floor(diff / 3600000);
-    const m = Math.floor((diff % 3600000) / 60000);
-    const s = Math.floor((diff % 60000) / 1000);
-    return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  const changeStatus = async (status: string) => {
+    if (!selectedTicket) return;
+    try {
+      await updateStatus.mutateAsync({ id: selectedTicket.id, status });
+      toast.success("סטטוס הקריאה עודכן");
+    } catch (err: any) {
+      toast.error(err?.message ?? "שגיאה בעדכון הסטטוס");
+    }
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="page-header flex items-start justify-between gap-4">
+      <div className="page-header flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <h1 className="page-title">משימות IT</h1>
-          <p className="page-subtitle">ניהול קריאות שירות, ניתוקים ואבטחת מידע</p>
+          <h1 className="page-title">קריאות שירות</h1>
+          <p className="page-subtitle">קריאות עובדים בטיפול מחלקת התפעול</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="open_all">פתוחות ובטיפול</SelectItem>
+              <SelectItem value="open">נפתחו</SelectItem>
+              <SelectItem value="in_progress">בטיפול</SelectItem>
+              <SelectItem value="done">טופלו</SelectItem>
+              <SelectItem value="all">הכל</SelectItem>
+            </SelectContent>
+          </Select>
           <ExportExcelButton
-            disabled={!tickets?.length}
+            disabled={!filtered.length}
             onClick={() => {
-              if (!tickets?.length) return;
               exportToExcel(
-                tickets.map((t: any) => ({
+                filtered.map((t: any) => ({
                   ticket_code: t.ticket_code,
                   title: t.title,
-                  priority: priorityLabels[t.priority] ?? t.priority,
-                  status: t.status,
-                  type: t.ticket_type,
+                  subject: subjectLabel(t.subject_category ?? t.ticket_type),
+                  priority: PRIORITY_LABELS[t.priority] ?? t.priority,
+                  status: STATUS_LABELS[t.status] ?? t.status,
                   employee: t.employees?.full_name ?? "",
-                  sla: t.sla_deadline ? new Date(t.sla_deadline).toLocaleDateString("en-GB") : "",
+                  sla: t.sla_deadline ? new Date(t.sla_deadline).toLocaleString("en-GB") : "",
                 })),
                 [
                   { key: "ticket_code", label: "מזהה" },
                   { key: "title", label: "כותרת" },
-                  { key: "priority", label: "עדיפות" },
+                  { key: "subject", label: "נושא" },
+                  { key: "priority", label: "דחיפות" },
                   { key: "status", label: "סטטוס" },
-                  { key: "type", label: "סוג" },
                   { key: "employee", label: "עובד" },
-                  { key: "sla", label: "SLA" },
+                  { key: "sla", label: "יעד טיפול" },
                 ],
-                "קריאות_IT"
+                "קריאות_שירות",
               );
             }}
           />
           <Button onClick={() => setNewOpen(true)} className="gap-2">
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4" aria-hidden="true" />
             קריאה חדשה
           </Button>
         </div>
@@ -99,39 +130,40 @@ export default function ITTickets() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Ticket list */}
           <div className={cn("lg:col-span-1 space-y-2", selectedTicket && "hidden lg:block")}>
-            {(tickets ?? []).map((ticket) => (
+            {filtered.map((ticket: any) => (
               <button
                 key={ticket.id}
-                onClick={() => openTicket(ticket)}
+                onClick={() => setSelectedId(ticket.id)}
                 className={cn(
                   "w-full text-right bg-card rounded-xl border p-4 transition-all hover:shadow-md",
                   ticket.ticket_type === "offboarding" ? "border-destructive/30" : "border-border/50",
-                  selectedId === ticket.id && "ring-2 ring-primary"
+                  selectedId === ticket.id && "ring-2 ring-primary",
                 )}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
                       <span className="font-mono text-xs text-muted-foreground">{ticket.ticket_code}</span>
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${priorityColors[ticket.priority] ?? ""}`}>
-                        {priorityLabels[ticket.priority] ?? ticket.priority}
+                        {PRIORITY_LABELS[ticket.priority] ?? ticket.priority}
+                      </span>
+                      <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full border", STATUS_CLASSES[ticket.status])}>
+                        {STATUS_LABELS[ticket.status] ?? ticket.status}
                       </span>
                     </div>
                     <p className="text-sm font-medium truncate">{ticket.title}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{(ticket as any).employees?.full_name}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {subjectLabel(ticket.subject_category ?? ticket.ticket_type)} · {ticket.employees?.full_name}
+                    </p>
                   </div>
-                  {ticket.ticket_type === "offboarding" && ticket.status !== "done" && ticket.sla_deadline && (
-                    <div className="flex items-center gap-1 text-xs font-mono text-destructive bg-destructive/10 px-2 py-1 rounded-md">
-                      <Timer className="w-3 h-3" />
-                      {getSlaRemaining(ticket.sla_deadline)}
-                    </div>
-                  )}
-                  {ticket.status === "done" && <CheckCircle2 className="w-5 h-5 text-success shrink-0" />}
+                  {ticket.status === "done"
+                    ? <CheckCircle2 className="w-5 h-5 text-success shrink-0" aria-hidden="true" />
+                    : <SlaBadge deadline={ticket.sla_deadline} done={false} />}
                 </div>
               </button>
             ))}
-            {(!tickets || tickets.length === 0) && (
-              <div className="text-center py-8 text-muted-foreground">אין קריאות</div>
+            {filtered.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">אין קריאות להצגה</div>
             )}
           </div>
 
@@ -139,69 +171,101 @@ export default function ITTickets() {
           <div className="lg:col-span-2">
             {selectedTicket ? (
               <div className="bg-card rounded-xl border border-border/50 shadow-card animate-fade-in">
-                <div className={cn("p-5 border-b", selectedTicket.ticket_type === "offboarding" ? "border-destructive/20 bg-destructive/5" : "border-border/50")}>
+                <div className="p-5 border-b border-border/50">
                   <button onClick={() => setSelectedId(null)} className="lg:hidden flex items-center gap-1 text-sm text-muted-foreground mb-3">
-                    <ChevronLeft className="w-4 h-4 rotate-180" />
+                    <ChevronLeft className="w-4 h-4 rotate-180" aria-hidden="true" />
                     חזרה
                   </button>
-                  <div className="flex items-start justify-between">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
                         <span className="font-mono text-sm text-muted-foreground">{selectedTicket.ticket_code}</span>
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${priorityColors[selectedTicket.priority] ?? ""}`}>
-                          {priorityLabels[selectedTicket.priority] ?? selectedTicket.priority}
+                          {PRIORITY_LABELS[selectedTicket.priority] ?? selectedTicket.priority}
+                        </span>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-muted">
+                          {subjectLabel(selectedTicket.subject_category ?? selectedTicket.ticket_type)}
                         </span>
                       </div>
                       <h2 className="text-lg font-bold">{selectedTicket.title}</h2>
                       <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
-                        <User className="w-3.5 h-3.5" />{(selectedTicket as any).employees?.full_name}
+                        <User className="w-3.5 h-3.5" aria-hidden="true" />{selectedTicket.employees?.full_name}
                       </p>
                     </div>
-                    {selectedTicket.ticket_type === "offboarding" && selectedTicket.sla_deadline && (
-                      <div className="flex flex-col items-center gap-1 bg-destructive/10 px-4 py-2 rounded-lg">
-                        <Timer className="w-5 h-5 text-destructive" />
-                        <span className="text-lg font-mono font-bold text-destructive">{getSlaRemaining(selectedTicket.sla_deadline)}</span>
-                        <span className="text-[10px] text-destructive">SLA נותר</span>
-                      </div>
-                    )}
+                    <div className="flex flex-col items-end gap-2">
+                      <SlaBadge deadline={selectedTicket.sla_deadline} done={selectedTicket.status === "done"} />
+                      <Select value={selectedTicket.status} onValueChange={changeStatus}>
+                        <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="open">נפתחה</SelectItem>
+                          <SelectItem value="in_progress">בטיפול</SelectItem>
+                          <SelectItem value="done">טופלה</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
 
-                {selectedTicket.ticket_type === "offboarding" && localChecklist.length > 0 ? (
-                  <div className="p-5">
-                    <h3 className="font-semibold mb-4 flex items-center gap-2">
-                      <Lock className="w-4 h-4 text-destructive" />
-                      מטריצת ניתוקים
-                    </h3>
-                    <div className="space-y-3">
-                      {localChecklist.map((item, i) => (
-                        <label key={i} className={cn(
-                          "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
-                          item.done ? "bg-success/5 border-success/30" : "bg-card border-border hover:bg-muted/50"
-                        )}>
-                          <input type="checkbox" checked={item.done} onChange={() => toggleCheck(i)} className="w-5 h-5 rounded accent-success" />
-                          <span className={cn("text-sm flex-1", item.done && "line-through text-muted-foreground")}>{item.label}</span>
-                          {item.done && <CheckCircle2 className="w-4 h-4 text-success" />}
-                        </label>
-                      ))}
+                <div className="p-5 space-y-4">
+                  {selectedTicket.description && (
+                    <div>
+                      <h3 className="text-sm font-semibold mb-1">תיאור</h3>
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{selectedTicket.description}</p>
                     </div>
-                    <div className="mt-6 pt-4 border-t border-border/50">
-                      <Button disabled={!allChecked} className={cn("w-full gap-2", allChecked ? "bg-destructive hover:bg-destructive/90" : "")}>
-                        <Shield className="w-4 h-4" />
-                        {allChecked ? "אשר ניתוק סופי (דורש סיסמה)" : `${localChecklist.filter(c => c.done).length}/${localChecklist.length} סעיפים הושלמו`}
-                      </Button>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                    {selectedTicket.location && (
+                      <p className="flex items-center gap-2"><MapPin className="w-4 h-4 text-muted-foreground" aria-hidden="true" />{selectedTicket.location}</p>
+                    )}
+                    {selectedTicket.contact_phone && (
+                      <p className="flex items-center gap-2"><Phone className="w-4 h-4 text-muted-foreground" aria-hidden="true" /><span dir="ltr">{selectedTicket.contact_phone}</span></p>
+                    )}
+                    <p className="flex items-center gap-2">
+                      <CalendarClock className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                      נפתחה: {new Date(selectedTicket.created_at).toLocaleString("he-IL")}
+                    </p>
+                    {selectedTicket.sla_deadline && (
+                      <p className="flex items-center gap-2">
+                        <Timer className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                        יעד טיפול: {new Date(selectedTicket.sla_deadline).toLocaleString("he-IL")}
+                      </p>
+                    )}
+                  </div>
+
+                  {selectedTicket.related_asset_id && (
+                    <div>
+                      <h3 className="text-sm font-semibold mb-1">פריט קשור</h3>
+                      <Link
+                        to={`/assets/item/${selectedTicket.related_asset_id}`}
+                        className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+                      >
+                        <Package className="w-4 h-4" aria-hidden="true" />
+                        {selectedTicket.related_asset?.asset_name ?? "מעבר לכרטיס הפריט"}
+                        {selectedTicket.related_asset?.asset_code ? ` (${selectedTicket.related_asset.asset_code})` : ""}
+                      </Link>
                     </div>
-                  </div>
-                ) : (
-                  <div className="p-8 text-center text-muted-foreground">
-                    <Shield className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                    <p className="text-sm">פרטי הקריאה</p>
-                  </div>
-                )}
+                  )}
+
+                  {attachments.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold mb-1">קבצים מצורפים</h3>
+                      <ul className="space-y-1">
+                        {attachments.map((a, i) => (
+                          <li key={i}>
+                            <a href={a.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm text-primary hover:underline">
+                              <Paperclip className="w-3.5 h-3.5" aria-hidden="true" />{a.name}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="bg-card rounded-xl border border-border/50 shadow-card p-12 text-center text-muted-foreground">
-                <Shield className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                <Wrench className="w-12 h-12 mx-auto mb-4 opacity-20" aria-hidden="true" />
                 <p className="font-medium">בחר קריאה מהרשימה</p>
               </div>
             )}
