@@ -11,6 +11,7 @@ export type KpiKey =
 export type WidgetKey =
   | "expiring"
   | "activity"
+  | "openTickets"
   | "onboarding"
   | "leave"
   | "alerts"
@@ -40,12 +41,12 @@ const ROLE_CONFIG: Record<AppRole, DashboardConfig> = {
   },
   operations: {
     kpis: ["activeEmployees", "totalAssets", "openAlerts", "openTickets"],
-    widgets: ["expiring", "activity", "onboarding", "alerts", "leaving"],
+    widgets: ["expiring", "activity", "openTickets", "onboarding", "alerts", "leaving"],
     expiryDomains: ALL_DOMAINS,
   },
   it_manager: {
     kpis: ["totalAssets", "openTickets", "openAlerts"],
-    widgets: ["expiring", "onboarding", "alerts", "activity"],
+    widgets: ["expiring", "onboarding", "alerts", "openTickets", "activity"],
     expiryDomains: ["digital", "license", "physical"],
   },
   legal: {
@@ -101,6 +102,7 @@ const KPI_ORDER: KpiKey[] = [
 const WIDGET_ORDER: WidgetKey[] = [
   "expiring",
   "activity",
+  "openTickets",
   "onboarding",
   "leave",
   "attendanceMissing",

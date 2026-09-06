@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { ExpiringAssetsCard } from "@/components/ExpiringAssetsCard";
 import { LeaveStatusCard } from "@/components/dashboard/LeaveStatusCard";
 import { OnboardingCard } from "@/components/dashboard/OnboardingCard";
+import { OpenTicketsCard } from "@/components/dashboard/OpenTicketsCard";
 import { AttendanceMissingCard } from "@/components/dashboard/AttendanceMissingCard";
 import { Tax101StatusCard } from "@/components/dashboard/Tax101StatusCard";
 import { hasDualAccess } from "@/lib/dualAccess";
@@ -136,6 +137,8 @@ export default function Dashboard() {
         {/* Sidebar */}
         <div className="space-y-6">
           {showWidget("onboarding") && <OnboardingCard />}
+
+          {showWidget("openTickets") && <OpenTicketsCard />}
 
           {showWidget("attendanceMissing") && <AttendanceMissingCard />}
 
