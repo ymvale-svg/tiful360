@@ -730,6 +730,17 @@ export default function EmployeePortal() {
           </div>
         )}
 
+        {/* ===== SERVICE TICKETS TAB ===== */}
+        {activeTab === "tickets" && myEmployee && (
+          <div role="tabpanel" id="portal-tabpanel-tickets" aria-labelledby="portal-tab-tickets" className="animate-fade-in">
+            <MyTicketsTab
+              employeeId={myEmployee.id}
+              employeeName={myEmployee.full_name}
+              employeePhone={myEmployee.phone}
+            />
+          </div>
+        )}
+
         {/* ===== NEWS TAB ===== */}
         {activeTab === "news" && (
           <div role="tabpanel" id="portal-tabpanel-news" aria-labelledby="portal-tab-news" className="space-y-3 animate-fade-in">
