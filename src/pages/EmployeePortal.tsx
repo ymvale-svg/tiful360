@@ -503,7 +503,7 @@ export default function EmployeePortal() {
         )}
 
         {/* Tabs */}
-        <div role="tablist" aria-label="ניווט פורטל" className="grid grid-cols-3 md:grid-cols-6 gap-1.5">
+        <div role="tablist" aria-label="ניווט פורטל" className="grid grid-cols-3 md:grid-cols-7 gap-1.5">
           {portalTabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
