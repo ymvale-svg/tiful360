@@ -47,6 +47,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
 
   const { data: categories } = useAssetCategories();
   const { data: employees } = useEmployees();
+  const { data: sites } = useSites();
   const deleteMutation = useDeleteAsset();
   const { toast } = useToast();
   const qc = useQueryClient();
