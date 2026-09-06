@@ -59,7 +59,7 @@ export default function UnassignedAssets() {
   const rows = useMemo(() => {
     const term = q.trim().toLowerCase();
     let list = ((assets ?? []) as any[]).filter((a) => {
-      if (a.current_owner_id) return false;
+      if (a.current_owner_id || a.assigned_site_id) return false;
       const cat = catById.get(a.category_id);
       if (cat?.is_assignable === false) return false;
       if (getDomain(cat) !== domain) return false;
