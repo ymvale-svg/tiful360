@@ -36,6 +36,7 @@ const portalTabs = [
   { id: "assets", label: "הציוד שלי", icon: Package },
   { id: "attendance", label: "נוכחות", icon: Clock },
   { id: "hr", label: "שכר וחופשות", icon: FileText },
+  { id: "tickets", label: "קריאות שירות", icon: Wrench },
   { id: "news", label: "הודעות", icon: Megaphone },
   { id: "kb", label: "נהלים", icon: BookOpen },
   { id: "contacts", label: "אנשי קשר", icon: Phone },
