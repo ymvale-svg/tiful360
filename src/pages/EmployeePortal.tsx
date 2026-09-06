@@ -3,8 +3,9 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { 
   Package, Clock, Megaphone, BookOpen, Phone, ExternalLink,
   FileText, CalendarDays, AlertCircle, LogOut, Cake, PartyPopper,
-  Box, Wifi, LayoutDashboard
+  Box, Wifi, LayoutDashboard, Wrench
 } from "lucide-react";
+import { MyTicketsTab } from "@/components/portal/MyTicketsTab";
 import portalLogo from "@/assets/portal-logo.png.asset.json";
 import { hasDualAccess } from "@/lib/dualAccess";
 import { Button } from "@/components/ui/button";
