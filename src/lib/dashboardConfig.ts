@@ -111,6 +111,18 @@ const WIDGET_ORDER: WidgetKey[] = [
   "leaving",
 ];
 
+export const WIDGET_LABELS: Record<WidgetKey, string> = {
+  expiring: "פקיעת תוקף ציוד",
+  activity: "פעילות אחרונה",
+  openTickets: "קריאות שירות פתוחות",
+  onboarding: "עובדים בקליטה",
+  leave: "סטטוס חופשות ומחלות",
+  attendanceMissing: "חוסרי החתמה",
+  tax101: "טופס 101",
+  alerts: "התראות קרובות",
+  leaving: "עובדים בתהליך עזיבה",
+};
+
 /** Merges the configs of every role the user holds (union). */
 export function resolveDashboardConfig(roles: AppRole[]): DashboardConfig {
   if (roles.includes("super_admin")) return ROLE_CONFIG.super_admin;
