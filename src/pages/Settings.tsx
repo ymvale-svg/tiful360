@@ -139,9 +139,15 @@ export default function Settings() {
           <PortalSettingsTab />
           <div className="mt-6 space-y-6">
             <EmailsSettings
+              columnKey="operations_emails"
+              title="נמענים לקריאות שירות (תפעול)"
+              description='כתובות דוא"ל של התפעול שיקבלו כל קריאת שירות חדשה שנפתחת (מופרדות בפסיק). עותק נשלח תמיד לפותח הקריאה.'
+              placeholder="ops@company.com"
+            />
+            <EmailsSettings
               columnKey="it_emails"
               title='נמענים להתראות IT'
-              description='כתובות דוא"ל שיקבלו התראה בעת פתיחת קריאת IT חדשה (מופרדות בפסיק)'
+              description='כתובות דוא"ל נוספות שיקבלו התראה בעת פתיחת קריאה חדשה (מופרדות בפסיק)'
               placeholder="it@company.com, ops@company.com"
             />
             <EmailsSettings
