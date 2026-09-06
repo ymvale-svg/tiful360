@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { generateTicketCode } from "@/lib/serviceTickets";
 
 interface OffboardingParams {
   employeeId: string;
@@ -163,6 +164,14 @@ export function useCancelOffboarding() {
         _employee_id: employeeId,
       });
       if (error) throw error;
+
+      // Close any open offboarding ticket for this employee
+      await supabase
+        .from("it_tickets")
+        .update({ status: "done", resolved_at: new Date().toISOString() })
+        .eq("employee_id", employeeId)
+        .eq("ticket_type", "offboarding")
+        .neq("status", "done");
       return data;
     },
     onSuccess: () => {
