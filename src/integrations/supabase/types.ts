@@ -1729,9 +1729,12 @@ export type Database = {
       it_tickets: {
         Row: {
           assigned_to: string | null
+          attachments: Json
           checklist: Json | null
           company_id: string | null
+          contact_phone: string | null
           created_at: string
+          description: string | null
           employee_id: string
           external_source: string
           git_sernum: string | null
@@ -1741,11 +1744,14 @@ export type Database = {
           git_sync_status: string
           git_synced_at: string | null
           id: string
+          location: string | null
           priority: Database["public"]["Enums"]["ticket_priority"]
+          related_asset_id: string | null
           resolved_at: string | null
           resolved_by: string | null
           sla_deadline: string | null
           status: Database["public"]["Enums"]["ticket_status"]
+          subject_category: string | null
           ticket_code: string
           ticket_type: Database["public"]["Enums"]["ticket_type"]
           title: string
@@ -1753,9 +1759,12 @@ export type Database = {
         }
         Insert: {
           assigned_to?: string | null
+          attachments?: Json
           checklist?: Json | null
           company_id?: string | null
+          contact_phone?: string | null
           created_at?: string
+          description?: string | null
           employee_id: string
           external_source?: string
           git_sernum?: string | null
@@ -1765,11 +1774,14 @@ export type Database = {
           git_sync_status?: string
           git_synced_at?: string | null
           id?: string
+          location?: string | null
           priority?: Database["public"]["Enums"]["ticket_priority"]
+          related_asset_id?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
           sla_deadline?: string | null
           status?: Database["public"]["Enums"]["ticket_status"]
+          subject_category?: string | null
           ticket_code: string
           ticket_type: Database["public"]["Enums"]["ticket_type"]
           title: string
@@ -1777,9 +1789,12 @@ export type Database = {
         }
         Update: {
           assigned_to?: string | null
+          attachments?: Json
           checklist?: Json | null
           company_id?: string | null
+          contact_phone?: string | null
           created_at?: string
+          description?: string | null
           employee_id?: string
           external_source?: string
           git_sernum?: string | null
@@ -1789,11 +1804,14 @@ export type Database = {
           git_sync_status?: string
           git_synced_at?: string | null
           id?: string
+          location?: string | null
           priority?: Database["public"]["Enums"]["ticket_priority"]
+          related_asset_id?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
           sla_deadline?: string | null
           status?: Database["public"]["Enums"]["ticket_status"]
+          subject_category?: string | null
           ticket_code?: string
           ticket_type?: Database["public"]["Enums"]["ticket_type"]
           title?: string
@@ -1819,6 +1837,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "it_tickets_related_asset_id_fkey"
+            columns: ["related_asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
             referencedColumns: ["id"]
           },
         ]
@@ -2680,6 +2705,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "sites_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sla_settings: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          notify_on_breach: boolean
+          priority: string
+          subject_category: string
+          target_hours: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          notify_on_breach?: boolean
+          priority: string
+          subject_category: string
+          target_hours?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          notify_on_breach?: boolean
+          priority?: string
+          subject_category?: string
+          target_hours?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sla_settings_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
