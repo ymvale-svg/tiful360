@@ -3,8 +3,9 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { 
   Package, Clock, Megaphone, BookOpen, Phone, ExternalLink,
   FileText, CalendarDays, AlertCircle, LogOut, Cake, PartyPopper,
-  Box, Wifi, LayoutDashboard
+  Box, Wifi, LayoutDashboard, Wrench
 } from "lucide-react";
+import { MyTicketsTab } from "@/components/portal/MyTicketsTab";
 import portalLogo from "@/assets/portal-logo.png.asset.json";
 import { hasDualAccess } from "@/lib/dualAccess";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ const portalTabs = [
   { id: "assets", label: "הציוד שלי", icon: Package },
   { id: "attendance", label: "נוכחות", icon: Clock },
   { id: "hr", label: "שכר וחופשות", icon: FileText },
+  { id: "tickets", label: "קריאות שירות", icon: Wrench },
   { id: "news", label: "הודעות", icon: Megaphone },
   { id: "kb", label: "נהלים", icon: BookOpen },
   { id: "contacts", label: "אנשי קשר", icon: Phone },
@@ -501,7 +503,7 @@ export default function EmployeePortal() {
         )}
 
         {/* Tabs */}
-        <div role="tablist" aria-label="ניווט פורטל" className="grid grid-cols-3 md:grid-cols-6 gap-1.5">
+        <div role="tablist" aria-label="ניווט פורטל" className="grid grid-cols-3 md:grid-cols-7 gap-1.5">
           {portalTabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -725,6 +727,17 @@ export default function EmployeePortal() {
             </div>
 
             <BirthdayPreferenceCard employee={myEmployee} />
+          </div>
+        )}
+
+        {/* ===== SERVICE TICKETS TAB ===== */}
+        {activeTab === "tickets" && myEmployee && (
+          <div role="tabpanel" id="portal-tabpanel-tickets" aria-labelledby="portal-tab-tickets" className="animate-fade-in">
+            <MyTicketsTab
+              employeeId={myEmployee.id}
+              employeeName={myEmployee.full_name}
+              employeePhone={myEmployee.phone}
+            />
           </div>
         )}
 

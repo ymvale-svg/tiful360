@@ -23,11 +23,15 @@ const PRIORITY_LABELS: Record<string, string> = {
   low: "נמוך",
 };
 
-const TYPE_LABELS: Record<string, string> = {
-  hardware: "תמיכה טכנית",
-  software: "תוכנה / רישיונות",
-  access: "הרשאות וגישה",
+const SUBJECT_LABELS: Record<string, string> = {
+  computing: "מיחשוב",
+  peripherals: "ציוד היקפי",
+  furniture: "ריהוט משרדי",
+  software: "תוכנות",
+  other: "אחר",
   offboarding: "ניתוקים / סיום העסקה",
+  hardware: "תמיכה טכנית",
+  access: "הרשאות וגישה",
 };
 
 function escapeHtml(s: string) {
@@ -45,7 +49,7 @@ function layout(title: string, body: string) {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f7fb;padding:24px 0;">
     <tr><td align="center">
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);">
-        <tr><td style="background:#0f172a;color:#fff;padding:18px 24px;font-size:16px;font-weight:bold;">תפעול 360 — קריאת IT חדשה</td></tr>
+        <tr><td style="background:#0f172a;color:#fff;padding:18px 24px;font-size:16px;font-weight:bold;">תפעול 360 — קריאת שירות חדשה</td></tr>
         <tr><td style="padding:24px;">${body}</td></tr>
         <tr><td style="padding:14px 24px;background:#f1f5f9;color:#64748b;font-size:11px;text-align:center;">הודעה אוטומטית ממערכת תפעול 360</td></tr>
       </table>
@@ -77,7 +81,7 @@ async function enqueueEmail(
     to,
     subject,
     html,
-    label: "it-ticket-new",
+    label: "service-ticket-new",
   });
 }
 
@@ -113,7 +117,7 @@ Deno.serve(async (req) => {
 
     const { data: ticket, error: ticketErr } = await supabase
       .from("it_tickets")
-      .select("*, employees(full_name, phone, email, department)")
+      .select("*, employees(full_name, phone, email, department), related_asset:assets(asset_name, asset_code, serial_number, license_plate)")
       .eq("id", ticket_id)
       .single();
 
@@ -126,32 +130,39 @@ Deno.serve(async (req) => {
 
     const { data: company } = await supabase
       .from("companies")
-      .select("name, it_emails")
+      .select("name, it_emails, operations_emails")
       .eq("id", ticket.company_id)
       .single();
 
-    const recipients = (company?.it_emails ?? "")
-      .split(",")
-      .map((s: string) => s.trim())
-      .filter((s: string) => s.length > 0 && /^\S+@\S+\.\S+$/.test(s));
+    const employee = (ticket as any).employees;
+
+    const parseEmails = (raw: string | null | undefined) =>
+      (raw ?? "")
+        .split(",")
+        .map((s: string) => s.trim())
+        .filter((s: string) => s.length > 0 && /^\S+@\S+\.\S+$/.test(s));
+
+    // Operations owns service tickets; IT addresses are kept as extra recipients.
+    const recipients = Array.from(
+      new Set([
+        ...parseEmails(company?.operations_emails),
+        ...parseEmails(company?.it_emails),
+        ...parseEmails(employee?.email),
+      ]),
+    );
 
     if (recipients.length === 0) {
       return new Response(
-        JSON.stringify({ ok: true, warning: "no IT recipients configured" }),
+        JSON.stringify({ ok: true, warning: "no recipients configured" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const employee = (ticket as any).employees;
-    const checklist = Array.isArray(ticket.checklist) ? ticket.checklist : [];
-    const description =
-      checklist.find((c: any) => c.type === "description")?.label ?? "";
-    const location = checklist
-      .find((c: any) => typeof c.label === "string" && c.label.startsWith("מיקום:"))
-      ?.label?.replace("מיקום: ", "") ?? "";
-    const phone = checklist
-      .find((c: any) => typeof c.label === "string" && c.label.startsWith("טלפון איש קשר:"))
-      ?.label?.replace("טלפון איש קשר: ", "") ?? employee?.phone ?? "";
+    const description = ticket.description ?? "";
+    const location = ticket.location ?? "";
+    const phone = ticket.contact_phone ?? employee?.phone ?? "";
+    const asset = (ticket as any).related_asset;
+    const attachments = Array.isArray(ticket.attachments) ? ticket.attachments : [];
 
     const portalBase =
       req.headers.get("origin") ?? "https://tiful360.lovable.app";
@@ -160,21 +171,32 @@ Deno.serve(async (req) => {
     const rows: Array<[string, string]> = [
       ["מספר קריאה", ticket.ticket_code],
       ["נושא", ticket.title],
-      ["סוג", TYPE_LABELS[ticket.ticket_type] ?? ticket.ticket_type],
+      ["נושא הקריאה", SUBJECT_LABELS[ticket.subject_category ?? ticket.ticket_type] ?? "אחר"],
       ["דחיפות", PRIORITY_LABELS[ticket.priority] ?? ticket.priority],
       ["פותח קריאה", employee?.full_name ?? "—"],
       ["מחלקה", employee?.department ?? "—"],
       ["טלפון לתקלה", phone || "—"],
       ["מיקום", location || "—"],
       ["חברה", company?.name ?? "—"],
+      [
+        "פריט קשור",
+        asset
+          ? `${asset.asset_name} (${asset.license_plate || asset.asset_code || ""})${asset.serial_number ? ` מס' סידורי ${asset.serial_number}` : ""}`
+          : "—",
+      ],
+      [
+        "יעד טיפול (SLA)",
+        ticket.sla_deadline ? new Date(ticket.sla_deadline).toLocaleString("he-IL") : "—",
+      ],
     ];
 
     const html = layout(
-      "קריאת IT חדשה",
-      `<h2 style="margin:0 0 8px;font-size:18px;">🛠️ נפתחה קריאת IT חדשה</h2>
+      "קריאת שירות חדשה",
+      `<h2 style="margin:0 0 8px;font-size:18px;">🛠️ נפתחה קריאת שירות חדשה</h2>
        <p style="color:#475569;font-size:14px;">פרטי הקריאה:</p>
        ${detailsTable(rows)}
        ${description ? `<p style="font-size:14px;"><strong>תיאור מפורט:</strong><br>${escapeHtml(description).replaceAll("\n", "<br>")}</p>` : ""}
+       ${attachments.length ? `<p style="font-size:14px;"><strong>קבצים מצורפים:</strong><br>${attachments.map((a: any) => `<a href="${escapeHtml(a.url)}">${escapeHtml(a.name)}</a>`).join("<br>")}</p>` : ""}
        <p style="margin:18px 0;">
          <a href="${ticketUrl}" style="background:#0f172a;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;display:inline-block;font-weight:600;">פתח את הקריאה במערכת</a>
        </p>`,
@@ -185,7 +207,7 @@ Deno.serve(async (req) => {
       const ok = await enqueueEmail(
         supabase,
         to,
-        `🛠️ קריאת IT חדשה — ${ticket.ticket_code} — ${ticket.title}`,
+        `🛠️ קריאת שירות חדשה — ${ticket.ticket_code} — ${ticket.title}`,
         html,
       );
       if (ok) sent++;

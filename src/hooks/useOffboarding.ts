@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { generateTicketCode } from "@/lib/serviceTickets";
 
 interface OffboardingParams {
   employeeId: string;
@@ -46,53 +47,74 @@ export function useStartOffboarding() {
         }
       }
 
-      // 3. Generate ticket code
-      const { data: lastTicket } = await supabase
+      // 3. Reuse an existing open offboarding ticket instead of creating a duplicate
+      const { data: existing } = await supabase
         .from("it_tickets")
-        .select("ticket_code")
+        .select("id, ticket_code")
+        .eq("employee_id", params.employeeId)
+        .eq("ticket_type", "offboarding")
+        .neq("status", "done")
         .order("created_at", { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
-      const lastNum = lastTicket?.ticket_code
-        ? parseInt(lastTicket.ticket_code.replace("IT-", ""), 10)
-        : 0;
-      const newTicketCode = `IT-${String(lastNum + 1).padStart(3, "0")}`;
+      const newTicketCode = existing?.ticket_code ?? generateTicketCode();
 
-      // 4. Build checklist from digital access
+      // 4. Build the disconnection + collection checklist
       const checklist = [
         ...params.digitalAccess.map((da) => ({
           label: `ניתוק ${da.access_type}: ${da.resource_path}`,
           done: false,
         })),
+        ...params.assets.map((a) => ({
+          label: `משיכת ציוד: ${a.asset_name} (${a.asset_code}) — ${a.category_name}`,
+          done: false,
+        })),
         { label: "השבתת חשבון Active Directory", done: false },
-        { label: "איסוף כל הציוד הפיזי", done: false },
+        { label: "ניתוק רישיונות ותוכנות בתשלום", done: false },
+        { label: "החזרת רכב חברה / רכב ליסינג (אם קיים)", done: false },
         { label: "מחיקת נתונים אישיים מהמכשירים", done: false },
         { label: "ביטול כרטיס כניסה / מפתחות", done: false },
       ];
 
-      // 5. Create IT ticket
-      const slaDeadline = new Date();
-      slaDeadline.setHours(slaDeadline.getHours() + 4);
+      // 5. Create or update the offboarding service ticket, due on the last working day
+      const dueDate = new Date(`${params.endDate}T17:00:00`);
+      const slaDeadline = (isNaN(dueDate.getTime()) ? new Date(Date.now() + 4 * 3600_000) : dueDate).toISOString();
 
-      const { error: ticketError } = await supabase.from("it_tickets").insert({
+      const ticketPayload = {
         ticket_code: newTicketCode,
-        title: `פרוטוקול ניתוק - ${params.employeeName}`,
+        company_id: empRow?.company_id ?? null,
+        title: `ניתוקים וסיום העסקה - ${params.employeeName}`,
+        description: `תהליך עזיבה לעובד ${params.employeeName} (${params.employeeCode}). יום עבודה אחרון: ${params.endDate}. יש לנתק גישות, תוכנות ורישיונות ולמשוך את הציוד המשוייך.`,
         employee_id: params.employeeId,
-        ticket_type: "offboarding",
-        priority: "critical",
-        status: "open",
-        sla_deadline: slaDeadline.toISOString(),
+        ticket_type: "offboarding" as const,
+        subject_category: "offboarding",
+        priority: "critical" as const,
+        status: "open" as const,
+        sla_deadline: slaDeadline,
         checklist,
-      });
-      if (ticketError) throw ticketError;
+      };
+
+      let ticketId = existing?.id ?? null;
+      if (existing?.id) {
+        const { error: updErr } = await supabase.from("it_tickets").update(ticketPayload).eq("id", existing.id);
+        if (updErr) throw updErr;
+      } else {
+        const { data: inserted, error: ticketError } = await supabase
+          .from("it_tickets")
+          .insert(ticketPayload)
+          .select("id")
+          .single();
+        if (ticketError) throw ticketError;
+        ticketId = inserted.id;
+      }
 
       // 6. Log activity
       const { data: { user } } = await supabase.auth.getUser();
       await supabase.from("activity_log").insert({
         employee_id: params.employeeId,
         action: `התנעת תהליך עזיבה - ${params.employeeName}`,
-        details: `תאריך סיום: ${params.endDate}. נוצרה קריאת IT ${newTicketCode}.`,
+        details: `תאריך סיום: ${params.endDate}. נוצרה קריאת שירות ${newTicketCode}.`,
         entity_type: "employee",
         entity_id: params.employeeId,
         performed_by: user?.id,
@@ -106,6 +128,13 @@ export function useStartOffboarding() {
         target_date: params.endDate,
         related_employee_id: params.employeeId,
       });
+
+      // 8. Notify operations
+      if (ticketId) {
+        supabase.functions
+          .invoke("notify-it-ticket", { body: { ticket_id: ticketId } })
+          .catch((err) => console.warn("notify-it-ticket failed", err));
+      }
 
       return { ticketCode: newTicketCode };
     },
@@ -135,6 +164,14 @@ export function useCancelOffboarding() {
         _employee_id: employeeId,
       });
       if (error) throw error;
+
+      // Close any open offboarding ticket for this employee
+      await supabase
+        .from("it_tickets")
+        .update({ status: "done", resolved_at: new Date().toISOString() })
+        .eq("employee_id", employeeId)
+        .eq("ticket_type", "offboarding")
+        .neq("status", "done");
       return data;
     },
     onSuccess: () => {
