@@ -86,7 +86,10 @@ export function useITTickets() {
   return useQuery({
     queryKey: ["it-tickets", activeCompanyId],
     queryFn: async () => {
-      let query = supabase.from("it_tickets").select("*, employees(full_name)").order("created_at", { ascending: false });
+      let query = supabase
+        .from("it_tickets")
+        .select("*, employees(full_name, email), related_asset:assets(id, asset_name, asset_code, serial_number, license_plate, asset_categories(domain))")
+        .order("created_at", { ascending: false });
       if (activeCompanyId) query = query.eq("company_id", activeCompanyId);
       const { data, error } = await query;
       if (error) throw error;
