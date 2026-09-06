@@ -15,6 +15,7 @@ import { SubEmployersTab } from "@/components/SubEmployersTab";
 import { EmailTemplatesTab } from "@/components/EmailTemplatesTab";
 import { ProtocolTemplatesTab } from "@/components/settings/ProtocolTemplatesTab";
 import { GoogleCalendarSyncCard } from "@/components/settings/GoogleCalendarSyncCard";
+import { SlaSettingsCard } from "@/components/settings/SlaSettingsCard";
 import { Mail } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
