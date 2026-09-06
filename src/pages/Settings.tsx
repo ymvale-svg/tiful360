@@ -176,7 +176,10 @@ export default function Settings() {
         )}
 
         <TabsContent value="alerts">
-          <AlertRulesSettings />
+          <div className="space-y-6">
+            <SlaSettingsCard />
+            <AlertRulesSettings />
+          </div>
         </TabsContent>
       </Tabs>
 
