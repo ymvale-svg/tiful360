@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAssets, useAssetCategories, useEmployees } from "@/hooks/useData";
 import { getCategoryIcon, getCategoryColor } from "@/lib/categoryIcons";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Pencil, FileSignature, UserMinus, Trash2, User, Building2, History } from "lucide-react";
+import { ChevronLeft, Pencil, FileSignature, UserMinus, Trash2, User, Building2, History, MapPin } from "lucide-react";
+import { useSites } from "@/hooks/useSites";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { EditAssetDialog } from "@/components/EditAssetDialog";
@@ -109,11 +110,14 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
 
   const empMap = new Map((employees ?? []).map((e: any) => [e.id, e]));
   const owner = asset.current_owner_id ? empMap.get(asset.current_owner_id) as any : null;
+  const assignedSite = asset.assigned_site_id
+    ? (sites ?? []).find((s) => s.id === asset.assigned_site_id) ?? null
+    : null;
 
   const handleUnassign = async () => {
     const { error } = await supabase
       .from("assets")
-      .update({ current_owner_id: null, status: "in_stock" })
+      .update({ current_owner_id: null, assigned_site_id: null, status: "in_stock" } as any)
       .eq("id", assetId);
     if (error) {
       toast({ title: "שגיאה בביטול שיוך", description: error.message, variant: "destructive" });
@@ -182,13 +186,13 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {isAssignable && !asset.current_owner_id && (
+          {isAssignable && !asset.current_owner_id && !asset.assigned_site_id && (
             <Button onClick={() => setAssignOpen(true)} className="gap-2">
               <FileSignature className="w-4 h-4" />
-              שיוך לעובד
+              שיוך לעובד / לאתר
             </Button>
           )}
-          {isAssignable && asset.current_owner_id && (
+          {isAssignable && (asset.current_owner_id || asset.assigned_site_id) && (
             <>
               <Button variant="outline" onClick={() => setAssignOpen(true)} className="gap-2">
                 <FileSignature className="w-4 h-4" />
@@ -324,8 +328,21 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
                     {owner.phone && <div className="text-xs text-muted-foreground" dir="ltr">{owner.phone}</div>}
                   </div>
                 </div>
+              ) : assignedSite ? (
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <MapPin className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-medium truncate">{assignedSite.name}</div>
+                    <div className="text-xs text-muted-foreground">אתר מחוץ למשרד</div>
+                    {assignedSite.address && <div className="text-xs text-muted-foreground truncate">{assignedSite.address}</div>}
+                    {assignedSite.contact_name && <div className="text-xs text-muted-foreground truncate">{assignedSite.contact_name}</div>}
+                    {assignedSite.phone && <div className="text-xs text-muted-foreground" dir="ltr">{assignedSite.phone}</div>}
+                  </div>
+                </div>
               ) : (
-                <p className="text-sm text-muted-foreground">הפריט במלאי — לא משויך לעובד.</p>
+                <p className="text-sm text-muted-foreground">הפריט במלאי — לא משויך לעובד או לאתר.</p>
               )}
             </div>
 
