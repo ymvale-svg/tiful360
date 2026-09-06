@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { FileText, Upload, Trash2, Download, AlertCircle, Calendar } from "lucide-react";
+import { FileText, Upload, Trash2, Download, AlertCircle, Calendar, Eye } from "lucide-react";
+import { DocumentPreviewDialog } from "@/components/DocumentPreviewDialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -33,6 +34,7 @@ export function AssetDocumentsSection({ assetId }: Props) {
   const [expiryDate, setExpiryDate] = useState("");
   const [notes, setNotes] = useState("");
   const [isDragging, setIsDragging] = useState(false);
+  const [preview, setPreview] = useState<{ url: string | null; name: string } | null>(null);
 
   const reset = () => {
     setFile(null); setDocType("other"); setLabel(""); setExpiryDate(""); setNotes(""); setShowForm(false);
@@ -86,6 +88,18 @@ export function AssetDocumentsSection({ assetId }: Props) {
       return;
     }
     window.open(url, "_blank");
+  };
+
+  const handlePreview = async (doc: AssetDocument) => {
+    const name = doc.document_label || doc.file_name;
+    setPreview({ url: null, name });
+    const url = await getAssetDocumentSignedUrl(doc.file_url);
+    if (!url) {
+      setPreview(null);
+      toast({ title: "שגיאה בפתיחת המסמך", variant: "destructive" });
+      return;
+    }
+    setPreview({ url, name });
   };
 
   const handleDelete = async (doc: AssetDocument) => {
@@ -226,6 +240,13 @@ export function AssetDocumentsSection({ assetId }: Props) {
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   <button
+                    onClick={() => handlePreview(doc)}
+                    className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary"
+                    title="צפה"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                  <button
                     onClick={() => handleDownload(doc)}
                     className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
                     title="הורד"
@@ -245,6 +266,12 @@ export function AssetDocumentsSection({ assetId }: Props) {
           })}
         </ul>
       )}
+      <DocumentPreviewDialog
+        open={!!preview}
+        onOpenChange={(o) => { if (!o) setPreview(null); }}
+        url={preview?.url ?? null}
+        fileName={preview?.name ?? ""}
+      />
     </div>
   );
 }
