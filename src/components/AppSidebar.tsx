@@ -49,7 +49,7 @@ const mainNav: NavItem[] = [
   { label: "לוח בקרה", icon: LayoutDashboard, path: "/", roles: ["admin", "it_manager", "super_admin", "operations", "payroll", "hr", "finance"] },
   { label: "עובדים", icon: Users, path: "/employees", roles: ["admin", "super_admin", "operations", "payroll", "hr", "finance"] },
   { label: "משאבים", icon: Package, path: "/assets", roles: ["admin", "it_manager", "super_admin", "operations", "finance", "legal"], preload: preload.assets },
-  { label: "משימות IT", icon: Shield, path: "/it-tickets", roles: ["admin", "it_manager", "super_admin", "operations"], preload: preload.itTickets },
+  { label: "קריאות שירות", icon: Shield, path: "/it-tickets", roles: ["admin", "it_manager", "super_admin", "operations"], preload: preload.itTickets },
   { label: "משאבי אנוש", icon: Wallet, path: "/payroll", roles: ["admin", "super_admin", "payroll", "hr"], preload: preload.payroll },
   // Onboarding / attendance map live inside the HR hub, but roles without /payroll access keep a direct entry
   { label: "קליטת עובדים", icon: UserPlus, path: "/onboarding", roles: ["operations", "it_manager"], strictRoles: true, preload: preload.onboarding },

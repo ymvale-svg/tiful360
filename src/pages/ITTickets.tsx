@@ -237,7 +237,7 @@ export default function ITTickets() {
                     <div>
                       <h3 className="text-sm font-semibold mb-1">פריט קשור</h3>
                       <Link
-                        to={`/assets/item/${selectedTicket.related_asset_id}`}
+                        to={`/assets/${selectedTicket.related_asset?.asset_categories?.domain ?? "physical"}/${selectedTicket.related_asset_id}`}
                         className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
                       >
                         <Package className="w-4 h-4" aria-hidden="true" />
