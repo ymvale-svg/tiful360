@@ -517,6 +517,7 @@ export type Database = {
           account_username: string | null
           asset_code: string
           asset_name: string
+          assigned_site_id: string | null
           category_id: string
           company_id: string | null
           condition: string
@@ -551,6 +552,7 @@ export type Database = {
           account_username?: string | null
           asset_code: string
           asset_name: string
+          assigned_site_id?: string | null
           category_id: string
           company_id?: string | null
           condition?: string
@@ -585,6 +587,7 @@ export type Database = {
           account_username?: string | null
           asset_code?: string
           asset_name?: string
+          assigned_site_id?: string | null
           category_id?: string
           company_id?: string | null
           condition?: string
@@ -615,6 +618,13 @@ export type Database = {
           year_of_manufacture?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "assets_assigned_site_id_fkey"
+            columns: ["assigned_site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "assets_category_id_fkey"
             columns: ["category_id"]
@@ -2626,6 +2636,56 @@ export type Database = {
           training_id?: string | null
         }
         Relationships: []
+      }
+      sites: {
+        Row: {
+          address: string | null
+          company_id: string
+          contact_name: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          company_id: string
+          contact_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          company_id?: string
+          contact_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sites_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sub_employers: {
         Row: {

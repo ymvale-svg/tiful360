@@ -11,11 +11,13 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { SignaturePad, SignaturePadHandle } from "@/components/SignaturePad";
 import {
   FileSignature, Camera, Video, Gauge, Send, PenTool, Upload, X,
-  ChevronLeft, ChevronRight, Loader2, FileDown, Save, RotateCcw, Trash2,
+  ChevronLeft, ChevronRight, Loader2, FileDown, Save, RotateCcw, Trash2, MapPin, User,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useEmployees } from "@/hooks/useData";
+import { useSites } from "@/hooks/useSites";
+import { SiteSelect } from "@/components/sites/SiteSelect";
 import { useCompany } from "@/hooks/useCompany";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -74,6 +76,7 @@ const QUICK_TEXTS = [
 
 export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction = "handover", defaultEmployeeId, onAssigned }: Props) {
   const { data: employees } = useEmployees();
+  const { data: sites } = useSites();
   const { activeCompany, activeCompanyId } = useCompany();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -103,6 +106,8 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
   const [step, setStep] = useState<Step>("details");
   const [mode, setMode] = useState<Mode>("on_site");
   const [employeeId, setEmployeeId] = useState("");
+  const [assignTarget, setAssignTarget] = useState<"employee" | "site">("employee");
+  const [siteId, setSiteId] = useState("");
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [freeText, setFreeText] = useState("");
   const [odometer, setOdometer] = useState("");
@@ -139,6 +144,8 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
 
   const categoryName = asset?.asset_categories?.category_name ?? "";
   const isVehicle = asset?.asset_categories?.protocol_type === "vehicle" || !!asset?.license_plate;
+  /** Assignment to an off-site location instead of an employee (no signed protocol). */
+  const siteMode = assignTarget === "site" && !isReturn && !preassignedOwnerId;
   const skipsForm = isReturn
     ? asset?.asset_categories?.skip_return_form === true
     : asset?.asset_categories?.skip_handover_form === true;
@@ -445,6 +452,48 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
     }
   };
 
+  /** Assign the item to an off-site location instead of an employee (no signed protocol). */
+  const handleSiteAssign = async () => {
+    if (!siteId) return;
+    setBusy(true);
+    try {
+      const patch: Record<string, any> = {
+        assigned_site_id: siteId,
+        current_owner_id: null,
+        status: "in_use",
+      };
+      if (isVehicle && odometer) patch.current_km = Number(odometer);
+      const { error } = await supabase.from("assets").update(patch as any).eq("id", asset!.id);
+      if (error) throw error;
+
+      const siteName = (sites ?? []).find((s: any) => s.id === siteId)?.name ?? "";
+      try {
+        await supabase.from("activity_log").insert({
+          company_id: activeCompanyId,
+          action: `שיוך ציוד לאתר: ${asset?.asset_name ?? ""}`,
+          details: `הפריט שויך לאתר ${siteName}`,
+          entity_type: "asset",
+          entity_id: asset!.id,
+          performed_by: user?.id,
+        } as any);
+      } catch (e) {
+        console.warn("activity_log insert (site assign) failed:", e);
+      }
+
+      toast({ title: "הפריט שויך לאתר", description: siteName });
+      qc.invalidateQueries({ queryKey: ["assets"] });
+      qc.invalidateQueries({ queryKey: ["activity-log"] });
+      onAssigned?.();
+      close();
+    } catch (e: any) {
+      toast({ title: "שגיאה בשיוך לאתר", description: e.message, variant: "destructive" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+
+
   const handleSignNow = async () => {
     const receiver = receiverSigRef.current?.getDataUrl();
     const issuer = issuerSigRef.current?.getDataUrl();
@@ -555,13 +604,26 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">קטגוריה זו מוגדרת ללא פרוטוקול חתום.</p>
             {!preassignedOwnerId && !isReturn && (
-              <EmployeePicker employees={employees} value={employeeId} onChange={setEmployeeId} />
+              <div className="space-y-3">
+                <AssignTargetToggle value={assignTarget} onChange={setAssignTarget} />
+                {assignTarget === "site" ? (
+                  <SiteSelect value={siteId} onChange={setSiteId} label="אתר מחוץ למשרד" />
+                ) : (
+                  <EmployeePicker employees={employees} value={employeeId} onChange={setEmployeeId} />
+                )}
+              </div>
             )}
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={close}>ביטול</Button>
-              <Button className="flex-1" disabled={busy || (!isReturn && !employeeId)} onClick={handleDirectAssign}>
-                {busy ? "שומר..." : isReturn ? "החזר למלאי" : "שייך"}
-              </Button>
+              {siteMode ? (
+                <Button className="flex-1" disabled={busy || !siteId} onClick={handleSiteAssign}>
+                  {busy ? "שומר..." : "שייך לאתר"}
+                </Button>
+              ) : (
+                <Button className="flex-1" disabled={busy || (!isReturn && !employeeId)} onClick={handleDirectAssign}>
+                  {busy ? "שומר..." : isReturn ? "החזר למלאי" : "שייך"}
+                </Button>
+              )}
             </div>
           </div>
         ) : (
@@ -605,9 +667,17 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
                     </div>
                   </div>
                 ) : (
-                  <EmployeePicker employees={employees} value={employeeId} onChange={setEmployeeId} />
+                  <div className="space-y-3">
+                    <AssignTargetToggle value={assignTarget} onChange={setAssignTarget} />
+                    {assignTarget === "site" ? (
+                      <SiteSelect value={siteId} onChange={setSiteId} label="אתר מחוץ למשרד" />
+                    ) : (
+                      <EmployeePicker employees={employees} value={employeeId} onChange={setEmployeeId} />
+                    )}
+                  </div>
                 )}
 
+                {!siteMode && (<>
                 <div>
                   <Label className="text-sm mb-2 block">פרטים שיופיעו בפרוטוקול</Label>
                   <div className="space-y-1.5 max-h-64 overflow-y-auto rounded-lg border p-2">
@@ -640,12 +710,20 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
                     ))}
                   </div>
                 </div>
+                </>)}
+
 
                 <div className="flex gap-2 pt-1">
                   <Button variant="outline" className="flex-1" onClick={close}>ביטול</Button>
-                  <Button className="flex-1 gap-1" disabled={!employeeId} onClick={() => setStep("media")}>
-                    המשך <ChevronLeft className="w-4 h-4" />
-                  </Button>
+                  {siteMode ? (
+                    <Button className="flex-1 gap-1" disabled={!siteId || busy} onClick={handleSiteAssign}>
+                      {busy ? "שומר..." : "שייך לאתר"}
+                    </Button>
+                  ) : (
+                    <Button className="flex-1 gap-1" disabled={!employeeId} onClick={() => setStep("media")}>
+                      המשך <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
@@ -869,5 +947,29 @@ function FilePickerButton({
         }}
       />
     </label>
+  );
+}
+
+function AssignTargetToggle({
+  value, onChange,
+}: { value: "employee" | "site"; onChange: (v: "employee" | "site") => void }) {
+  return (
+    <div>
+      <Label className="text-sm mb-1.5 block">שיוך הפריט אל</Label>
+      <div className="grid grid-cols-2 gap-2">
+        <ModeButton
+          active={value === "employee"}
+          onClick={() => onChange("employee")}
+          icon={<User className="w-4 h-4" />}
+          title="עובד"
+        />
+        <ModeButton
+          active={value === "site"}
+          onClick={() => onChange("site")}
+          icon={<MapPin className="w-4 h-4" />}
+          title="אתר מחוץ למשרד"
+        />
+      </div>
+    </div>
   );
 }
