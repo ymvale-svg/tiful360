@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
     const canInviteEmployees = canManage || callerRoles?.some((r: any) =>
       ["operations", "it_manager"].includes(r.role)
     );
-    const allowed = action === "invite" ? canInviteEmployees : canManage;
+    const allowed = action === "invite" || action === "resend-invite" ? canInviteEmployees : canManage;
     if (!allowed) {
       return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
