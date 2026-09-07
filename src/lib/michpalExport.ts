@@ -40,6 +40,30 @@ export function ilTime(ts: string | Date): string {
   });
 }
 
+/** UTC offset of Asia/Jerusalem on a given date, e.g. "+02:00" / "+03:00". */
+export function ilUtcOffset(isoDate: string): string {
+  const probe = new Date(`${isoDate}T12:00:00Z`);
+  const name = new Intl.DateTimeFormat("en-US", {
+    timeZone: IL_TZ,
+    timeZoneName: "longOffset",
+  })
+    .formatToParts(probe)
+    .find((p) => p.type === "timeZoneName")?.value ?? "GMT+03:00";
+  const m = name.match(/([+-])(\d{1,2}):?(\d{2})?/);
+  if (!m) return "+03:00";
+  return `${m[1]}${m[2].padStart(2, "0")}:${m[3] ?? "00"}`;
+}
+
+/** Start of the local (Israel) day as an absolute timestamp, DST-aware. */
+export function ilDayStartIso(isoDate: string): string {
+  return `${isoDate}T00:00:00${ilUtcOffset(isoDate)}`;
+}
+
+/** End of the local (Israel) day as an absolute timestamp, DST-aware. */
+export function ilDayEndIso(isoDate: string): string {
+  return `${isoDate}T23:59:59${ilUtcOffset(isoDate)}`;
+}
+
 /** yyyy-mm-dd -> dd/mm/yyyy */
 export function toMichpalDate(isoDate: string): string {
   const [y, m, d] = isoDate.split("-");
