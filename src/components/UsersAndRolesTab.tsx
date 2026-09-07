@@ -101,6 +101,17 @@ export function UsersAndRolesTab() {
     queryFn: () => fetchUsers(activeCompanyId),
   });
 
+  const searchTerms = useMemo(() => search.trim().toLowerCase().split(/\s+/).filter(Boolean), [search]);
+  const filteredUsers = useMemo(() => {
+    if (!searchTerms.length) return users;
+    return users.filter((u) =>
+      searchTerms.every((term) =>
+        [u.full_name, u.email, u.phone, u.roles.map((r) => ROLE_LABELS[r] || r).join(" ")]
+          .some((field) => (field ?? "").toLowerCase().includes(term))
+      )
+    );
+  }, [users, searchTerms]);
+
   // Linked employee user IDs for the active company (to mark "external" vs "employee")
   const { data: linkedUserIds = new Set<string>() } = useQuery({
     queryKey: ["linked-employee-user-ids", activeCompanyId],
