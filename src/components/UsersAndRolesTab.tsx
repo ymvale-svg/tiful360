@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
-import { Users, ShieldCheck, ShieldOff, Ban, CheckCircle, RefreshCw, Upload, UserPlus } from "lucide-react";
+import { Users, ShieldCheck, ShieldOff, Ban, CheckCircle, RefreshCw, Upload, UserPlus, Search, Send, X } from "lucide-react";
 import { ImportExcelDialog } from "@/components/ImportExcelDialog";
 import { InviteExternalUserDialog } from "@/components/InviteExternalUserDialog";
 import { format } from "date-fns";
@@ -86,11 +86,14 @@ async function fetchUsers(companyId: string | null): Promise<ManagedUser[]> {
 
 export function UsersAndRolesTab() {
   const { toast } = useToast();
-  const { user: currentUser, isAdmin, isSuperAdmin, isOperations, isHR, isPayroll } = useAuth();
+  const { user: currentUser, isAdmin, isSuperAdmin, isOperations, isHR, isPayroll, isIT } = useAuth();
   const { activeCompanyId } = useCompany();
   const queryClient = useQueryClient();
   const [importOpen, setImportOpen] = useState(false);
   const [inviteExternalOpen, setInviteExternalOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const canInviteUsers = isAdmin || isSuperAdmin || isHR || isPayroll || isOperations || isIT;
 
   // Operations-only users (no admin/super_admin) cannot manage sensitive roles
   const restrictRoles = isOperations && !isAdmin && !isSuperAdmin;
@@ -99,6 +102,17 @@ export function UsersAndRolesTab() {
     queryKey: ["managed-users", activeCompanyId],
     queryFn: () => fetchUsers(activeCompanyId),
   });
+
+  const searchTerms = useMemo(() => search.trim().toLowerCase().split(/\s+/).filter(Boolean), [search]);
+  const filteredUsers = useMemo(() => {
+    if (!searchTerms.length) return users;
+    return users.filter((u) =>
+      searchTerms.every((term) =>
+        [u.full_name, u.email, u.phone, u.roles.map((r) => ROLE_LABELS[r] || r).join(" ")]
+          .some((field) => (field ?? "").toLowerCase().includes(term))
+      )
+    );
+  }, [users, searchTerms]);
 
   // Linked employee user IDs for the active company (to mark "external" vs "employee")
   const { data: linkedUserIds = new Set<string>() } = useQuery({
@@ -163,6 +177,37 @@ export function UsersAndRolesTab() {
     },
   });
 
+  const resendInviteMutation = useMutation({
+    mutationFn: async ({ user_id, email, full_name }: { user_id: string; email: string; full_name?: string | null }) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-users?action=resend-invite`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ user_id, email, full_name, company_id: activeCompanyId }),
+        }
+      );
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to resend invite");
+      return json;
+    },
+    onSuccess: (data) => {
+      toast({
+        title: data.already_active ? "המשתמש כבר פעיל" : "ההזמנה נשלחה מחדש",
+        description: data.message || "מייל ההזמנה נשלח לכתובת המשתמש",
+      });
+      queryClient.invalidateQueries({ queryKey: ["managed-users"] });
+    },
+    onError: (err: any) => {
+      toast({ title: "שגיאה בשליחת הזמנה", description: err.message, variant: "destructive" });
+    },
+  });
+
   const handleRoleChange = (userId: string, currentRoles: string[], newRole: string) => {
     const has = currentRoles.includes(newRole);
     roleMutation.mutate({ user_id: userId, role: newRole, remove: has });
@@ -187,6 +232,28 @@ export function UsersAndRolesTab() {
             רענון
           </Button>
         </div>
+      </div>
+
+      <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2 max-w-md">
+        <Search className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+        <input
+          type="search"
+          aria-label="חיפוש משתמשים"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="חפש לפי שם, דוא״ל, טלפון או תפקיד..."
+          className="bg-transparent text-sm outline-none w-full"
+        />
+        {search && (
+          <button
+            type="button"
+            onClick={() => setSearch("")}
+            className="text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded p-0.5"
+            aria-label="נקה חיפוש"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -241,14 +308,14 @@ export function UsersAndRolesTab() {
                     טוען משתמשים...
                   </TableCell>
                 </TableRow>
-              ) : users.length === 0 ? (
+              ) : filteredUsers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    לא נמצאו משתמשים
+                    {search ? "לא נמצאו משתמשים התואמים לחיפוש" : "לא נמצאו משתמשים"}
                   </TableCell>
                 </TableRow>
               ) : (
-                users.map((u) => (
+                filteredUsers.map((u) => (
                   <TableRow key={u.id} className={u.banned ? "opacity-60" : ""}>
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -319,6 +386,20 @@ export function UsersAndRolesTab() {
                               ))}
                           </SelectContent>
                         </Select>
+
+                        {canInviteUsers && u.email && !u.last_sign_in_at && !u.banned && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-xs gap-1"
+                            onClick={() => resendInviteMutation.mutate({ user_id: u.id, email: u.email, full_name: u.full_name })}
+                            disabled={resendInviteMutation.isPending}
+                            title="שלח הזמנה מחדש"
+                          >
+                            <Send className="w-3 h-3" />
+                            שלח הזמנה
+                          </Button>
+                        )}
 
                         {u.id !== currentUser?.id && (
                           <Button

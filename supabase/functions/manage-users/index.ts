@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
     const canInviteEmployees = canManage || callerRoles?.some((r: any) =>
       ["operations", "it_manager"].includes(r.role)
     );
-    const allowed = action === "invite" ? canInviteEmployees : canManage;
+    const allowed = action === "invite" || action === "resend-invite" ? canInviteEmployees : canManage;
     if (!allowed) {
       return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -390,6 +390,52 @@ Deno.serve(async (req) => {
       }
 
       return new Response(JSON.stringify({ success: true, status, user_id: userId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (req.method === "POST" && action === "resend-invite") {
+      const { user_id, email, full_name, company_id } = await req.json();
+      if (!user_id || !email) {
+        return new Response(JSON.stringify({ error: "user_id and email required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (!callerIsSuperAdmin && !(await isInCallerCompanies(user_id))) {
+        return new Response(JSON.stringify({ error: "No access to this user" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const { data: { user: targetUser }, error: getErr } = await adminClient.auth.admin.getUserById(user_id);
+      if (getErr || !targetUser) {
+        return new Response(JSON.stringify({ error: "User not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (targetUser.email_confirmed_at || targetUser.last_sign_in_at) {
+        return new Response(
+          JSON.stringify({ success: true, already_active: true, message: "המשתמש כבר אישר את כתובת הדוא״ל או התחבר בעבר" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      let companyName = "";
+      if (company_id) {
+        const { data: companyRow } = await adminClient.from("companies").select("name").eq("id", company_id).maybeSingle();
+        companyName = companyRow?.name ?? "";
+      }
+
+      const origin = req.headers.get("origin") || req.headers.get("referer")?.replace(/\/+$/, "") || "";
+      const redirectTo = origin ? `${origin}/welcome` : undefined;
+
+      const { error: inviteErr } = await adminClient.auth.admin.inviteUserByEmail(email, {
+        data: { full_name: full_name || targetUser.user_metadata?.full_name || null, company_name: companyName },
+        redirectTo,
+      });
+
+      if (inviteErr) {
+        return new Response(JSON.stringify({ error: inviteErr.message || "resend failed" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, already_active: false, message: "הזמנה נשלחה מחדש" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     if (req.method === "POST" && action === "ban") {
