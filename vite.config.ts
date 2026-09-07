@@ -42,7 +42,10 @@ export default defineConfig(({ mode }) => {
           // the token-signing pages or anything under /.well-known — the TWA's
           // Digital Asset Links file must be served as itself.
           navigateFallback: "/index.html",
-          navigateFallbackDenylist: [/^\/\.well-known\//, /^\/storage\//],
+          // /~oauth/* must always hit the network: it is the managed sign-in
+          // broker (Google callback), and serving the cached shell there
+          // swallowed the callback and rendered a 404.
+          navigateFallbackDenylist: [/^\/\.well-known\//, /^\/storage\//, /^\/~/],
           cleanupOutdatedCaches: true,
           // 3 MB: the Tax-101 chunk alone is ~680 kB.
           maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
