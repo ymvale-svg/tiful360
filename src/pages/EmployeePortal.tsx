@@ -184,6 +184,18 @@ export default function EmployeePortal() {
   // Fetch merged company contacts (employees + external) via secure hook
   const { data: portalContacts = [] } = useCompanyContacts();
 
+  const contactSearchTerms = contactSearch.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const filteredContacts = useMemo(() => {
+    if (!contactSearchTerms.length) return portalContacts;
+    return portalContacts.filter((c) =>
+      contactSearchTerms.every((term) =>
+        [c.name, c.role, c.department, c.phone, c.email].some((field) =>
+          (field ?? "").toLowerCase().includes(term)
+        )
+      )
+    );
+  }, [portalContacts, contactSearchTerms]);
+
   // Fetch announcements from DB
   const { data: announcements = [] } = useQuery({
     queryKey: ["announcements", activeCompanyId],
