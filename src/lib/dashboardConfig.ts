@@ -31,14 +31,15 @@ const ALL_DOMAINS = "all" as const;
 const ROLE_CONFIG: Record<AppRole, DashboardConfig> = {
   super_admin: {
     kpis: ["activeEmployees", "totalAssets", "openAlerts", "openTickets"],
-    widgets: ["expiring", "activity", "onboarding", "leave", "alerts", "leaving", "attendanceMissing", "tax101"],
+    widgets: ["expiring", "activity", "openTickets", "onboarding", "leave", "alerts", "leaving", "attendanceMissing", "tax101"],
     expiryDomains: ALL_DOMAINS,
   },
   admin: {
     kpis: ["activeEmployees", "totalAssets", "openAlerts", "openTickets"],
-    widgets: ["expiring", "activity", "onboarding", "leave", "alerts", "leaving", "attendanceMissing", "tax101"],
+    widgets: ["expiring", "activity", "openTickets", "onboarding", "leave", "alerts", "leaving", "attendanceMissing", "tax101"],
     expiryDomains: ALL_DOMAINS,
   },
+
   operations: {
     kpis: ["activeEmployees", "totalAssets", "openAlerts", "openTickets"],
     widgets: ["expiring", "activity", "openTickets", "onboarding", "alerts", "leaving"],
@@ -76,7 +77,7 @@ const ROLE_CONFIG: Record<AppRole, DashboardConfig> = {
   },
   ceo: {
     kpis: ["activeEmployees", "totalAssets", "openAlerts", "openTickets"],
-    widgets: ["onboarding", "leave", "leaving", "alerts", "activity"],
+    widgets: ["onboarding", "leave", "leaving", "alerts", "openTickets", "activity"],
     expiryDomains: ALL_DOMAINS,
   },
   secretariat: {
