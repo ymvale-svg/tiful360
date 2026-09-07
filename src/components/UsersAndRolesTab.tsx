@@ -306,14 +306,14 @@ export function UsersAndRolesTab() {
                     טוען משתמשים...
                   </TableCell>
                 </TableRow>
-              ) : users.length === 0 ? (
+              ) : filteredUsers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    לא נמצאו משתמשים
+                    {search ? "לא נמצאו משתמשים התואמים לחיפוש" : "לא נמצאו משתמשים"}
                   </TableCell>
                 </TableRow>
               ) : (
-                users.map((u) => (
+                filteredUsers.map((u) => (
                   <TableRow key={u.id} className={u.banned ? "opacity-60" : ""}>
                     <TableCell>
                       <div className="flex items-center gap-3">
