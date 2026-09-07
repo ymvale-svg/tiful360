@@ -232,6 +232,28 @@ export function UsersAndRolesTab() {
         </div>
       </div>
 
+      <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2 max-w-md">
+        <Search className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+        <input
+          type="search"
+          aria-label="חיפוש משתמשים"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="חפש לפי שם, דוא״ל, טלפון או תפקיד..."
+          className="bg-transparent text-sm outline-none w-full"
+        />
+        {search && (
+          <button
+            type="button"
+            onClick={() => setSearch("")}
+            className="text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded p-0.5"
+            aria-label="נקה חיפוש"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-2">
