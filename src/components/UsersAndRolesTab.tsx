@@ -91,6 +91,7 @@ export function UsersAndRolesTab() {
   const queryClient = useQueryClient();
   const [importOpen, setImportOpen] = useState(false);
   const [inviteExternalOpen, setInviteExternalOpen] = useState(false);
+  const [search, setSearch] = useState("");
 
   // Operations-only users (no admin/super_admin) cannot manage sensitive roles
   const restrictRoles = isOperations && !isAdmin && !isSuperAdmin;
