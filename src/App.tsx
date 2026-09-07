@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CompanyProvider } from "@/hooks/useCompany";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { OAuthReturnRedirect } from "@/components/OAuthReturnRedirect";
 
 // Eager: critical entry pages and frequently-used screens (avoids Suspense flash on navigation)
 import Login from "@/pages/Login";
@@ -64,6 +65,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <CompanyProvider>
+            <OAuthReturnRedirect />
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 <Route path="/login" element={<Login />} />
