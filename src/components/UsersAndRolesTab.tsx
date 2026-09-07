@@ -86,12 +86,14 @@ async function fetchUsers(companyId: string | null): Promise<ManagedUser[]> {
 
 export function UsersAndRolesTab() {
   const { toast } = useToast();
-  const { user: currentUser, isAdmin, isSuperAdmin, isOperations, isHR, isPayroll } = useAuth();
+  const { user: currentUser, isAdmin, isSuperAdmin, isOperations, isHR, isPayroll, isIT } = useAuth();
   const { activeCompanyId } = useCompany();
   const queryClient = useQueryClient();
   const [importOpen, setImportOpen] = useState(false);
   const [inviteExternalOpen, setInviteExternalOpen] = useState(false);
   const [search, setSearch] = useState("");
+
+  const canInviteUsers = isAdmin || isSuperAdmin || isHR || isPayroll || isOperations || isIT;
 
   // Operations-only users (no admin/super_admin) cannot manage sensitive roles
   const restrictRoles = isOperations && !isAdmin && !isSuperAdmin;
