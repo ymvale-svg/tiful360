@@ -47,6 +47,7 @@ export default function EmployeePortal() {
   const [activeTab, setActiveTab] = useState("assets");
   const [newLeaveOpen, setNewLeaveOpen] = useState(false);
   const [punchingDir, setPunchingDir] = useState<"in" | "out" | null>(null);
+  const [contactSearch, setContactSearch] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, signOut, roles } = useAuth();
   const { data: profile } = useProfile();
