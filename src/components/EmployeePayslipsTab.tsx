@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable/index";
 import { useEmployeePayslips, getPayslipSignedUrl, useDeletePayslip } from "@/hooks/usePayslips";
 import { Download, Calendar, TrendingUp, Stethoscope, FileText, Eye, Trash2, ShieldAlert, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -76,19 +77,31 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary, hideBa
     setVerifying(true);
     setPwError(null);
     sessionStorage.setItem("payslip_google_reauth", employeeId);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: window.location.href,
-        queryParams: { prompt: "select_account" },
-      },
-    });
-    if (error) {
+    // Managed Cloud Auth handles the Google round-trip; calling supabase.auth
+    // directly returned a Google 403. redirect_uri must be a public same-origin
+    // URL, so the current page is remembered separately and restored on return.
+    sessionStorage.setItem("oauth_return_path", window.location.pathname + window.location.search);
+    try {
+      const result: any = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+        extraParams: { prompt: "select_account" },
+      });
+      if (result?.redirected) return;
+      if (result?.error) throw result.error;
+      // Popup flow: the session is already set here.
       sessionStorage.removeItem("payslip_google_reauth");
+      sessionStorage.removeItem("oauth_return_path");
+      setUnlocked(true);
+      setVerifying(false);
+      supabase.functions.invoke("notify-payslip-access", {
+        body: { employee_id: employeeId, context: auditContext ?? "צפייה עצמית בתלושי שכר (אימות Google)" },
+      }).catch(() => { /* audit failure must not block the employee's own view */ });
+    } catch {
+      sessionStorage.removeItem("payslip_google_reauth");
+      sessionStorage.removeItem("oauth_return_path");
       setVerifying(false);
       setPwError("שגיאה בהתחברות ל-Google, נסה שוב");
     }
-    // On success the browser redirects to Google — no further action here.
   };
 
 
