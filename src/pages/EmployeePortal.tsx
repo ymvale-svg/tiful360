@@ -828,8 +828,29 @@ export default function EmployeePortal() {
 
         {/* ===== CONTACTS TAB ===== */}
         {activeTab === "contacts" && (
-          <div role="tabpanel" id="portal-tabpanel-contacts" aria-labelledby="portal-tab-contacts" className="space-y-2 animate-fade-in">
-            {portalContacts.length > 0 ? portalContacts.map((contact) => (
+          <div role="tabpanel" id="portal-tabpanel-contacts" aria-labelledby="portal-tab-contacts" className="space-y-3 animate-fade-in">
+            <div className="relative">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              <input
+                type="search"
+                value={contactSearch}
+                onChange={(e) => setContactSearch(e.target.value)}
+                placeholder="חפש לפי שם, תפקיד, מחלקה, טלפון או דוא״ל..."
+                className="w-full pr-9 pl-9 py-2.5 bg-card border border-border/50 rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground"
+                aria-label="חיפוש אנשי קשר"
+              />
+              {contactSearch && (
+                <button
+                  type="button"
+                  onClick={() => setContactSearch("")}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded p-0.5"
+                  aria-label="נקה חיפוש"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            {filteredContacts.length > 0 ? filteredContacts.map((contact) => (
               <div key={contact.id} className="bg-card rounded-xl border border-border/50 p-3 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                   <span className="text-sm font-bold text-primary">{contact.name[0]}</span>
@@ -850,7 +871,9 @@ export default function EmployeePortal() {
                 )}
               </div>
             )) : (
-              <p className="text-center text-sm text-muted-foreground py-8">אין אנשי קשר כרגע</p>
+              <p className="text-center text-sm text-muted-foreground py-8">
+                {contactSearch ? "לא נמצאו אנשי קשר התואמים לחיפוש" : "אין אנשי קשר כרגע"}
+              </p>
             )}
           </div>
         )}
