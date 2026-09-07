@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
-import { Users, ShieldCheck, ShieldOff, Ban, CheckCircle, RefreshCw, Upload, UserPlus } from "lucide-react";
+import { Users, ShieldCheck, ShieldOff, Ban, CheckCircle, RefreshCw, Upload, UserPlus, Search, Send, X } from "lucide-react";
 import { ImportExcelDialog } from "@/components/ImportExcelDialog";
 import { InviteExternalUserDialog } from "@/components/InviteExternalUserDialog";
 import { format } from "date-fns";
