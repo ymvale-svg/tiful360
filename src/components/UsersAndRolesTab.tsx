@@ -175,6 +175,37 @@ export function UsersAndRolesTab() {
     },
   });
 
+  const resendInviteMutation = useMutation({
+    mutationFn: async ({ user_id, email, full_name }: { user_id: string; email: string; full_name?: string | null }) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-users?action=resend-invite`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ user_id, email, full_name }),
+        }
+      );
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to resend invite");
+      return json;
+    },
+    onSuccess: (data) => {
+      toast({
+        title: data.already_active ? "המשתמש כבר פעיל" : "ההזמנה נשלחה מחדש",
+        description: data.message || "מייל ההזמנה נשלח לכתובת המשתמש",
+      });
+      queryClient.invalidateQueries({ queryKey: ["managed-users"] });
+    },
+    onError: (err: any) => {
+      toast({ title: "שגיאה בשליחת הזמנה", description: err.message, variant: "destructive" });
+    },
+  });
+
   const handleRoleChange = (userId: string, currentRoles: string[], newRole: string) => {
     const has = currentRoles.includes(newRole);
     roleMutation.mutate({ user_id: userId, role: newRole, remove: has });
