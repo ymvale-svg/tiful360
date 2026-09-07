@@ -387,7 +387,7 @@ export function UsersAndRolesTab() {
                           </SelectContent>
                         </Select>
 
-                        {canManageUsers && u.email && !u.last_sign_in_at && !u.banned && (
+                        {canInviteUsers && u.email && !u.last_sign_in_at && !u.banned && (
                           <Button
                             variant="outline"
                             size="sm"
