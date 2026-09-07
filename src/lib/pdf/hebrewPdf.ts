@@ -4,6 +4,7 @@ import fontkit from "@pdf-lib/fontkit";
 // HTML fallback served by the dev server when a /public file is missing).
 import notoSansHebrewRegularUrl from "@/assets/fonts/NotoSansHebrew-Regular.ttf?url";
 import notoSansHebrewBoldUrl from "@/assets/fonts/NotoSansHebrew-Bold.ttf?url";
+import { getHandoverSignedUrl } from "@/lib/handoverUrl";
 
 // Cached as Uint8Array. We hand a *fresh copy* to pdf-lib on every embed
 // because pdf-lib/fontkit may detach or mutate the underlying ArrayBuffer,
@@ -228,8 +229,11 @@ export async function embedSignaturePng(pdf: PDFDocument, dataUrl: string | null
       const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
       return await pdf.embedJpg(bytes);
     }
-    // URL fetch
-    const res = await fetch(dataUrl);
+    // Bare storage object paths (private handover bucket) must be signed first.
+    const src = /^(data:|blob:|https?:|\/)/.test(dataUrl)
+      ? dataUrl
+      : await getHandoverSignedUrl(dataUrl);
+    const res = await fetch(src);
     const buf = new Uint8Array(await res.arrayBuffer());
     try { return await pdf.embedPng(buf); } catch { return await pdf.embedJpg(buf); }
   } catch {

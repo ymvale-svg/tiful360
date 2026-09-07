@@ -6,7 +6,10 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   url: string | null;
+  /** Real stored file name — drives which preview renderer is used. */
   fileName: string;
+  /** Optional display title (e.g. a document label). */
+  title?: string;
 }
 
 function kind(name: string): "image" | "pdf" | "other" {
@@ -16,23 +19,24 @@ function kind(name: string): "image" | "pdf" | "other" {
   return "other";
 }
 
-export function DocumentPreviewDialog({ open, onOpenChange, url, fileName }: Props) {
+export function DocumentPreviewDialog({ open, onOpenChange, url, fileName, title }: Props) {
   const type = kind(fileName);
+  const heading = title || fileName;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl w-[95vw] p-4">
         <DialogHeader>
-          <DialogTitle className="text-sm break-all text-right">{fileName}</DialogTitle>
+          <DialogTitle className="text-sm break-all text-right">{heading}</DialogTitle>
         </DialogHeader>
 
         <div className="h-[70vh] rounded-lg border bg-muted/20 overflow-auto flex items-center justify-center">
           {!url ? (
             <p className="text-sm text-muted-foreground">טוען...</p>
           ) : type === "image" ? (
-            <img src={url} alt={fileName} className="max-w-full max-h-full object-contain" />
+            <img src={url} alt={heading} className="max-w-full max-h-full object-contain" />
           ) : type === "pdf" ? (
-            <iframe src={url} title={fileName} className="w-full h-full" />
+            <iframe src={url} title={heading} className="w-full h-full" />
           ) : (
             <div className="text-center space-y-3 p-6">
               <p className="text-sm text-muted-foreground">לא ניתן להציג תצוגה מקדימה לסוג קובץ זה</p>

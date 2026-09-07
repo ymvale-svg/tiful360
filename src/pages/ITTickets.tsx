@@ -1,13 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Wrench, CheckCircle2, User, Timer, ChevronLeft, Plus, Package,
-  MapPin, Phone, Paperclip, CalendarClock, AlertTriangle,
+  MapPin, Phone, Paperclip, CalendarClock, AlertTriangle, ListChecks,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useITTickets } from "@/hooks/useData";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useUpdateTicketStatus } from "@/hooks/useServiceTickets";
 import { NewITTicketDialog } from "@/components/NewITTicketDialog";
 import { ExportExcelButton } from "@/components/ExcelActionButtons";
@@ -60,6 +63,28 @@ export default function ITTickets() {
   const attachments: { name: string; url: string }[] = Array.isArray(selectedTicket?.attachments)
     ? (selectedTicket.attachments as any[])
     : [];
+
+  const checklist = useMemo<{ label: string; done: boolean }[]>(
+    () => (Array.isArray(selectedTicket?.checklist) ? (selectedTicket.checklist as any[]) : []),
+    [selectedTicket],
+  );
+  const [savingCheck, setSavingCheck] = useState(false);
+  const queryClient = useQueryClient();
+
+  const toggleCheck = async (index: number) => {
+    if (!selectedTicket || savingCheck) return;
+    const next = checklist.map((item, i) => (i === index ? { ...item, done: !item.done } : item));
+    setSavingCheck(true);
+    try {
+      const { error } = await supabase.from("it_tickets").update({ checklist: next }).eq("id", selectedTicket.id);
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ["it-tickets"] });
+    } catch (err: any) {
+      toast.error(err?.message ?? "שגיאה בעדכון המשימה");
+    } finally {
+      setSavingCheck(false);
+    }
+  };
 
   const changeStatus = async (status: string) => {
     if (!selectedTicket) return;
@@ -244,6 +269,34 @@ export default function ITTickets() {
                         {selectedTicket.related_asset?.asset_name ?? "מעבר לכרטיס הפריט"}
                         {selectedTicket.related_asset?.asset_code ? ` (${selectedTicket.related_asset.asset_code})` : ""}
                       </Link>
+                    </div>
+                  )}
+
+                  {checklist.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                        <ListChecks className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                        מטריצת ניתוקים ומשיכת ציוד ({checklist.filter((c) => c.done).length}/{checklist.length})
+                      </h3>
+                      <ul className="space-y-2">
+                        {checklist.map((item, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <Checkbox
+                              id={`chk-${selectedTicket.id}-${i}`}
+                              checked={!!item.done}
+                              disabled={savingCheck}
+                              onCheckedChange={() => toggleCheck(i)}
+                              className="mt-0.5"
+                            />
+                            <label
+                              htmlFor={`chk-${selectedTicket.id}-${i}`}
+                              className={cn("text-sm cursor-pointer", item.done && "line-through text-muted-foreground")}
+                            >
+                              {item.label}
+                            </label>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   )}
 
