@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { 
   Package, Clock, Megaphone, BookOpen, Phone, ExternalLink,
   FileText, CalendarDays, AlertCircle, LogOut, Cake, PartyPopper,
-  Box, Wifi, LayoutDashboard, Wrench
+  Box, Wifi, LayoutDashboard, Wrench, Search, X
 } from "lucide-react";
 import { MyTicketsTab } from "@/components/portal/MyTicketsTab";
 import portalLogo from "@/assets/portal-logo.png.asset.json";
