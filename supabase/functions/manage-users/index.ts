@@ -5,6 +5,22 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Invitation links must point at the app root + /welcome. The referer header
+// carries a full page URL (e.g. https://app.com/employees?tab=users), so it is
+// normalized to its origin — concatenating it directly produced dead 404 links.
+function resolveAppOrigin(req: Request): string {
+  const candidates = [req.headers.get("origin"), req.headers.get("referer")];
+  for (const c of candidates) {
+    if (!c) continue;
+    try {
+      return new URL(c).origin;
+    } catch {
+      // ignore malformed values
+    }
+  }
+  return Deno.env.get("APP_SITE_URL") || "https://tiful360.com";
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -233,8 +249,8 @@ Deno.serve(async (req) => {
         .maybeSingle();
       const companyName = companyRow?.name ?? "";
 
-      const origin = req.headers.get("origin") || req.headers.get("referer")?.replace(/\/$/, "") || "";
-      const redirectTo = origin ? `${origin}/welcome` : undefined;
+      const origin = resolveAppOrigin(req);
+      const redirectTo = `${origin}/welcome`;
 
       const results: Array<{ email: string; status: string; error?: string; employee_id?: string }> = [];
 
@@ -352,8 +368,8 @@ Deno.serve(async (req) => {
         }
       }
 
-      const origin = req.headers.get("origin") || req.headers.get("referer")?.replace(/\/$/, "") || "";
-      const redirectTo = origin ? `${origin}/welcome` : undefined;
+      const origin = resolveAppOrigin(req);
+      const redirectTo = `${origin}/welcome`;
 
       // Check if user already exists
       const { data: { users: existingUsers } } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
@@ -420,8 +436,8 @@ Deno.serve(async (req) => {
         companyName = companyRow?.name ?? "";
       }
 
-      const origin = req.headers.get("origin") || req.headers.get("referer")?.replace(/\/+$/, "") || "";
-      const redirectTo = origin ? `${origin}/welcome` : undefined;
+      const origin = resolveAppOrigin(req);
+      const redirectTo = `${origin}/welcome`;
 
       const { error: inviteErr } = await adminClient.auth.admin.inviteUserByEmail(email, {
         data: { full_name: full_name || targetUser.user_metadata?.full_name || null, company_name: companyName },
