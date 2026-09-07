@@ -2,6 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -106,6 +110,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
   const [videoProgress, setVideoProgress] = useState<number | null>(null);
   const [foundDraft, setFoundDraft] = useState<HandoverDraft | null>(null);
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+  const [confirmExit, setConfirmExit] = useState(false);
 
   const issuerSigRef = useRef<SignaturePadHandle>(null);
   const receiverSigRef = useRef<SignaturePadHandle>(null);
@@ -242,6 +247,11 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
   }, [template, firstAsset, categoryName, employee, activeCompany?.name, issuerName]);
 
   const close = () => onOpenChange(false);
+
+  /** Never close on an accidental tap outside — always ask first. */
+  const requestClose = () => setConfirmExit(true);
+  const exitWithDraft = async () => { await handleSaveDraft(); setConfirmExit(false); close(); };
+  const exitWithoutSaving = () => { setConfirmExit(false); close(); };
 
   const uploadFile = async (file: Blob, name: string, contentType?: string) =>
     uploadProtocolFile("handover-forms", `${activeCompanyId}/multi/${Date.now()}-${name}`, file, contentType, name);
@@ -482,9 +492,12 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
   if (!assets.length) return null;
 
   return (
-    <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : close())}>
+    <>
+    <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : requestClose())}>
       <DialogContent
         dir="rtl"
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => { e.preventDefault(); requestClose(); }}
         className="max-w-2xl w-[100vw] h-[100dvh] sm:h-auto sm:w-full sm:max-h-[92vh] overflow-y-auto rounded-none sm:rounded-lg p-4 sm:p-6"
       >
         <DialogHeader>
@@ -682,6 +695,30 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
         )}
       </DialogContent>
     </Dialog>
+
+      <AlertDialog open={confirmExit} onOpenChange={setConfirmExit}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>לצאת מהתהליך?</AlertDialogTitle>
+            <AlertDialogDescription>
+              האם אתה בטוח שברצונך לצאת מהתהליך? אפשר לשמור טיוטה ולהמשיך מאוחר יותר.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-2">
+            <AlertDialogCancel>המשך בתהליך</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); exitWithDraft(); }}>
+              שמור טיוטה וצא
+            </AlertDialogAction>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => { e.preventDefault(); exitWithoutSaving(); }}
+            >
+              צא ללא שמירה
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
