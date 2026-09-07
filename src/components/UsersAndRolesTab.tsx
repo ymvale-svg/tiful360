@@ -385,6 +385,20 @@ export function UsersAndRolesTab() {
                           </SelectContent>
                         </Select>
 
+                        {canManageUsers && u.email && !u.last_sign_in_at && !u.banned && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-xs gap-1"
+                            onClick={() => resendInviteMutation.mutate({ user_id: u.id, email: u.email, full_name: u.full_name })}
+                            disabled={resendInviteMutation.isPending}
+                            title="שלח הזמנה מחדש"
+                          >
+                            <Send className="w-3 h-3" />
+                            שלח הזמנה
+                          </Button>
+                        )}
+
                         {u.id !== currentUser?.id && (
                           <Button
                             variant={u.banned ? "outline" : "destructive"}
