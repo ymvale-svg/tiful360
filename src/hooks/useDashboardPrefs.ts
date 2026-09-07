@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import type { WidgetKey } from "@/lib/dashboardConfig";
 
 export interface DashboardPrefs {
@@ -26,21 +27,65 @@ function load(userId?: string): DashboardPrefs {
   }
 }
 
-/** Per-user dashboard layout preferences (hidden widgets + wide widgets), stored locally. */
+function writeLocal(userId: string | undefined, next: DashboardPrefs) {
+  try {
+    localStorage.setItem(storageKey(userId), JSON.stringify(next));
+  } catch {
+    /* storage full/blocked — prefs stay in memory for the session */
+  }
+}
+
+/**
+ * Per-user dashboard layout preferences (hidden widgets + wide widgets).
+ * Stored on the server so they follow the user across devices/browsers,
+ * with a local copy for instant rendering.
+ */
 export function useDashboardPrefs(userId?: string) {
   const [prefs, setPrefs] = useState<DashboardPrefs>(() => load(userId));
+  const loadedFor = useRef<string | undefined>(undefined);
 
+  // Load the saved layout for this user (local first, then server).
   useEffect(() => {
-    setPrefs(load(userId));
+    if (!userId) return;
+    const local = load(userId);
+    setPrefs(local);
+    let cancelled = false;
+
+    (async () => {
+      const { data, error } = await supabase
+        .from("user_dashboard_prefs")
+        .select("hidden, wide")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (cancelled || error) return;
+
+      if (data) {
+        const remote: DashboardPrefs = {
+          hidden: (data.hidden ?? []) as WidgetKey[],
+          wide: (data.wide ?? []) as WidgetKey[],
+        };
+        setPrefs(remote);
+        writeLocal(userId, remote);
+      } else if (local.hidden.length > 0 || local.wide.length > 0) {
+        // First run after the server-side store was added: keep what the user already set.
+        await supabase.from("user_dashboard_prefs").upsert({ user_id: userId, ...local });
+      }
+      loadedFor.current = userId;
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [userId]);
 
   const save = useCallback(
     (next: DashboardPrefs) => {
       setPrefs(next);
-      try {
-        localStorage.setItem(storageKey(userId), JSON.stringify(next));
-      } catch {
-        /* storage full/blocked — prefs stay in memory for the session */
+      writeLocal(userId, next);
+      if (userId) {
+        void supabase
+          .from("user_dashboard_prefs")
+          .upsert({ user_id: userId, hidden: next.hidden, wide: next.wide, updated_at: new Date().toISOString() });
       }
     },
     [userId],
