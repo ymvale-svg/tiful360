@@ -189,7 +189,7 @@ export function UsersAndRolesTab() {
             "Content-Type": "application/json",
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
-          body: JSON.stringify({ user_id, email, full_name }),
+          body: JSON.stringify({ user_id, email, full_name, company_id: activeCompanyId }),
         }
       );
       const json = await res.json();
