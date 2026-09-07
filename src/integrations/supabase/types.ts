@@ -2950,6 +2950,27 @@ export type Database = {
           },
         ]
       }
+      user_dashboard_prefs: {
+        Row: {
+          hidden: string[]
+          updated_at: string
+          user_id: string
+          wide: string[]
+        }
+        Insert: {
+          hidden?: string[]
+          updated_at?: string
+          user_id: string
+          wide?: string[]
+        }
+        Update: {
+          hidden?: string[]
+          updated_at?: string
+          user_id?: string
+          wide?: string[]
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
