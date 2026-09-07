@@ -97,8 +97,8 @@ export function MichpalExportCard() {
         .from("attendance_punches")
         .select("employee_id, punch_at, direction, source, status")
         .eq("company_id", activeCompanyId)
-        .gte("punch_at", `${from}T00:00:00+03:00`)
-        .lte("punch_at", `${to}T23:59:59+03:00`)
+        .gte("punch_at", ilDayStartIso(from))
+        .lte("punch_at", ilDayEndIso(to))
         .order("punch_at", { ascending: true })
         .limit(20000);
       if (error) throw error;

@@ -64,8 +64,8 @@ export const SignaturePad = forwardRef<SignaturePadHandle, Props>(
           role="img"
           aria-labelledby={labelId}
           aria-describedby={`${labelId}-hint`}
-          className="bg-background border-2 border-dashed border-border rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
-          style={{ height }}
+          className="border-2 border-dashed border-border rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
+          style={{ height, backgroundColor: "hsl(var(--signature-surface))" }}
         >
           {size && (
             <SignatureCanvas

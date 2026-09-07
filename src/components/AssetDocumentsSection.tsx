@@ -34,7 +34,7 @@ export function AssetDocumentsSection({ assetId }: Props) {
   const [expiryDate, setExpiryDate] = useState("");
   const [notes, setNotes] = useState("");
   const [isDragging, setIsDragging] = useState(false);
-  const [preview, setPreview] = useState<{ url: string | null; name: string } | null>(null);
+  const [preview, setPreview] = useState<{ url: string | null; name: string; fileName: string } | null>(null);
 
   const reset = () => {
     setFile(null); setDocType("other"); setLabel(""); setExpiryDate(""); setNotes(""); setShowForm(false);
@@ -92,14 +92,14 @@ export function AssetDocumentsSection({ assetId }: Props) {
 
   const handlePreview = async (doc: AssetDocument) => {
     const name = doc.document_label || doc.file_name;
-    setPreview({ url: null, name });
+    setPreview({ url: null, name, fileName: doc.file_name });
     const url = await getAssetDocumentSignedUrl(doc.file_url);
     if (!url) {
       setPreview(null);
       toast({ title: "שגיאה בפתיחת המסמך", variant: "destructive" });
       return;
     }
-    setPreview({ url, name });
+    setPreview({ url, name, fileName: doc.file_name });
   };
 
   const handleDelete = async (doc: AssetDocument) => {
@@ -270,7 +270,8 @@ export function AssetDocumentsSection({ assetId }: Props) {
         open={!!preview}
         onOpenChange={(o) => { if (!o) setPreview(null); }}
         url={preview?.url ?? null}
-        fileName={preview?.name ?? ""}
+        fileName={preview?.fileName ?? ""}
+        title={preview?.name ?? ""}
       />
     </div>
   );
