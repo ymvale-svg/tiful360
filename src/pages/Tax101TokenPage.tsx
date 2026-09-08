@@ -11,7 +11,9 @@ export default function Tax101TokenPage() {
   const [form, setForm] = useState<any>(null);
   const [employee, setEmployee] = useState<any>(null);
   const [company, setCompany] = useState<any>(null);
+  const [employer, setEmployer] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+
   const [open, setOpen] = useState(false);
   const [done, setDone] = useState(false);
 
