@@ -83,9 +83,16 @@ export function useDashboardPrefs(userId?: string) {
       setPrefs(next);
       writeLocal(userId, next);
       if (userId) {
-        void supabase
-          .from("user_dashboard_prefs")
-          .upsert({ user_id: userId, hidden: next.hidden, wide: next.wide, updated_at: new Date().toISOString() });
+        // NOTE: the query builder is lazy — it must be awaited/then-ed to actually run.
+        void (async () => {
+          const { error } = await supabase
+            .from("user_dashboard_prefs")
+            .upsert(
+              { user_id: userId, hidden: next.hidden, wide: next.wide, updated_at: new Date().toISOString() },
+              { onConflict: "user_id" },
+            );
+          if (error) console.error("Failed to save dashboard prefs", error);
+        })();
       }
     },
     [userId],
