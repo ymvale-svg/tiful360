@@ -226,6 +226,8 @@ interface Props {
   onSuccess?: () => void;
   /** When true, uses public/anon update path (token flow). */
   isTokenFlow?: boolean;
+  /** Employer details supplied by the caller (token flow — anon cannot read tables). */
+  employerOverride?: { name: string; tax_id: string; address?: string; phone?: string } | null;
 }
 
 const STEPS = [
@@ -237,7 +239,8 @@ const STEPS = [
   "חתימה",
 ];
 
-export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, onSuccess, isTokenFlow }: Props) {
+export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, onSuccess, isTokenFlow, employerOverride }: Props) {
+
   const { toast } = useToast();
   const submit = useSubmitTax101();
   const [step, setStep] = useState(0);
@@ -254,6 +257,10 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
   // Load employer (sub_employer if set, else company) for the PDF
   useEffect(() => {
     if (!open || !employee) return;
+    if (employerOverride) {
+      setEmployerInfo(employerOverride);
+      return;
+    }
     (async () => {
       try {
         if (employee.sub_employer_id) {
@@ -282,7 +289,8 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
         }
       } catch { /* ignore */ }
     })();
-  }, [open, employee]);
+  }, [open, employee, employerOverride]);
+
 
   const draftKey = `tax101-draft-${formId}`;
 

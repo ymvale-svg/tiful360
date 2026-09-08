@@ -3587,6 +3587,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_tax_form_101_context_by_token: {
+        Args: { _token: string }
+        Returns: Json
+      }
       git_decrypt_password: {
         Args: { _cipher: string; _key: string }
         Returns: string
