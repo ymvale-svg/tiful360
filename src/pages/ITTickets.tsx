@@ -55,11 +55,31 @@ export default function ITTickets() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("open_all");
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Deep link from email: /it-tickets?ticket=<id|ticket_code>
+  const deepLink = searchParams.get("ticket");
+  useEffect(() => {
+    if (!deepLink || !tickets?.length) return;
+    const match = (tickets as any[]).find(
+      (t: any) => t.id === deepLink || t.ticket_code?.toLowerCase() === deepLink.toLowerCase(),
+    );
+    if (match) {
+      setSelectedId(match.id);
+      setStatusFilter("all");
+    } else {
+      toast.error("הקריאה לא נמצאה או שאין לך הרשאה לצפות בה");
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete("ticket");
+    setSearchParams(next, { replace: true });
+  }, [deepLink, tickets]);
 
   const filtered = (tickets ?? []).filter((t: any) =>
     statusFilter === "all" ? true : statusFilter === "open_all" ? t.status !== "done" : t.status === statusFilter,
   );
   const selectedTicket: any = tickets?.find((t: any) => t.id === selectedId);
+
   const attachments: { name: string; url: string }[] = Array.isArray(selectedTicket?.attachments)
     ? (selectedTicket.attachments as any[])
     : [];
