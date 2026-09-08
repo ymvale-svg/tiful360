@@ -226,6 +226,8 @@ interface Props {
   onSuccess?: () => void;
   /** When true, uses public/anon update path (token flow). */
   isTokenFlow?: boolean;
+  /** Employer details supplied by the caller (token flow — anon cannot read tables). */
+  employerOverride?: { name: string; tax_id: string; address?: string; phone?: string } | null;
 }
 
 const STEPS = [
@@ -237,7 +239,8 @@ const STEPS = [
   "חתימה",
 ];
 
-export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, onSuccess, isTokenFlow }: Props) {
+export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, onSuccess, isTokenFlow, employerOverride }: Props) {
+
   const { toast } = useToast();
   const submit = useSubmitTax101();
   const [step, setStep] = useState(0);
