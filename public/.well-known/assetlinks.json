@@ -1,11 +1,13 @@
 [
   {
-    "relation": ["delegate_permission/common.handle_all_urls"],
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.tiful360.app",
+      "package_name": "com.tiful360.twa",
       "sha256_cert_fingerprints": [
-        "REPLACE_WITH_SHA256_FINGERPRINT_FROM_KEYSTORE"
+        "45:8F:D4:4D:5A:A3:C2:D0:6A:1B:AC:BA:3C:02:37:B9:FD:5A:28:F8:EB:BE:84:4B:8A:AC:58:22:4B:D4:68:AB"
       ]
     }
   }
