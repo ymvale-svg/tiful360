@@ -174,9 +174,7 @@ Deno.serve(async (req) => {
     const asset = (ticket as any).related_asset;
     const attachments = Array.isArray(ticket.attachments) ? ticket.attachments : [];
 
-    const portalBase =
-      req.headers.get("origin") ?? "https://tiful360.lovable.app";
-    const ticketUrl = `${portalBase}/it-tickets`;
+    const ticketUrl = `${APP_BASE}/it-tickets?ticket=${encodeURIComponent(ticket.ticket_code ?? ticket.id)}`;
 
     const rows: Array<[string, string]> = [
       ["מספר קריאה", ticket.ticket_code],
