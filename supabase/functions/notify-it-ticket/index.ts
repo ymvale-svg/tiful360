@@ -42,15 +42,24 @@ function escapeHtml(s: string) {
     .replaceAll('"', "&quot;");
 }
 
+const LOGO_URL =
+  "https://rhzmhiknbcipucfvgkok.supabase.co/storage/v1/object/public/email-assets/logo.png";
+const APP_BASE = "https://tiful360.com";
+
 function layout(title: string, body: string) {
   return `<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"/><title>${escapeHtml(
     title,
-  )}</title></head><body style="margin:0;padding:0;background:#f6f7fb;font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f7fb;padding:24px 0;">
+  )}</title></head><body dir="rtl" style="margin:0;padding:0;background:#f6f7fb;font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;direction:rtl;text-align:right;">
+  <table role="presentation" dir="rtl" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f7fb;padding:24px 0;direction:rtl;">
     <tr><td align="center">
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);">
-        <tr><td style="background:#0f172a;color:#fff;padding:18px 24px;font-size:16px;font-weight:bold;">תפעול 360 — קריאת שירות חדשה</td></tr>
-        <tr><td style="padding:24px;">${body}</td></tr>
+      <table role="presentation" dir="rtl" width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);direction:rtl;text-align:right;">
+        <tr><td align="center" style="background:#0f172a;padding:18px 24px;">
+          <a href="${APP_BASE}" style="text-decoration:none;display:inline-block;">
+            <img src="${LOGO_URL}" width="48" height="48" alt="תפעול 360" style="border-radius:12px;display:block;margin:0 auto 8px;" />
+          </a>
+          <div style="color:#fff;font-size:16px;font-weight:bold;">תפעול 360 — קריאת שירות חדשה</div>
+        </td></tr>
+        <tr><td dir="rtl" align="right" style="padding:24px;direction:rtl;text-align:right;">${body}</td></tr>
         <tr><td style="padding:14px 24px;background:#f1f5f9;color:#64748b;font-size:11px;text-align:center;">הודעה אוטומטית ממערכת תפעול 360</td></tr>
       </table>
     </td></tr>
@@ -59,17 +68,18 @@ function layout(title: string, body: string) {
 }
 
 function detailsTable(rows: Array<[string, string]>) {
-  return `<table role="presentation" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:14px;margin:12px 0;">
+  return `<table role="presentation" dir="rtl" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:14px;margin:12px 0;direction:rtl;text-align:right;">
     ${rows
       .map(
         ([k, v]) =>
-          `<tr><td style="color:#64748b;padding:4px 12px 4px 0;">${escapeHtml(
+          `<tr><td align="right" style="color:#64748b;padding:4px 0 4px 12px;text-align:right;white-space:nowrap;">${escapeHtml(
             k,
-          )}</td><td style="font-weight:600;">${escapeHtml(v)}</td></tr>`,
+          )}</td><td align="right" style="font-weight:600;text-align:right;">${escapeHtml(v)}</td></tr>`,
       )
       .join("")}
   </table>`;
 }
+
 
 async function enqueueEmail(
   supabase: any,
