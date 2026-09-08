@@ -257,6 +257,10 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
   // Load employer (sub_employer if set, else company) for the PDF
   useEffect(() => {
     if (!open || !employee) return;
+    if (employerOverride) {
+      setEmployerInfo(employerOverride);
+      return;
+    }
     (async () => {
       try {
         if (employee.sub_employer_id) {
@@ -285,7 +289,8 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
         }
       } catch { /* ignore */ }
     })();
-  }, [open, employee]);
+  }, [open, employee, employerOverride]);
+
 
   const draftKey = `tax101-draft-${formId}`;
 
