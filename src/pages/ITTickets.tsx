@@ -3,7 +3,7 @@ import {
   Wrench, CheckCircle2, User, Timer, ChevronLeft, Plus, Package,
   MapPin, Phone, Paperclip, CalendarClock, AlertTriangle, ListChecks,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
