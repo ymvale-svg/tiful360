@@ -23,26 +23,25 @@ export default function Tax101TokenPage() {
     }
     (async () => {
       try {
-        const { data: rows, error: e1 } = await supabase.rpc("get_tax_form_101_by_token", { _token: token });
-        if (e1) throw e1;
-        const f = Array.isArray(rows) ? rows[0] : rows;
-        if (!f) {
+        const { data: ctx, error: e0 } = await (supabase as any).rpc(
+          "get_tax_form_101_context_by_token",
+          { _token: token },
+        );
+        if (e0) throw e0;
+        if (!ctx) {
           setError("לא נמצא טופס או שהקישור פג תוקף");
           return;
         }
-        if ((f as any).status !== "pending") {
+        const f = (ctx as any).form;
+        setEmployee((ctx as any).employee ?? null);
+        setCompany((ctx as any).company ?? null);
+        setEmployer((ctx as any).employer ?? null);
+        if (f?.status !== "pending") {
           setError("הטופס כבר נחתם");
           setForm(f);
           return;
         }
         setForm(f);
-
-        const [{ data: emp }, { data: co }] = await Promise.all([
-          supabase.from("employees").select("*").eq("id", (f as any).employee_id).maybeSingle(),
-          supabase.from("companies").select("name, logo_url").eq("id", (f as any).company_id).maybeSingle(),
-        ]);
-        setEmployee(emp);
-        setCompany(co);
       } catch (e: any) {
         setError(e.message ?? "שגיאה");
       } finally {
@@ -50,6 +49,7 @@ export default function Tax101TokenPage() {
       }
     })();
   }, [token]);
+
 
   if (loading) {
     return (
