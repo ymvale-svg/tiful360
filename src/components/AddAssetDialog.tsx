@@ -117,13 +117,27 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
   // Hide custom fields that duplicate the system expiry_date field.
   // Any custom field literally named like the system expiry is treated as a duplicate.
   const EXPIRY_DUPLICATE_NAMES = new Set(["תוקף", "תוקף פוליסה", "תאריך תפוגה", "תאריך תוקף"]);
+  const selectedGroup = useMemo(
+    () => categoryGroups.find(g => g.id === form.group_id) ?? null,
+    [categoryGroups, form.group_id],
+  );
+  // Vehicle-linked subscription sub-categories (Pango, toll roads, fuel cards):
+  // the sub-category already says everything, so generic category-level fields are hidden.
+  const vehicleLinkedGroup = isVehicleLinkedGroup(selectedGroup as any);
   const catFields = useMemo(
     () =>
-      filterFieldsForGroup(catFieldsRaw as any[], form.group_id || null).filter(
-        (cf: any) => !EXPIRY_DUPLICATE_NAMES.has((cf.field_name ?? "").trim()),
-      ),
-    [catFieldsRaw, form.group_id]
+      filterFieldsForGroup(catFieldsRaw as any[], form.group_id || null)
+        .filter((cf: any) => !EXPIRY_DUPLICATE_NAMES.has((cf.field_name ?? "").trim()))
+        .filter((cf: any) => !vehicleLinkedGroup || cf.group_id === form.group_id),
+    [catFieldsRaw, form.group_id, vehicleLinkedGroup]
   );
+
+  // Auto-name vehicle-linked subscriptions after their sub-category
+  useEffect(() => {
+    if (vehicleLinkedGroup && selectedGroup) {
+      setForm(prev => (prev.asset_name === selectedGroup.name ? prev : { ...prev, asset_name: selectedGroup.name }));
+    }
+  }, [vehicleLinkedGroup, selectedGroup]);
 
   // Reset everything when dialog closes
   useEffect(() => {
