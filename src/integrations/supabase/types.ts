@@ -372,6 +372,7 @@ export type Database = {
           name: string
           sort_order: number
           updated_at: string
+          visible_builtin_fields: Json | null
         }
         Insert: {
           category_id: string
@@ -384,6 +385,7 @@ export type Database = {
           name: string
           sort_order?: number
           updated_at?: string
+          visible_builtin_fields?: Json | null
         }
         Update: {
           category_id?: string
@@ -396,6 +398,7 @@ export type Database = {
           name?: string
           sort_order?: number
           updated_at?: string
+          visible_builtin_fields?: Json | null
         }
         Relationships: [
           {
