@@ -177,6 +177,7 @@ export default function VehicleSubscriptions() {
         usedEmployees.add(v.employee_id);
         subs = [...subs, ...(assetSubsByEmployee.get(v.employee_id) ?? [])];
       }
+      subs = dedupeSubs(subs);
       subs = [...subs].sort((a, b) => (b.start_date ?? "").localeCompare(a.start_date ?? ""));
       return {
         id: v.key,
