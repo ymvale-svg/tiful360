@@ -34,6 +34,20 @@ type SubItem = VehicleSubscription & {
   source_asset_id?: string;
 };
 
+/** Same subscription can exist both as a real record and as an asset — show it once.
+ *  Keeps the record-based tag when both exist. */
+function dedupeSubs(items: SubItem[]): SubItem[] {
+  const byProvider = new Map<string, SubItem>();
+  for (const s of items) {
+    const key = (s.provider ?? "").trim().replace(/^מנוי\s+/, "").toLowerCase();
+    const existing = byProvider.get(key);
+    if (!existing || (existing.source === "asset" && s.source === "record")) {
+      byProvider.set(key, s);
+    }
+  }
+  return Array.from(byProvider.values());
+}
+
 type Row = {
   id: string;
   employee_id: string | null;
@@ -177,6 +191,7 @@ export default function VehicleSubscriptions() {
         usedEmployees.add(v.employee_id);
         subs = [...subs, ...(assetSubsByEmployee.get(v.employee_id) ?? [])];
       }
+      subs = dedupeSubs(subs);
       subs = [...subs].sort((a, b) => (b.start_date ?? "").localeCompare(a.start_date ?? ""));
       return {
         id: v.key,
@@ -193,8 +208,9 @@ export default function VehicleSubscriptions() {
     });
 
     // Employees holding subscription assets but with no vehicle attached — still show them.
-    assetSubsByEmployee.forEach((subs, empId) => {
+    assetSubsByEmployee.forEach((rawSubs, empId) => {
       if (usedEmployees.has(empId)) return;
+      const subs = dedupeSubs(rawSubs);
       const emp: any = empById.get(empId);
       out.push({
         id: `e:${empId}`,
