@@ -474,15 +474,10 @@ export default function VehicleSubscriptions() {
                         size="sm"
                         variant={r.activeSubs.length ? "ghost" : "outline"}
                         className="gap-1"
-                        title="הוספת מנוי לרכב זה"
+                        title="ניהול מנויים תחת שירותי מנוי במסך משאבים"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setSubDialog({
-                            employeeVehicleId: r.employee_vehicle_id,
-                            assetId: r.asset_id,
-                            label: `${r.plate} · ${r.employee_name}`,
-                            subscription: null,
-                          });
+                          navigate("/assets/licenses");
                         }}
                       >
                         <Plus className="w-3.5 h-3.5" />
@@ -496,15 +491,6 @@ export default function VehicleSubscriptions() {
           </tbody>
         </table>
       </div>
-
-      <VehicleSubscriptionDialog
-        open={!!subDialog}
-        onOpenChange={(v) => !v && setSubDialog(null)}
-        employeeVehicleId={subDialog?.employeeVehicleId ?? null}
-        assetId={subDialog?.assetId ?? null}
-        vehicleLabel={subDialog?.label}
-        subscription={subDialog?.subscription ?? null}
-      />
     </div>
   );
 }
