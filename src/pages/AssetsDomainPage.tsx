@@ -781,28 +781,90 @@ function InstancesTable({
 }) {
   const isInsurance = domain === "insurance";
   const cols = isInsurance ? "grid-cols-[2fr_2fr_1.2fr_1.5fr_2rem]" : "grid-cols-12";
+
+  const [colSort, setColSort] = usePersistentFilter<{ key: string; dir: "asc" | "desc" } | null>(
+    `assets:${domain}:colsort`,
+    null,
+  );
+
+  const valueFor = (a: any, key: string): string | number => {
+    const cf = a.custom_fields ?? {};
+    switch (key) {
+      case "code": return a.asset_code ?? "";
+      case "second":
+        return (domain === "digital" ? a.account_username : domain === "licenses" ? (cf["ספק"] ?? a.manufacturer_model) : a.serial_number) ?? "";
+      case "employee": return a.employees?.full_name ?? "";
+      case "status":
+        if (domain === "physical") return assetStatusLabels[a.status] ?? a.status ?? "";
+        { const e = expiryOf(a, domain); return e ? new Date(e).getTime() : Number.MAX_SAFE_INTEGER; }
+      case "name": return a.asset_name ?? "";
+      case "insurer": return cf["חברת ביטוח"] ?? "";
+      case "agent": return cf["שם סוכן ביטוח"] ?? "";
+      case "expiry":
+        { const e = expiryOf(a, domain); return e ? new Date(e).getTime() : Number.MAX_SAFE_INTEGER; }
+      default: return "";
+    }
+  };
+
+  const sorted = colSort
+    ? [...items].sort((a, b) => {
+        const va = valueFor(a, colSort.key);
+        const vb = valueFor(b, colSort.key);
+        const cmp = typeof va === "number" && typeof vb === "number"
+          ? va - vb
+          : String(va).localeCompare(String(vb), "he", { numeric: true });
+        return colSort.dir === "asc" ? cmp : -cmp;
+      })
+    : items;
+
+  const toggleSort = (key: string) =>
+    setColSort((prev) =>
+      prev && prev.key === key
+        ? (prev.dir === "asc" ? { key, dir: "desc" } : null)
+        : { key, dir: "asc" },
+    );
+
+  const SortHead = ({ label, sortKey, className }: { label: string; sortKey: string; className?: string }) => {
+    const active = colSort?.key === sortKey;
+    return (
+      <button
+        type="button"
+        onClick={() => toggleSort(sortKey)}
+        className={cn("text-right flex items-center gap-1 hover:text-foreground transition-colors", active && "text-foreground", className)}
+        title="מיין לפי עמודה זו"
+      >
+        <span>{label}</span>
+        {active ? (
+          colSort!.dir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+        ) : (
+          <ChevronsUpDown className="w-3 h-3 opacity-40" />
+        )}
+      </button>
+    );
+  };
+
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">
       <div className={cn("grid gap-2 px-4 py-2 bg-muted/40 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide", cols)}>
         {isInsurance ? (
           <>
-            <div className="text-right">שם הביטוח</div>
-            <div className="text-right">חברת ביטוח</div>
-            <div className="text-right">תוקף פוליסה</div>
-            <div className="text-right">סוכן ביטוח</div>
+            <SortHead label="שם הביטוח" sortKey="name" />
+            <SortHead label="חברת ביטוח" sortKey="insurer" />
+            <SortHead label="תוקף פוליסה" sortKey="expiry" />
+            <SortHead label="סוכן ביטוח" sortKey="agent" />
             <div></div>
           </>
         ) : (
           <>
-            <div className="col-span-3 text-right">קוד</div>
-            <div className="col-span-3 text-right">{domain === "digital" ? "שם משתמש" : domain === "licenses" ? "ספק" : "מס׳ סידורי"}</div>
-            <div className="col-span-3 text-right">עובד</div>
-            <div className="col-span-2 text-right">{domain === "physical" ? "סטטוס" : "תפוגה"}</div>
+            <SortHead label="קוד" sortKey="code" className="col-span-3" />
+            <SortHead label={domain === "digital" ? "שם משתמש" : domain === "licenses" ? "ספק" : "מס׳ סידורי"} sortKey="second" className="col-span-3" />
+            <SortHead label="עובד" sortKey="employee" className="col-span-3" />
+            <SortHead label={domain === "physical" ? "סטטוס" : "תפוגה"} sortKey="status" className="col-span-2" />
             <div className="col-span-1 text-left"></div>
           </>
         )}
       </div>
-      {items.map((a: any) => {
+      {sorted.map((a: any) => {
         const exp = expiryOf(a, domain);
         const days = exp ? Math.ceil((new Date(exp).getTime() - Date.now()) / 86400000) : null;
         const expiryCls = days === null ? "text-muted-foreground" : days < 0 ? "text-destructive font-semibold" : days <= 30 ? "text-amber-600 dark:text-amber-400 font-semibold" : "text-foreground";
