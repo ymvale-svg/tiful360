@@ -2959,18 +2959,21 @@ export type Database = {
       user_dashboard_prefs: {
         Row: {
           hidden: string[]
+          order: string[]
           updated_at: string
           user_id: string
           wide: string[]
         }
         Insert: {
           hidden?: string[]
+          order?: string[]
           updated_at?: string
           user_id: string
           wide?: string[]
         }
         Update: {
           hidden?: string[]
+          order?: string[]
           updated_at?: string
           user_id?: string
           wide?: string[]

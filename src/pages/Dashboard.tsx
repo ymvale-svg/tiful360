@@ -15,7 +15,7 @@ import { Tax101StatusCard } from "@/components/dashboard/Tax101StatusCard";
 import { CustomizeDashboardDialog } from "@/components/dashboard/CustomizeDashboardDialog";
 import { hasDualAccess } from "@/lib/dualAccess";
 import { resolveDashboardConfig, type KpiKey, type WidgetKey } from "@/lib/dashboardConfig";
-import { useDashboardPrefs } from "@/hooks/useDashboardPrefs";
+import { useDashboardPrefs, applyWidgetOrder } from "@/hooks/useDashboardPrefs";
 import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
@@ -24,7 +24,7 @@ export default function Dashboard() {
   const { data: alerts } = useAlerts();
   const { data: employees } = useEmployees();
   const { data: activityLog } = useActivityLog();
-  const { prefs, toggleHidden, toggleWide, reset, isCustomized } = useDashboardPrefs(user?.id);
+  const { prefs, toggleHidden, toggleWide, setOrder, reset, isCustomized } = useDashboardPrefs(user?.id);
   const [customizeOpen, setCustomizeOpen] = useState(false);
 
   // Wait for roles to load before rendering — prevents flash of admin UI
@@ -50,7 +50,8 @@ export default function Dashboard() {
   }
 
   const config = resolveDashboardConfig(roles);
-  const visibleWidgets = config.widgets.filter((w) => !prefs.hidden.includes(w));
+  const orderedWidgets = applyWidgetOrder(config.widgets, prefs.order);
+  const visibleWidgets = orderedWidgets.filter((w) => !prefs.hidden.includes(w));
   const wideWidgets = visibleWidgets.filter((w) => prefs.wide.includes(w));
   const normalWidgets = visibleWidgets.filter((w) => !prefs.wide.includes(w));
   const showActivity = normalWidgets.includes("activity");
@@ -230,10 +231,11 @@ export default function Dashboard() {
       <CustomizeDashboardDialog
         open={customizeOpen}
         onOpenChange={setCustomizeOpen}
-        widgets={config.widgets}
+        widgets={orderedWidgets}
         prefs={prefs}
         onToggleHidden={toggleHidden}
         onToggleWide={toggleWide}
+        onSetOrder={setOrder}
         onReset={reset}
       />
     </div>

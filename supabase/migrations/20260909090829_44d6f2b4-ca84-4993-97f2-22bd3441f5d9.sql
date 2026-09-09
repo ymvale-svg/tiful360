@@ -1,0 +1,1 @@
+ALTER TABLE public.user_dashboard_prefs ADD COLUMN IF NOT EXISTS "order" TEXT[] NOT NULL DEFAULT '{}';
