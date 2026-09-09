@@ -5,9 +5,11 @@ import type { WidgetKey } from "@/lib/dashboardConfig";
 export interface DashboardPrefs {
   hidden: WidgetKey[];
   wide: WidgetKey[];
+  /** User-defined widget order; widgets missing here keep their default position. */
+  order: WidgetKey[];
 }
 
-const EMPTY: DashboardPrefs = { hidden: [], wide: [] };
+const EMPTY: DashboardPrefs = { hidden: [], wide: [], order: [] };
 
 function storageKey(userId?: string) {
   return `dashboard-prefs-${userId ?? "anon"}`;
@@ -21,6 +23,7 @@ function load(userId?: string): DashboardPrefs {
     return {
       hidden: Array.isArray(parsed.hidden) ? parsed.hidden : [],
       wide: Array.isArray(parsed.wide) ? parsed.wide : [],
+      order: Array.isArray(parsed.order) ? parsed.order : [],
     };
   } catch {
     return EMPTY;
@@ -35,8 +38,21 @@ function writeLocal(userId: string | undefined, next: DashboardPrefs) {
   }
 }
 
+/** Sort the role's widgets by the user's saved order; unknown keys keep default order. */
+export function applyWidgetOrder(widgets: WidgetKey[], order: WidgetKey[]): WidgetKey[] {
+  if (order.length === 0) return widgets;
+  return [...widgets].sort((a, b) => {
+    const ia = order.indexOf(a);
+    const ib = order.indexOf(b);
+    if (ia === -1 && ib === -1) return widgets.indexOf(a) - widgets.indexOf(b);
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
+}
+
 /**
- * Per-user dashboard layout preferences (hidden widgets + wide widgets).
+ * Per-user dashboard layout preferences (hidden widgets, wide widgets, order).
  * Stored on the server so they follow the user across devices/browsers,
  * with a local copy for instant rendering.
  */
@@ -54,7 +70,7 @@ export function useDashboardPrefs(userId?: string) {
     (async () => {
       const { data, error } = await supabase
         .from("user_dashboard_prefs")
-        .select("hidden, wide")
+        .select("hidden, wide, order")
         .eq("user_id", userId)
         .maybeSingle();
       if (cancelled || error) return;
@@ -63,10 +79,11 @@ export function useDashboardPrefs(userId?: string) {
         const remote: DashboardPrefs = {
           hidden: (data.hidden ?? []) as WidgetKey[],
           wide: (data.wide ?? []) as WidgetKey[],
+          order: ((data as { order?: string[] }).order ?? []) as WidgetKey[],
         };
         setPrefs(remote);
         writeLocal(userId, remote);
-      } else if (local.hidden.length > 0 || local.wide.length > 0) {
+      } else if (local.hidden.length > 0 || local.wide.length > 0 || local.order.length > 0) {
         // First run after the server-side store was added: keep what the user already set.
         await supabase.from("user_dashboard_prefs").upsert({ user_id: userId, ...local });
       }
@@ -88,7 +105,13 @@ export function useDashboardPrefs(userId?: string) {
           const { error } = await supabase
             .from("user_dashboard_prefs")
             .upsert(
-              { user_id: userId, hidden: next.hidden, wide: next.wide, updated_at: new Date().toISOString() },
+              {
+                user_id: userId,
+                hidden: next.hidden,
+                wide: next.wide,
+                order: next.order,
+                updated_at: new Date().toISOString(),
+              },
               { onConflict: "user_id" },
             );
           if (error) console.error("Failed to save dashboard prefs", error);
@@ -105,7 +128,7 @@ export function useDashboardPrefs(userId?: string) {
         : [...prefs.hidden, key];
       // Un-hiding keeps the width; hiding a wide widget drops the wide flag.
       const wide = hidden.includes(key) ? prefs.wide.filter((k) => k !== key) : prefs.wide;
-      save({ hidden, wide });
+      save({ ...prefs, hidden, wide });
     },
     [prefs, save],
   );
@@ -120,7 +143,20 @@ export function useDashboardPrefs(userId?: string) {
     [prefs, save],
   );
 
+  /** Persist a full ordering (already computed by the UI). */
+  const setOrder = useCallback(
+    (order: WidgetKey[]) => save({ ...prefs, order }),
+    [prefs, save],
+  );
+
   const reset = useCallback(() => save(EMPTY), [save]);
 
-  return { prefs, toggleHidden, toggleWide, reset, isCustomized: prefs.hidden.length > 0 || prefs.wide.length > 0 };
+  return {
+    prefs,
+    toggleHidden,
+    toggleWide,
+    setOrder,
+    reset,
+    isCustomized: prefs.hidden.length > 0 || prefs.wide.length > 0 || prefs.order.length > 0,
+  };
 }
