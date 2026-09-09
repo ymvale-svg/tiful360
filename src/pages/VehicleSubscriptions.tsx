@@ -7,7 +7,7 @@ import { useAssets, useEmployees } from "@/hooks/useData";
 import { useAssetGroups } from "@/hooks/useAssetGroups";
 import { usePersistentFilter } from "@/hooks/usePersistentFilter";
 import { exportToExcel } from "@/lib/exportExcel";
-import { VehicleSubscriptionDialog } from "@/components/vehicles/VehicleSubscriptionDialog";
+
 import {
   SUBSCRIPTION_PROVIDERS,
   SUBSCRIPTION_STATUS_LABELS,
