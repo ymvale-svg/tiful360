@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { Car, Plus, Pencil, Trash2, Ticket } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Car, Plus, Pencil, Trash2, Ticket, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,18 +8,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useEmployeeAssets } from "@/hooks/useData";
 import { useAssetGroups } from "@/hooks/useAssetGroups";
-import { VehicleSubscriptionDialog } from "./VehicleSubscriptionDialog";
+import { isVehicleLinkedGroup } from "@/lib/vehicleLinkedGroups";
 import {
-  SUBSCRIPTION_STATUS_LABELS,
   VEHICLE_TYPE_LABELS,
   useDeleteEmployeeVehicle,
-  useDeleteVehicleSubscription,
   useEmployeeVehicles,
   resolveVehiclePlate,
   useSaveEmployeeVehicle,
-  useVehicleSubscriptions,
   vehicleTypeFromGroupName,
-  type VehicleSubscription,
 } from "@/hooks/useVehicleSubscriptions";
 
 interface Props {
@@ -26,43 +23,44 @@ interface Props {
   canEdit: boolean;
 }
 
-const statusClass: Record<string, string> = {
-  active: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-  suspended: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  cancelled: "bg-muted text-muted-foreground",
+const assetStatusLabels: Record<string, string> = {
+  in_use: "בשימוש", in_stock: "במלאי", in_repair: "בתיקון", lost: "אבד",
 };
 
 export function EmployeeVehiclesTab({ employeeId, canEdit }: Props) {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const { data: vehicles } = useEmployeeVehicles(employeeId);
-  const { data: subscriptions } = useVehicleSubscriptions();
   const { data: assets } = useEmployeeAssets(employeeId);
   const { data: groups } = useAssetGroups();
   const saveVehicle = useSaveEmployeeVehicle();
   const deleteVehicle = useDeleteEmployeeVehicle();
-  const deleteSubscription = useDeleteVehicleSubscription();
 
   const [addingVehicle, setAddingVehicle] = useState(false);
   const [editingVehicleId, setEditingVehicleId] = useState<string | null>(null);
   const [plate, setPlate] = useState("");
   const [notes, setNotes] = useState("");
-  const [subDialog, setSubDialog] = useState<{
-    employeeVehicleId?: string | null;
-    assetId?: string | null;
-    label?: string;
-    subscription?: VehicleSubscription | null;
-  } | null>(null);
 
   const companyVehicles = useMemo(
     () => (assets ?? []).filter((a: any) => a.asset_categories?.protocol_type === "vehicle"),
     [assets]
   );
 
-  const groupName = (groupId?: string | null) => (groups ?? []).find((g) => g.id === groupId)?.name ?? null;
+  const groupById = useMemo(
+    () => new Map((groups ?? []).map((g) => [g.id, g])),
+    [groups]
+  );
 
-  const subsForPrivate = (vehicleId: string) =>
-    (subscriptions ?? []).filter((s) => s.employee_vehicle_id === vehicleId);
-  const subsForAsset = (assetId: string) => (subscriptions ?? []).filter((s) => s.asset_id === assetId);
+  // Single source of truth: subscription items managed under Resources (שירותי מנוי)
+  const subscriptionAssets = useMemo(
+    () =>
+      (assets ?? []).filter((a: any) =>
+        isVehicleLinkedGroup(groupById.get(a.group_id) as any),
+      ),
+    [assets, groupById]
+  );
+
+  const groupName = (groupId?: string | null) => groupById.get(groupId ?? "")?.name ?? null;
 
   const startAdd = () => {
     setAddingVehicle(true);
@@ -101,7 +99,7 @@ export function EmployeeVehiclesTab({ employeeId, canEdit }: Props) {
   };
 
   const removeVehicle = async (id: string) => {
-    if (!confirm("למחוק את הרכב וכל המנויים שלו?")) return;
+    if (!confirm("למחוק את הרכב?")) return;
     try {
       await deleteVehicle.mutateAsync(id);
       toast({ title: "הרכב נמחק" });
@@ -109,60 +107,6 @@ export function EmployeeVehiclesTab({ employeeId, canEdit }: Props) {
       toast({ title: "שגיאה במחיקה", description: e.message, variant: "destructive" });
     }
   };
-
-  const removeSubscription = async (id: string) => {
-    if (!confirm("למחוק את המנוי?")) return;
-    try {
-      await deleteSubscription.mutateAsync(id);
-      toast({ title: "המנוי נמחק" });
-    } catch (e: any) {
-      toast({ title: "שגיאה במחיקה", description: e.message, variant: "destructive" });
-    }
-  };
-
-  const SubscriptionsList = ({
-    subs,
-    onAdd,
-  }: {
-    subs: VehicleSubscription[];
-    onAdd: () => void;
-  }) => (
-    <div className="mt-3 space-y-2">
-      {subs.length === 0 ? (
-        <p className="text-sm text-muted-foreground">אין מנויים לרכב זה</p>
-      ) : (
-        subs.map((s) => (
-          <div key={s.id} className="flex flex-wrap items-center gap-2 sm:gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2">
-            <Ticket className="w-4 h-4 text-muted-foreground shrink-0" />
-            <span className="font-medium text-sm">{s.provider}</span>
-            <span className={`text-xs px-2 py-0.5 rounded-full ${statusClass[s.status] ?? ""}`}>
-              {SUBSCRIPTION_STATUS_LABELS[s.status] ?? s.status}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {s.start_date ? new Date(s.start_date).toLocaleDateString("en-GB") : "ללא תאריך התחלה"}
-            </span>
-            {s.notes && <span className="text-xs text-muted-foreground truncate max-w-[16rem]">{s.notes}</span>}
-            {canEdit && (
-              <div className="ms-auto flex items-center gap-1">
-                <Button size="sm" variant="ghost" onClick={() => setSubDialog({ subscription: s })} aria-label="ערוך מנוי">
-                  <Pencil className="w-3.5 h-3.5" />
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => removeSubscription(s.id)} aria-label="מחק מנוי">
-                  <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                </Button>
-              </div>
-            )}
-          </div>
-        ))
-      )}
-      {canEdit && (
-        <Button size="sm" variant="outline" className="gap-1.5" onClick={onAdd}>
-          <Plus className="w-3.5 h-3.5" />
-          הוסף מנוי
-        </Button>
-      )}
-    </div>
-  );
 
   return (
     <div className="space-y-4" dir="rtl">
@@ -215,10 +159,6 @@ export function EmployeeVehiclesTab({ employeeId, canEdit }: Props) {
               </div>
             )}
           </div>
-          <SubscriptionsList
-            subs={subsForPrivate(v.id)}
-            onAdd={() => setSubDialog({ employeeVehicleId: v.id, label: v.license_plate })}
-          />
         </div>
       ))}
 
@@ -226,18 +166,18 @@ export function EmployeeVehiclesTab({ employeeId, canEdit }: Props) {
         const typeKey = vehicleTypeFromGroupName(groupName(a.group_id));
         return (
           <div key={a.id} className="bg-card border border-border rounded-xl p-4">
-            <div className="flex items-center gap-3 flex-wrap">
+            <button
+              type="button"
+              onClick={() => navigate(`/assets/physical/${a.id}`)}
+              className="flex items-center gap-3 flex-wrap w-full text-right hover:opacity-80 transition-opacity"
+            >
               <Car className="w-4 h-4 text-muted-foreground" />
               <span className="font-mono font-semibold">{resolveVehiclePlate(a)}</span>
               <span className="text-sm">{a.asset_name}</span>
               <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
                 {VEHICLE_TYPE_LABELS[typeKey]}
               </span>
-            </div>
-            <SubscriptionsList
-              subs={subsForAsset(a.id)}
-              onAdd={() => setSubDialog({ assetId: a.id, label: resolveVehiclePlate(a) || a.asset_name })}
-            />
+            </button>
           </div>
         );
       })}
@@ -248,14 +188,47 @@ export function EmployeeVehiclesTab({ employeeId, canEdit }: Props) {
         </div>
       )}
 
-      <VehicleSubscriptionDialog
-        open={!!subDialog}
-        onOpenChange={(v) => !v && setSubDialog(null)}
-        employeeVehicleId={subDialog?.employeeVehicleId}
-        assetId={subDialog?.assetId}
-        vehicleLabel={subDialog?.label}
-        subscription={subDialog?.subscription}
-      />
+      {/* Subscription services — synced from Resources (שירותי מנוי) */}
+      <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+            <Ticket className="w-4 h-4" />
+            מנויי רכב ואגרות
+          </h3>
+          {canEdit && (
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => navigate("/assets/licenses")}>
+              <Plus className="w-3.5 h-3.5" />
+              ניהול מנויים במשאבים
+            </Button>
+          )}
+        </div>
+
+        {subscriptionAssets.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            לא משויכים לעובד מנויים. ניתן לשייך מנוי מתוך מסך המשאבים &gt; שירותי מנוי.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {subscriptionAssets.map((a: any) => (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => navigate(`/assets/licenses/${a.id}`)}
+                className="w-full flex flex-wrap items-center gap-2 sm:gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2 text-right hover:bg-muted transition-colors"
+              >
+                <Ticket className="w-4 h-4 text-muted-foreground shrink-0" />
+                <span className="font-medium text-sm">{groupName(a.group_id) ?? a.asset_name}</span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  {assetStatusLabels[a.status] ?? a.status}
+                </span>
+                <span className="text-xs font-mono text-muted-foreground">{a.asset_code}</span>
+                {a.notes && <span className="text-xs text-muted-foreground truncate max-w-[16rem]">{a.notes}</span>}
+                <ChevronLeft className="w-4 h-4 text-muted-foreground ms-auto" />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
