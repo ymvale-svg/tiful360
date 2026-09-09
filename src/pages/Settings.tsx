@@ -25,10 +25,28 @@ import { useAuth } from "@/hooks/useAuth";
 function EmailsSettings({
   columnKey, title, description, placeholder,
 }: { columnKey: "it_emails" | "expiry_notification_emails" | "operations_emails" | "payroll_emails" | "secretariat_emails"; title: string; description: string; placeholder: string }) {
-  const { activeCompanyId, activeCompany } = useCompany();
+  const { activeCompanyId } = useCompany();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [emails, setEmails] = useState((activeCompany as any)?.[columnKey] ?? "");
+  const [emails, setEmails] = useState("");
+  const [loaded, setLoaded] = useState(false);
+
+  // Load current recipients via the security-definer RPC (direct column reads
+  // are restricted for non-admin roles).
+  useEffect(() => {
+    if (!activeCompanyId || loaded) return;
+    let cancelled = false;
+    supabase
+      .rpc("get_company_routing_emails", { _company_id: activeCompanyId })
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (!error && data && data.length > 0) {
+          setEmails((data[0] as any)?.[columnKey] ?? "");
+        }
+        setLoaded(true);
+      });
+    return () => { cancelled = true; };
+  }, [activeCompanyId, columnKey, loaded]);
 
   const updateMutation = useMutation({
     mutationFn: async () => {
