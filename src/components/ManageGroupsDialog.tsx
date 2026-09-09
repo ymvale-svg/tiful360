@@ -13,6 +13,8 @@ import {
 } from "@/hooks/useAssetGroups";
 import { useToast } from "@/hooks/use-toast";
 import { OWNER_ROLE_OPTIONS } from "@/lib/domainConfig";
+import { getBuiltinFields, isBuiltinFieldVisible } from "@/lib/builtinFields";
+import type { DomainKey } from "@/lib/assetDomains";
 
 interface Props {
   open: boolean;
@@ -20,9 +22,12 @@ interface Props {
   categoryId: string;
   categoryName: string;
   companyId?: string | null;
+  /** Domain of the category — enables the "relevant fields" configuration. */
+  domain?: DomainKey | null;
 }
 
-export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryName, companyId }: Props) {
+export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryName, companyId, domain }: Props) {
+
   const { data: assets } = useAssets();
   const { data: groups } = useAssetGroups();
   const createGroup = useCreateAssetGroup();
@@ -100,6 +105,25 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
     }
   };
 
+  const selectedGroup = useMemo(
+    () => catGroups.find((g) => g.id === selectedGroupId) ?? null,
+    [catGroups, selectedGroupId],
+  );
+  const builtinFields = useMemo(() => getBuiltinFields(domain ?? null), [domain]);
+
+  const toggleBuiltinField = async (key: string) => {
+    if (!selectedGroup) return;
+    const current = Array.isArray(selectedGroup.visible_builtin_fields)
+      ? selectedGroup.visible_builtin_fields.map(String)
+      : builtinFields.map((f) => f.key);
+    const next = current.includes(key) ? current.filter((k) => k !== key) : [...current, key];
+    try {
+      await updateGroup.mutateAsync({ id: selectedGroup.id, visible_builtin_fields: next });
+    } catch (e: any) {
+      toast({ title: "שגיאה", description: e.message, variant: "destructive" });
+    }
+  };
+
   const inGroup = useMemo(
     () => catAssets.filter((a: any) => a.group_id === selectedGroupId),
     [catAssets, selectedGroupId],
@@ -116,6 +140,7 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
   const removeFromGroup = async (assetId: string) => {
     await assignAssets.mutateAsync({ groupId: null, assetIds: [assetId] });
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -235,9 +260,36 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
 
           {/* Items panel */}
           <div className="space-y-2">
+            {selectedGroup && builtinFields.length > 0 && (
+              <div className="border border-border rounded-lg p-3 space-y-2">
+                <div className="text-xs font-medium text-muted-foreground">
+                  שדות רלוונטיים לתת-הקטגוריה
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  שדה שלא מסומן לא יופיע בכרטיס הפריט ולא בטופס ההוספה.
+                </p>
+                <div className="grid grid-cols-2 gap-1">
+                  {builtinFields.map((f) => {
+                    const checked = isBuiltinFieldVisible(selectedGroup, f.key);
+                    return (
+                      <label key={f.key} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 accent-primary"
+                          checked={checked}
+                          onChange={() => toggleBuiltinField(f.key)}
+                        />
+                        <span className="truncate">{f.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <div className="text-xs font-medium text-muted-foreground">
               {selectedGroupId ? "פריטים בתת-הקטגוריה" : "בחר תת-קטגוריה כדי לשייך פריטים"}
             </div>
+
             {selectedGroupId ? (
               <div className="space-y-3 max-h-80 overflow-y-auto">
                 <div>
