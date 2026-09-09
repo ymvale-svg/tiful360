@@ -326,7 +326,7 @@ export default function EmployeeDetail() {
                 </div>
               </div>
             ))}
-            {(!assets || assets.length === 0) && (
+            {nonVehicleAssets.length === 0 && (
               <div className="col-span-2 text-center py-8 text-muted-foreground">אין ציוד רשום</div>
             )}
           </div>
