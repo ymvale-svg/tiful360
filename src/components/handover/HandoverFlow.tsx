@@ -151,7 +151,7 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
   const isVehicle = asset?.asset_categories?.protocol_type === "vehicle" || !!asset?.license_plate;
   /** Assignment to an off-site location instead of an employee (no signed protocol). */
   const siteMode = assignTarget === "site" && !isReturn && !preassignedOwnerId;
-  const skipsForm = isReturn
+  const categorySkips = isReturn
     ? asset?.asset_categories?.skip_return_form === true
     : asset?.asset_categories?.skip_handover_form === true;
 
@@ -165,6 +165,14 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
     () => resolveTemplate(templates, protocolType as any, activeCompanyId ?? null, asset?.category_id ?? null, asset?.group_id ?? null),
     [templates, protocolType, activeCompanyId, asset?.category_id, asset?.group_id]
   );
+
+  /** A template bound to this exact sub-category means a signed protocol is required
+   *  even when the parent category is configured to skip forms (e.g. fuel cards). */
+  const hasSubCategoryProtocol = !!(
+    template && asset?.group_id && template.group_id === asset.group_id
+  );
+  const skipsForm = categorySkips && !hasSubCategoryProtocol;
+
 
   const candidateFields = useMemo(
     () => (asset ? buildCandidateFields(asset, categoryName) : []),
