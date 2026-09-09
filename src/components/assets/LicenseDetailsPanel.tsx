@@ -15,7 +15,9 @@ interface Props { asset: any }
 
 export function LicenseDetailsPanel({ asset }: Props) {
   const qc = useQueryClient();
+  const { data: groups } = useAssetGroups();
   const { toast } = useToast();
+
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const cf = asset.custom_fields ?? {};
