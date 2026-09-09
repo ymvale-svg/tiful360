@@ -436,26 +436,16 @@ export default function VehicleSubscriptions() {
                           <button
                             key={s.id}
                             type="button"
-                            title={s.source === "asset" ? "מנוי מתוך מסך משאבים — פתיחת כרטיס הפריט" : s.notes || undefined}
+                            title={s.source === "asset" ? "פתיחת כרטיס הפריט" : s.notes || undefined}
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (s.source === "asset") {
-                                navigate(`/assets/licenses/${s.source_asset_id}`);
-                                return;
-                              }
-                              setSubDialog({
-                                employeeVehicleId: r.employee_vehicle_id,
-                                assetId: r.asset_id,
-                                label: `${r.plate} · ${r.employee_name}`,
-                                subscription: s,
-                              });
+                              if (s.source_asset_id) navigate(`/assets/licenses/${s.source_asset_id}`);
                             }}
                             className={`text-xs px-2 py-1 rounded-full border transition-opacity hover:opacity-80 ${statusClass[s.status] ?? "bg-muted text-muted-foreground border-border"}`}
                           >
                             {s.provider}
                             {s.start_date && <span className="opacity-70"> · {fmtDate(s.start_date)}</span>}
                             <span className="opacity-70"> · {SUBSCRIPTION_STATUS_LABELS[s.status] ?? s.status}</span>
-                            {s.source === "asset" && <span className="opacity-70"> · משאבים</span>}
                           </button>
 
                         ))}
