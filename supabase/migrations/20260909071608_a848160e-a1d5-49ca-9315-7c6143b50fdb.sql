@@ -1,0 +1,1 @@
+ALTER TABLE public.asset_groups ADD COLUMN IF NOT EXISTS visible_builtin_fields jsonb;

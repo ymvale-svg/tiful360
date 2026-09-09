@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import { useCreateAsset } from "@/hooks/useMutations";
 import { useAssetCategories, useEmployees, useAssets } from "@/hooks/useData";
 import { useAssetGroups } from "@/hooks/useAssetGroups";
+import { isBuiltinFieldVisible } from "@/lib/builtinFields";
 import { useCategoryFields, useAddCategoryFieldOption, filterFieldsForGroup } from "@/hooks/useCategories";
 import { getDomain } from "@/lib/assetDomains";
 import { isVehicleLinkedGroup } from "@/lib/vehicleLinkedGroups";
@@ -125,6 +126,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
   // Vehicle-linked subscription sub-categories (Pango, toll roads, fuel cards):
   // the sub-category already says everything, so generic category-level fields are hidden.
   const vehicleLinkedGroup = isVehicleLinkedGroup(selectedGroup as any);
+  const showBuiltin = (key: string) => isBuiltinFieldVisible(selectedGroup as any, key);
   const catFields = useMemo(
     () =>
       filterFieldsForGroup(catFieldsRaw as any[], form.group_id || null)
@@ -662,6 +664,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
             <div className="border-t border-border/50 pt-3 mt-3 space-y-3">
               <p className="text-xs font-medium text-muted-foreground">פרטי הגישה</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {showBuiltin("account_username") && (
                 <div>
                   <label className="text-sm font-medium mb-1 block">שם משתמש</label>
                   <input
@@ -672,6 +675,8 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                     className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
                   />
                 </div>
+                )}
+                {showBuiltin("account_url") && (
                 <div>
                   <label className="text-sm font-medium mb-1 block">כתובת המערכת</label>
                   <input
@@ -682,6 +687,8 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                     className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
                   />
                 </div>
+                )}
+                {showBuiltin("password_expires_at") && (
                 <div>
                   <label className="text-sm font-medium mb-1 block">תוקף סיסמה</label>
                   <input
@@ -692,6 +699,8 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                     className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
                   />
                 </div>
+                )}
+                {showBuiltin("mfa_enabled") && (
                 <label className="flex items-center gap-2 text-sm mt-6">
                   <input
                     type="checkbox"
@@ -701,6 +710,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                   />
                   אימות דו-שלבי (MFA) מופעל
                 </label>
+                )}
               </div>
             </div>
           )}

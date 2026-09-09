@@ -931,7 +931,9 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
           categoryId={category.id}
           categoryName={category.category_name}
           companyId={category.company_id ?? null}
+          domain={getDomain(category as any)}
         />
+
       </>
     );
   }

@@ -11,7 +11,9 @@ export type AssetGroup = {
   sort_order: number;
   default_owner_role: string | null;
   is_vehicle_related?: boolean | null;
+  visible_builtin_fields?: string[] | null;
 };
+
 
 export function useAssetGroups() {
   const { activeCompanyId } = useCompany();
@@ -49,7 +51,7 @@ export function useCreateAssetGroup() {
 export function useUpdateAssetGroup() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...params }: { id: string; name?: string; description?: string | null; sort_order?: number; default_owner_role?: string | null }) => {
+    mutationFn: async ({ id, ...params }: { id: string; name?: string; description?: string | null; sort_order?: number; default_owner_role?: string | null; visible_builtin_fields?: string[] | null }) => {
       const { error } = await supabase.from("asset_groups").update(params as any).eq("id", id);
       if (error) throw error;
     },

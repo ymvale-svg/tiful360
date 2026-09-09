@@ -7,12 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { useAssetGroups } from "@/hooks/useAssetGroups";
+import { showFieldRow } from "@/lib/builtinFields";
+
 
 interface Props { asset: any }
 
 export function LicenseDetailsPanel({ asset }: Props) {
   const qc = useQueryClient();
+  const { data: groups } = useAssetGroups();
   const { toast } = useToast();
+
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const cf = asset.custom_fields ?? {};
@@ -55,6 +60,12 @@ export function LicenseDetailsPanel({ asset }: Props) {
     return new Date(d!).toLocaleDateString("en-GB");
   };
 
+  const group = (groups ?? []).find((g) => g.id === asset.group_id) ?? null;
+  const show = (key: string, value: unknown) => showFieldRow(group, key, value, editing);
+  const hasAnyValue = ["vendor", "plan", "seats"].some((k) => !!cf[k]) ||
+    !!asset.account_username || !!asset.account_url || !!asset.license_expires_at;
+
+
   const handleSave = async () => {
     setSaving(true);
     const newCustom = { ...cf, vendor: form.vendor || null, plan: form.plan || null, seats: form.seats || null };
@@ -94,33 +105,49 @@ export function LicenseDetailsPanel({ asset }: Props) {
       </div>
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-        <FieldEditable label="ספק" value={cf.vendor} editing={editing} v={form.vendor} onChange={(v) => setForm({ ...form, vendor: v })} />
-        <FieldEditable label="תוכנית/Plan" value={cf.plan} editing={editing} v={form.plan} onChange={(v) => setForm({ ...form, plan: v })} />
-        <FieldEditable label="מס׳ מושבים" value={cf.seats} editing={editing} v={form.seats} onChange={(v) => setForm({ ...form, seats: v })} />
-        <FieldEditable label="שם משתמש" value={asset.account_username} editing={editing} v={form.account_username} onChange={(v) => setForm({ ...form, account_username: v })} ltr />
-        <div className="col-span-2">
-          <Label className="text-xs text-muted-foreground">כתובת / URL</Label>
-          {editing ? (
-            <Input value={form.account_url} onChange={(e) => setForm({ ...form, account_url: e.target.value })} className="mt-1 text-left" dir="ltr" />
-          ) : asset.account_url ? (
-            <a href={asset.account_url} target="_blank" rel="noreferrer" className="font-medium mt-1 text-primary inline-flex items-center gap-1 hover:underline text-sm" dir="ltr">
-              {asset.account_url} <ExternalLink className="w-3 h-3" />
-            </a>
-          ) : <div className="font-medium mt-1">—</div>}
-        </div>
-      </div>
-
-      <div className="pt-3 border-t border-border flex items-center justify-between gap-3">
-        <div className="text-sm text-muted-foreground">תפוגת רישיון</div>
-        {editing ? (
-          <Input type="date" value={form.license_expires_at} onChange={(e) => setForm({ ...form, license_expires_at: e.target.value })} className="w-44 text-left" dir="ltr" />
-        ) : (
-          <div className={cn("text-sm flex items-center gap-1", expiryClass(asset.license_expires_at))}>
-            {daysTo(asset.license_expires_at) !== null && daysTo(asset.license_expires_at)! <= 30 && <AlertTriangle className="w-3.5 h-3.5" />}
-            {expiryLabel(asset.license_expires_at)}
+        {show("vendor", cf.vendor) && (
+          <FieldEditable label="ספק" value={cf.vendor} editing={editing} v={form.vendor} onChange={(v) => setForm({ ...form, vendor: v })} />
+        )}
+        {show("plan", cf.plan) && (
+          <FieldEditable label="תוכנית/Plan" value={cf.plan} editing={editing} v={form.plan} onChange={(v) => setForm({ ...form, plan: v })} />
+        )}
+        {show("seats", cf.seats) && (
+          <FieldEditable label="מס׳ מושבים" value={cf.seats} editing={editing} v={form.seats} onChange={(v) => setForm({ ...form, seats: v })} />
+        )}
+        {show("account_username", asset.account_username) && (
+          <FieldEditable label="שם משתמש" value={asset.account_username} editing={editing} v={form.account_username} onChange={(v) => setForm({ ...form, account_username: v })} ltr />
+        )}
+        {show("account_url", asset.account_url) && (
+          <div className="col-span-2">
+            <Label className="text-xs text-muted-foreground">כתובת / URL</Label>
+            {editing ? (
+              <Input value={form.account_url} onChange={(e) => setForm({ ...form, account_url: e.target.value })} className="mt-1 text-left" dir="ltr" />
+            ) : asset.account_url ? (
+              <a href={asset.account_url} target="_blank" rel="noreferrer" className="font-medium mt-1 text-primary inline-flex items-center gap-1 hover:underline text-sm" dir="ltr">
+                {asset.account_url} <ExternalLink className="w-3 h-3" />
+              </a>
+            ) : <div className="font-medium mt-1">—</div>}
           </div>
         )}
       </div>
+
+      {show("license_expires_at", asset.license_expires_at) && (
+        <div className="pt-3 border-t border-border flex items-center justify-between gap-3">
+          <div className="text-sm text-muted-foreground">תפוגת רישיון</div>
+          {editing ? (
+            <Input type="date" value={form.license_expires_at} onChange={(e) => setForm({ ...form, license_expires_at: e.target.value })} className="w-44 text-left" dir="ltr" />
+          ) : (
+            <div className={cn("text-sm flex items-center gap-1", expiryClass(asset.license_expires_at))}>
+              {daysTo(asset.license_expires_at) !== null && daysTo(asset.license_expires_at)! <= 30 && <AlertTriangle className="w-3.5 h-3.5" />}
+              {expiryLabel(asset.license_expires_at)}
+            </div>
+          )}
+        </div>
+      )}
+      {!editing && !hasAnyValue && (
+        <p className="text-xs text-muted-foreground">אין עדיין פרטים — לחץ "ערוך" כדי להוסיף.</p>
+      )}
+
     </div>
   );
 }
