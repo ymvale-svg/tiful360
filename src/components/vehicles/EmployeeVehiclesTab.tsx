@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Car, Plus, Pencil, Trash2, Ticket, ChevronLeft } from "lucide-react";
+import { Car, Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +8,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useEmployeeAssets } from "@/hooks/useData";
 import { useAssetGroups } from "@/hooks/useAssetGroups";
-import { isVehicleLinkedGroup } from "@/lib/vehicleLinkedGroups";
 import {
   VEHICLE_TYPE_LABELS,
   useDeleteEmployeeVehicle,
@@ -22,10 +21,6 @@ interface Props {
   employeeId: string;
   canEdit: boolean;
 }
-
-const assetStatusLabels: Record<string, string> = {
-  in_use: "בשימוש", in_stock: "במלאי", in_repair: "בתיקון", lost: "אבד",
-};
 
 export function EmployeeVehiclesTab({ employeeId, canEdit }: Props) {
   const { toast } = useToast();
@@ -49,15 +44,6 @@ export function EmployeeVehiclesTab({ employeeId, canEdit }: Props) {
   const groupById = useMemo(
     () => new Map((groups ?? []).map((g) => [g.id, g])),
     [groups]
-  );
-
-  // Single source of truth: subscription items managed under Resources (שירותי מנוי)
-  const subscriptionAssets = useMemo(
-    () =>
-      (assets ?? []).filter((a: any) =>
-        isVehicleLinkedGroup(groupById.get(a.group_id) as any),
-      ),
-    [assets, groupById]
   );
 
   const groupName = (groupId?: string | null) => groupById.get(groupId ?? "")?.name ?? null;
