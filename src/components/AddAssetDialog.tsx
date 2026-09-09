@@ -15,6 +15,7 @@ import { useAssetCategories, useEmployees, useAssets } from "@/hooks/useData";
 import { useAssetGroups } from "@/hooks/useAssetGroups";
 import { useCategoryFields, useAddCategoryFieldOption, filterFieldsForGroup } from "@/hooks/useCategories";
 import { getDomain } from "@/lib/assetDomains";
+import { isVehicleLinkedGroup } from "@/lib/vehicleLinkedGroups";
 import { useAuth } from "@/hooks/useAuth";
 import { useUploadAssetDocument } from "@/hooks/useAssetDocuments";
 import { FileText, Upload, Trash2 } from "lucide-react";
@@ -620,6 +621,11 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
             </div>
           )}
 
+          {vehicleLinkedGroup ? (
+            <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
+              תת-הקטגוריה מגדירה את המנוי — שם הפריט ופרטי הספק נקבעים אוטומטית ואין צורך במילוי שדות נוספים.
+            </p>
+          ) : (
           <div>
             <label className="text-sm font-medium mb-1 block">
               {selectedCategory?.prefix === "CINS" ? "שם הפוליסה" : isDigital ? "שם המערכת / השירות" : "שם פריט"}
@@ -633,6 +639,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
             />
             {errors.asset_name && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.asset_name}</p>}
           </div>
+          )}
 
           {selectedCategory?.prefix !== "CINS" && selectedCategory?.prefix !== "CAR" && domain === "physical" && (
             <div>
