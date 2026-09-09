@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
+import { useAssetGroups } from "@/hooks/useAssetGroups";
+import { showFieldRow } from "@/lib/builtinFields";
 
 interface Props {
   asset: any;
@@ -15,6 +17,7 @@ interface Props {
 
 export function DigitalAccessPanel({ asset }: Props) {
   const qc = useQueryClient();
+  const { data: groups } = useAssetGroups();
   const { toast } = useToast();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -77,6 +80,11 @@ export function DigitalAccessPanel({ asset }: Props) {
     setEditing(false);
   };
 
+  const group = (groups ?? []).find((g) => g.id === asset.group_id) ?? null;
+  const show = (key: string, value: unknown) => showFieldRow(group, key, value, editing);
+  const hasAnyValue = !!asset.account_username || !!asset.account_url ||
+    asset.mfa_enabled != null || !!asset.password_expires_at || !!asset.license_expires_at;
+
   const ExpiryRow = ({ label, value, field }: { label: string; value?: string | null; field: "password_expires_at" | "license_expires_at" }) => (
     <div className="flex items-center justify-between gap-3 py-2 border-b border-border last:border-0">
       <div className="text-sm text-muted-foreground">{label}</div>
@@ -112,6 +120,7 @@ export function DigitalAccessPanel({ asset }: Props) {
       </div>
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+        {show("account_username", asset.account_username) && (
         <div>
           <Label className="text-xs text-muted-foreground">שם משתמש</Label>
           {editing ? (
@@ -120,6 +129,8 @@ export function DigitalAccessPanel({ asset }: Props) {
             <div className="font-mono text-sm mt-1">{asset.account_username ?? "—"}</div>
           )}
         </div>
+        )}
+        {show("account_url", asset.account_url) && (
         <div>
           <Label className="text-xs text-muted-foreground">כתובת / URL</Label>
           {editing ? (
@@ -133,6 +144,8 @@ export function DigitalAccessPanel({ asset }: Props) {
             <div className="font-medium mt-1">—</div>
           )}
         </div>
+        )}
+        {show("mfa_enabled", asset.mfa_enabled) && (
         <div className="col-span-2 flex items-center justify-between py-2 border-t border-border">
           <Label className="text-sm flex items-center gap-2">
             {form.mfa_enabled ? <Shield className="w-4 h-4 text-emerald-600" /> : <ShieldOff className="w-4 h-4 text-muted-foreground" />}
@@ -146,13 +159,23 @@ export function DigitalAccessPanel({ asset }: Props) {
             </span>
           )}
         </div>
+        )}
       </div>
 
-      <div className="pt-3 border-t border-border">
-        <h3 className="text-xs font-semibold text-muted-foreground mb-2">תוקפים</h3>
-        <ExpiryRow label="תפוגת סיסמה" value={asset.password_expires_at} field="password_expires_at" />
-        <ExpiryRow label="תפוגת רישיון" value={asset.license_expires_at} field="license_expires_at" />
-      </div>
+      {(show("password_expires_at", asset.password_expires_at) || show("license_expires_at", asset.license_expires_at)) && (
+        <div className="pt-3 border-t border-border">
+          <h3 className="text-xs font-semibold text-muted-foreground mb-2">תוקפים</h3>
+          {show("password_expires_at", asset.password_expires_at) && (
+            <ExpiryRow label="תפוגת סיסמה" value={asset.password_expires_at} field="password_expires_at" />
+          )}
+          {show("license_expires_at", asset.license_expires_at) && (
+            <ExpiryRow label="תפוגת רישיון" value={asset.license_expires_at} field="license_expires_at" />
+          )}
+        </div>
+      )}
+      {!editing && !hasAnyValue && (
+        <p className="text-xs text-muted-foreground">אין עדיין פרטים — לחץ "ערוך" כדי להוסיף.</p>
+      )}
     </div>
   );
 }
