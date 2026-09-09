@@ -10,6 +10,7 @@ export type AssetGroup = {
   description: string | null;
   sort_order: number;
   default_owner_role: string | null;
+  is_vehicle_related?: boolean | null;
 };
 
 export function useAssetGroups() {

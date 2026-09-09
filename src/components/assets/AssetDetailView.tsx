@@ -19,6 +19,9 @@ import { TrainingDetailsPanel } from "@/components/assets/TrainingDetailsPanel";
 import { InsuranceDetailsPanel } from "@/components/assets/InsuranceDetailsPanel";
 import { RealEstateDetailsPanel } from "@/components/assets/RealEstateDetailsPanel";
 import { getDomain, getPanelOwnedCustomFieldKeys } from "@/lib/assetDomains";
+import { VehicleLinkPanel } from "@/components/assets/VehicleLinkPanel";
+import { isVehicleLinkedGroup } from "@/lib/vehicleLinkedGroups";
+import { useAssetGroups } from "@/hooks/useAssetGroups";
 import { useDeleteAsset } from "@/hooks/useMutations";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -48,6 +51,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
   const { data: categories } = useAssetCategories();
   const { data: employees } = useEmployees();
   const { data: sites } = useSites();
+  const { data: assetGroups } = useAssetGroups();
   const deleteMutation = useDeleteAsset();
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -284,6 +288,11 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
             )}
           </div>
 
+
+          {/* Vehicle-linked subscription (Pango / tolls / fuel cards) */}
+          {isVehicleLinkedGroup(
+            (assetGroups ?? []).find((g: any) => g.id === asset.group_id) as any,
+          ) && <VehicleLinkPanel asset={asset} />}
 
           {/* Domain-specific panels */}
           {(() => {
