@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Car, Plus, Pencil, Trash2, Ticket, ChevronLeft } from "lucide-react";
+import { Car, Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +8,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useEmployeeAssets } from "@/hooks/useData";
 import { useAssetGroups } from "@/hooks/useAssetGroups";
-import { isVehicleLinkedGroup } from "@/lib/vehicleLinkedGroups";
 import {
   VEHICLE_TYPE_LABELS,
   useDeleteEmployeeVehicle,
@@ -22,10 +21,6 @@ interface Props {
   employeeId: string;
   canEdit: boolean;
 }
-
-const assetStatusLabels: Record<string, string> = {
-  in_use: "בשימוש", in_stock: "במלאי", in_repair: "בתיקון", lost: "אבד",
-};
 
 export function EmployeeVehiclesTab({ employeeId, canEdit }: Props) {
   const { toast } = useToast();
@@ -49,15 +44,6 @@ export function EmployeeVehiclesTab({ employeeId, canEdit }: Props) {
   const groupById = useMemo(
     () => new Map((groups ?? []).map((g) => [g.id, g])),
     [groups]
-  );
-
-  // Single source of truth: subscription items managed under Resources (שירותי מנוי)
-  const subscriptionAssets = useMemo(
-    () =>
-      (assets ?? []).filter((a: any) =>
-        isVehicleLinkedGroup(groupById.get(a.group_id) as any),
-      ),
-    [assets, groupById]
   );
 
   const groupName = (groupId?: string | null) => groupById.get(groupId ?? "")?.name ?? null;
@@ -187,48 +173,6 @@ export function EmployeeVehiclesTab({ employeeId, canEdit }: Props) {
           לא נרשמו רכבים לעובד זה
         </div>
       )}
-
-      {/* Subscription services — synced from Resources (שירותי מנוי) */}
-      <div className="bg-card border border-border rounded-xl p-4 space-y-3">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-            <Ticket className="w-4 h-4" />
-            מנויי רכב ואגרות
-          </h3>
-          {canEdit && (
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => navigate("/assets/licenses")}>
-              <Plus className="w-3.5 h-3.5" />
-              ניהול מנויים במשאבים
-            </Button>
-          )}
-        </div>
-
-        {subscriptionAssets.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            לא משויכים לעובד מנויים. ניתן לשייך מנוי מתוך מסך המשאבים &gt; שירותי מנוי.
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {subscriptionAssets.map((a: any) => (
-              <button
-                key={a.id}
-                type="button"
-                onClick={() => navigate(`/assets/licenses/${a.id}`)}
-                className="w-full flex flex-wrap items-center gap-2 sm:gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2 text-right hover:bg-muted transition-colors"
-              >
-                <Ticket className="w-4 h-4 text-muted-foreground shrink-0" />
-                <span className="font-medium text-sm">{groupName(a.group_id) ?? a.asset_name}</span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                  {assetStatusLabels[a.status] ?? a.status}
-                </span>
-                <span className="text-xs font-mono text-muted-foreground">{a.asset_code}</span>
-                {a.notes && <span className="text-xs text-muted-foreground truncate max-w-[16rem]">{a.notes}</span>}
-                <ChevronLeft className="w-4 h-4 text-muted-foreground ms-auto" />
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 }

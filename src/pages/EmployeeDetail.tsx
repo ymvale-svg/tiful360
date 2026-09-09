@@ -32,8 +32,7 @@ import { useEmployeeHandoverForms } from "@/hooks/useHandoverForms";
 import { getDomain, domainKeyToSlug } from "@/lib/assetDomains";
 import { EmployeeActivityTimeline } from "@/components/EmployeeActivityTimeline";
 import { EmployeeVehiclesTab } from "@/components/vehicles/EmployeeVehiclesTab";
-import { useAssetGroups } from "@/hooks/useAssetGroups";
-import { isVehicleAsset, isVehicleLinkedGroup } from "@/lib/vehicleLinkedGroups";
+import { isVehicleAsset } from "@/lib/vehicleLinkedGroups";
 
 
 
@@ -91,7 +90,7 @@ export default function EmployeeDetail() {
   const { data: employee, isLoading } = useEmployee(id!);
   const { data: assets } = useEmployeeAssets(id!);
   const { data: allAssets } = useAssets();
-  const { data: assetGroups } = useAssetGroups();
+  
   const { data: activityLog } = useActivityLog(id);
   const unassignAsset = useUnassignAsset();
   const { data: leaveRequests } = useEmployeeLeaveRequests(id!);
@@ -111,12 +110,9 @@ export default function EmployeeDetail() {
     a.asset_categories?.protocol_type === "digital" || (a.asset_categories?.prefix ?? "") === "DACC";
   const physicalAssets = employeeAssets.filter((a: any) => !isDigital(a));
   const digitalAccessAssets = employeeAssets.filter(isDigital);
-  // Vehicles and vehicle-linked subscriptions (Pango, tolls, fuel cards) live in the
-  // "רכב ומנויים" tab only — single source of truth, no duplicate listing here.
-  const groupByIdMap = new Map((assetGroups ?? []).map((g: any) => [g.id, g]));
-  const nonVehicleAssets = employeeAssets.filter(
-    (a: any) => !isVehicleAsset(a) && !isVehicleLinkedGroup(groupByIdMap.get(a.group_id) as any),
-  );
+  // Vehicles live in the "רכב ומנויים" tab only; subscription services (Pango,
+  // tolls, fuel cards) are listed here under "ציוד וגישות" — no duplication.
+  const nonVehicleAssets = employeeAssets.filter((a: any) => !isVehicleAsset(a));
   const { isAdmin, isSuperAdmin, isPayroll, isHR, isOperations, isFinance, user } = useAuth();
   const qc = useQueryClient();
   const canEditRemotePunch = isSuperAdmin || isAdmin || isPayroll || isOperations || isFinance;
