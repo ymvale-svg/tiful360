@@ -32,8 +32,7 @@ import { useEmployeeHandoverForms } from "@/hooks/useHandoverForms";
 import { getDomain, domainKeyToSlug } from "@/lib/assetDomains";
 import { EmployeeActivityTimeline } from "@/components/EmployeeActivityTimeline";
 import { EmployeeVehiclesTab } from "@/components/vehicles/EmployeeVehiclesTab";
-import { useAssetGroups } from "@/hooks/useAssetGroups";
-import { isVehicleAsset, isVehicleLinkedGroup } from "@/lib/vehicleLinkedGroups";
+import { isVehicleAsset } from "@/lib/vehicleLinkedGroups";
 
 
 
