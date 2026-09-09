@@ -15,7 +15,7 @@ import { Tax101StatusCard } from "@/components/dashboard/Tax101StatusCard";
 import { CustomizeDashboardDialog } from "@/components/dashboard/CustomizeDashboardDialog";
 import { hasDualAccess } from "@/lib/dualAccess";
 import { resolveDashboardConfig, type KpiKey, type WidgetKey } from "@/lib/dashboardConfig";
-import { useDashboardPrefs } from "@/hooks/useDashboardPrefs";
+import { useDashboardPrefs, applyWidgetOrder } from "@/hooks/useDashboardPrefs";
 import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
