@@ -90,7 +90,7 @@ export default function EmployeeDetail() {
   const { data: employee, isLoading } = useEmployee(id!);
   const { data: assets } = useEmployeeAssets(id!);
   const { data: allAssets } = useAssets();
-  const { data: assetGroups } = useAssetGroups();
+  
   const { data: activityLog } = useActivityLog(id);
   const unassignAsset = useUnassignAsset();
   const { data: leaveRequests } = useEmployeeLeaveRequests(id!);

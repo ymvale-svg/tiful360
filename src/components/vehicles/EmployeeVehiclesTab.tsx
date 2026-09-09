@@ -187,48 +187,6 @@ export function EmployeeVehiclesTab({ employeeId, canEdit }: Props) {
           לא נרשמו רכבים לעובד זה
         </div>
       )}
-
-      {/* Subscription services — synced from Resources (שירותי מנוי) */}
-      <div className="bg-card border border-border rounded-xl p-4 space-y-3">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-            <Ticket className="w-4 h-4" />
-            מנויי רכב ואגרות
-          </h3>
-          {canEdit && (
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => navigate("/assets/licenses")}>
-              <Plus className="w-3.5 h-3.5" />
-              ניהול מנויים במשאבים
-            </Button>
-          )}
-        </div>
-
-        {subscriptionAssets.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            לא משויכים לעובד מנויים. ניתן לשייך מנוי מתוך מסך המשאבים &gt; שירותי מנוי.
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {subscriptionAssets.map((a: any) => (
-              <button
-                key={a.id}
-                type="button"
-                onClick={() => navigate(`/assets/licenses/${a.id}`)}
-                className="w-full flex flex-wrap items-center gap-2 sm:gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2 text-right hover:bg-muted transition-colors"
-              >
-                <Ticket className="w-4 h-4 text-muted-foreground shrink-0" />
-                <span className="font-medium text-sm">{groupName(a.group_id) ?? a.asset_name}</span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                  {assetStatusLabels[a.status] ?? a.status}
-                </span>
-                <span className="text-xs font-mono text-muted-foreground">{a.asset_code}</span>
-                {a.notes && <span className="text-xs text-muted-foreground truncate max-w-[16rem]">{a.notes}</span>}
-                <ChevronLeft className="w-4 h-4 text-muted-foreground ms-auto" />
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 }
