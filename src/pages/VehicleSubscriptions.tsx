@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Download, Plus, Search, Ticket } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { useAssets, useEmployees } from "@/hooks/useData";
 import { useAssetGroups } from "@/hooks/useAssetGroups";
 import { usePersistentFilter } from "@/hooks/usePersistentFilter";
 import { exportToExcel } from "@/lib/exportExcel";
-import { VehicleSubscriptionDialog } from "@/components/vehicles/VehicleSubscriptionDialog";
+
 import {
   SUBSCRIPTION_PROVIDERS,
   SUBSCRIPTION_STATUS_LABELS,
@@ -73,12 +73,6 @@ export default function VehicleSubscriptions() {
   const { data: employees } = useEmployees();
   const { data: groups } = useAssetGroups();
 
-  const [subDialog, setSubDialog] = useState<{
-    employeeVehicleId?: string | null;
-    assetId?: string | null;
-    label?: string;
-    subscription?: VehicleSubscription | null;
-  } | null>(null);
 
   const [filters, setFilters, resetFilters] = usePersistentFilter("vehicle-subscriptions", {
     q: "",
@@ -442,26 +436,16 @@ export default function VehicleSubscriptions() {
                           <button
                             key={s.id}
                             type="button"
-                            title={s.source === "asset" ? "מנוי מתוך מסך משאבים — פתיחת כרטיס הפריט" : s.notes || undefined}
+                            title={s.source === "asset" ? "פתיחת כרטיס הפריט" : s.notes || undefined}
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (s.source === "asset") {
-                                navigate(`/assets/licenses/${s.source_asset_id}`);
-                                return;
-                              }
-                              setSubDialog({
-                                employeeVehicleId: r.employee_vehicle_id,
-                                assetId: r.asset_id,
-                                label: `${r.plate} · ${r.employee_name}`,
-                                subscription: s,
-                              });
+                              if (s.source_asset_id) navigate(`/assets/licenses/${s.source_asset_id}`);
                             }}
                             className={`text-xs px-2 py-1 rounded-full border transition-opacity hover:opacity-80 ${statusClass[s.status] ?? "bg-muted text-muted-foreground border-border"}`}
                           >
                             {s.provider}
                             {s.start_date && <span className="opacity-70"> · {fmtDate(s.start_date)}</span>}
                             <span className="opacity-70"> · {SUBSCRIPTION_STATUS_LABELS[s.status] ?? s.status}</span>
-                            {s.source === "asset" && <span className="opacity-70"> · משאבים</span>}
                           </button>
 
                         ))}
@@ -474,15 +458,10 @@ export default function VehicleSubscriptions() {
                         size="sm"
                         variant={r.activeSubs.length ? "ghost" : "outline"}
                         className="gap-1"
-                        title="הוספת מנוי לרכב זה"
+                        title="ניהול מנויים תחת שירותי מנוי במסך משאבים"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setSubDialog({
-                            employeeVehicleId: r.employee_vehicle_id,
-                            assetId: r.asset_id,
-                            label: `${r.plate} · ${r.employee_name}`,
-                            subscription: null,
-                          });
+                          navigate("/assets/licenses");
                         }}
                       >
                         <Plus className="w-3.5 h-3.5" />
@@ -496,15 +475,6 @@ export default function VehicleSubscriptions() {
           </tbody>
         </table>
       </div>
-
-      <VehicleSubscriptionDialog
-        open={!!subDialog}
-        onOpenChange={(v) => !v && setSubDialog(null)}
-        employeeVehicleId={subDialog?.employeeVehicleId ?? null}
-        assetId={subDialog?.assetId ?? null}
-        vehicleLabel={subDialog?.label}
-        subscription={subDialog?.subscription ?? null}
-      />
     </div>
   );
 }
