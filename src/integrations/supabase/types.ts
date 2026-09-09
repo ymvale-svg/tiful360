@@ -368,6 +368,7 @@ export type Database = {
           default_owner_role: string | null
           description: string | null
           id: string
+          is_vehicle_related: boolean
           name: string
           sort_order: number
           updated_at: string
@@ -379,6 +380,7 @@ export type Database = {
           default_owner_role?: string | null
           description?: string | null
           id?: string
+          is_vehicle_related?: boolean
           name: string
           sort_order?: number
           updated_at?: string
@@ -390,6 +392,7 @@ export type Database = {
           default_owner_role?: string | null
           description?: string | null
           id?: string
+          is_vehicle_related?: boolean
           name?: string
           sort_order?: number
           updated_at?: string
