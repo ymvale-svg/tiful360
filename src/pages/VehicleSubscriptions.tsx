@@ -208,8 +208,9 @@ export default function VehicleSubscriptions() {
     });
 
     // Employees holding subscription assets but with no vehicle attached — still show them.
-    assetSubsByEmployee.forEach((subs, empId) => {
+    assetSubsByEmployee.forEach((rawSubs, empId) => {
       if (usedEmployees.has(empId)) return;
+      const subs = dedupeSubs(rawSubs);
       const emp: any = empById.get(empId);
       out.push({
         id: `e:${empId}`,
