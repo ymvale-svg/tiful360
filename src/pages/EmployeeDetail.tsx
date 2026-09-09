@@ -32,6 +32,8 @@ import { useEmployeeHandoverForms } from "@/hooks/useHandoverForms";
 import { getDomain, domainKeyToSlug } from "@/lib/assetDomains";
 import { EmployeeActivityTimeline } from "@/components/EmployeeActivityTimeline";
 import { EmployeeVehiclesTab } from "@/components/vehicles/EmployeeVehiclesTab";
+import { useAssetGroups } from "@/hooks/useAssetGroups";
+import { isVehicleAsset, isVehicleLinkedGroup } from "@/lib/vehicleLinkedGroups";
 
 
 
@@ -89,6 +91,7 @@ export default function EmployeeDetail() {
   const { data: employee, isLoading } = useEmployee(id!);
   const { data: assets } = useEmployeeAssets(id!);
   const { data: allAssets } = useAssets();
+  const { data: assetGroups } = useAssetGroups();
   const { data: activityLog } = useActivityLog(id);
   const unassignAsset = useUnassignAsset();
   const { data: leaveRequests } = useEmployeeLeaveRequests(id!);
