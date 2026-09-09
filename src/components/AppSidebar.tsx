@@ -216,7 +216,26 @@ export function AppSidebar({ mobileOpen = false, onMobileOpenChange }: AppSideba
             <NavItemComponent key={item.path} item={item} />
           ))}
         </div>
+
+        {/* Super Admin section — bottom of the list */}
+        {visibleSuperAdmin.length > 0 && (
+          <>
+            <div className="my-4 border-t border-sidebar-border" />
+            <div className="space-y-1">
+              {(!collapsed || mobileOpen) && (
+                <p className="px-3 py-1 text-[11px] font-medium text-sidebar-muted uppercase tracking-wider flex items-center gap-1">
+                  <Crown className="w-3 h-3" />
+                  סופר אדמין
+                </p>
+              )}
+              {visibleSuperAdmin.map((item) => (
+                <NavItemComponent key={item.path} item={item} />
+              ))}
+            </div>
+          </>
+        )}
       </nav>
+
 
       {/* Bottom */}
       <div className="p-3 border-t border-sidebar-border space-y-1">
