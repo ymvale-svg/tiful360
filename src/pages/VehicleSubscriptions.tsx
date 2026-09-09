@@ -73,12 +73,6 @@ export default function VehicleSubscriptions() {
   const { data: employees } = useEmployees();
   const { data: groups } = useAssetGroups();
 
-  const [subDialog, setSubDialog] = useState<{
-    employeeVehicleId?: string | null;
-    assetId?: string | null;
-    label?: string;
-    subscription?: VehicleSubscription | null;
-  } | null>(null);
 
   const [filters, setFilters, resetFilters] = usePersistentFilter("vehicle-subscriptions", {
     q: "",
