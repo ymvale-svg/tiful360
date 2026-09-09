@@ -108,6 +108,12 @@ export default function EmployeeDetail() {
     a.asset_categories?.protocol_type === "digital" || (a.asset_categories?.prefix ?? "") === "DACC";
   const physicalAssets = employeeAssets.filter((a: any) => !isDigital(a));
   const digitalAccessAssets = employeeAssets.filter(isDigital);
+  // Vehicles and vehicle-linked subscriptions (Pango, tolls, fuel cards) live in the
+  // "רכב ומנויים" tab only — single source of truth, no duplicate listing here.
+  const groupByIdMap = new Map((assetGroups ?? []).map((g: any) => [g.id, g]));
+  const nonVehicleAssets = employeeAssets.filter(
+    (a: any) => !isVehicleAsset(a) && !isVehicleLinkedGroup(groupByIdMap.get(a.group_id) as any),
+  );
   const { isAdmin, isSuperAdmin, isPayroll, isHR, isOperations, isFinance, user } = useAuth();
   const qc = useQueryClient();
   const canEditRemotePunch = isSuperAdmin || isAdmin || isPayroll || isOperations || isFinance;
