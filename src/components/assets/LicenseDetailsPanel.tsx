@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { useAssetGroups } from "@/hooks/useAssetGroups";
+import { showFieldRow } from "@/lib/builtinFields";
+
 
 interface Props { asset: any }
 
@@ -54,6 +57,12 @@ export function LicenseDetailsPanel({ asset }: Props) {
     if (days <= 30) return `בעוד ${days} ימים`;
     return new Date(d!).toLocaleDateString("en-GB");
   };
+
+  const group = (groups ?? []).find((g) => g.id === asset.group_id) ?? null;
+  const show = (key: string, value: unknown) => showFieldRow(group, key, value, editing);
+  const hasAnyValue = ["vendor", "plan", "seats"].some((k) => !!cf[k]) ||
+    !!asset.account_username || !!asset.account_url || !!asset.license_expires_at;
+
 
   const handleSave = async () => {
     setSaving(true);
