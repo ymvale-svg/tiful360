@@ -329,7 +329,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                     ) : (
                       <SearchableSelect
                         value={form.current_owner_id}
-                        onChange={(v) => setForm({ ...form, current_owner_id: v, ...(v ? { assigned_site_id: "" } : {}) })}
+                        onChange={(v) => setForm({ ...form, current_owner_id: v, ...(v ? { assigned_site_id: "", container_id: "" } : {}) })}
                         options={[
                           { value: "", label: "ללא שיוך לעובד" },
                           ...(employees ?? [])
@@ -376,20 +376,21 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                   <label className="text-sm font-medium mb-1 block">שיוך לאתר</label>
                   <div className={readCls}>
                     {siteName ?? <span className="text-muted-foreground">ללא שיוך לאתר</span>}
+                    {containerName && <span className="block text-xs text-muted-foreground mt-0.5">מכולה: {containerName}</span>}
                   </div>
                 </>
               ) : (
                 <>
                   <SiteSelect
                     value={form.assigned_site_id}
-                    onChange={(v) => setForm({ ...form, assigned_site_id: v, ...(v ? { current_owner_id: "" } : {}) })}
+                    onChange={(v) => setForm({ ...form, assigned_site_id: v, container_id: "", ...(v ? { current_owner_id: "" } : {}) })}
                     label="שיוך לאתר (במקום עובד)"
                   />
                   {form.assigned_site_id && (
                     <button
                       type="button"
                       className="text-xs text-destructive hover:underline mt-1"
-                      onClick={() => setForm({ ...form, assigned_site_id: "" })}
+                      onClick={() => setForm({ ...form, assigned_site_id: "", container_id: "" })}
                     >
                       הסר שיוך לאתר
                     </button>
@@ -397,6 +398,15 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                 </>
               )}
             </div>
+          )}
+
+          {!isView && form.assigned_site_id && (
+            <ContainerSelect
+              siteId={form.assigned_site_id}
+              value={form.container_id}
+              onChange={(v) => setForm({ ...form, container_id: v })}
+              label="מכולה (מיקום אחסון באתר)"
+            />
           )}
 
           <div>
