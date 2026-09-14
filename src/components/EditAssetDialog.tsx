@@ -195,7 +195,11 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
   const display = (v: string | null | undefined) =>
     v && String(v).trim() !== "" ? String(v) : <span className="text-muted-foreground">—</span>;
 
+  const { data: sites } = useSites();
   const ownerName = (employees ?? []).find((e: any) => e.id === form.current_owner_id)?.full_name;
+  const siteName = form.assigned_site_id
+    ? (() => { const s = (sites ?? []).find((s) => s.id === form.assigned_site_id); return s ? (s.address ? `${s.name} — ${s.address}` : s.name) : null; })()
+    : null;
   const categoryName = (categories ?? []).find((c: any) => c.id === form.category_id)?.category_name;
   const conditionLabels: Record<string, string> = { new: "חדש", good: "תקין", fair: "בינוני" };
 
@@ -313,13 +317,13 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                   <div>
                     <label className="text-sm font-medium mb-1 block">שיוך לעובד</label>
                     {isView ? (
-                      <div className={readCls}>{ownerName ? ownerName : <span className="text-muted-foreground">במלאי (ללא שיוך)</span>}</div>
+                      <div className={readCls}>{ownerName ? ownerName : <span className="text-muted-foreground">ללא שיוך לעובד</span>}</div>
                     ) : (
                       <SearchableSelect
                         value={form.current_owner_id}
-                        onChange={(v) => setForm({ ...form, current_owner_id: v })}
+                        onChange={(v) => setForm({ ...form, current_owner_id: v, ...(v ? { assigned_site_id: "" } : {}) })}
                         options={[
-                          { value: "", label: "במלאי (ללא שיוך)" },
+                          { value: "", label: "ללא שיוך לעובד" },
                           ...(employees ?? [])
                             .filter((e: any) => e.status === "active" || e.status === "onboarding")
                             .map((e: any) => ({ value: e.id, label: `${e.full_name} (${e.employee_code})` })),
