@@ -481,6 +481,7 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
     try {
       const patch: Record<string, any> = {
         assigned_site_id: siteId,
+        container_id: containerId || null,
         current_owner_id: null,
         status: "in_use",
       };
@@ -489,11 +490,12 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
       if (error) throw error;
 
       const siteName = (sites ?? []).find((s: any) => s.id === siteId)?.name ?? "";
+      const containerName = (siteContainers ?? []).find((c) => c.id === containerId)?.name;
       try {
         await supabase.from("activity_log").insert({
           company_id: activeCompanyId,
           action: `שיוך ציוד לאתר: ${asset?.asset_name ?? ""}`,
-          details: `הפריט שויך לאתר ${siteName}`,
+          details: `הפריט שויך לאתר ${siteName}${containerName ? ` (מכולה: ${containerName})` : ""}`,
           entity_type: "asset",
           entity_id: asset!.id,
           performed_by: user?.id,
