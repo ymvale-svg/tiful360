@@ -22,6 +22,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEmployees } from "@/hooks/useData";
 import { useSites } from "@/hooks/useSites";
 import { SiteSelect } from "@/components/sites/SiteSelect";
+import { ContainerSelect } from "@/components/sites/ContainerSelect";
+import { useSiteContainers } from "@/hooks/useSiteContainers";
 import { useCompany } from "@/hooks/useCompany";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -111,7 +113,10 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
   const [mode, setMode] = useState<Mode>("on_site");
   const [employeeId, setEmployeeId] = useState("");
   const [assignTarget, setAssignTarget] = useState<"employee" | "site">("employee");
-  const [siteId, setSiteId] = useState("");
+  const [siteId, setSiteIdRaw] = useState("");
+  const [containerId, setContainerId] = useState("");
+  const setSiteId = (v: string) => { setSiteIdRaw(v); setContainerId(""); };
+  const { data: siteContainers } = useSiteContainers(siteId || null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [freeText, setFreeText] = useState("");
   const [odometer, setOdometer] = useState("");
@@ -477,6 +482,7 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
     try {
       const patch: Record<string, any> = {
         assigned_site_id: siteId,
+        container_id: containerId || null,
         current_owner_id: null,
         status: "in_use",
       };
@@ -485,11 +491,12 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
       if (error) throw error;
 
       const siteName = (sites ?? []).find((s: any) => s.id === siteId)?.name ?? "";
+      const containerName = (siteContainers ?? []).find((c) => c.id === containerId)?.name;
       try {
         await supabase.from("activity_log").insert({
           company_id: activeCompanyId,
           action: `שיוך ציוד לאתר: ${asset?.asset_name ?? ""}`,
-          details: `הפריט שויך לאתר ${siteName}`,
+          details: `הפריט שויך לאתר ${siteName}${containerName ? ` (מכולה: ${containerName})` : ""}`,
           entity_type: "asset",
           entity_id: asset!.id,
           performed_by: user?.id,
@@ -628,7 +635,10 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
               <div className="space-y-3">
                 <AssignTargetToggle value={assignTarget} onChange={setAssignTarget} />
                 {assignTarget === "site" ? (
-                  <SiteSelect value={siteId} onChange={setSiteId} label="אתר מחוץ למשרד" />
+                  <div className="space-y-3">
+                    <SiteSelect value={siteId} onChange={setSiteId} label="אתר מחוץ למשרד" />
+                    {siteId && <ContainerSelect siteId={siteId} value={containerId} onChange={setContainerId} label="מכולה (מיקום אחסון באתר)" />}
+                  </div>
                 ) : (
                   <EmployeePicker employees={employees} value={employeeId} onChange={setEmployeeId} />
                 )}
@@ -691,7 +701,10 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
                   <div className="space-y-3">
                     <AssignTargetToggle value={assignTarget} onChange={setAssignTarget} />
                     {assignTarget === "site" ? (
-                      <SiteSelect value={siteId} onChange={setSiteId} label="אתר מחוץ למשרד" />
+                      <div className="space-y-3">
+                        <SiteSelect value={siteId} onChange={setSiteId} label="אתר מחוץ למשרד" />
+                        {siteId && <ContainerSelect siteId={siteId} value={containerId} onChange={setContainerId} label="מכולה (מיקום אחסון באתר)" />}
+                      </div>
                     ) : (
                       <EmployeePicker employees={employees} value={employeeId} onChange={setEmployeeId} />
                     )}

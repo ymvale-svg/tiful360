@@ -5,6 +5,7 @@ import { getCategoryIcon, getCategoryColor } from "@/lib/categoryIcons";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Pencil, FileSignature, UserMinus, Trash2, User, Building2, History, MapPin } from "lucide-react";
 import { useSites } from "@/hooks/useSites";
+import { useSiteContainers } from "@/hooks/useSiteContainers";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { EditAssetDialog } from "@/components/EditAssetDialog";
@@ -118,11 +119,15 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
   const assignedSite = asset.assigned_site_id
     ? (sites ?? []).find((s) => s.id === asset.assigned_site_id) ?? null
     : null;
+  const { data: siteContainers } = useSiteContainers(asset.assigned_site_id ?? null);
+  const assignedContainer = asset.container_id
+    ? (siteContainers ?? []).find((c) => c.id === asset.container_id) ?? null
+    : null;
 
   const handleUnassign = async () => {
     const { error } = await supabase
       .from("assets")
-      .update({ current_owner_id: null, assigned_site_id: null, status: "in_stock" } as any)
+      .update({ current_owner_id: null, assigned_site_id: null, container_id: null, status: "in_stock" } as any)
       .eq("id", assetId);
     if (error) {
       toast({ title: "שגיאה בביטול שיוך", description: error.message, variant: "destructive" });
@@ -346,6 +351,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
                   <div className="min-w-0">
                     <div className="font-medium truncate">{assignedSite.name}</div>
                     <div className="text-xs text-muted-foreground">אתר מחוץ למשרד</div>
+                    {assignedContainer && <div className="text-xs font-medium truncate">מכולה: {assignedContainer.name}</div>}
                     {assignedSite.address && <div className="text-xs text-muted-foreground truncate">{assignedSite.address}</div>}
                     {assignedSite.contact_name && <div className="text-xs text-muted-foreground truncate">{assignedSite.contact_name}</div>}
                     {assignedSite.phone && <div className="text-xs text-muted-foreground" dir="ltr">{assignedSite.phone}</div>}

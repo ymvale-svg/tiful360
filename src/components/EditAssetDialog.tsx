@@ -19,6 +19,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { ManufacturerModelInput } from "@/components/assets/ManufacturerModelInput";
 import { SiteSelect } from "@/components/sites/SiteSelect";
+import { ContainerSelect } from "@/components/sites/ContainerSelect";
+import { useSiteContainers } from "@/hooks/useSiteContainers";
 import { useSites } from "@/hooks/useSites";
 import { openHandoverFile } from "@/lib/handoverUrl";
 
@@ -61,7 +63,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
 
   const [form, setForm] = useState({
     asset_name: "", category_id: "", group_id: "", serial_number: "", current_owner_id: "",
-    assigned_site_id: "",
+    assigned_site_id: "", container_id: "",
     status: "in_stock", manufacturer_model: "", condition: "good",
     expiry_date: "", notes: "", notification_days_before: "" as string,
   });
@@ -88,6 +90,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
         serial_number: asset.serial_number ?? "",
         current_owner_id: asset.current_owner_id ?? "",
         assigned_site_id: (asset as any).assigned_site_id ?? "",
+        container_id: (asset as any).container_id ?? "",
         status: asset.status,
         manufacturer_model: asset.manufacturer_model ?? "",
         condition: asset.condition ?? "good",
@@ -172,6 +175,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
         serial_number: form.serial_number || null,
         current_owner_id: form.current_owner_id || null,
         assigned_site_id: form.assigned_site_id || null,
+        container_id: form.assigned_site_id ? (form.container_id || null) : null,
         status: (form.current_owner_id || form.assigned_site_id) ? "in_use" : (form.status as any),
         manufacturer_model: form.manufacturer_model || null,
         condition: form.condition,
@@ -197,8 +201,12 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
 
   const { data: sites } = useSites();
   const ownerName = (employees ?? []).find((e: any) => e.id === form.current_owner_id)?.full_name;
+  const { data: containers } = useSiteContainers(form.assigned_site_id || null);
   const siteName = form.assigned_site_id
     ? (() => { const s = (sites ?? []).find((s) => s.id === form.assigned_site_id); return s ? (s.address ? `${s.name} — ${s.address}` : s.name) : null; })()
+    : null;
+  const containerName = form.container_id
+    ? (containers ?? []).find((c) => c.id === form.container_id)?.name ?? null
     : null;
   const categoryName = (categories ?? []).find((c: any) => c.id === form.category_id)?.category_name;
   const conditionLabels: Record<string, string> = { new: "חדש", good: "תקין", fair: "בינוני" };
@@ -321,7 +329,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                     ) : (
                       <SearchableSelect
                         value={form.current_owner_id}
-                        onChange={(v) => setForm({ ...form, current_owner_id: v, ...(v ? { assigned_site_id: "" } : {}) })}
+                        onChange={(v) => setForm({ ...form, current_owner_id: v, ...(v ? { assigned_site_id: "", container_id: "" } : {}) })}
                         options={[
                           { value: "", label: "ללא שיוך לעובד" },
                           ...(employees ?? [])
@@ -368,20 +376,21 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                   <label className="text-sm font-medium mb-1 block">שיוך לאתר</label>
                   <div className={readCls}>
                     {siteName ?? <span className="text-muted-foreground">ללא שיוך לאתר</span>}
+                    {containerName && <span className="block text-xs text-muted-foreground mt-0.5">מכולה: {containerName}</span>}
                   </div>
                 </>
               ) : (
                 <>
                   <SiteSelect
                     value={form.assigned_site_id}
-                    onChange={(v) => setForm({ ...form, assigned_site_id: v, ...(v ? { current_owner_id: "" } : {}) })}
+                    onChange={(v) => setForm({ ...form, assigned_site_id: v, container_id: "", ...(v ? { current_owner_id: "" } : {}) })}
                     label="שיוך לאתר (במקום עובד)"
                   />
                   {form.assigned_site_id && (
                     <button
                       type="button"
                       className="text-xs text-destructive hover:underline mt-1"
-                      onClick={() => setForm({ ...form, assigned_site_id: "" })}
+                      onClick={() => setForm({ ...form, assigned_site_id: "", container_id: "" })}
                     >
                       הסר שיוך לאתר
                     </button>
@@ -389,6 +398,15 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                 </>
               )}
             </div>
+          )}
+
+          {!isView && form.assigned_site_id && (
+            <ContainerSelect
+              siteId={form.assigned_site_id}
+              value={form.container_id}
+              onChange={(v) => setForm({ ...form, container_id: v })}
+              label="מכולה (מיקום אחסון באתר)"
+            />
           )}
 
           <div>
