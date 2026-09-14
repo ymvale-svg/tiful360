@@ -635,7 +635,10 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
               <div className="space-y-3">
                 <AssignTargetToggle value={assignTarget} onChange={setAssignTarget} />
                 {assignTarget === "site" ? (
-                  <SiteSelect value={siteId} onChange={setSiteId} label="אתר מחוץ למשרד" />
+                  <div className="space-y-3">
+                    <SiteSelect value={siteId} onChange={setSiteId} label="אתר מחוץ למשרד" />
+                    {siteId && <ContainerSelect siteId={siteId} value={containerId} onChange={setContainerId} label="מכולה (מיקום אחסון באתר)" />}
+                  </div>
                 ) : (
                   <EmployeePicker employees={employees} value={employeeId} onChange={setEmployeeId} />
                 )}
@@ -698,7 +701,10 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
                   <div className="space-y-3">
                     <AssignTargetToggle value={assignTarget} onChange={setAssignTarget} />
                     {assignTarget === "site" ? (
-                      <SiteSelect value={siteId} onChange={setSiteId} label="אתר מחוץ למשרד" />
+                      <div className="space-y-3">
+                        <SiteSelect value={siteId} onChange={setSiteId} label="אתר מחוץ למשרד" />
+                        {siteId && <ContainerSelect siteId={siteId} value={containerId} onChange={setContainerId} label="מכולה (מיקום אחסון באתר)" />}
+                      </div>
                     ) : (
                       <EmployeePicker employees={employees} value={employeeId} onChange={setEmployeeId} />
                     )}
