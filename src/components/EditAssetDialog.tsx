@@ -361,6 +361,36 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
             );
           })()}
 
+          {selectedCategory?.prefix !== "CINS" && selectedCategory?.is_assignable !== false && (
+            <div>
+              {isView ? (
+                <>
+                  <label className="text-sm font-medium mb-1 block">שיוך לאתר</label>
+                  <div className={readCls}>
+                    {siteName ?? <span className="text-muted-foreground">ללא שיוך לאתר</span>}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <SiteSelect
+                    value={form.assigned_site_id}
+                    onChange={(v) => setForm({ ...form, assigned_site_id: v, ...(v ? { current_owner_id: "" } : {}) })}
+                    label="שיוך לאתר (במקום עובד)"
+                  />
+                  {form.assigned_site_id && (
+                    <button
+                      type="button"
+                      className="text-xs text-destructive hover:underline mt-1"
+                      onClick={() => setForm({ ...form, assigned_site_id: "" })}
+                    >
+                      הסר שיוך לאתר
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
           <div>
             <label className="text-sm font-medium mb-1 block">
               התראת מייל מראש (ימים לפני תפוגה)
