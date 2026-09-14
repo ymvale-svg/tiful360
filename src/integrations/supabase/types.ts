@@ -652,7 +652,7 @@ export type Database = {
             foreignKeyName: "assets_container_id_fkey"
             columns: ["container_id"]
             isOneToOne: false
-            referencedRelation: "site_containers"
+            referencedRelation: "assets"
             referencedColumns: ["id"]
           },
           {

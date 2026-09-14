@@ -1,0 +1,2 @@
+ALTER TABLE public.assets DROP CONSTRAINT IF EXISTS assets_container_id_fkey;
+ALTER TABLE public.assets ADD CONSTRAINT assets_container_id_fkey FOREIGN KEY (container_id) REFERENCES public.assets(id) ON DELETE SET NULL;
