@@ -116,6 +116,7 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
   const [siteId, setSiteIdRaw] = useState("");
   const [containerId, setContainerId] = useState("");
   const setSiteId = (v: string) => { setSiteIdRaw(v); setContainerId(""); };
+  const { data: siteContainers } = useSiteContainers(siteId || null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [freeText, setFreeText] = useState("");
   const [odometer, setOdometer] = useState("");
