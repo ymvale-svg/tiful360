@@ -18,6 +18,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { ManufacturerModelInput } from "@/components/assets/ManufacturerModelInput";
+import { SiteSelect } from "@/components/sites/SiteSelect";
+import { useSites } from "@/hooks/useSites";
 import { openHandoverFile } from "@/lib/handoverUrl";
 
 
@@ -59,6 +61,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
 
   const [form, setForm] = useState({
     asset_name: "", category_id: "", group_id: "", serial_number: "", current_owner_id: "",
+    assigned_site_id: "",
     status: "in_stock", manufacturer_model: "", condition: "good",
     expiry_date: "", notes: "", notification_days_before: "" as string,
   });
@@ -84,6 +87,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
         group_id: (asset as any).group_id ?? "",
         serial_number: asset.serial_number ?? "",
         current_owner_id: asset.current_owner_id ?? "",
+        assigned_site_id: (asset as any).assigned_site_id ?? "",
         status: asset.status,
         manufacturer_model: asset.manufacturer_model ?? "",
         condition: asset.condition ?? "good",
@@ -167,7 +171,8 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
         group_id: form.group_id || null,
         serial_number: form.serial_number || null,
         current_owner_id: form.current_owner_id || null,
-        status: form.current_owner_id ? "in_use" : (form.status as any),
+        assigned_site_id: form.assigned_site_id || null,
+        status: (form.current_owner_id || form.assigned_site_id) ? "in_use" : (form.status as any),
         manufacturer_model: form.manufacturer_model || null,
         condition: form.condition,
         expiry_date: form.expiry_date || null,
