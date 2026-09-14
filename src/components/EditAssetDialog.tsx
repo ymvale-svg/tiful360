@@ -19,6 +19,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { ManufacturerModelInput } from "@/components/assets/ManufacturerModelInput";
 import { SiteSelect } from "@/components/sites/SiteSelect";
+import { ContainerSelect } from "@/components/sites/ContainerSelect";
+import { useSiteContainers } from "@/hooks/useSiteContainers";
 import { useSites } from "@/hooks/useSites";
 import { openHandoverFile } from "@/lib/handoverUrl";
 
@@ -61,7 +63,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
 
   const [form, setForm] = useState({
     asset_name: "", category_id: "", group_id: "", serial_number: "", current_owner_id: "",
-    assigned_site_id: "",
+    assigned_site_id: "", container_id: "",
     status: "in_stock", manufacturer_model: "", condition: "good",
     expiry_date: "", notes: "", notification_days_before: "" as string,
   });
