@@ -90,6 +90,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
         serial_number: asset.serial_number ?? "",
         current_owner_id: asset.current_owner_id ?? "",
         assigned_site_id: (asset as any).assigned_site_id ?? "",
+        container_id: (asset as any).container_id ?? "",
         status: asset.status,
         manufacturer_model: asset.manufacturer_model ?? "",
         condition: asset.condition ?? "good",
