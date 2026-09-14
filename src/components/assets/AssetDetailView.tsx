@@ -351,6 +351,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
                   <div className="min-w-0">
                     <div className="font-medium truncate">{assignedSite.name}</div>
                     <div className="text-xs text-muted-foreground">אתר מחוץ למשרד</div>
+                    {assignedContainer && <div className="text-xs font-medium truncate">מכולה: {assignedContainer.name}</div>}
                     {assignedSite.address && <div className="text-xs text-muted-foreground truncate">{assignedSite.address}</div>}
                     {assignedSite.contact_name && <div className="text-xs text-muted-foreground truncate">{assignedSite.contact_name}</div>}
                     {assignedSite.phone && <div className="text-xs text-muted-foreground" dir="ltr">{assignedSite.phone}</div>}
