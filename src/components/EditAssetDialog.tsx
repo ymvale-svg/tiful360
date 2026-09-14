@@ -175,6 +175,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
         serial_number: form.serial_number || null,
         current_owner_id: form.current_owner_id || null,
         assigned_site_id: form.assigned_site_id || null,
+        container_id: form.assigned_site_id ? (form.container_id || null) : null,
         status: (form.current_owner_id || form.assigned_site_id) ? "in_use" : (form.status as any),
         manufacturer_model: form.manufacturer_model || null,
         condition: form.condition,
@@ -200,8 +201,12 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
 
   const { data: sites } = useSites();
   const ownerName = (employees ?? []).find((e: any) => e.id === form.current_owner_id)?.full_name;
+  const { data: containers } = useSiteContainers(form.assigned_site_id || null);
   const siteName = form.assigned_site_id
     ? (() => { const s = (sites ?? []).find((s) => s.id === form.assigned_site_id); return s ? (s.address ? `${s.name} — ${s.address}` : s.name) : null; })()
+    : null;
+  const containerName = form.container_id
+    ? (containers ?? []).find((c) => c.id === form.container_id)?.name ?? null
     : null;
   const categoryName = (categories ?? []).find((c: any) => c.id === form.category_id)?.category_name;
   const conditionLabels: Record<string, string> = { new: "חדש", good: "תקין", fair: "בינוני" };
