@@ -527,6 +527,7 @@ export type Database = {
           category_id: string
           company_id: string | null
           condition: string
+          container_id: string | null
           created_at: string
           current_km: number | null
           current_owner_id: string | null
@@ -562,6 +563,7 @@ export type Database = {
           category_id: string
           company_id?: string | null
           condition?: string
+          container_id?: string | null
           created_at?: string
           current_km?: number | null
           current_owner_id?: string | null
@@ -597,6 +599,7 @@ export type Database = {
           category_id?: string
           company_id?: string | null
           condition?: string
+          container_id?: string | null
           created_at?: string
           current_km?: number | null
           current_owner_id?: string | null
@@ -643,6 +646,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assets_container_id_fkey"
+            columns: ["container_id"]
+            isOneToOne: false
+            referencedRelation: "site_containers"
             referencedColumns: ["id"]
           },
           {
@@ -2667,6 +2677,54 @@ export type Database = {
           training_id?: string | null
         }
         Relationships: []
+      }
+      site_containers: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+          site_id: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          site_id: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          site_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_containers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_containers_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sites: {
         Row: {
