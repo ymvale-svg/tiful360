@@ -83,7 +83,6 @@ const QUICK_TEXTS = [
 export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction = "handover", defaultEmployeeId, onAssigned }: Props) {
   const { data: employees } = useEmployees();
   const { data: sites } = useSites();
-  const { data: siteContainers } = useSiteContainers(siteId || null);
   const { activeCompany, activeCompanyId } = useCompany();
   const { user } = useAuth();
   const { toast } = useToast();
