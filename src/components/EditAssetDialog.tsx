@@ -18,6 +18,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { ManufacturerModelInput } from "@/components/assets/ManufacturerModelInput";
+import { SiteSelect } from "@/components/sites/SiteSelect";
+import { useSites } from "@/hooks/useSites";
 import { openHandoverFile } from "@/lib/handoverUrl";
 
 
@@ -59,6 +61,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
 
   const [form, setForm] = useState({
     asset_name: "", category_id: "", group_id: "", serial_number: "", current_owner_id: "",
+    assigned_site_id: "",
     status: "in_stock", manufacturer_model: "", condition: "good",
     expiry_date: "", notes: "", notification_days_before: "" as string,
   });
@@ -84,6 +87,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
         group_id: (asset as any).group_id ?? "",
         serial_number: asset.serial_number ?? "",
         current_owner_id: asset.current_owner_id ?? "",
+        assigned_site_id: (asset as any).assigned_site_id ?? "",
         status: asset.status,
         manufacturer_model: asset.manufacturer_model ?? "",
         condition: asset.condition ?? "good",
@@ -167,7 +171,8 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
         group_id: form.group_id || null,
         serial_number: form.serial_number || null,
         current_owner_id: form.current_owner_id || null,
-        status: form.current_owner_id ? "in_use" : (form.status as any),
+        assigned_site_id: form.assigned_site_id || null,
+        status: (form.current_owner_id || form.assigned_site_id) ? "in_use" : (form.status as any),
         manufacturer_model: form.manufacturer_model || null,
         condition: form.condition,
         expiry_date: form.expiry_date || null,
@@ -190,7 +195,11 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
   const display = (v: string | null | undefined) =>
     v && String(v).trim() !== "" ? String(v) : <span className="text-muted-foreground">—</span>;
 
+  const { data: sites } = useSites();
   const ownerName = (employees ?? []).find((e: any) => e.id === form.current_owner_id)?.full_name;
+  const siteName = form.assigned_site_id
+    ? (() => { const s = (sites ?? []).find((s) => s.id === form.assigned_site_id); return s ? (s.address ? `${s.name} — ${s.address}` : s.name) : null; })()
+    : null;
   const categoryName = (categories ?? []).find((c: any) => c.id === form.category_id)?.category_name;
   const conditionLabels: Record<string, string> = { new: "חדש", good: "תקין", fair: "בינוני" };
 
@@ -308,13 +317,13 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                   <div>
                     <label className="text-sm font-medium mb-1 block">שיוך לעובד</label>
                     {isView ? (
-                      <div className={readCls}>{ownerName ? ownerName : <span className="text-muted-foreground">במלאי (ללא שיוך)</span>}</div>
+                      <div className={readCls}>{ownerName ? ownerName : <span className="text-muted-foreground">ללא שיוך לעובד</span>}</div>
                     ) : (
                       <SearchableSelect
                         value={form.current_owner_id}
-                        onChange={(v) => setForm({ ...form, current_owner_id: v })}
+                        onChange={(v) => setForm({ ...form, current_owner_id: v, ...(v ? { assigned_site_id: "" } : {}) })}
                         options={[
-                          { value: "", label: "במלאי (ללא שיוך)" },
+                          { value: "", label: "ללא שיוך לעובד" },
                           ...(employees ?? [])
                             .filter((e: any) => e.status === "active" || e.status === "onboarding")
                             .map((e: any) => ({ value: e.id, label: `${e.full_name} (${e.employee_code})` })),
@@ -351,6 +360,36 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
               </div>
             );
           })()}
+
+          {selectedCategory?.prefix !== "CINS" && selectedCategory?.is_assignable !== false && (
+            <div>
+              {isView ? (
+                <>
+                  <label className="text-sm font-medium mb-1 block">שיוך לאתר</label>
+                  <div className={readCls}>
+                    {siteName ?? <span className="text-muted-foreground">ללא שיוך לאתר</span>}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <SiteSelect
+                    value={form.assigned_site_id}
+                    onChange={(v) => setForm({ ...form, assigned_site_id: v, ...(v ? { current_owner_id: "" } : {}) })}
+                    label="שיוך לאתר (במקום עובד)"
+                  />
+                  {form.assigned_site_id && (
+                    <button
+                      type="button"
+                      className="text-xs text-destructive hover:underline mt-1"
+                      onClick={() => setForm({ ...form, assigned_site_id: "" })}
+                    >
+                      הסר שיוך לאתר
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
           <div>
             <label className="text-sm font-medium mb-1 block">
