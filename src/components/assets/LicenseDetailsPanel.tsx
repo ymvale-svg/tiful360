@@ -61,7 +61,7 @@ export function LicenseDetailsPanel({ asset }: Props) {
   };
 
   const group = (groups ?? []).find((g) => g.id === asset.group_id) ?? null;
-  const show = (key: string, value: unknown) => showFieldRow(group, key, value, editing);
+  const show = (key: string, value: unknown) => showFieldRow(group, key, value, editing, "licenses");
   const hasAnyValue = ["vendor", "plan", "seats"].some((k) => !!cf[k]) ||
     !!asset.account_username || !!asset.account_url || !!asset.license_expires_at;
 
