@@ -55,9 +55,9 @@ export function PendingSignaturesCard() {
           <div className="p-6 text-center text-muted-foreground text-sm">אין טפסים ממתינים לחתימה</div>
         )}
         {rows.map((form) => {
-          const label = form.assets?.asset_name
+          const itemName = form.assets?.asset_name
             ? `${form.assets.asset_name}${form.assets.asset_code ? ` (${form.assets.asset_code})` : ""}`
-            : snapshotItemLabel(form.form_snapshot);
+            : (snapshotItemLabel(form.form_snapshot).name || "טופס מסירה");
           const waitingDays = Math.floor(
             (Date.now() - new Date(form.created_at).getTime()) / (1000 * 60 * 60 * 24),
           );
