@@ -7,8 +7,7 @@ import { FileSignature, ExternalLink, CheckCircle2 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import type { HandoverFormData } from "@/lib/pdf/types";
-import { buildHandoverPdf } from "@/lib/pdf/lazy";
+import { buildPdfForFormSnapshot, snapshotItemLabel } from "@/lib/pdf/formPdf";
 import { SignaturePad, SignaturePadHandle } from "./SignaturePad";
 import { useToast } from "@/hooks/use-toast";
 
@@ -47,10 +46,7 @@ export function PendingHandoverForms({ employeeId }: Props) {
     let createdUrl: string | null = null;
     (async () => {
       try {
-        const blob = await buildHandoverPdf({
-          ...(active.form_snapshot as HandoverFormData),
-          receiver_signature: sigUrl,
-        });
+        const blob = await buildPdfForFormSnapshot(active.form_snapshot, sigUrl);
         if (cancelled) return;
         createdUrl = URL.createObjectURL(blob);
         setPreviewUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return createdUrl; });
@@ -70,10 +66,7 @@ export function PendingHandoverForms({ employeeId }: Props) {
     try {
       setSigUrl(sig);
 
-      const blob = await buildHandoverPdf({
-        ...(active.form_snapshot as HandoverFormData),
-        receiver_signature: sig,
-      });
+      const blob = await buildPdfForFormSnapshot(active.form_snapshot, sig);
       const pdfPath = `${active.company_id}/${active.employee_id}/${active.asset_id}-${Date.now()}.pdf`;
       const { error: upErr } = await supabase.storage
         .from("handover-forms")
@@ -89,7 +82,7 @@ export function PendingHandoverForms({ employeeId }: Props) {
           signature_data: sig,
           pdf_url: pdfUrl,
           signed_at: new Date().toISOString(),
-          form_snapshot: { ...active.form_snapshot, receiver_signature: sig },
+          form_snapshot: { ...active.form_snapshot, receiver_signature: sig, employee_signature: sig },
         })
         .eq("id", active.id);
       if (error) throw error;
@@ -109,8 +102,8 @@ export function PendingHandoverForms({ employeeId }: Props) {
             templateData: {
               employeeName: emp.full_name ?? snap.employee_name ?? "",
               companyName: snap.company_name ?? "",
-              itemName: snap.asset_name ?? snap.title ?? "",
-              itemCode: snap.asset_code ?? "",
+              itemName: snapshotItemLabel(snap).name,
+              itemCode: snapshotItemLabel(snap).code,
               direction: active.direction ?? "handover",
               title: snap.title ?? null,
               issuerName: snap.issuer_name ?? "",
@@ -148,8 +141,8 @@ export function PendingHandoverForms({ employeeId }: Props) {
         {pending.map((row: any) => (
           <div key={row.id} className="bg-card rounded-lg border border-border/50 p-3 flex items-center gap-3">
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{row.form_snapshot?.asset_name}</p>
-              <p className="text-xs text-muted-foreground">{row.form_snapshot?.asset_code}</p>
+              <p className="text-sm font-medium truncate">{snapshotItemLabel(row.form_snapshot).name}</p>
+              <p className="text-xs text-muted-foreground">{snapshotItemLabel(row.form_snapshot).code}</p>
             </div>
             <Button size="sm" className="gap-1" onClick={() => { setSigUrl(null); setActive(row); }}>
               <ExternalLink className="w-3 h-3" />
