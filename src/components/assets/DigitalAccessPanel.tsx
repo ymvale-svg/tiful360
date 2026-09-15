@@ -81,7 +81,7 @@ export function DigitalAccessPanel({ asset }: Props) {
   };
 
   const group = (groups ?? []).find((g) => g.id === asset.group_id) ?? null;
-  const show = (key: string, value: unknown) => showFieldRow(group, key, value, editing);
+  const show = (key: string, value: unknown) => showFieldRow(group, key, value, editing, "digital");
   const hasAnyValue = !!asset.account_username || !!asset.account_url ||
     asset.mfa_enabled != null || !!asset.password_expires_at || !!asset.license_expires_at;
 
