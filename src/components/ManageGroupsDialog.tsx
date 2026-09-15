@@ -34,6 +34,8 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
   const createGroup = useCreateAssetGroup();
   const updateGroup = useUpdateAssetGroup();
   const deleteGroup = useDeleteAssetGroup();
+  const moveGroup = useMoveAssetGroup();
+  const { data: categories } = useAssetCategories();
   const assignAssets = useAssignAssetsToGroup();
   const { toast } = useToast();
 
