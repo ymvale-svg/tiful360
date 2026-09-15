@@ -19,6 +19,7 @@ import { useExpiringAssets } from "@/hooks/useExpiringAssets";
 import { AssetDetailView } from "@/components/assets/AssetDetailView";
 import { AddAssetDialog } from "@/components/AddAssetDialog";
 import { MultiHandoverFlow } from "@/components/handover/MultiHandoverFlow";
+import { PendingSignatureDialog } from "@/components/handover/PendingSignatureDialog";
 import { getCategoryIcon, getCategoryColor } from "@/lib/categoryIcons";
 import { resolveOwnerRole, OWNER_ROLE_LABEL } from "@/lib/domainConfig";
 import {
