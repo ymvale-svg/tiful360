@@ -462,10 +462,11 @@ export default function VehicleSubscriptions() {
                         size="sm"
                         variant={r.activeSubs.length ? "ghost" : "outline"}
                         className="gap-1"
-                        title="ניהול מנויים תחת שירותי מנוי במסך משאבים"
+                        title="הוספת מנוי תחת רישיונות ותוכנות ‹ שירותי מנוי"
+                        disabled={!r.employee_id}
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate("/assets/licenses");
+                          setQuickAdd({ employeeId: r.employee_id, employeeName: r.employee_name, plate: r.plate });
                         }}
                       >
                         <Plus className="w-3.5 h-3.5" />
