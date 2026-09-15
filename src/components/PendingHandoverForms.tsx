@@ -141,8 +141,8 @@ export function PendingHandoverForms({ employeeId }: Props) {
         {pending.map((row: any) => (
           <div key={row.id} className="bg-card rounded-lg border border-border/50 p-3 flex items-center gap-3">
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{row.form_snapshot?.asset_name}</p>
-              <p className="text-xs text-muted-foreground">{row.form_snapshot?.asset_code}</p>
+              <p className="text-sm font-medium truncate">{snapshotItemLabel(row.form_snapshot).name}</p>
+              <p className="text-xs text-muted-foreground">{snapshotItemLabel(row.form_snapshot).code}</p>
             </div>
             <Button size="sm" className="gap-1" onClick={() => { setSigUrl(null); setActive(row); }}>
               <ExternalLink className="w-3 h-3" />
