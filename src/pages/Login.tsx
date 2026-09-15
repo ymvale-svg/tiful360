@@ -4,7 +4,7 @@ import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import logoImg from "@/assets/logo.png";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { translateAuthError } from "@/lib/authErrors";
 
@@ -22,7 +22,15 @@ export default function Login() {
   const [emailLoading, setEmailLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
+
+  /** Same-origin path to open after a successful sign-in (e.g. a signing link). */
+  const redirectParam = searchParams.get("redirect");
+  const afterLogin =
+    redirectParam && redirectParam.startsWith("/") && !redirectParam.startsWith("//")
+      ? redirectParam
+      : "/select-company";
 
   const verifyActiveEmployee = async (_userId: string, _userEmail: string | null | undefined) => {
     // Links the signed-in account to its active employee card (by email) and
@@ -35,6 +43,8 @@ export default function Login() {
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
+    // Managed Google sign-in returns to the app root; remember where to continue.
+    if (afterLogin !== "/select-company") sessionStorage.setItem("oauth_return_path", afterLogin);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
         redirect_uri: window.location.origin,
@@ -59,7 +69,7 @@ export default function Login() {
         }
       }
 
-      navigate("/select-company");
+      navigate(afterLogin);
     } catch (error: any) {
       const raw = (error?.message || "").toString();
       const isUnauthorized =
@@ -101,7 +111,7 @@ export default function Login() {
           return;
         }
       }
-      navigate("/select-company");
+      navigate(afterLogin);
     } catch (error: any) {
       toast({
         title: "שגיאה בהתחברות",

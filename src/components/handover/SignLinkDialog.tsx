@@ -91,6 +91,10 @@ export function SignLinkDialog({ open, onOpenChange, links, employeeName, emailS
           ))}
         </div>
 
+        <p className="text-xs text-muted-foreground">
+          החתימה מתבצעת רק לאחר כניסת העובד לאזור האישי בפורטל.
+        </p>
+
         <div className="flex justify-start pt-2">
           <Button onClick={() => onOpenChange(false)}>סגירה</Button>
         </div>
