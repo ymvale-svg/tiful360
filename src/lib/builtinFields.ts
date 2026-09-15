@@ -26,9 +26,7 @@ export const BUILTIN_FIELDS: Partial<Record<DomainKey, BuiltinField[]>> = {
     { key: "condition", label: "מצב הציוד", defaultVisible: true },
     { key: "assigned_site_id", label: "שיוך לאתר", defaultVisible: true },
     { key: "expiry_date", label: "תאריך תפוגה", defaultVisible: true },
-    ...COMMON_ASSIGN,
-  ],
-  _unused_vehicle_anchor: [
+    // Vehicle-specific fields (relevant when the category is a vehicle category):
     { key: "license_plate", label: "לוחית רישוי", defaultVisible: true },
     { key: "vehicle_type", label: "סוג בעלות", defaultVisible: true },
     { key: "fuel_type", label: "סוג דלק", defaultVisible: true },
@@ -38,11 +36,6 @@ export const BUILTIN_FIELDS: Partial<Record<DomainKey, BuiltinField[]>> = {
     { key: "insurance_expiry", label: "תוקף ביטוח", defaultVisible: true },
     { key: "license_expiry", label: "תוקף רישיון רכב", defaultVisible: true },
     { key: "insurance_company", label: "חברת ביטוח", defaultVisible: true },
-    { key: "serial_number", label: "מס׳ סידורי", defaultVisible: false },
-    { key: "condition", label: "מצב הציוד", defaultVisible: false },
-    { key: "manufacturer_model", label: "יצרן ודגם", defaultVisible: false },
-    { key: "expiry_date", label: "תאריך תפוגה", defaultVisible: false },
-    { key: "assigned_site_id", label: "שיוך לאתר", defaultVisible: false },
     ...COMMON_ASSIGN,
   ],
   digital: [
