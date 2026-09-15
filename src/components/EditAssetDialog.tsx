@@ -380,7 +380,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
             );
           })()}
 
-          {selectedCategory?.prefix !== "CINS" && selectedCategory?.is_assignable !== false && (
+          {selectedCategory?.prefix !== "CINS" && selectedCategory?.is_assignable !== false && showField("assigned_site_id", form.assigned_site_id, !isView) && (
             <div>
               {isView ? (
                 <>
@@ -420,6 +420,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
             />
           )}
 
+          {showField("notification_days_before", form.notification_days_before, !isView) && (
           <div>
             <label className="text-sm font-medium mb-1 block">
               התראת מייל מראש (ימים לפני תפוגה)
