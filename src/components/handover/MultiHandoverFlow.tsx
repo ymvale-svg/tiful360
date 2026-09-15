@@ -376,9 +376,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
             direction: "handover",
             title: template?.display_name ?? null,
             issuerName,
-            issuedAt: new Date().toLocaleString("he-IL", {
-              day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
-            }),
+            issuedAt: formatDateTimeDMY(new Date()),
             fields: itemFields.map((f) => ({ label: f.label, value: String(f.value ?? "") })),
             notes: freeText || null,
             pdfUrl,

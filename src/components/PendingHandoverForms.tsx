@@ -114,9 +114,7 @@ export function PendingHandoverForms({ employeeId }: Props) {
               direction: active.direction ?? "handover",
               title: snap.title ?? null,
               issuerName: snap.issuer_name ?? "",
-              issuedAt: new Date().toLocaleString("he-IL", {
-                day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
-              }),
+              issuedAt: formatDateTimeDMY(new Date()),
               fields: (snap.fields ?? []).map((f: any) => ({ label: f.label, value: String(f.value ?? "") })),
               notes: snap.free_text ?? null,
               pdfUrl,

@@ -38,6 +38,11 @@ function formatDate(iso: string) {
   const d = new Date(iso);
   return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
+function formatDayLabel(iso: string) {
+  const d = new Date(iso);
+  const wd = d.toLocaleDateString("he-IL", { weekday: "short" });
+  return `${wd} ${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
 function dayKey(iso: string) {
   return iso.slice(0, 10);
 }
