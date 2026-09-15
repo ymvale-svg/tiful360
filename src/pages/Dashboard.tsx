@@ -223,8 +223,14 @@ export default function Dashboard() {
         </div>
       )}
       {!showActivity && sidebarWidgets.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {sidebarWidgets.map(renderWidget)}
+        // Two independent columns (not a row grid) so a tall card never
+        // leaves an empty gap under the short card beside it.
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          {[0, 1].map((col) => (
+            <div key={col} className="space-y-6">
+              {sidebarWidgets.filter((_, i) => i % 2 === col).map(renderWidget)}
+            </div>
+          ))}
         </div>
       )}
 
