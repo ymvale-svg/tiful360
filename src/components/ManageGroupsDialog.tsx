@@ -3,18 +3,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Pencil, Check, X, ChevronRight, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAssets } from "@/hooks/useData";
+import { useAssets, useAssetCategories } from "@/hooks/useData";
 import {
   useAssetGroups,
   useCreateAssetGroup,
   useUpdateAssetGroup,
   useDeleteAssetGroup,
+  useMoveAssetGroup,
   useAssignAssetsToGroup,
 } from "@/hooks/useAssetGroups";
 import { useToast } from "@/hooks/use-toast";
 import { OWNER_ROLE_OPTIONS } from "@/lib/domainConfig";
 import { getBuiltinFields, isBuiltinFieldVisible } from "@/lib/builtinFields";
-import type { DomainKey } from "@/lib/assetDomains";
+import { DOMAIN_META, DOMAIN_ORDER, getDomain, type DomainKey } from "@/lib/assetDomains";
 
 interface Props {
   open: boolean;
