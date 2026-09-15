@@ -20,6 +20,7 @@ import { TrainingDetailsPanel } from "@/components/assets/TrainingDetailsPanel";
 import { InsuranceDetailsPanel } from "@/components/assets/InsuranceDetailsPanel";
 import { RealEstateDetailsPanel } from "@/components/assets/RealEstateDetailsPanel";
 import { getDomain, getPanelOwnedCustomFieldKeys } from "@/lib/assetDomains";
+import { isBuiltinFieldVisible } from "@/lib/builtinFields";
 import { VehicleLinkPanel } from "@/components/assets/VehicleLinkPanel";
 import { isVehicleLinkedGroup } from "@/lib/vehicleLinkedGroups";
 import { useAssetGroups } from "@/hooks/useAssetGroups";
