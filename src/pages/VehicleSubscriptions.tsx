@@ -480,6 +480,14 @@ export default function VehicleSubscriptions() {
           </tbody>
         </table>
       </div>
+
+      <QuickAddSubscriptionDialog
+        open={!!quickAdd}
+        onOpenChange={(o) => !o && setQuickAdd(null)}
+        employeeId={quickAdd?.employeeId ?? null}
+        employeeName={quickAdd?.employeeName ?? ""}
+        plate={quickAdd?.plate}
+      />
     </div>
   );
 }
