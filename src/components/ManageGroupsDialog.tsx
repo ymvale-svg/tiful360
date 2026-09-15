@@ -108,6 +108,39 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
     }
   };
 
+  /** Every category in the company, grouped by domain — the move targets. */
+  const moveTargets = useMemo(() => {
+    const byDomain = new Map<DomainKey, { id: string; label: string }[]>();
+    (categories ?? []).forEach((c: any) => {
+      const d = getDomain(c);
+      const list = byDomain.get(d) ?? [];
+      list.push({ id: c.id, label: `${c.category_name}${c.prefix ? ` (${c.prefix})` : ""}` });
+      byDomain.set(d, list);
+    });
+    return DOMAIN_ORDER.filter((d) => byDomain.has(d)).map((d) => ({
+      domain: d,
+      title: DOMAIN_META[d].title,
+      items: byDomain.get(d)!,
+    }));
+  }, [categories]);
+
+  const handleMove = async (groupId: string, groupName: string, targetCategoryId: string) => {
+    if (!targetCategoryId || targetCategoryId === categoryId) return;
+    const target = (categories ?? []).find((c: any) => c.id === targetCategoryId) as any;
+    const count = catAssets.filter((a: any) => a.group_id === groupId).length;
+    if (!confirm(
+      `להעביר את "${groupName}" לקטגוריה "${target?.category_name}"?\n` +
+      `${count} פריטים יעברו יחד איתה. מזהי הפריטים (הקידומת) יישארו ללא שינוי.`,
+    )) return;
+    try {
+      await moveGroup.mutateAsync({ groupId, categoryId: targetCategoryId });
+      if (selectedGroupId === groupId) setSelectedGroupId(null);
+      toast({ title: "תת-הקטגוריה הועברה", description: `כעת תחת ${target?.category_name}` });
+    } catch (e: any) {
+      toast({ title: "שגיאה", description: e.message, variant: "destructive" });
+    }
+  };
+
   const selectedGroup = useMemo(
     () => catGroups.find((g) => g.id === selectedGroupId) ?? null,
     [catGroups, selectedGroupId],
