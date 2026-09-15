@@ -17,7 +17,8 @@ export type WidgetKey =
   | "alerts"
   | "leaving"
   | "attendanceMissing"
-  | "tax101";
+  | "tax101"
+  | "pendingSignatures";
 
 export interface DashboardConfig {
   kpis: KpiKey[];
@@ -31,23 +32,23 @@ const ALL_DOMAINS = "all" as const;
 const ROLE_CONFIG: Record<AppRole, DashboardConfig> = {
   super_admin: {
     kpis: ["activeEmployees", "totalAssets", "openAlerts", "openTickets"],
-    widgets: ["expiring", "activity", "openTickets", "onboarding", "leave", "alerts", "leaving", "attendanceMissing", "tax101"],
+    widgets: ["expiring", "activity", "openTickets", "onboarding", "leave", "alerts", "leaving", "attendanceMissing", "tax101", "pendingSignatures"],
     expiryDomains: ALL_DOMAINS,
   },
   admin: {
     kpis: ["activeEmployees", "totalAssets", "openAlerts", "openTickets"],
-    widgets: ["expiring", "activity", "openTickets", "onboarding", "leave", "alerts", "leaving", "attendanceMissing", "tax101"],
+    widgets: ["expiring", "activity", "openTickets", "onboarding", "leave", "alerts", "leaving", "attendanceMissing", "tax101", "pendingSignatures"],
     expiryDomains: ALL_DOMAINS,
   },
 
   operations: {
     kpis: ["activeEmployees", "totalAssets", "openAlerts", "openTickets"],
-    widgets: ["expiring", "activity", "openTickets", "onboarding", "alerts", "leaving"],
+    widgets: ["expiring", "activity", "openTickets", "onboarding", "alerts", "leaving", "pendingSignatures"],
     expiryDomains: ALL_DOMAINS,
   },
   it_manager: {
     kpis: ["totalAssets", "openTickets", "openAlerts"],
-    widgets: ["expiring", "onboarding", "alerts", "openTickets", "activity"],
+    widgets: ["expiring", "onboarding", "alerts", "openTickets", "activity", "pendingSignatures"],
     expiryDomains: ["digital", "license", "physical"],
   },
   legal: {
@@ -110,6 +111,7 @@ const WIDGET_ORDER: WidgetKey[] = [
   "tax101",
   "alerts",
   "leaving",
+  "pendingSignatures",
 ];
 
 export const WIDGET_LABELS: Record<WidgetKey, string> = {
@@ -122,6 +124,7 @@ export const WIDGET_LABELS: Record<WidgetKey, string> = {
   tax101: "טופס 101",
   alerts: "התראות קרובות",
   leaving: "עובדים בתהליך עזיבה",
+  pendingSignatures: "טפסים ממתינים לחתימה מרחוק",
 };
 
 /** Merges the configs of every role the user holds (union). */
