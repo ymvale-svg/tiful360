@@ -447,6 +447,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
               </>
             )}
           </div>
+          )}
 
           {form.current_owner_id && (
             <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
