@@ -32,24 +32,45 @@ export default defineConfig(({ mode }) => {
       VitePWA({
         // The manifest is hand-maintained in public/manifest.webmanifest and
         // already linked from index.html — the plugin only adds the worker.
-        injectRegister: "auto",
-        registerType: "autoUpdate",
+        // We register the worker ourselves so an update can be offered to the
+        // user instead of applied silently — see PwaUpdatePrompt.
+        injectRegister: null,
+        registerType: "prompt",
         manifest: false,
         workbox: {
-          // Precache the built shell only.
-          globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"],
-          // The SPA falls back to index.html for unknown routes, but never for
-          // the token-signing pages or anything under /.well-known — the TWA's
-          // Digital Asset Links file must be served as itself.
-          navigateFallback: "/index.html",
-          // /~oauth/* must always hit the network: it is the managed sign-in
-          // broker (Google callback), and serving the cached shell there
-          // swallowed the callback and rendered a 404.
-          navigateFallbackDenylist: [/^\/\.well-known\//, /^\/storage\//, /^\/~/],
+          // Precache the hashed build output only. Those filenames change with
+          // their content, so a precached asset can never go stale.
+          globPatterns: ["**/*.{js,css,ico,png,svg,woff,woff2}"],
+          // The plugin otherwise registers its own navigation route that serves a
+          // precached index.html. That route is registered first, so it would win
+          // over the NetworkFirst one below — and with HTML no longer precached it
+          // would throw while the worker is evaluating, leaving no worker at all.
+          navigateFallback: undefined,
           cleanupOutdatedCaches: true,
           // 3 MB: the Tax-101 chunk alone is ~680 kB.
           maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
           runtimeCaching: [
+            {
+              // index.html is fetched from the network on every navigation, so a
+              // deploy is visible on the next page load rather than the one after.
+              // Serving it from the precache (the previous navigateFallback) meant
+              // the first load after every publish showed the old app — and, worse,
+              // that stale HTML pointed at hashed chunks the deploy had already
+              // deleted, so a lazy route could fail to load at all.
+              // The cache is kept only as the offline answer.
+              urlPattern: ({ request, url }) =>
+                request.mode === "navigate" &&
+                !url.pathname.startsWith("/~") &&
+                !url.pathname.startsWith("/.well-known/") &&
+                !url.pathname.startsWith("/storage/"),
+              handler: "NetworkFirst",
+              options: {
+                cacheName: "html",
+                networkTimeoutSeconds: 4,
+                expiration: { maxEntries: 20 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
             {
               // Google Fonts stylesheets/files are the only third-party assets
               // worth holding; they carry no user data.

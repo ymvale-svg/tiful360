@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CompanyProvider } from "@/hooks/useCompany";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { PwaUpdatePrompt } from "@/components/PwaUpdatePrompt";
 import { OAuthReturnRedirect } from "@/components/OAuthReturnRedirect";
 
 // Eager: critical entry pages and frequently-used screens (avoids Suspense flash on navigation)
@@ -62,6 +63,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <PwaUpdatePrompt />
       <BrowserRouter>
         <AuthProvider>
           <CompanyProvider>
