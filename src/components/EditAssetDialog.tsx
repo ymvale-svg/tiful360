@@ -23,6 +23,9 @@ import { ContainerSelect } from "@/components/sites/ContainerSelect";
 import { useSiteContainers } from "@/hooks/useSiteContainers";
 import { useSites } from "@/hooks/useSites";
 import { openHandoverFile } from "@/lib/handoverUrl";
+import { showFieldRow } from "@/lib/builtinFields";
+import { getDomain } from "@/lib/assetDomains";
+import { isVehicleLinkedGroup } from "@/lib/vehicleLinkedGroups";
 
 
 const INSURANCE_TYPES = ["רכב", "דירקטורים", "צד ג׳", "קבלני"];
@@ -76,6 +79,14 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
     () => (assetGroups ?? []).filter(g => g.category_id === form.category_id),
     [assetGroups, form.category_id]
   );
+  const selectedGroup = useMemo(
+    () => categoryGroups.find(g => g.id === form.group_id) ?? null,
+    [categoryGroups, form.group_id]
+  );
+  const domain = getDomain(selectedCategory as any);
+  /** Relevant fields only: per-sub-category config, falling back to the domain defaults. */
+  const showField = (key: string, value: unknown, editing: boolean) =>
+    showFieldRow(selectedGroup as any, key, value, editing, domain);
   const catFields = filterFieldsForGroup(catFieldsRaw as any[], form.group_id || null).filter((cf: any) => {
     if (selectedCategory?.prefix === "CINS" && cf.field_name === "תוקף פוליסה") return false;
     return true;
