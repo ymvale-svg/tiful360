@@ -1,19 +1,24 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, FileSignature, Upload } from "lucide-react";
+import { CheckCircle2, FileSignature, Upload, LogIn, FileDown } from "lucide-react";
 import { SignaturePad, SignaturePadHandle } from "@/components/SignaturePad";
 import { buildPdfForFormSnapshot as buildPdfForRecord } from "@/lib/pdf/formPdf";
+import { ProtocolPreview } from "@/components/handover/ProtocolPreview";
 import { uploadViaSignedToken } from "@/lib/signedFormUpload";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
-
+type Gate = "checking" | "anonymous" | "forbidden" | "allowed";
 
 export default function SignHandover() {
   const { token } = useParams();
+  const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, loading: authLoading } = useAuth();
   const [record, setRecord] = useState<any>(null);
+  const [gate, setGate] = useState<Gate>("checking");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [attachment, setAttachment] = useState<File | null>(null);
@@ -23,16 +28,36 @@ export default function SignHandover() {
   const [sigUrl, setSigUrl] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
+  const signPath = `/handover/${token}`;
+
+  // Signing always requires a portal session: the link alone is never enough.
   useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      setGate("anonymous");
+      setLoading(false);
+      return;
+    }
     (async () => {
-      if (!token) return;
-      const { data } = await supabase.rpc("get_handover_form_by_token", { _token: token });
-      setRecord(Array.isArray(data) ? data[0] ?? null : data ?? null);
+      const { data } = await supabase.rpc("get_handover_form_by_token", { _token: token! });
+      const row = Array.isArray(data) ? data[0] ?? null : data ?? null;
+      setRecord(row);
+      if (!row) {
+        setGate("allowed"); // invalid link message below
+      } else {
+        // RLS lets a user see only their own employee card (staff see more).
+        const { data: emp } = await supabase
+          .from("employees")
+          .select("id")
+          .eq("id", row.employee_id)
+          .maybeSingle();
+        setGate(emp ? "allowed" : "forbidden");
+      }
       setLoading(false);
     })();
-  }, [token]);
+  }, [token, user, authLoading]);
 
-  // Live PDF preview with logo
+  // Live PDF preview with logo (desktop).
   useEffect(() => {
     if (!record) return;
     let cancelled = false;
@@ -40,7 +65,6 @@ export default function SignHandover() {
     (async () => {
       try {
         const blob = await buildPdfForRecord(record.form_snapshot, sigUrl);
-
         if (cancelled) return;
         createdUrl = URL.createObjectURL(blob);
         setPreviewUrl((prev) => {
@@ -56,6 +80,11 @@ export default function SignHandover() {
       if (createdUrl) URL.revokeObjectURL(createdUrl);
     };
   }, [record, sigUrl]);
+
+  const goToLogin = () => {
+    sessionStorage.setItem("oauth_return_path", signPath);
+    navigate(`/login?redirect=${encodeURIComponent(signPath)}`);
+  };
 
   const handleSign = async () => {
     if (!record) return;
@@ -105,8 +134,42 @@ export default function SignHandover() {
     }
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center" role="status" aria-live="polite">טוען...</div>;
-  if (!record) return <div className="min-h-screen flex items-center justify-center text-destructive" role="alert">קישור לא תקף</div>;
+  if (authLoading || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" role="status" aria-live="polite">טוען...</div>
+    );
+  }
+
+  if (gate === "anonymous") {
+    return (
+      <main className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 text-center" dir="rtl">
+        <FileSignature className="w-14 h-14 text-primary" aria-hidden="true" />
+        <h1 className="text-xl font-bold">נדרשת כניסה לאזור האישי</h1>
+        <p className="text-sm text-muted-foreground max-w-sm">
+          לצורך חתימה על הטופס יש להתחבר לאזור האישי בפורטל. לאחר הכניסה תועברו אוטומטית לטופס.
+        </p>
+        <Button className="w-full max-w-xs" onClick={goToLogin}>
+          <LogIn className="w-4 h-4 ml-2" aria-hidden="true" /> כניסה לאזור האישי
+        </Button>
+      </main>
+    );
+  }
+
+  if (gate === "forbidden") {
+    return (
+      <main className="min-h-screen flex flex-col items-center justify-center gap-3 p-6 text-center" dir="rtl">
+        <h1 className="text-xl font-bold text-destructive">הטופס אינו שייך לחשבון זה</h1>
+        <p className="text-sm text-muted-foreground max-w-sm">
+          התחברתם עם חשבון אחר. יש להתנתק ולהתחבר עם החשבון של העובד שעבורו נשלח הטופס.
+        </p>
+        <Button variant="outline" onClick={() => navigate("/portal")}>לאזור האישי</Button>
+      </main>
+    );
+  }
+
+  if (!record) {
+    return <div className="min-h-screen flex items-center justify-center text-destructive" role="alert">קישור לא תקף</div>;
+  }
 
   if (done || record.status === "signed") {
     return (
@@ -114,27 +177,37 @@ export default function SignHandover() {
         <CheckCircle2 className="w-16 h-16 text-green-500 mb-4" aria-hidden="true" />
         <h1 className="text-2xl font-bold mb-2">הטופס נחתם בהצלחה</h1>
         <p className="text-muted-foreground">תודה. עותק נשמר בתיק שלך.</p>
-        {record.pdf_url && (
-          <a href={record.pdf_url} target="_blank" rel="noreferrer" className="mt-4 text-primary underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded">
-            הורד PDF
-          </a>
-        )}
+        <Button className="mt-4" variant="outline" onClick={() => navigate("/portal")}>לאזור האישי</Button>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-muted/30 p-6" dir="rtl">
-      <div className="max-w-4xl mx-auto space-y-4">
-        <div className="bg-card border rounded-xl p-6">
-          <h1 className="text-xl font-bold flex items-center gap-2 mb-1">
-            <FileSignature className="w-6 h-6 text-primary" aria-hidden="true" />
+    <main className="min-h-screen bg-muted/30 p-3 sm:p-6 pb-28 sm:pb-6" dir="rtl">
+      <div className="max-w-4xl mx-auto space-y-3 sm:space-y-4">
+        <div className="bg-card border rounded-xl p-4 sm:p-6">
+          <h1 className="text-lg sm:text-xl font-bold flex items-center gap-2 mb-1">
+            <FileSignature className="w-5 h-5 sm:w-6 sm:h-6 text-primary shrink-0" aria-hidden="true" />
             חתימה על טופס קבלת ציוד
           </h1>
-          <p className="text-sm text-muted-foreground">אנא קרא את הטופס וחתום למטה.</p>
+          <p className="text-sm text-muted-foreground">אנא קראו את הטופס וחתמו בתחתית העמוד.</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-card overflow-hidden">
+        {/* Mobile: readable HTML protocol. Desktop: the full PDF preview. */}
+        <div className="bg-card border rounded-xl p-4 sm:hidden">
+          <ProtocolPreview snapshot={record.form_snapshot} />
+          {previewUrl && (
+            <Button
+              variant="outline"
+              className="w-full mt-4"
+              onClick={() => window.open(previewUrl, "_blank", "noopener,noreferrer")}
+            >
+              <FileDown className="w-4 h-4 ml-2" aria-hidden="true" /> פתיחת הטופס המלא (PDF)
+            </Button>
+          )}
+        </div>
+
+        <div className="hidden sm:block bg-white rounded-xl shadow-card overflow-hidden">
           {previewUrl ? (
             <iframe
               src={previewUrl}
@@ -147,12 +220,12 @@ export default function SignHandover() {
           )}
         </div>
 
-        <div className="bg-card border rounded-xl p-6 space-y-4">
+        <div className="bg-card border rounded-xl p-4 sm:p-6 space-y-4">
           <SignaturePad ref={sigRef} label="חתימתי על קבלת הציוד" height={180} />
 
           <div>
-            <label htmlFor="handover-attachment" className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg text-sm cursor-pointer hover:bg-muted/70 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
-              <Upload className="w-4 h-4" aria-hidden="true" />
+            <label htmlFor="handover-attachment" className="flex items-center gap-2 px-3 py-3 bg-muted rounded-lg text-sm cursor-pointer hover:bg-muted/70 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+              <Upload className="w-4 h-4 shrink-0" aria-hidden="true" />
               <span className="truncate">{attachment ? attachment.name : "צרף מסמך נוסף (אופציונלי)..."}</span>
               <input
                 id="handover-attachment"
@@ -164,10 +237,17 @@ export default function SignHandover() {
             </label>
           </div>
 
-          <Button className="w-full" disabled={busy} onClick={handleSign} aria-busy={busy}>
+          <Button className="w-full h-12 text-base hidden sm:flex" disabled={busy} onClick={handleSign} aria-busy={busy}>
             {busy ? "שומר..." : "אישור וחתימה"}
           </Button>
         </div>
+      </div>
+
+      {/* Sticky action bar keeps the primary action reachable on phones. */}
+      <div className="sm:hidden fixed bottom-0 inset-x-0 p-3 bg-background/95 backdrop-blur border-t">
+        <Button className="w-full h-12 text-base" disabled={busy} onClick={handleSign} aria-busy={busy}>
+          {busy ? "שומר..." : "אישור וחתימה"}
+        </Button>
       </div>
     </main>
   );
