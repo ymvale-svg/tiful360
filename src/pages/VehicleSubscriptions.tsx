@@ -89,6 +89,10 @@ export default function VehicleSubscriptions() {
   const { data: groups } = useAssetGroups();
 
 
+  const [quickAdd, setQuickAdd] = useState<
+    { employeeId: string | null; employeeName: string; plate: string } | null
+  >(null);
+
   const [filters, setFilters, resetFilters] = usePersistentFilter("vehicle-subscriptions", {
     q: "",
     provider: "all",
