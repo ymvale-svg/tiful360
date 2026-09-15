@@ -69,7 +69,7 @@ export function PendingSignaturesCard() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{label.name}</p>
+                  <p className="text-sm font-medium truncate">{itemName}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {form.employees?.full_name ?? "—"}
                     {" • "}
