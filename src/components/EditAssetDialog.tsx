@@ -289,7 +289,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                 )}
               </div>
             )}
-            {(selectedCategory as any)?.is_assignable !== false && (
+            {(selectedCategory as any)?.is_assignable !== false && showField("condition", form.condition, !isView) && (
               <div>
                 <label className="text-sm font-medium mb-1 block">מצב הציוד</label>
                 {isView ? (
@@ -310,7 +310,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
           </div>
 
 
-          {selectedCategory?.prefix !== "CINS" && selectedCategory?.prefix !== "CAR" && (
+          {selectedCategory?.prefix !== "CINS" && selectedCategory?.prefix !== "CAR" && showField("manufacturer_model", form.manufacturer_model, !isView) && (
             <div>
               <label className="text-sm font-medium mb-1 block">יצרן ומודל</label>
               {isView ? (
@@ -358,7 +358,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                     </div>
                   </div>
                 )}
-                {selectedCategory?.prefix !== "CAR" && (
+                {selectedCategory?.prefix !== "CAR" && showField("expiry_date", form.expiry_date, !isView) && (
                   <div>
                     <label className="text-sm font-medium mb-1 block">
                       {isInsurance ? "תוקף עד" : "תאריך תפוגה"}
