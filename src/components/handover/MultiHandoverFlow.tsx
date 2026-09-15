@@ -30,6 +30,8 @@ import { buildProtocolPdf } from "@/lib/pdf/lazy";
 import type { ProtocolMedia } from "@/lib/pdf/types";
 import { uploadProtocolFile, compressImage, describeUploadError } from "@/lib/protocolUpload";
 import { getDomain, type DomainKey } from "@/lib/assetDomains";
+import { SignLinkDialog } from "@/components/handover/SignLinkDialog";
+import { signLinkFor, sendSignLink } from "@/lib/signLink";
 import { compressVideo, VIDEO_TARGET_BYTES } from "@/lib/videoCompress";
 import {
   saveHandoverDraft, loadHandoverDraft, deleteHandoverDraft, draftKeyForAssets, formatDraftTime,
