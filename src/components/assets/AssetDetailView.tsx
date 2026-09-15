@@ -232,8 +232,12 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
             <h2 className="text-sm font-semibold text-muted-foreground">פרטי הנכס</h2>
             {(() => {
               const domain = category ? getDomain(category) : null;
+              const group = (assetGroups ?? []).find((g: any) => g.id === asset.group_id) as any;
               const panelKeys = getPanelOwnedCustomFieldKeys(domain, category);
-              const hideCondition = domain === "insurance";
+              const hideCondition = domain === "insurance" || !isBuiltinFieldVisible(group, "condition", domain);
+              const showSerial = isBuiltinFieldVisible(group, "serial_number", domain);
+              const showModel = isBuiltinFieldVisible(group, "manufacturer_model", domain);
+              const showExpiry = isBuiltinFieldVisible(group, "expiry_date", domain);
               const customEntries = asset.custom_fields
                 ? Object.entries(asset.custom_fields).filter(([k]) => !panelKeys.has(k))
                 : [];
@@ -242,8 +246,8 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
                   <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                     <Field label="קטגוריה" value={category?.category_name} />
                     <Field label="מזהה" value={asset.asset_code} mono />
-                    {asset.serial_number && <Field label="מס׳ סידורי" value={asset.serial_number} mono />}
-                    {asset.manufacturer_model && <Field label="יצרן/דגם" value={asset.manufacturer_model} />}
+                    {showSerial && asset.serial_number && <Field label="מס׳ סידורי" value={asset.serial_number} mono />}
+                    {showModel && asset.manufacturer_model && <Field label="יצרן/דגם" value={asset.manufacturer_model} />}
                     {isAssignable && (
                       <Field
                         label="סטטוס"
@@ -255,7 +259,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
                       />
                     )}
                     {asset.condition && !hideCondition && <Field label="מצב" value={asset.condition} />}
-                    {expiry && (
+                    {showExpiry && expiry && (
                       <Field
                         label="תפוגה"
                         value={
