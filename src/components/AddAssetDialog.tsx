@@ -126,7 +126,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
   // Vehicle-linked subscription sub-categories (Pango, toll roads, fuel cards):
   // the sub-category already says everything, so generic category-level fields are hidden.
   const vehicleLinkedGroup = isVehicleLinkedGroup(selectedGroup as any);
-  const showBuiltin = (key: string) => isBuiltinFieldVisible(selectedGroup as any, key);
+  const showBuiltin = (key: string) => isBuiltinFieldVisible(selectedGroup as any, key, domain);
   const catFields = useMemo(
     () =>
       filterFieldsForGroup(catFieldsRaw as any[], form.group_id || null)
@@ -643,7 +643,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
           </div>
           )}
 
-          {selectedCategory?.prefix !== "CINS" && selectedCategory?.prefix !== "CAR" && domain === "physical" && (
+          {selectedCategory?.prefix !== "CINS" && selectedCategory?.prefix !== "CAR" && domain === "physical" && showBuiltin("manufacturer_model") && (
             <div>
               <label className="text-sm font-medium mb-1 block">יצרן ומודל</label>
               <ManufacturerModelInput
@@ -739,7 +739,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                   </div>
                 </div>
               )}
-              {selectedCategory?.prefix !== "CAR" && (
+              {selectedCategory?.prefix !== "CAR" && showBuiltin("expiry_date") && (
                 <div>
                   <label className="text-sm font-medium mb-1 block">
                     {selectedCategory?.prefix === "CINS" ? "תוקף עד" : "תאריך תפוגה"}
@@ -756,7 +756,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
             </div>
           )}
 
-          {!bulkMode && (
+          {!bulkMode && showBuiltin("notification_days_before") && (
             <div>
               <label className="text-sm font-medium mb-1 block">
                 התראת מייל מראש (ימים לפני תפוגה)
