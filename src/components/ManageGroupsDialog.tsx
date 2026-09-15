@@ -271,6 +271,22 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
                               <option key={o.value} value={o.value}>{o.label}</option>
                             ))}
                           </select>
+                          <select
+                            value={categoryId}
+                            onChange={(e) => handleMove(g.id, g.name, e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            disabled={moveGroup.isPending}
+                            title="העבר לקטגוריה אחרת (גם בדומיין אחר)"
+                            className="shrink-0 max-w-[9rem] px-1.5 py-1 bg-background rounded-md text-[11px] outline-none border border-border/50 focus:ring-1 focus:ring-primary/30"
+                          >
+                            {moveTargets.map((d) => (
+                              <optgroup key={d.domain} label={d.title}>
+                                {d.items.map((c) => (
+                                  <option key={c.id} value={c.id}>{c.label}</option>
+                                ))}
+                              </optgroup>
+                            ))}
+                          </select>
                           <button
                             onClick={() => { setEditingId(g.id); setEditName(g.name); }}
                             className="text-muted-foreground hover:text-foreground p-1"
