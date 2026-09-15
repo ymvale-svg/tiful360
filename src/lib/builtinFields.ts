@@ -28,7 +28,7 @@ export const BUILTIN_FIELDS: Partial<Record<DomainKey, BuiltinField[]>> = {
     { key: "expiry_date", label: "תאריך תפוגה", defaultVisible: true },
     ...COMMON_ASSIGN,
   ],
-  vehicle: [
+  _unused_vehicle_anchor: [
     { key: "license_plate", label: "לוחית רישוי", defaultVisible: true },
     { key: "vehicle_type", label: "סוג בעלות", defaultVisible: true },
     { key: "fuel_type", label: "סוג דלק", defaultVisible: true },
