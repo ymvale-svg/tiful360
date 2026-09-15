@@ -37,3 +37,6 @@ project_id = "rhzmhiknbcipucfvgkok"
     verify_jwt = false
   [functions.send-handover-protocol-email]
     verify_jwt = true
+
+  [functions.send-handover-sign-link]
+    verify_jwt = true

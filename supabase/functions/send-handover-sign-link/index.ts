@@ -67,8 +67,6 @@ Deno.serve(async (req) => {
   if (!employee?.email) return json({ success: false, reason: 'no_email', links })
 
   const snap: any = forms[0].form_snapshot ?? {}
-  const fieldValue = (key: string) =>
-    (Array.isArray(snap.fields) ? snap.fields.find((x: any) => x?.key === key)?.value : null) ?? null
 
   const items = forms.map((f: any) => {
     const s: any = f.form_snapshot ?? {}
@@ -90,7 +88,6 @@ Deno.serve(async (req) => {
       issuedAt: fmtDateTimeIL(new Date()),
       items,
       signUrl: links[0],
-      _unusedFieldProbe: fieldValue('asset_name') ? undefined : undefined,
     },
     idempotencyKey: `handover-sign-${forms.map((f: any) => f.id).sort().join('-')}`,
   })

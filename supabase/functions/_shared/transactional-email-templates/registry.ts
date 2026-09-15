@@ -6,6 +6,7 @@ import { template as unmatchedPunches } from './unmatched-punches.tsx'
 import { template as unmatchedPunchesWeekly } from './unmatched-punches-weekly.tsx'
 import { template as payrollMonthlyGaps } from './payroll-monthly-gaps.tsx'
 import { template as handoverProtocol } from './handover-protocol.tsx'
+import { template as handoverSignRequest } from './handover-sign-request.tsx'
 
 export interface TemplateEntry {
   component: ComponentType<any>
@@ -23,6 +24,7 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'unmatched-punches-weekly': unmatchedPunchesWeekly,
   'payroll-monthly-gaps': payrollMonthlyGaps,
   'handover-protocol': handoverProtocol,
+  'handover-sign-request': handoverSignRequest,
 }
 
 
