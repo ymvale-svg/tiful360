@@ -171,6 +171,7 @@ export default function VehicleSubscriptions() {
           created_at: a.created_at,
           source: "asset",
           source_asset_id: a.id,
+          card_number: extractCardNumber(a),
         };
         const arr = map.get(a.current_owner_id) ?? [];
         arr.push(item);
