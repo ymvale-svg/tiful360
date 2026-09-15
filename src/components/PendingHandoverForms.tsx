@@ -82,7 +82,7 @@ export function PendingHandoverForms({ employeeId }: Props) {
           signature_data: sig,
           pdf_url: pdfUrl,
           signed_at: new Date().toISOString(),
-          form_snapshot: { ...active.form_snapshot, receiver_signature: sig },
+          form_snapshot: { ...active.form_snapshot, receiver_signature: sig, employee_signature: sig },
         })
         .eq("id", active.id);
       if (error) throw error;
@@ -102,8 +102,8 @@ export function PendingHandoverForms({ employeeId }: Props) {
             templateData: {
               employeeName: emp.full_name ?? snap.employee_name ?? "",
               companyName: snap.company_name ?? "",
-              itemName: snap.asset_name ?? snap.title ?? "",
-              itemCode: snap.asset_code ?? "",
+              itemName: snapshotItemLabel(snap).name,
+              itemCode: snapshotItemLabel(snap).code,
               direction: active.direction ?? "handover",
               title: snap.title ?? null,
               issuerName: snap.issuer_name ?? "",
