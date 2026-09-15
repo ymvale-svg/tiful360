@@ -24,6 +24,7 @@ import { useSiteContainers } from "@/hooks/useSiteContainers";
 import { useSites } from "@/hooks/useSites";
 import { openHandoverFile } from "@/lib/handoverUrl";
 import { showFieldRow } from "@/lib/builtinFields";
+import { useProtocolTemplates } from "@/hooks/useProtocolTemplates";
 import { getDomain } from "@/lib/assetDomains";
 import { isVehicleLinkedGroup } from "@/lib/vehicleLinkedGroups";
 
@@ -87,6 +88,18 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
   /** Relevant fields only: per-sub-category config, falling back to the domain defaults. */
   const showField = (key: string, value: unknown, editing: boolean) =>
     showFieldRow(selectedGroup as any, key, value, editing, domain);
+
+  // The handover section appears only when a handover protocol is defined for
+  // this sub-category (most specific) or its category.
+  const { data: protocolTemplates } = useProtocolTemplates(asset?.company_id ?? null);
+  const hasHandoverProtocol = useMemo(() => {
+    if (!protocolTemplates) return false;
+    const gid = form.group_id || null;
+    return protocolTemplates.some((t: any) =>
+      (gid && t.group_id === gid) ||
+      (!t.group_id && t.category_id === form.category_id),
+    );
+  }, [protocolTemplates, form.group_id, form.category_id]);
   const catFields = filterFieldsForGroup(catFieldsRaw as any[], form.group_id || null).filter((cf: any) => {
     if (selectedCategory?.prefix === "CINS" && cf.field_name === "תוקף פוליסה") return false;
     return true;
