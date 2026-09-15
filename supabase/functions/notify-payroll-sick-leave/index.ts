@@ -1,4 +1,5 @@
 import { enqueueTransactionalEmail } from "../_shared/enqueueEmail.ts";
+import { fmtDateIL } from "../_shared/formatDate.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.103.0";
 
 const corsHeaders = {
@@ -79,8 +80,8 @@ Deno.serve(async (req) => {
 
     const employee = request.employee as any;
     const company = request.company as any;
-    const start = new Date(request.start_date).toLocaleDateString("he-IL");
-    const end = new Date(request.end_date).toLocaleDateString("he-IL");
+    const start = fmtDateIL(request.start_date);
+    const end = fmtDateIL(request.end_date);
 
     const subject = `הצהרת מחלה — ${employee?.full_name ?? "עובד"} (${start} – ${end})`;
 

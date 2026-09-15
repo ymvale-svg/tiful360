@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { fmtDateIL } from "../_shared/formatDate.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -93,7 +94,7 @@ Deno.serve(async (req) => {
         <h2 style="color:#1e40af;">טופס 101 חתום — ${empName}</h2>
         <p>שלום,</p>
         <p>מצורף טופס 101 חתום של <strong>${empName}</strong> לשנת המס <strong>${form.tax_year}</strong>${company?.name ? ` בחברת ${company.name}` : ""}.</p>
-        <p style="color:#666;font-size:13px;">הטופס נחתם דיגיטלית בתאריך ${form.signed_at ? new Date(form.signed_at).toLocaleDateString("he-IL") : "—"}.</p>
+        <p style="color:#666;font-size:13px;">הטופס נחתם דיגיטלית בתאריך ${fmtDateIL(form.signed_at)}.</p>
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;" />
         <p style="font-size:11px;color:#999;">הודעה זו נשלחה אוטומטית מערכת תיק 360.</p>
       </div>

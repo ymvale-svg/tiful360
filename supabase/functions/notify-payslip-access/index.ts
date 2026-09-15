@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.103.0";
+import { fmtDateTimeIL } from "../_shared/formatDate.ts";
 import { enqueueTransactionalEmail } from "../_shared/enqueueEmail.ts";
 
 const corsHeaders = {
@@ -54,7 +55,7 @@ Deno.serve(async (req) => {
       (viewer.user_metadata as any)?.full_name ??
       viewer.email ??
       viewer.id;
-    const when = new Date().toLocaleString("he-IL", { timeZone: "Asia/Jerusalem" });
+    const when = fmtDateTimeIL(new Date());
 
     // Audit trail
     await admin.from("activity_log").insert({
