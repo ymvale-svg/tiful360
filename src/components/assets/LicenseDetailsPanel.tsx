@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useAssetGroups } from "@/hooks/useAssetGroups";
-import { showFieldRow } from "@/lib/builtinFields";
+import { showFieldRow, isBuiltinFieldVisible } from "@/lib/builtinFields";
 
 
 interface Props { asset: any }
@@ -61,7 +61,9 @@ export function LicenseDetailsPanel({ asset }: Props) {
   };
 
   const group = (groups ?? []).find((g) => g.id === asset.group_id) ?? null;
-  const show = (key: string, value: unknown) => showFieldRow(group, key, value, editing);
+  const show = (key: string, value: unknown) => showFieldRow(group, key, value, editing, "licenses");
+  const PANEL_KEYS = ["vendor", "plan", "seats", "account_username", "account_url", "license_expires_at"];
+  const anyFieldVisible = PANEL_KEYS.some((k) => isBuiltinFieldVisible(group, k, "licenses"));
   const hasAnyValue = ["vendor", "plan", "seats"].some((k) => !!cf[k]) ||
     !!asset.account_username || !!asset.account_url || !!asset.license_expires_at;
 
@@ -85,6 +87,8 @@ export function LicenseDetailsPanel({ asset }: Props) {
     qc.invalidateQueries({ queryKey: ["expiring-assets"] });
     setEditing(false);
   };
+
+  if (!anyFieldVisible) return null;
 
   return (
     <div className="bg-card border border-border rounded-xl p-5 space-y-4">

@@ -23,6 +23,10 @@ import { ContainerSelect } from "@/components/sites/ContainerSelect";
 import { useSiteContainers } from "@/hooks/useSiteContainers";
 import { useSites } from "@/hooks/useSites";
 import { openHandoverFile } from "@/lib/handoverUrl";
+import { showFieldRow } from "@/lib/builtinFields";
+import { useProtocolTemplates } from "@/hooks/useProtocolTemplates";
+import { getDomain } from "@/lib/assetDomains";
+import { isVehicleLinkedGroup } from "@/lib/vehicleLinkedGroups";
 
 
 const INSURANCE_TYPES = ["רכב", "דירקטורים", "צד ג׳", "קבלני"];
@@ -76,6 +80,26 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
     () => (assetGroups ?? []).filter(g => g.category_id === form.category_id),
     [assetGroups, form.category_id]
   );
+  const selectedGroup = useMemo(
+    () => categoryGroups.find(g => g.id === form.group_id) ?? null,
+    [categoryGroups, form.group_id]
+  );
+  const domain = getDomain(selectedCategory as any);
+  /** Relevant fields only: per-sub-category config, falling back to the domain defaults. */
+  const showField = (key: string, value: unknown, editing: boolean) =>
+    showFieldRow(selectedGroup as any, key, value, editing, domain);
+
+  // The handover section appears only when a handover protocol is defined for
+  // this sub-category (most specific) or its category.
+  const { data: protocolTemplates } = useProtocolTemplates(asset?.company_id ?? null);
+  const hasHandoverProtocol = useMemo(() => {
+    if (!protocolTemplates) return false;
+    const gid = form.group_id || null;
+    return protocolTemplates.some((t: any) =>
+      (gid && t.group_id === gid) ||
+      (!t.group_id && t.category_id === form.category_id),
+    );
+  }, [protocolTemplates, form.group_id, form.category_id]);
   const catFields = filterFieldsForGroup(catFieldsRaw as any[], form.group_id || null).filter((cf: any) => {
     if (selectedCategory?.prefix === "CINS" && cf.field_name === "תוקף פוליסה") return false;
     return true;
@@ -278,7 +302,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                 )}
               </div>
             )}
-            {(selectedCategory as any)?.is_assignable !== false && (
+            {(selectedCategory as any)?.is_assignable !== false && showField("condition", form.condition, !isView) && (
               <div>
                 <label className="text-sm font-medium mb-1 block">מצב הציוד</label>
                 {isView ? (
@@ -299,7 +323,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
           </div>
 
 
-          {selectedCategory?.prefix !== "CINS" && selectedCategory?.prefix !== "CAR" && (
+          {selectedCategory?.prefix !== "CINS" && selectedCategory?.prefix !== "CAR" && showField("manufacturer_model", form.manufacturer_model, !isView) && (
             <div>
               <label className="text-sm font-medium mb-1 block">יצרן ומודל</label>
               {isView ? (
@@ -347,7 +371,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                     </div>
                   </div>
                 )}
-                {selectedCategory?.prefix !== "CAR" && (
+                {selectedCategory?.prefix !== "CAR" && showField("expiry_date", form.expiry_date, !isView) && (
                   <div>
                     <label className="text-sm font-medium mb-1 block">
                       {isInsurance ? "תוקף עד" : "תאריך תפוגה"}
@@ -369,7 +393,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
             );
           })()}
 
-          {selectedCategory?.prefix !== "CINS" && selectedCategory?.is_assignable !== false && (
+          {selectedCategory?.prefix !== "CINS" && selectedCategory?.is_assignable !== false && showField("assigned_site_id", form.assigned_site_id, !isView) && (
             <div>
               {isView ? (
                 <>
@@ -409,6 +433,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
             />
           )}
 
+          {showField("notification_days_before", form.notification_days_before, !isView) && (
           <div>
             <label className="text-sm font-medium mb-1 block">
               התראת מייל מראש (ימים לפני תפוגה)
@@ -435,8 +460,9 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
               </>
             )}
           </div>
+          )}
 
-          {form.current_owner_id && (
+          {form.current_owner_id && hasHandoverProtocol && (
             <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
               <div className="text-sm font-medium flex items-center gap-2">
                 <FileSignature className="w-4 h-4 text-primary" />

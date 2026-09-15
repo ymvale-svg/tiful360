@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { useAssetGroups } from "@/hooks/useAssetGroups";
+import { isCompanyOwnedVehicleGroup } from "@/lib/builtinFields";
 
 interface Props {
   asset: any;
@@ -48,6 +50,11 @@ export function VehicleDetailsPanel({ asset }: Props) {
     });
   }, [asset.id]);
 
+  // Test / insurance / vehicle-license fields apply only to company-owned cars.
+  const { data: assetGroups } = useAssetGroups();
+  const group = (assetGroups ?? []).find((g) => g.id === asset.group_id) ?? null;
+  const ownedVehicle = isCompanyOwnedVehicleGroup(group);
+
   const daysTo = (d?: string | null) => {
     if (!d) return null;
     return Math.ceil((new Date(d).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
@@ -76,11 +83,11 @@ export function VehicleDetailsPanel({ asset }: Props) {
       fuel_type: form.fuel_type || null,
       year_of_manufacture: form.year_of_manufacture ? Number(form.year_of_manufacture) : null,
       current_km: form.current_km ? Number(form.current_km) : null,
-      test_expiry: form.test_expiry || null,
-      insurance_expiry: form.insurance_expiry || null,
-      license_expiry: form.license_expiry || null,
-      insurance_company: form.insurance_company || null,
-      insurance_policy_number: form.insurance_policy_number || null,
+      test_expiry: ownedVehicle ? form.test_expiry || null : asset.test_expiry ?? null,
+      insurance_expiry: ownedVehicle ? form.insurance_expiry || null : asset.insurance_expiry ?? null,
+      license_expiry: ownedVehicle ? form.license_expiry || null : asset.license_expiry ?? null,
+      insurance_company: ownedVehicle ? form.insurance_company || null : asset.insurance_company ?? null,
+      insurance_policy_number: ownedVehicle ? form.insurance_policy_number || null : asset.insurance_policy_number ?? null,
     };
     const { error } = await supabase.from("assets").update(payload).eq("id", asset.id);
     setSaving(false);
@@ -175,30 +182,36 @@ export function VehicleDetailsPanel({ asset }: Props) {
             <div className="font-medium mt-1">{asset.current_km ? asset.current_km.toLocaleString() + " ק\"מ" : "—"}</div>
           )}
         </div>
-        <div>
-          <Label className="text-xs text-muted-foreground">חברת ביטוח</Label>
-          {editing ? (
-            <Input value={form.insurance_company} onChange={(e) => setForm({ ...form, insurance_company: e.target.value })} className="mt-1" />
-          ) : (
-            <div className="font-medium mt-1">{asset.insurance_company ?? "—"}</div>
-          )}
-        </div>
-        <div className="col-span-2">
-          <Label className="text-xs text-muted-foreground">מספר פוליסה</Label>
-          {editing ? (
-            <Input value={form.insurance_policy_number} onChange={(e) => setForm({ ...form, insurance_policy_number: e.target.value })} className="mt-1 text-left" dir="ltr" />
-          ) : (
-            <div className="font-mono text-sm mt-1">{asset.insurance_policy_number ?? "—"}</div>
-          )}
-        </div>
+        {ownedVehicle && (editing || asset.insurance_company) && (
+          <div>
+            <Label className="text-xs text-muted-foreground">חברת ביטוח</Label>
+            {editing ? (
+              <Input value={form.insurance_company} onChange={(e) => setForm({ ...form, insurance_company: e.target.value })} className="mt-1" />
+            ) : (
+              <div className="font-medium mt-1">{asset.insurance_company ?? "—"}</div>
+            )}
+          </div>
+        )}
+        {ownedVehicle && (editing || asset.insurance_policy_number) && (
+          <div className="col-span-2">
+            <Label className="text-xs text-muted-foreground">מספר פוליסה</Label>
+            {editing ? (
+              <Input value={form.insurance_policy_number} onChange={(e) => setForm({ ...form, insurance_policy_number: e.target.value })} className="mt-1 text-left" dir="ltr" />
+            ) : (
+              <div className="font-mono text-sm mt-1">{asset.insurance_policy_number ?? "—"}</div>
+            )}
+          </div>
+        )}
       </div>
 
-      <div className="pt-3 border-t border-border">
-        <h3 className="text-xs font-semibold text-muted-foreground mb-2">תוקפים</h3>
-        <ExpiryRow label="תוקף טסט" value={asset.test_expiry} field="test_expiry" />
-        <ExpiryRow label="תוקף ביטוח" value={asset.insurance_expiry} field="insurance_expiry" />
-        <ExpiryRow label="תוקף רישוי" value={asset.license_expiry} field="license_expiry" />
-      </div>
+      {ownedVehicle && (
+        <div className="pt-3 border-t border-border">
+          <h3 className="text-xs font-semibold text-muted-foreground mb-2">תוקפים</h3>
+          <ExpiryRow label="תוקף טסט" value={asset.test_expiry} field="test_expiry" />
+          <ExpiryRow label="תוקף ביטוח" value={asset.insurance_expiry} field="insurance_expiry" />
+          <ExpiryRow label="תוקף רישוי" value={asset.license_expiry} field="license_expiry" />
+        </div>
+      )}
     </div>
   );
 }
