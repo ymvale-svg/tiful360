@@ -462,7 +462,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
           </div>
           )}
 
-          {form.current_owner_id && (
+          {form.current_owner_id && hasHandoverProtocol && (
             <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
               <div className="text-sm font-medium flex items-center gap-2">
                 <FileSignature className="w-4 h-4 text-primary" />
