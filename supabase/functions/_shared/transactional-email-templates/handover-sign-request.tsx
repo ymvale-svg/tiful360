@@ -60,11 +60,11 @@ const Email = ({
           )}
 
           <Section style={{ textAlign: 'center', margin: '28px 0' }}>
-            <Button href={signUrl} style={button}>לצפייה ולחתימה דיגיטלית</Button>
+            <Button href={signUrl} style={button}>כניסה לאזור האישי וחתימה</Button>
           </Section>
 
           <Text style={small}>
-            אם הכפתור אינו עובד, העתיקו את הקישור לדפדפן:<br />
+            החתימה מתבצעת לאחר כניסה לאזור האישי בפורטל. אם הכפתור אינו עובד, העתיקו את הקישור לדפדפן:<br />
             <Link href={signUrl} style={{ color: '#1e40af', direction: 'ltr', display: 'inline-block' }}>{signUrl}</Link>
           </Text>
 

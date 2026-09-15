@@ -43,6 +43,8 @@ export default function Login() {
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
+    // Managed Google sign-in returns to the app root; remember where to continue.
+    if (afterLogin !== "/select-company") sessionStorage.setItem("oauth_return_path", afterLogin);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
         redirect_uri: window.location.origin,
