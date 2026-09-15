@@ -286,39 +286,27 @@ export default function VehicleSubscriptions() {
     return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
   }, [rows]);
 
-  /** Excel: one line per vehicle, each active subscription flattened into its own set of columns. */
+  /** Excel: one line per vehicle, a ✅/❌ column per subscription service + fuel card number. */
   const handleExport = () => {
-    const maxSubs = Math.max(1, ...filtered.map((r) => r.activeSubs.length));
     const headers = [
-      { key: "employee_name", label: "עובד" },
-      { key: "department", label: "מחלקה" },
+      { key: "employee_name", label: "שם העובד" },
       { key: "plate", label: "מס' רכב" },
-      { key: "vehicle_type", label: "סוג רכב" },
-      { key: "subs_count", label: "מס' מנויים" },
+      { key: "vehicle_type", label: "סוג בעלות" },
+      ...EXPORT_PROVIDERS.map((p) => ({ key: `p_${p}`, label: p })),
+      { key: "fuel_card", label: "מס' כרטיס דלק" },
     ];
-    for (let i = 1; i <= maxSubs; i++) {
-      headers.push(
-        { key: `p${i}`, label: `מנוי ${i} — ספק` },
-        { key: `d${i}`, label: `מנוי ${i} — תאריך התחלה` },
-        { key: `s${i}`, label: `מנוי ${i} — סטטוס` },
-        { key: `n${i}`, label: `מנוי ${i} — הערות` }
-      );
-    }
     const data = filtered.map((r) => {
       const row: Record<string, any> = {
         employee_name: r.employee_name,
-        department: r.department,
         plate: r.plate,
         vehicle_type: r.vehicle_type,
-        subs_count: r.activeSubs.length,
       };
-      r.activeSubs.forEach((s, idx) => {
-        const i = idx + 1;
-        row[`p${i}`] = s.provider;
-        row[`d${i}`] = fmtDate(s.start_date);
-        row[`s${i}`] = SUBSCRIPTION_STATUS_LABELS[s.status] ?? s.status;
-        row[`n${i}`] = s.notes ?? "";
+      const active = r.activeSubs.map((s) => normProvider(s.provider));
+      EXPORT_PROVIDERS.forEach((p) => {
+        row[`p_${p}`] = active.includes(normProvider(p)) ? "✅" : "❌";
       });
+      const card = r.activeSubs.find((s) => s.card_number);
+      row.fuel_card = card?.card_number ?? "";
       return row;
     });
     exportToExcel(data, headers, "מנויי_רכב");
