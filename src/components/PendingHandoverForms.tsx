@@ -66,10 +66,7 @@ export function PendingHandoverForms({ employeeId }: Props) {
     try {
       setSigUrl(sig);
 
-      const blob = await buildHandoverPdf({
-        ...(active.form_snapshot as HandoverFormData),
-        receiver_signature: sig,
-      });
+      const blob = await buildPdfForFormSnapshot(active.form_snapshot, sig);
       const pdfPath = `${active.company_id}/${active.employee_id}/${active.asset_id}-${Date.now()}.pdf`;
       const { error: upErr } = await supabase.storage
         .from("handover-forms")
