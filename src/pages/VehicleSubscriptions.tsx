@@ -32,7 +32,21 @@ type SubItem = VehicleSubscription & {
   source: "record" | "asset";
   /** For source === "asset": the asset id, so the tag links to the item card. */
   source_asset_id?: string;
+  /** Fuel-card number, when the subscription is a fuel card. */
+  card_number?: string | null;
 };
+
+/** Fixed export columns — one per subscription service. */
+const EXPORT_PROVIDERS = ["פנגו", "מנהרות הכרמל", "חוצה צפון", "כביש 6"];
+
+const normProvider = (p: string) => (p ?? "").trim().replace(/^מנוי\s+/, "").toLowerCase();
+
+/** Fuel-card number: dedicated field first, then the "מספר כרטיס- ..." note. */
+function extractCardNumber(asset: any): string | null {
+  if (asset?.serial_number) return String(asset.serial_number).trim();
+  const m = String(asset?.notes ?? "").match(/מספר\s*כרטיס[-:\s]*([0-9]{4,})/);
+  return m ? m[1] : null;
+}
 
 /** Same subscription can exist both as a real record and as an asset — show it once.
  *  Keeps the record-based tag when both exist. */
