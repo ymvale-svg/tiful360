@@ -28,6 +28,16 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  // Cron-only endpoint (verify_jwt defaults to false), so require the same
+  // service-role bearer token guard used by the sibling scheduled functions.
+  // Without it anyone could POST an arbitrary date and spam every employee.
+  const authHeader = req.headers.get('Authorization') ?? ''
+  if (authHeader !== `Bearer ${serviceKey}`) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
   const admin = createClient(supabaseUrl, serviceKey)
 
   let target: string
