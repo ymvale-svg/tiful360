@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Download, Plus, Search, Ticket } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { useAssets, useEmployees } from "@/hooks/useData";
 import { useAssetGroups } from "@/hooks/useAssetGroups";
 import { usePersistentFilter } from "@/hooks/usePersistentFilter";
 import { exportToExcel } from "@/lib/exportExcel";
+import { QuickAddSubscriptionDialog } from "@/components/vehicles/QuickAddSubscriptionDialog";
 
 import {
   SUBSCRIPTION_PROVIDERS,
