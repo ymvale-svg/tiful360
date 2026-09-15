@@ -151,7 +151,7 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
     if (!selectedGroup) return;
     const current = Array.isArray(selectedGroup.visible_builtin_fields)
       ? selectedGroup.visible_builtin_fields.map(String)
-      : builtinFields.map((f) => f.key);
+      : builtinFields.filter((f) => f.defaultVisible).map((f) => f.key);
     const next = current.includes(key) ? current.filter((k) => k !== key) : [...current, key];
     try {
       await updateGroup.mutateAsync({ id: selectedGroup.id, visible_builtin_fields: next });
@@ -322,7 +322,7 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
                 </p>
                 <div className="grid grid-cols-2 gap-1">
                   {builtinFields.map((f) => {
-                    const checked = isBuiltinFieldVisible(selectedGroup, f.key);
+                    const checked = isBuiltinFieldVisible(selectedGroup, f.key, domain ?? null);
                     return (
                       <label key={f.key} className="flex items-center gap-2 text-sm cursor-pointer">
                         <input
