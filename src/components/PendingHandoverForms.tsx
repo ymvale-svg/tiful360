@@ -7,8 +7,7 @@ import { FileSignature, ExternalLink, CheckCircle2 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import type { HandoverFormData } from "@/lib/pdf/types";
-import { buildHandoverPdf } from "@/lib/pdf/lazy";
+import { buildPdfForFormSnapshot, snapshotItemLabel } from "@/lib/pdf/formPdf";
 import { SignaturePad, SignaturePadHandle } from "./SignaturePad";
 import { useToast } from "@/hooks/use-toast";
 
@@ -47,10 +46,7 @@ export function PendingHandoverForms({ employeeId }: Props) {
     let createdUrl: string | null = null;
     (async () => {
       try {
-        const blob = await buildHandoverPdf({
-          ...(active.form_snapshot as HandoverFormData),
-          receiver_signature: sigUrl,
-        });
+        const blob = await buildPdfForFormSnapshot(active.form_snapshot, sigUrl);
         if (cancelled) return;
         createdUrl = URL.createObjectURL(blob);
         setPreviewUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return createdUrl; });
