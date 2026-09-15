@@ -39,6 +39,8 @@ import { buildProtocolPdf } from "@/lib/pdf/lazy";
 import type { ProtocolDirection, ProtocolMedia } from "@/lib/pdf/types";
 import { uploadProtocolFile, compressImage, describeUploadError } from "@/lib/protocolUpload";
 import { compressVideo, VIDEO_TARGET_BYTES } from "@/lib/videoCompress";
+import { SignLinkDialog } from "@/components/handover/SignLinkDialog";
+import { signLinkFor, sendSignLink } from "@/lib/signLink";
 import {
   saveHandoverDraft, loadHandoverDraft, deleteHandoverDraft, draftKeyForAsset, formatDraftTime,
   type HandoverDraft,
@@ -131,6 +133,9 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
   const [foundDraft, setFoundDraft] = useState<HandoverDraft | null>(null);
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
   const [confirmExit, setConfirmExit] = useState(false);
+  const [signLinkOpen, setSignLinkOpen] = useState(false);
+  const [signLinks, setSignLinks] = useState<string[]>([]);
+  const [signEmailSent, setSignEmailSent] = useState<boolean | null>(null);
 
 
   const issuerSigRef = useRef<SignaturePadHandle>(null);
@@ -381,7 +386,7 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
 
 
   const insertForm = async (values: Record<string, any>) => {
-    const { error } = await supabase.from("asset_handover_forms").insert({
+    const { data, error } = await supabase.from("asset_handover_forms").insert({
       company_id: activeCompanyId,
       asset_id: asset!.id,
       employee_id: employeeId,
@@ -394,8 +399,9 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
       odometer_km: isVehicle && odometer ? Number(odometer) : null,
       created_by: user?.id,
       ...values,
-    } as any);
+    } as any).select("id, sign_token").single();
     if (error) throw error;
+    return data as { id: string; sign_token: string };
   };
 
   const snapshot = (media: ProtocolMedia[]) => ({
@@ -572,14 +578,20 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
     try {
       const media = await uploadMedia();
       const issuer = issuerSigRef.current?.getDataUrl() ?? null;
-      await insertForm({
+      const row = await insertForm({
         status: "pending",
         form_snapshot: { ...snapshot(media), issuer_signature: issuer } as any,
         issuer_signature: issuer,
         media: media as any,
       });
       await applyAssetUpdate();
-      toast({ title: "נשלח לחתימה", description: "הפרוטוקול ממתין לעובד בפורטל" });
+      const { links, sent } = await sendSignLink([row.id], [signLinkFor(row.sign_token)]);
+      setSignLinks(links);
+      setSignEmailSent(sent);
+      toast({
+        title: "נשלח לחתימה",
+        description: sent ? "נשלח מייל לעובד עם קישור לחתימה" : "הפרוטוקול ממתין לעובד בפורטל",
+      });
       qc.invalidateQueries({ queryKey: ["assets"] });
       qc.invalidateQueries({ queryKey: ["activity-log"] });
       qc.invalidateQueries({ queryKey: ["handover-forms"] });
@@ -587,6 +599,7 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
       if (draftKey) await deleteHandoverDraft(draftKey);
       onAssigned?.();
       close();
+      setSignLinkOpen(true);
     } catch (e: any) {
       toast({ title: "שגיאה בשמירת הפרוטוקול", description: describeUploadError(e), variant: "destructive" });
     } finally {
@@ -914,6 +927,14 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <SignLinkDialog
+        open={signLinkOpen}
+        onOpenChange={setSignLinkOpen}
+        links={signLinks}
+        employeeName={employee?.full_name}
+        emailSent={signEmailSent}
+      />
     </>
   );
 }

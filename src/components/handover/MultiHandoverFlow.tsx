@@ -30,6 +30,8 @@ import { buildProtocolPdf } from "@/lib/pdf/lazy";
 import type { ProtocolMedia } from "@/lib/pdf/types";
 import { uploadProtocolFile, compressImage, describeUploadError } from "@/lib/protocolUpload";
 import { getDomain, type DomainKey } from "@/lib/assetDomains";
+import { SignLinkDialog } from "@/components/handover/SignLinkDialog";
+import { signLinkFor, sendSignLink } from "@/lib/signLink";
 import { compressVideo, VIDEO_TARGET_BYTES } from "@/lib/videoCompress";
 import {
   saveHandoverDraft, loadHandoverDraft, deleteHandoverDraft, draftKeyForAssets, formatDraftTime,
@@ -112,6 +114,9 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
   const [foundDraft, setFoundDraft] = useState<HandoverDraft | null>(null);
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
   const [confirmExit, setConfirmExit] = useState(false);
+  const [signLinkOpen, setSignLinkOpen] = useState(false);
+  const [signLinks, setSignLinks] = useState<string[]>([]);
+  const [signEmailSent, setSignEmailSent] = useState<boolean | null>(null);
 
   const issuerSigRef = useRef<SignaturePadHandle>(null);
   const receiverSigRef = useRef<SignaturePadHandle>(null);
@@ -341,8 +346,9 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
       media,
       items: assets.map((a) => ({ id: a.id, name: a.asset_name, code: a.asset_code, serial: a.serial_number })),
     };
+    const inserted: { id: string; sign_token: string }[] = [];
     for (const a of assets) {
-      const { error } = await supabase.from("asset_handover_forms").insert({
+      const { data, error } = await supabase.from("asset_handover_forms").insert({
         company_id: activeCompanyId,
         asset_id: a.id,
         employee_id: employeeId,
@@ -355,9 +361,11 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
         created_by: user?.id,
         ...values,
         form_snapshot: { ...baseSnapshot, ...(values.form_snapshot ?? {}) } as any,
-      } as any);
+      } as any).select("id, sign_token").single();
       if (error) throw error;
+      inserted.push(data as { id: string; sign_token: string });
     }
+    return inserted;
   };
 
   /** One email with the combined protocol (recipient resolved server-side). */
@@ -458,18 +466,30 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
     try {
       const media = await uploadMedia();
       const issuer = issuerSigRef.current?.getDataUrl() ?? null;
-      await insertForms({
+      const rows = await insertForms({
         status: "pending",
         form_snapshot: { issuer_signature: issuer },
         issuer_signature: issuer,
         media: media as any,
       }, media);
       await applyAssetsUpdate();
-      toast({ title: "נשלח לחתימה", description: `${assets.length} פרוטוקולים ממתינים לעובד בפורטל` });
+      const { links, sent } = await sendSignLink(
+        rows.map((r) => r.id),
+        rows.map((r) => signLinkFor(r.sign_token)),
+      );
+      setSignLinks(links);
+      setSignEmailSent(sent);
+      toast({
+        title: "נשלח לחתימה",
+        description: sent
+          ? `נשלח מייל לעובד עם קישור לחתימה על ${assets.length} פרוטוקולים`
+          : `${assets.length} פרוטוקולים ממתינים לעובד בפורטל`,
+      });
       invalidate();
       if (draftKey) await deleteHandoverDraft(draftKey);
       onAssigned?.();
       close();
+      setSignLinkOpen(true);
     } catch (e: any) {
       toast({ title: "שגיאה בשמירת הפרוטוקול", description: describeUploadError(e), variant: "destructive" });
     } finally {
@@ -717,6 +737,14 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <SignLinkDialog
+        open={signLinkOpen}
+        onOpenChange={setSignLinkOpen}
+        links={signLinks}
+        employeeName={employee?.full_name}
+        emailSent={signEmailSent}
+      />
     </>
   );
 }
