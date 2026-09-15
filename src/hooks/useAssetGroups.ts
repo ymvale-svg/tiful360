@@ -80,6 +80,42 @@ export function useDeleteAssetGroup() {
 }
 
 
+/**
+ * Moves a sub-category to another category (possibly in a different domain),
+ * taking its items and field definitions along. Asset codes are never touched,
+ * so an existing prefix such as ACC stays exactly as it is.
+ */
+export function useMoveAssetGroup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ groupId, categoryId }: { groupId: string; categoryId: string }) => {
+      const { error } = await supabase
+        .from("asset_groups")
+        .update({ category_id: categoryId } as any)
+        .eq("id", groupId);
+      if (error) throw error;
+
+      const { error: assetsError } = await supabase
+        .from("assets")
+        .update({ category_id: categoryId } as any)
+        .eq("group_id", groupId);
+      if (assetsError) throw assetsError;
+
+      const { error: fieldsError } = await supabase
+        .from("category_fields")
+        .update({ category_id: categoryId } as any)
+        .eq("group_id", groupId);
+      if (fieldsError) throw fieldsError;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["asset-groups"] });
+      qc.invalidateQueries({ queryKey: ["assets"] });
+      qc.invalidateQueries({ queryKey: ["category-fields"] });
+      qc.invalidateQueries({ queryKey: ["asset-categories"] });
+    },
+  });
+}
+
 export function useAssignAssetsToGroup() {
   const qc = useQueryClient();
   return useMutation({

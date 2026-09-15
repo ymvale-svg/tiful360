@@ -3,18 +3,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Pencil, Check, X, ChevronRight, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAssets } from "@/hooks/useData";
+import { useAssets, useAssetCategories } from "@/hooks/useData";
 import {
   useAssetGroups,
   useCreateAssetGroup,
   useUpdateAssetGroup,
   useDeleteAssetGroup,
+  useMoveAssetGroup,
   useAssignAssetsToGroup,
 } from "@/hooks/useAssetGroups";
 import { useToast } from "@/hooks/use-toast";
 import { OWNER_ROLE_OPTIONS } from "@/lib/domainConfig";
 import { getBuiltinFields, isBuiltinFieldVisible } from "@/lib/builtinFields";
-import type { DomainKey } from "@/lib/assetDomains";
+import { DOMAIN_META, DOMAIN_ORDER, getDomain, type DomainKey } from "@/lib/assetDomains";
 
 interface Props {
   open: boolean;
@@ -33,6 +34,8 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
   const createGroup = useCreateAssetGroup();
   const updateGroup = useUpdateAssetGroup();
   const deleteGroup = useDeleteAssetGroup();
+  const moveGroup = useMoveAssetGroup();
+  const { data: categories } = useAssetCategories();
   const assignAssets = useAssignAssetsToGroup();
   const { toast } = useToast();
 
@@ -100,6 +103,39 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
       await deleteGroup.mutateAsync(id);
       if (selectedGroupId === id) setSelectedGroupId(null);
       toast({ title: "תת-הקטגוריה נמחקה" });
+    } catch (e: any) {
+      toast({ title: "שגיאה", description: e.message, variant: "destructive" });
+    }
+  };
+
+  /** Every category in the company, grouped by domain — the move targets. */
+  const moveTargets = useMemo(() => {
+    const byDomain = new Map<DomainKey, { id: string; label: string }[]>();
+    (categories ?? []).forEach((c: any) => {
+      const d = getDomain(c);
+      const list = byDomain.get(d) ?? [];
+      list.push({ id: c.id, label: `${c.category_name}${c.prefix ? ` (${c.prefix})` : ""}` });
+      byDomain.set(d, list);
+    });
+    return DOMAIN_ORDER.filter((d) => byDomain.has(d)).map((d) => ({
+      domain: d,
+      title: DOMAIN_META[d].title,
+      items: byDomain.get(d)!,
+    }));
+  }, [categories]);
+
+  const handleMove = async (groupId: string, groupName: string, targetCategoryId: string) => {
+    if (!targetCategoryId || targetCategoryId === categoryId) return;
+    const target = (categories ?? []).find((c: any) => c.id === targetCategoryId) as any;
+    const count = catAssets.filter((a: any) => a.group_id === groupId).length;
+    if (!confirm(
+      `להעביר את "${groupName}" לקטגוריה "${target?.category_name}"?\n` +
+      `${count} פריטים יעברו יחד איתה. מזהי הפריטים (הקידומת) יישארו ללא שינוי.`,
+    )) return;
+    try {
+      await moveGroup.mutateAsync({ groupId, categoryId: targetCategoryId });
+      if (selectedGroupId === groupId) setSelectedGroupId(null);
+      toast({ title: "תת-הקטגוריה הועברה", description: `כעת תחת ${target?.category_name}` });
     } catch (e: any) {
       toast({ title: "שגיאה", description: e.message, variant: "destructive" });
     }
@@ -233,6 +269,22 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
                             <option value="">ללא אחראי</option>
                             {OWNER_ROLE_OPTIONS.map((o) => (
                               <option key={o.value} value={o.value}>{o.label}</option>
+                            ))}
+                          </select>
+                          <select
+                            value={categoryId}
+                            onChange={(e) => handleMove(g.id, g.name, e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            disabled={moveGroup.isPending}
+                            title="העבר לקטגוריה אחרת (גם בדומיין אחר)"
+                            className="shrink-0 max-w-[9rem] px-1.5 py-1 bg-background rounded-md text-[11px] outline-none border border-border/50 focus:ring-1 focus:ring-primary/30"
+                          >
+                            {moveTargets.map((d) => (
+                              <optgroup key={d.domain} label={d.title}>
+                                {d.items.map((c) => (
+                                  <option key={c.id} value={c.id}>{c.label}</option>
+                                ))}
+                              </optgroup>
                             ))}
                           </select>
                           <button
