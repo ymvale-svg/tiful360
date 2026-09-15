@@ -35,7 +35,13 @@ function formatTime(iso: string) {
   return d.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
 }
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit" });
+  const d = new Date(iso);
+  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+function formatDayLabel(iso: string) {
+  const d = new Date(iso);
+  const wd = d.toLocaleDateString("he-IL", { weekday: "short" });
+  return `${wd} ${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 function dayKey(iso: string) {
   return iso.slice(0, 10);
@@ -353,7 +359,7 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
                 const missing = !firstIn || !lastOut;
                 return (
                   <tr key={day} className="border-t align-top">
-                    <td className="p-2 whitespace-nowrap">{new Date(day).toLocaleDateString("he-IL", { weekday: "short", day: "2-digit", month: "2-digit" })}</td>
+                    <td className="p-2 whitespace-nowrap">{formatDayLabel(day)}</td>
                     <td className="p-2">
                       <div className="flex flex-wrap gap-1">
                         {items.map(p => (<PunchChip key={p.id} punch={p} />))}
@@ -393,7 +399,7 @@ function EmployeeMonthlyTable({ punches, loading }: { punches: AttendancePunch[]
               <div key={day} className="border rounded-lg p-3 bg-card space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-semibold">
-                    {new Date(day).toLocaleDateString("he-IL", { weekday: "short", day: "2-digit", month: "2-digit" })}
+                    {formatDayLabel(day)}
                   </span>
                   {missing ? (
                     <Badge variant="outline" className="border-amber-500/50 text-amber-700 dark:text-amber-300 bg-amber-500/10 text-[10px]">

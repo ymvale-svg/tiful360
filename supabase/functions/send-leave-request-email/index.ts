@@ -2,6 +2,7 @@
 // Receives { request_id, event } where event is 'submitted' | 'approved' | 'sick-closed'.
 // Sends the appropriate emails through Lovable's managed email delivery.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.103.0";
+import { fmtDateIL } from "../_shared/formatDate.ts";
 import { sendHtmlEmailLogged } from "../_shared/send-email-logged.ts";
 
 const corsHeaders = {
@@ -26,7 +27,7 @@ const TYPE_LABELS: Record<string, string> = {
 
 function fmtDate(d: string) {
   try {
-    return new Date(d).toLocaleDateString("he-IL");
+    return fmtDateIL(d);
   } catch {
     return d;
   }

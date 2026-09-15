@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatDateTimeDMY } from "@/lib/utils";
 import { Megaphone, Plus, Pencil, Trash2, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -145,8 +146,8 @@ export default function Announcements() {
                 </div>
                 <p className="text-sm text-muted-foreground whitespace-pre-line">{a.content}</p>
                 <div className="mt-3 pt-2 border-t border-border/40 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
-                  <span>פרסום: {new Date(a.published_at).toLocaleString("he-IL")}</span>
-                  {a.expires_at && <span>תפוגה: {new Date(a.expires_at).toLocaleString("he-IL")}</span>}
+                  <span>פרסום: {formatDateTimeDMY(a.published_at)}</span>
+                  {a.expires_at && <span>תפוגה: {formatDateTimeDMY(a.expires_at)}</span>}
                   {a.sender_name && (
                     <span>בברכה, {a.sender_name}{a.sender_role ? ` · ${a.sender_role}` : ""}</span>
                   )}

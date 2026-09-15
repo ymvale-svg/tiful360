@@ -2,6 +2,7 @@
 // Sends an email notification to the configured IT recipients (companies.it_emails)
 // when a new IT ticket is opened.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.103.0";
+import { fmtDateTimeIL } from "../_shared/formatDate.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -194,7 +195,7 @@ Deno.serve(async (req) => {
       ],
       [
         "יעד טיפול (SLA)",
-        ticket.sla_deadline ? new Date(ticket.sla_deadline).toLocaleString("he-IL") : "—",
+        fmtDateTimeIL(ticket.sla_deadline),
       ],
     ];
 

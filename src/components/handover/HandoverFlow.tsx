@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { formatDateTimeDMY } from "@/lib/utils";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -431,9 +432,7 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
             direction,
             title: template?.display_name ?? null,
             issuerName,
-            issuedAt: new Date().toLocaleString("he-IL", {
-              day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
-            }),
+            issuedAt: formatDateTimeDMY(new Date()),
             fields: [
               ...selectedFields,
               ...(isVehicle && odometer ? [{ label: 'ק"מ במעמד המסירה', value: odometer }] : []),

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Wrench, Clock } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatDateDMY } from "@/lib/utils";
 import { useMyServiceTickets } from "@/hooks/useServiceTickets";
 import { NewPortalTicketDialog } from "@/components/portal/NewPortalTicketDialog";
 import { PRIORITY_LABELS, STATUS_CLASSES, STATUS_LABELS, subjectLabel } from "@/lib/serviceTickets";
@@ -39,7 +39,7 @@ export function MyTicketsTab({ employeeId, employeeName, employeePhone }: Props)
             <div className="flex items-center justify-between text-[11px] text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Clock className="w-3 h-3" aria-hidden="true" />
-                {new Date(t.created_at).toLocaleDateString("he-IL")}
+                {formatDateDMY(t.created_at)}
               </span>
               <span>
                 {subjectLabel(t.subject_category)} • {PRIORITY_LABELS[t.priority] ?? t.priority}

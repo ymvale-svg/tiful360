@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatDateTimeDMY } from "@/lib/utils";
 import { FileSignature, FileDown, Clock, Eye, ExternalLink, Images, Play } from "lucide-react";
 import type { HandoverFormRow } from "@/hooks/useHandoverForms";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -17,9 +18,7 @@ interface Props {
 
 const fmt = (iso?: string | null) =>
   iso
-    ? new Date(iso).toLocaleString("he-IL", {
-        day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
-      })
+    ? formatDateTimeDMY(iso)
     : "—";
 
 /** Shared list of handover / return protocols (item card + employee portal). */

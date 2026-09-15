@@ -60,9 +60,9 @@ export const draftKeyForAssets = (assetIds: string[]) => `multi:${[...assetIds].
 
 export function formatDraftTime(iso: string) {
   try {
-    return new Date(iso).toLocaleString("he-IL", {
-      day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
-    });
+    const d = new Date(iso);
+    const p = (n: number) => String(n).padStart(2, "0");
+    return `${p(d.getDate())}/${p(d.getMonth() + 1)} ${p(d.getHours())}:${p(d.getMinutes())}`;
   } catch {
     return iso;
   }
