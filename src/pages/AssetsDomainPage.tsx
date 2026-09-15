@@ -296,6 +296,7 @@ export default function AssetsDomainPage() {
         </div>
       );
     }
+    const signFormId = searchParams.get("signForm");
     return (
       <div className="space-y-4 animate-fade-in" dir="rtl">
         <AssetDetailView
@@ -303,6 +304,11 @@ export default function AssetsDomainPage() {
           categoryId={asset.category_id}
           onBack={() => navigate(`/assets/${params.domain}`)}
           onBackToCategories={() => navigate("/assets")}
+        />
+        <PendingSignatureDialog
+          formId={signFormId}
+          open={!!signFormId}
+          onOpenChange={(o) => { if (!o) updateParams({ signForm: null }); }}
         />
       </div>
     );
