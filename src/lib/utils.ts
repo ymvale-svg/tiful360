@@ -21,7 +21,7 @@ export function formatDateDMY(value: Date | string | null | undefined, fallback 
     // Avoid timezone shift for plain YYYY-MM-DD strings
     if (ISO_DATE_RE.test(s)) {
       const [y, m, day] = s.slice(0, 10).split("-");
-      return `${day}-${m}-${y}`;
+      return `${day}/${m}/${y}`;
     }
     d = new Date(s);
   }
@@ -29,7 +29,7 @@ export function formatDateDMY(value: Date | string | null | undefined, fallback 
   const dd = String(d.getDate()).padStart(2, "0");
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const yyyy = d.getFullYear();
-  return `${dd}-${mm}-${yyyy}`;
+  return `${dd}/${mm}/${yyyy}`;
 }
 
 /**
@@ -44,5 +44,5 @@ export function formatDateTimeDMY(value: Date | string | null | undefined, fallb
   const yyyy = d.getFullYear();
   const hh = String(d.getHours()).padStart(2, "0");
   const mi = String(d.getMinutes()).padStart(2, "0");
-  return `${dd}-${mm}-${yyyy} ${hh}:${mi}`;
+  return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
 }
