@@ -133,6 +133,9 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
   const [foundDraft, setFoundDraft] = useState<HandoverDraft | null>(null);
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
   const [confirmExit, setConfirmExit] = useState(false);
+  const [signLinkOpen, setSignLinkOpen] = useState(false);
+  const [signLinks, setSignLinks] = useState<string[]>([]);
+  const [signEmailSent, setSignEmailSent] = useState<boolean | null>(null);
 
 
   const issuerSigRef = useRef<SignaturePadHandle>(null);

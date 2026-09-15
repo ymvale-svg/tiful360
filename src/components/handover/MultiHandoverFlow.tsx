@@ -114,6 +114,9 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
   const [foundDraft, setFoundDraft] = useState<HandoverDraft | null>(null);
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
   const [confirmExit, setConfirmExit] = useState(false);
+  const [signLinkOpen, setSignLinkOpen] = useState(false);
+  const [signLinks, setSignLinks] = useState<string[]>([]);
+  const [signEmailSent, setSignEmailSent] = useState<boolean | null>(null);
 
   const issuerSigRef = useRef<SignaturePadHandle>(null);
   const receiverSigRef = useRef<SignaturePadHandle>(null);
