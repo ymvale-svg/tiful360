@@ -6,7 +6,7 @@ import {
 import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTimeDMY } from "@/lib/utils";
 import { useITTickets } from "@/hooks/useData";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -145,7 +145,7 @@ export default function ITTickets() {
                   priority: PRIORITY_LABELS[t.priority] ?? t.priority,
                   status: STATUS_LABELS[t.status] ?? t.status,
                   employee: t.employees?.full_name ?? "",
-                  sla: t.sla_deadline ? new Date(t.sla_deadline).toLocaleString("en-GB") : "",
+                  sla: t.sla_deadline ? formatDateTimeDMY(t.sla_deadline, "") : "",
                 })),
                 [
                   { key: "ticket_code", label: "מזהה" },
@@ -268,12 +268,12 @@ export default function ITTickets() {
                     )}
                     <p className="flex items-center gap-2">
                       <CalendarClock className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-                      נפתחה: {new Date(selectedTicket.created_at).toLocaleString("he-IL")}
+                      נפתחה: {formatDateTimeDMY(selectedTicket.created_at)}
                     </p>
                     {selectedTicket.sla_deadline && (
                       <p className="flex items-center gap-2">
                         <Timer className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-                        יעד טיפול: {new Date(selectedTicket.sla_deadline).toLocaleString("he-IL")}
+                        יעד טיפול: {formatDateTimeDMY(selectedTicket.sla_deadline)}
                       </p>
                     )}
                   </div>
