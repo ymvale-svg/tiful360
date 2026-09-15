@@ -1,9 +1,13 @@
-import { Link } from "react-router-dom";
+// ============= Full file contents =============
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { PenLine, ChevronLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateDMY } from "@/lib/utils";
 import { snapshotItemLabel } from "@/lib/pdf/formPdf";
+import { getDomain } from "@/lib/assetDomains";
+import { PendingSignatureDialog } from "@/components/handover/PendingSignatureDialog";
 
 interface PendingFormRow {
   id: string;
@@ -12,18 +16,25 @@ interface PendingFormRow {
   direction: string;
   created_at: string;
   form_snapshot: any;
-  assets?: { asset_name: string | null; asset_code: string | null } | null;
+  assets?: {
+    asset_name: string | null;
+    asset_code: string | null;
+    asset_categories?: { domain?: string | null; prefix?: string; protocol_type?: string } | null;
+  } | null;
   employees?: { full_name: string | null } | null;
 }
 
 /** Handover/return protocols that were sent for remote signing and still await the employee's signature. */
 export function PendingSignaturesCard() {
+  const navigate = useNavigate();
+  const [dialogFormId, setDialogFormId] = useState<string | null>(null);
+
   const { data: forms, isLoading } = useQuery({
     queryKey: ["pending-signature-forms"],
     queryFn: async (): Promise<PendingFormRow[]> => {
       const { data, error } = await supabase
         .from("asset_handover_forms")
-        .select("id, employee_id, asset_id, direction, created_at, form_snapshot, assets(asset_name, asset_code), employees(full_name)")
+        .select("id, employee_id, asset_id, direction, created_at, form_snapshot, assets(asset_name, asset_code, asset_categories(domain, prefix, protocol_type)), employees(full_name)")
         .eq("status", "pending")
         .order("created_at", { ascending: true })
         .limit(6);
@@ -33,6 +44,16 @@ export function PendingSignaturesCard() {
   });
 
   const rows = forms ?? [];
+
+  const openForm = (form: PendingFormRow) => {
+    if (form.asset_id) {
+      const domain = getDomain(form.assets?.asset_categories ?? null);
+      navigate(`/assets/${domain}/${form.asset_id}?signForm=${form.id}`);
+    } else {
+      // No linked item — show the process dialog inline instead.
+      setDialogFormId(form.id);
+    }
+  };
 
   return (
     <div className="bg-card rounded-xl border border-border/50 shadow-card">
@@ -62,10 +83,11 @@ export function PendingSignaturesCard() {
             (Date.now() - new Date(form.created_at).getTime()) / (1000 * 60 * 60 * 24),
           );
           return (
-            <Link
+            <button
               key={form.id}
-              to={`/employees/${form.employee_id}`}
-              className="block p-4 hover:bg-muted/30 transition-colors"
+              type="button"
+              onClick={() => openForm(form)}
+              className="block w-full text-right p-4 hover:bg-muted/30 transition-colors"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
@@ -86,10 +108,16 @@ export function PendingSignaturesCard() {
                   </span>
                 </div>
               </div>
-            </Link>
+            </button>
           );
         })}
       </div>
+
+      <PendingSignatureDialog
+        formId={dialogFormId}
+        open={!!dialogFormId}
+        onOpenChange={(o) => { if (!o) setDialogFormId(null); }}
+      />
     </div>
   );
 }
