@@ -10,6 +10,7 @@ import { ExpiringAssetsCard } from "@/components/ExpiringAssetsCard";
 import { LeaveStatusCard } from "@/components/dashboard/LeaveStatusCard";
 import { OnboardingCard } from "@/components/dashboard/OnboardingCard";
 import { OpenTicketsCard } from "@/components/dashboard/OpenTicketsCard";
+import { PendingSignaturesCard } from "@/components/dashboard/PendingSignaturesCard";
 import { AttendanceMissingCard } from "@/components/dashboard/AttendanceMissingCard";
 import { Tax101StatusCard } from "@/components/dashboard/Tax101StatusCard";
 import { CustomizeDashboardDialog } from "@/components/dashboard/CustomizeDashboardDialog";
@@ -148,6 +149,7 @@ export default function Dashboard() {
       case "expiring": return <ExpiringAssetsCard key={key} domains={expiryDomains} />;
       case "activity": return <div key={key}>{activityWidget}</div>;
       case "openTickets": return <OpenTicketsCard key={key} />;
+      case "pendingSignatures": return <PendingSignaturesCard key={key} />;
       case "onboarding": return <OnboardingCard key={key} />;
       case "attendanceMissing": return <AttendanceMissingCard key={key} />;
       case "tax101": return <Tax101StatusCard key={key} />;
