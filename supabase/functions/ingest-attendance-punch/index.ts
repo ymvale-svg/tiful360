@@ -150,11 +150,12 @@ function json(data: unknown, status = 200) {
 function formatDateTimeIL(iso: string): string {
   try {
     const d = new Date(iso);
-    const s = d.toLocaleString("he-IL", {
+    const s = d.toLocaleString("en-GB", {
       timeZone: "Asia/Jerusalem",
       day: "2-digit", month: "2-digit", year: "numeric",
       hour: "2-digit", minute: "2-digit",
-    });
+      hour12: false,
+    }).replace(",", "");
     return s;
   } catch { return iso; }
 }
