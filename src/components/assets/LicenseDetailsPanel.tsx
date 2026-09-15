@@ -88,6 +88,8 @@ export function LicenseDetailsPanel({ asset }: Props) {
     setEditing(false);
   };
 
+  if (!anyFieldVisible) return null;
+
   return (
     <div className="bg-card border border-border rounded-xl p-5 space-y-4">
       <div className="flex items-center justify-between">
