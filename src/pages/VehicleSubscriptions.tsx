@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Download, Plus, Search, Ticket } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { useAssets, useEmployees } from "@/hooks/useData";
 import { useAssetGroups } from "@/hooks/useAssetGroups";
 import { usePersistentFilter } from "@/hooks/usePersistentFilter";
 import { exportToExcel } from "@/lib/exportExcel";
+import { QuickAddSubscriptionDialog } from "@/components/vehicles/QuickAddSubscriptionDialog";
 
 import {
   SUBSCRIPTION_PROVIDERS,
@@ -32,7 +33,21 @@ type SubItem = VehicleSubscription & {
   source: "record" | "asset";
   /** For source === "asset": the asset id, so the tag links to the item card. */
   source_asset_id?: string;
+  /** Fuel-card number, when the subscription is a fuel card. */
+  card_number?: string | null;
 };
+
+/** Fixed export columns — one per subscription service. */
+const EXPORT_PROVIDERS = ["פנגו", "מנהרות הכרמל", "חוצה צפון", "כביש 6"];
+
+const normProvider = (p: string) => (p ?? "").trim().replace(/^מנוי\s+/, "").toLowerCase();
+
+/** Fuel-card number: dedicated field first, then the "מספר כרטיס- ..." note. */
+function extractCardNumber(asset: any): string | null {
+  if (asset?.serial_number) return String(asset.serial_number).trim();
+  const m = String(asset?.notes ?? "").match(/מספר\s*כרטיס[-:\s]*([0-9]{4,})/);
+  return m ? m[1] : null;
+}
 
 /** Same subscription can exist both as a real record and as an asset — show it once.
  *  Keeps the record-based tag when both exist. */
@@ -73,6 +88,10 @@ export default function VehicleSubscriptions() {
   const { data: employees } = useEmployees();
   const { data: groups } = useAssetGroups();
 
+
+  const [quickAdd, setQuickAdd] = useState<
+    { employeeId: string | null; employeeName: string; plate: string } | null
+  >(null);
 
   const [filters, setFilters, resetFilters] = usePersistentFilter("vehicle-subscriptions", {
     q: "",
@@ -157,6 +176,7 @@ export default function VehicleSubscriptions() {
           created_at: a.created_at,
           source: "asset",
           source_asset_id: a.id,
+          card_number: extractCardNumber(a),
         };
         const arr = map.get(a.current_owner_id) ?? [];
         arr.push(item);
@@ -271,39 +291,27 @@ export default function VehicleSubscriptions() {
     return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
   }, [rows]);
 
-  /** Excel: one line per vehicle, each active subscription flattened into its own set of columns. */
+  /** Excel: one line per vehicle, a ✅/❌ column per subscription service + fuel card number. */
   const handleExport = () => {
-    const maxSubs = Math.max(1, ...filtered.map((r) => r.activeSubs.length));
     const headers = [
-      { key: "employee_name", label: "עובד" },
-      { key: "department", label: "מחלקה" },
+      { key: "employee_name", label: "שם העובד" },
       { key: "plate", label: "מס' רכב" },
-      { key: "vehicle_type", label: "סוג רכב" },
-      { key: "subs_count", label: "מס' מנויים" },
+      { key: "vehicle_type", label: "סוג בעלות" },
+      ...EXPORT_PROVIDERS.map((p) => ({ key: `p_${p}`, label: p })),
+      { key: "fuel_card", label: "מס' כרטיס דלק" },
     ];
-    for (let i = 1; i <= maxSubs; i++) {
-      headers.push(
-        { key: `p${i}`, label: `מנוי ${i} — ספק` },
-        { key: `d${i}`, label: `מנוי ${i} — תאריך התחלה` },
-        { key: `s${i}`, label: `מנוי ${i} — סטטוס` },
-        { key: `n${i}`, label: `מנוי ${i} — הערות` }
-      );
-    }
     const data = filtered.map((r) => {
       const row: Record<string, any> = {
         employee_name: r.employee_name,
-        department: r.department,
         plate: r.plate,
         vehicle_type: r.vehicle_type,
-        subs_count: r.activeSubs.length,
       };
-      r.activeSubs.forEach((s, idx) => {
-        const i = idx + 1;
-        row[`p${i}`] = s.provider;
-        row[`d${i}`] = fmtDate(s.start_date);
-        row[`s${i}`] = SUBSCRIPTION_STATUS_LABELS[s.status] ?? s.status;
-        row[`n${i}`] = s.notes ?? "";
+      const active = r.activeSubs.map((s) => normProvider(s.provider));
+      EXPORT_PROVIDERS.forEach((p) => {
+        row[`p_${p}`] = active.includes(normProvider(p)) ? "✅" : "❌";
       });
+      const card = r.activeSubs.find((s) => s.card_number);
+      row.fuel_card = card?.card_number ?? "";
       return row;
     });
     exportToExcel(data, headers, "מנויי_רכב");
@@ -458,10 +466,11 @@ export default function VehicleSubscriptions() {
                         size="sm"
                         variant={r.activeSubs.length ? "ghost" : "outline"}
                         className="gap-1"
-                        title="ניהול מנויים תחת שירותי מנוי במסך משאבים"
+                        title="הוספת מנוי תחת רישיונות ותוכנות ‹ שירותי מנוי"
+                        disabled={!r.employee_id}
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate("/assets/licenses");
+                          setQuickAdd({ employeeId: r.employee_id, employeeName: r.employee_name, plate: r.plate });
                         }}
                       >
                         <Plus className="w-3.5 h-3.5" />
@@ -475,6 +484,14 @@ export default function VehicleSubscriptions() {
           </tbody>
         </table>
       </div>
+
+      <QuickAddSubscriptionDialog
+        open={!!quickAdd}
+        onOpenChange={(o) => !o && setQuickAdd(null)}
+        employeeId={quickAdd?.employeeId ?? null}
+        employeeName={quickAdd?.employeeName ?? ""}
+        plate={quickAdd?.plate}
+      />
     </div>
   );
 }
