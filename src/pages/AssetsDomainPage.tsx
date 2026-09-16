@@ -802,7 +802,7 @@ function InstancesTable({
       case "code": return a.asset_code ?? "";
       case "second":
         return (domain === "digital" ? a.account_username : domain === "licenses" ? (cf["ספק"] ?? a.manufacturer_model) : a.serial_number) ?? "";
-      case "employee": return a.employees?.full_name ?? "";
+      case "employee": return a.employees?.full_name ?? a.sites?.name ?? "";
       case "status":
         if (domain === "physical") return assetStatusLabels[a.status] ?? a.status ?? "";
         { const e = expiryOf(a, domain); return e ? new Date(e).getTime() : Number.MAX_SAFE_INTEGER; }
