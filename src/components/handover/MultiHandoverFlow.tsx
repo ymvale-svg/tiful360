@@ -388,7 +388,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
             fields: itemFields.map((f) => ({ label: f.label, value: String(f.value ?? "") })),
             notes: freeText || null,
             pdfUrl,
-            portalUrl: `${window.location.origin}/portal`,
+            portalUrl: "https://tiful360.com/portal",
           },
         },
       });
