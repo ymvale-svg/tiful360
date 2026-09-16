@@ -7,8 +7,11 @@ export const APP_ORIGIN = "https://tiful360.com";
  * Public remote-signing link for a handover/return protocol.
  * Always built on the official domain so the link is shareable and professional.
  */
-export function signLinkFor(token: string): string {
-  return `${APP_ORIGIN}/handover/${token}`;
+export function signLinkFor(tokenOrCode: string | null | undefined, shortCode?: string | null): string {
+  const code = shortCode ?? null;
+  // Short 6-char code keeps the shared link tidy; the long token stays as fallback.
+  if (code) return `${APP_ORIGIN}/h/${code}`;
+  return `${APP_ORIGIN}/handover/${tokenOrCode ?? ""}`;
 }
 
 /**

@@ -32,7 +32,7 @@ export function PendingSignatureDialog({ formId, open, onOpenChange }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("asset_handover_forms")
-        .select("id, direction, status, created_at, sign_token, form_snapshot, employee_id, employees(full_name), assets(asset_name, asset_code)")
+        .select("id, direction, status, created_at, sign_token, short_code, form_snapshot, employee_id, employees(full_name), assets(asset_name, asset_code)")
         .eq("id", formId!)
         .single();
       if (error) throw error;
@@ -40,7 +40,7 @@ export function PendingSignatureDialog({ formId, open, onOpenChange }: Props) {
     },
   });
 
-  const link = form?.sign_token ? signLinkFor(form.sign_token) : null;
+  const link = form?.sign_token || form?.short_code ? signLinkFor(form?.sign_token, form?.short_code) : null;
   const itemName = form
     ? form.assets?.asset_name
       ? `${form.assets.asset_name}${form.assets.asset_code ? ` (${form.assets.asset_code})` : ""}`

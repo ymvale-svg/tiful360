@@ -346,7 +346,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
       media,
       items: assets.map((a) => ({ id: a.id, name: a.asset_name, code: a.asset_code, serial: a.serial_number })),
     };
-    const inserted: { id: string; sign_token: string }[] = [];
+    const inserted: { id: string; sign_token: string; short_code?: string | null }[] = [];
     for (const a of assets) {
       const { data, error } = await supabase.from("asset_handover_forms").insert({
         company_id: activeCompanyId,
@@ -361,9 +361,9 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
         created_by: user?.id,
         ...values,
         form_snapshot: { ...baseSnapshot, ...(values.form_snapshot ?? {}) } as any,
-      } as any).select("id, sign_token").single();
+      } as any).select("id, sign_token, short_code").single();
       if (error) throw error;
-      inserted.push(data as { id: string; sign_token: string });
+      inserted.push(data as { id: string; sign_token: string; short_code?: string | null });
     }
     return inserted;
   };
@@ -475,7 +475,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
       await applyAssetsUpdate();
       const { links, sent } = await sendSignLink(
         rows.map((r) => r.id),
-        rows.map((r) => signLinkFor(r.sign_token)),
+        rows.map((r) => signLinkFor(r.sign_token, (r as any).short_code)),
       );
       setSignLinks(links);
       setSignEmailSent(sent);

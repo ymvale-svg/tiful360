@@ -431,6 +431,7 @@ export type Database = {
           protocol_subtype: string | null
           protocol_type: string
           selected_fields: Json
+          short_code: string | null
           sign_token: string
           signature_data: string | null
           signed_at: string | null
@@ -456,6 +457,7 @@ export type Database = {
           protocol_subtype?: string | null
           protocol_type?: string
           selected_fields?: Json
+          short_code?: string | null
           sign_token?: string
           signature_data?: string | null
           signed_at?: string | null
@@ -481,6 +483,7 @@ export type Database = {
           protocol_subtype?: string | null
           protocol_type?: string
           selected_fields?: Json
+          short_code?: string | null
           sign_token?: string
           signature_data?: string | null
           signed_at?: string | null
@@ -3425,6 +3428,7 @@ export type Database = {
           role: string
         }[]
       }
+      gen_handover_short_code: { Args: never; Returns: string }
       get_attendance_agent_status: {
         Args: { _company_id: string }
         Returns: {
@@ -3567,6 +3571,7 @@ export type Database = {
           protocol_subtype: string | null
           protocol_type: string
           selected_fields: Json
+          short_code: string | null
           sign_token: string
           signature_data: string | null
           signed_at: string | null
@@ -3692,6 +3697,7 @@ export type Database = {
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       my_access_blocked: { Args: never; Returns: boolean }
       my_self_edit_count_this_month: { Args: never; Returns: number }
+      resolve_handover_short_code: { Args: { _code: string }; Returns: string }
       set_company_attendance_auto_approve: {
         Args: { _company_id: string; _value: boolean }
         Returns: boolean
@@ -3785,6 +3791,7 @@ export type Database = {
           protocol_subtype: string | null
           protocol_type: string
           selected_fields: Json
+          short_code: string | null
           sign_token: string
           signature_data: string | null
           signed_at: string | null
