@@ -790,6 +790,14 @@ function InstancesTable({
 }) {
   const isInsurance = domain === "insurance";
   const cols = isInsurance ? "grid-cols-[2fr_2fr_1.2fr_1.5fr_2rem]" : "grid-cols-12";
+  // Second column (serial / username / vendor) is hidden when no item in the list has a value.
+  const secondValue = (a: any) =>
+    (domain === "digital"
+      ? a.account_username
+      : domain === "licenses"
+        ? (a.custom_fields?.["ספק"] ?? a.manufacturer_model)
+        : a.serial_number) ?? null;
+  const showSecond = items.some((a) => !!secondValue(a));
 
   const [colSort, setColSort] = usePersistentFilter<{ key: string; dir: "asc" | "desc" } | null>(
     `assets:${domain}:colsort`,
