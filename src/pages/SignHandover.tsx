@@ -28,13 +28,34 @@ export default function SignHandover() {
   const [sigUrl, setSigUrl] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  const signPath = `/handover/${token}`;
+  // Short links (/h/:code) resolve to the full sign token before anything else.
+  const [token, setToken] = useState<string | null>(tokenParam ?? null);
+  const signPath = code ? `/h/${code}` : `/handover/${tokenParam}`;
+
+  useEffect(() => {
+    if (tokenParam) {
+      setToken(tokenParam);
+      return;
+    }
+    if (!code) return;
+    (async () => {
+      const { data } = await supabase.rpc("resolve_handover_short_code" as any, { _code: code });
+      setToken((data as string) ?? "");
+    })();
+  }, [tokenParam, code]);
 
   // Signing always requires a portal session: the link alone is never enough.
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
       setGate("anonymous");
+      setLoading(false);
+      return;
+    }
+    if (token === null) return;
+    if (!token) {
+      setRecord(null);
+      setGate("allowed");
       setLoading(false);
       return;
     }
