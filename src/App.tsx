@@ -74,6 +74,7 @@ const App = () => (
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/welcome" element={<Welcome />} />
                 <Route path="/handover/:token" element={<SignHandover />} />
+                <Route path="/h/:code" element={<SignHandover />} />
                 <Route path="/sign-offboarding/:token" element={<SignOffboarding />} />
                 <Route path="/portal/tax101/:token" element={<Tax101TokenPage />} />
                 <Route path="/select-company" element={<SelectCompany />} />
