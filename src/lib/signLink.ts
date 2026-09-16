@@ -1,15 +1,14 @@
 import { supabase } from "@/integrations/supabase/client";
 
+/** Official public site origin — links shared with employees never expose internal hosts. */
+export const APP_ORIGIN = "https://tiful360.com";
+
 /**
  * Public remote-signing link for a handover/return protocol.
- * Uses the live origin so preview links stay inside the preview host.
+ * Always built on the official domain so the link is shareable and professional.
  */
 export function signLinkFor(token: string): string {
-  const origin =
-    typeof window !== "undefined" && window.location?.origin
-      ? window.location.origin
-      : "https://tiful360.com";
-  return `${origin}/handover/${token}`;
+  return `${APP_ORIGIN}/handover/${token}`;
 }
 
 /**
