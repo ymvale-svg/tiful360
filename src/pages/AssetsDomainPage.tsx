@@ -4,7 +4,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ChevronRight, ChevronDown, Search, Plus, ArrowRight, Users, AlertTriangle,
   ArrowUpDown, LayoutGrid, List, FolderPlus, Check, X, Link2, Trash2, FileSignature,
-  ChevronUp, ChevronsUpDown,
+  ChevronUp, ChevronsUpDown, Building2,
 
 } from "lucide-react";
 
