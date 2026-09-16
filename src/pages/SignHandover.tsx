@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 type Gate = "checking" | "anonymous" | "forbidden" | "allowed";
 
 export default function SignHandover() {
-  const { token } = useParams();
+  const { token: tokenParam, code } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
