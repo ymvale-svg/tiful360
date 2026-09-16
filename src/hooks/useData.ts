@@ -57,7 +57,7 @@ export function useAssets() {
     queryFn: async () => {
       let query = supabase
         .from("assets")
-        .select("*, asset_categories(category_name, prefix, icon, is_assignable, protocol_type, skip_handover_form, domain), employees!assets_current_owner_id_fkey(full_name)")
+        .select("*, asset_categories(category_name, prefix, icon, is_assignable, protocol_type, skip_handover_form, domain), employees!assets_current_owner_id_fkey(full_name), sites:assigned_site_id(name), container:container_id(asset_name, asset_code)")
         .order("created_at", { ascending: false });
       if (activeCompanyId) query = query.eq("company_id", activeCompanyId);
       const { data, error } = await query;
