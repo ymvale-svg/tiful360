@@ -152,6 +152,7 @@ export default function AssetsDomainPage() {
       a.serial_number?.toLowerCase().includes(q) ||
       a.license_plate?.toLowerCase().includes(q) ||
       a.employees?.full_name?.toLowerCase().includes(q) ||
+      a.sites?.name?.toLowerCase().includes(q) ||
       sub.toLowerCase().includes(q)
     );
   };
