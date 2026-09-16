@@ -33,6 +33,19 @@ export function HandoverFormsList({ forms, context, emptyText = "אין עדיי
 
   const openPreview = async (form: HandoverFormRow, title: string, fallbackUrl: string) => {
     const snapshot = (form.form_snapshot ?? {}) as Record<string, any>;
+    const stored = form.pdf_url || form.attached_document_url;
+
+    // A signed protocol already exists as a stored PDF — show that exact file
+    // instead of re-rendering it in the browser.
+    if (form.status === "signed" && stored) {
+      try {
+        setPreview({ url: await getHandoverSignedUrl(stored), title });
+        return;
+      } catch {
+        // fall through to a locally built preview
+      }
+    }
+
     if (!isProtocolSnapshot(snapshot)) {
       // fallbackUrl is a storage path in the private bucket — sign it first.
       setPreview({ url: await getHandoverSignedUrl(fallbackUrl), title });
@@ -46,6 +59,7 @@ export function HandoverFormsList({ forms, context, emptyText = "אין עדיי
       setCreatingPreview(false);
     }
   };
+
 
   if (forms.length === 0) {
     return <p className="text-sm text-muted-foreground">{emptyText}</p>;
