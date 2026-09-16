@@ -40,3 +40,6 @@ project_id = "rhzmhiknbcipucfvgkok"
 
   [functions.send-handover-sign-link]
     verify_jwt = true
+
+  [functions.notify-form-signed]
+    verify_jwt = true

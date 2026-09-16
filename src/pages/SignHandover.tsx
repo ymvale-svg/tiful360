@@ -147,6 +147,11 @@ export default function SignHandover() {
       });
       if (error) throw error;
 
+      // Let the person who sent the form know it was signed (in-app + email).
+      void supabase.functions
+        .invoke("notify-form-signed", { body: { token } })
+        .catch(() => undefined);
+
       setDone(true);
     } catch (err: any) {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });

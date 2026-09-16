@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -11,7 +10,6 @@ import { toast } from "@/hooks/use-toast";
  */
 export function useSignedFormAlerts() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -44,7 +42,6 @@ export function useSignedFormAlerts() {
 
           queryClient.invalidateQueries({ queryKey: ["handover-forms"] });
           queryClient.invalidateQueries({ queryKey: ["pending-handover-forms"] });
-          void navigate;
         },
       )
       .subscribe();
@@ -52,5 +49,5 @@ export function useSignedFormAlerts() {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [user?.id, navigate, queryClient]);
+  }, [user?.id, queryClient]);
 }

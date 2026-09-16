@@ -9,6 +9,7 @@ import { useProfile } from "@/hooks/useData";
 import { hasDualAccess } from "@/lib/dualAccess";
 import { SkipLink } from "./SkipLink";
 import { AiAssistantWidget } from "./AiAssistantWidget";
+import { useSignedFormAlerts } from "@/hooks/useSignedFormAlerts";
 
 export function AppLayout() {
   const { user, signOut, isSuperAdmin, roles } = useAuth();
@@ -18,6 +19,8 @@ export function AppLayout() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [headerSearch, setHeaderSearch] = useState(searchParams.get("q") ?? "");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useSignedFormAlerts();
 
   // Keep header input in sync when route/url changes
   useEffect(() => {
