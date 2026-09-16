@@ -4,7 +4,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ChevronRight, ChevronDown, Search, Plus, ArrowRight, Users, AlertTriangle,
   ArrowUpDown, LayoutGrid, List, FolderPlus, Check, X, Link2, Trash2, FileSignature,
-  ChevronUp, ChevronsUpDown,
+  ChevronUp, ChevronsUpDown, Building2,
 
 } from "lucide-react";
 
@@ -152,6 +152,7 @@ export default function AssetsDomainPage() {
       a.serial_number?.toLowerCase().includes(q) ||
       a.license_plate?.toLowerCase().includes(q) ||
       a.employees?.full_name?.toLowerCase().includes(q) ||
+      a.sites?.name?.toLowerCase().includes(q) ||
       sub.toLowerCase().includes(q)
     );
   };
@@ -790,6 +791,14 @@ function InstancesTable({
 }) {
   const isInsurance = domain === "insurance";
   const cols = isInsurance ? "grid-cols-[2fr_2fr_1.2fr_1.5fr_2rem]" : "grid-cols-12";
+  // Second column (serial / username / vendor) is hidden when no item in the list has a value.
+  const secondValue = (a: any) =>
+    (domain === "digital"
+      ? a.account_username
+      : domain === "licenses"
+        ? (a.custom_fields?.["ספק"] ?? a.manufacturer_model)
+        : a.serial_number) ?? null;
+  const showSecond = items.some((a) => !!secondValue(a));
 
   const [colSort, setColSort] = usePersistentFilter<{ key: string; dir: "asc" | "desc" } | null>(
     `assets:${domain}:colsort`,
@@ -802,7 +811,7 @@ function InstancesTable({
       case "code": return a.asset_code ?? "";
       case "second":
         return (domain === "digital" ? a.account_username : domain === "licenses" ? (cf["ספק"] ?? a.manufacturer_model) : a.serial_number) ?? "";
-      case "employee": return a.employees?.full_name ?? "";
+      case "employee": return a.employees?.full_name ?? a.sites?.name ?? "";
       case "status":
         if (domain === "physical") return assetStatusLabels[a.status] ?? a.status ?? "";
         { const e = expiryOf(a, domain); return e ? new Date(e).getTime() : Number.MAX_SAFE_INTEGER; }
@@ -866,8 +875,10 @@ function InstancesTable({
         ) : (
           <>
             <SortHead label="קוד" sortKey="code" className="col-span-3" />
-            <SortHead label={domain === "digital" ? "שם משתמש" : domain === "licenses" ? "ספק" : "מס׳ סידורי"} sortKey="second" className="col-span-3" />
-            <SortHead label="עובד" sortKey="employee" className="col-span-3" />
+            {showSecond && (
+              <SortHead label={domain === "digital" ? "שם משתמש" : domain === "licenses" ? "ספק" : "מס׳ סידורי"} sortKey="second" className="col-span-3" />
+            )}
+            <SortHead label="עובד / אתר" sortKey="employee" className={showSecond ? "col-span-3" : "col-span-6"} />
             <SortHead label={domain === "physical" ? "סטטוס" : "תפוגה"} sortKey="status" className="col-span-2" />
             <div className="col-span-1 text-left"></div>
           </>
@@ -920,10 +931,26 @@ function InstancesTable({
             className="w-full grid grid-cols-12 gap-2 px-4 py-3 text-sm border-t border-border hover:bg-muted/40 text-right items-center transition-colors cursor-pointer"
           >
             <div className="col-span-3 font-mono text-xs flex items-center">{checkbox}{a.asset_code}</div>
-            <div className="col-span-3 text-xs text-muted-foreground truncate" dir={domain === "digital" ? "ltr" : undefined}>
-              {(domain === "digital" ? a.account_username : domain === "licenses" ? (a.custom_fields?.["ספק"] ?? a.manufacturer_model) : a.serial_number) ?? "—"}
+            {showSecond && (
+              <div className="col-span-3 text-xs text-muted-foreground truncate" dir={domain === "digital" ? "ltr" : undefined}>
+                {secondValue(a) ?? "—"}
+              </div>
+            )}
+            <div className={cn("truncate", showSecond ? "col-span-3" : "col-span-6")}>
+              {a.employees?.full_name ? (
+                a.employees.full_name
+              ) : a.sites?.name ? (
+                <span className="inline-flex items-center gap-1">
+                  <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                  <span className="truncate">
+                    {a.sites.name}
+                    {a.container?.asset_name ? ` · ${a.container.asset_name}` : ""}
+                  </span>
+                </span>
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              )}
             </div>
-            <div className="col-span-3 truncate">{a.employees?.full_name ?? <span className="text-muted-foreground">—</span>}</div>
             <div className="col-span-2">
               {domain === "physical" ? (
                 <span className={cn("text-xs px-2 py-0.5 rounded-full", assetStatusClasses[a.status])}>
