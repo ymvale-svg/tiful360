@@ -930,10 +930,26 @@ function InstancesTable({
             className="w-full grid grid-cols-12 gap-2 px-4 py-3 text-sm border-t border-border hover:bg-muted/40 text-right items-center transition-colors cursor-pointer"
           >
             <div className="col-span-3 font-mono text-xs flex items-center">{checkbox}{a.asset_code}</div>
-            <div className="col-span-3 text-xs text-muted-foreground truncate" dir={domain === "digital" ? "ltr" : undefined}>
-              {(domain === "digital" ? a.account_username : domain === "licenses" ? (a.custom_fields?.["ספק"] ?? a.manufacturer_model) : a.serial_number) ?? "—"}
+            {showSecond && (
+              <div className="col-span-3 text-xs text-muted-foreground truncate" dir={domain === "digital" ? "ltr" : undefined}>
+                {secondValue(a) ?? "—"}
+              </div>
+            )}
+            <div className={cn("truncate", showSecond ? "col-span-3" : "col-span-6")}>
+              {a.employees?.full_name ? (
+                a.employees.full_name
+              ) : a.sites?.name ? (
+                <span className="inline-flex items-center gap-1">
+                  <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                  <span className="truncate">
+                    {a.sites.name}
+                    {a.container?.asset_name ? ` · ${a.container.asset_name}` : ""}
+                  </span>
+                </span>
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              )}
             </div>
-            <div className="col-span-3 truncate">{a.employees?.full_name ?? <span className="text-muted-foreground">—</span>}</div>
             <div className="col-span-2">
               {domain === "physical" ? (
                 <span className={cn("text-xs px-2 py-0.5 rounded-full", assetStatusClasses[a.status])}>
