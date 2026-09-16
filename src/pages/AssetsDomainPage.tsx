@@ -874,8 +874,10 @@ function InstancesTable({
         ) : (
           <>
             <SortHead label="קוד" sortKey="code" className="col-span-3" />
-            <SortHead label={domain === "digital" ? "שם משתמש" : domain === "licenses" ? "ספק" : "מס׳ סידורי"} sortKey="second" className="col-span-3" />
-            <SortHead label="עובד" sortKey="employee" className="col-span-3" />
+            {showSecond && (
+              <SortHead label={domain === "digital" ? "שם משתמש" : domain === "licenses" ? "ספק" : "מס׳ סידורי"} sortKey="second" className="col-span-3" />
+            )}
+            <SortHead label="עובד / אתר" sortKey="employee" className={showSecond ? "col-span-3" : "col-span-6"} />
             <SortHead label={domain === "physical" ? "סטטוס" : "תפוגה"} sortKey="status" className="col-span-2" />
             <div className="col-span-1 text-left"></div>
           </>
