@@ -445,7 +445,7 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
             ].map((f: any) => ({ label: f.label, value: String(f.value ?? "") })),
             notes: freeText || null,
             pdfUrl,
-            portalUrl: `${window.location.origin}/portal`,
+            portalUrl: "https://tiful360.com/portal",
           },
         },
       });
