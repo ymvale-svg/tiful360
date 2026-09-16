@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
   // RLS applies here: the caller must be allowed to see these forms.
   const { data: forms, error } = await userClient
     .from('asset_handover_forms')
-    .select('id, employee_id, sign_token, direction, status, form_snapshot')
+    .select('id, employee_id, sign_token, short_code, direction, status, form_snapshot')
     .in('id', formIds)
   if (error) return json({ error: 'Lookup failed' }, 500)
   if (!forms?.length) return json({ error: 'Forbidden' }, 403)
@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
     .eq('id', employeeId)
     .maybeSingle()
 
-  const links = forms.map((f: any) => `${APP_ORIGIN}/handover/${f.sign_token}`)
+  const links = forms.map((f: any) => f.short_code ? `${APP_ORIGIN}/h/${f.short_code}` : `${APP_ORIGIN}/handover/${f.sign_token}`)
   if (!employee?.email) return json({ success: false, reason: 'no_email', links })
 
   const snap: any = forms[0].form_snapshot ?? {}

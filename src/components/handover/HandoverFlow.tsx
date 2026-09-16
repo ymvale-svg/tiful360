@@ -399,9 +399,9 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
       odometer_km: isVehicle && odometer ? Number(odometer) : null,
       created_by: user?.id,
       ...values,
-    } as any).select("id, sign_token").single();
+    } as any).select("id, sign_token, short_code").single();
     if (error) throw error;
-    return data as { id: string; sign_token: string };
+    return data as { id: string; sign_token: string; short_code: string | null };
   };
 
   const snapshot = (media: ProtocolMedia[]) => ({
@@ -585,7 +585,7 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
         media: media as any,
       });
       await applyAssetUpdate();
-      const { links, sent } = await sendSignLink([row.id], [signLinkFor(row.sign_token)]);
+      const { links, sent } = await sendSignLink([row.id], [signLinkFor(row.sign_token, (row as any).short_code)]);
       setSignLinks(links);
       setSignEmailSent(sent);
       toast({
