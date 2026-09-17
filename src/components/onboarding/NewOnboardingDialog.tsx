@@ -566,6 +566,15 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
           setNewEmployeeOpen(false);
         }}
       />
+      <SendToOpsDialog
+        open={!!pendingSend}
+        onOpenChange={(o) => !o && setPendingSend(null)}
+        processId={pendingSend?.processId ?? null}
+        employeeId={pendingSend?.employeeId ?? null}
+        employeeName={employees.find((e: any) => e.id === pendingSend?.employeeId)?.full_name}
+        itemCount={pendingSend?.count}
+        onSent={() => setPendingSend(null)}
+      />
     </>
   );
 }
