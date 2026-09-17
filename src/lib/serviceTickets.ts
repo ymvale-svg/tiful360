@@ -11,9 +11,11 @@ export const TICKET_SUBJECTS = [
 export type TicketSubject = (typeof TICKET_SUBJECTS)[number]["value"];
 
 export const OFFBOARDING_SUBJECT = "offboarding";
+export const ONBOARDING_SUBJECT = "onboarding";
 
 export function subjectLabel(value: string | null | undefined) {
   if (value === OFFBOARDING_SUBJECT) return "ניתוקים / סיום העסקה";
+  if (value === ONBOARDING_SUBJECT) return "קליטת עובד";
   return TICKET_SUBJECTS.find((s) => s.value === value)?.label ?? "אחר";
 }
 
@@ -53,6 +55,7 @@ export const DEFAULT_SLA_HOURS: Record<string, { medium: number; critical: numbe
   software: { medium: 24, critical: 4 },
   other: { medium: 48, critical: 8 },
   [OFFBOARDING_SUBJECT]: { medium: 24, critical: 4 },
+  [ONBOARDING_SUBJECT]: { medium: 48, critical: 8 },
 };
 
 export function defaultSlaHours(subject: string, priority: string) {

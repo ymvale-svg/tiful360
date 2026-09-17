@@ -24,6 +24,7 @@ export const EMPLOYEE_DOCUMENT_TYPES: Array<{ value: string; label: string }> = 
   { value: "medical", label: "אישור רפואי" },
   { value: "signed_form", label: "טופס חתום" },
   { value: "offboarding", label: "מסמכי עזיבה" },
+  { value: "onboarding_protocol", label: "פרוטוקול קליטה" },
   { value: "other", label: "אחר" },
 ];
 
