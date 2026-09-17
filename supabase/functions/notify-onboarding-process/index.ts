@@ -86,6 +86,8 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const process_id = body?.process_id;
+    const document_path = typeof body?.document_path === "string" ? body.document_path : null;
+    const isFinal = body?.final === true;
     if (!process_id || typeof process_id !== "string") {
       return new Response(JSON.stringify({ error: "process_id required" }), {
         status: 400,
