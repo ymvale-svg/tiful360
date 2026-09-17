@@ -126,13 +126,22 @@ Deno.serve(async (req) => {
 
     const { data: company } = await supabase
       .from("companies")
-      .select("name, operations_emails, it_emails")
+      .select("name, operations_emails, it_emails, hr_emails")
       .eq("id", (proc as any).company_id)
       .single();
 
+    // The requesting HR user also receives a copy of the protocol.
+    const requesterEmail =
+      typeof (claims.claims as any)?.email === "string" ? (claims.claims as any).email : "";
+
     const recipients = Array.from(
       new Set(
-        [company?.operations_emails ?? "", company?.it_emails ?? ""]
+        [
+          company?.operations_emails ?? "",
+          company?.it_emails ?? "",
+          company?.hr_emails ?? "",
+          requesterEmail,
+        ]
           .join(",")
           .split(",")
           .map((s: string) => s.trim().toLowerCase())
@@ -145,6 +154,15 @@ Deno.serve(async (req) => {
         JSON.stringify({ ok: true, warning: "no operations recipients configured" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
+    }
+
+    // Long-lived signed link to the stored protocol PDF.
+    let documentUrl: string | null = null;
+    if (document_path) {
+      const { data: signed } = await supabase.storage
+        .from("employee-documents")
+        .createSignedUrl(document_path, 60 * 60 * 24 * 30);
+      documentUrl = signed?.signedUrl ?? null;
     }
 
     const emp = (proc as any).employees ?? {};
