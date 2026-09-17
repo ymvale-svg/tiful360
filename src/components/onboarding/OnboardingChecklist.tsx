@@ -271,6 +271,20 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
                                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">
                                     {OWNER_ROLE_LABEL[item.owner_role] ?? item.owner_role}
                                   </span>
+                                  {item.assigned_at && (
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600">
+                                      הוצמד ב-{formatDateDMY(item.assigned_at, true)}
+                                    </span>
+                                  )}
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-6 w-6 mr-auto text-muted-foreground hover:text-destructive"
+                                    onClick={() => removeItem(item)}
+                                    aria-label="הסר פריט"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </Button>
                                 </div>
                                 {item.notes && (
                                   <p className="text-xs mt-1.5 px-2.5 py-1.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-foreground flex items-start gap-1.5">
