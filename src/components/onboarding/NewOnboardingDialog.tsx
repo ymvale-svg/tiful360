@@ -18,6 +18,7 @@ import { getDomain, DOMAIN_META, type DomainKey } from "@/lib/assetDomains";
 import { resolveOwnerRole, OWNER_ROLE_OPTIONS, OWNER_ROLE_LABEL } from "@/lib/domainConfig";
 import { Send, Copy, UserPlus, CalendarDays, AlertCircle, X } from "lucide-react";
 import { EmployeeSetupWizard } from "@/components/EmployeeSetupWizard";
+import { SendToOpsDialog } from "@/components/onboarding/SendToOpsDialog";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
