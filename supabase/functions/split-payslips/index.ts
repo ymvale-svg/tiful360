@@ -586,7 +586,18 @@ Deno.serve(async (req) => {
           }, { onConflict: 'employee_id,period_year,period_month' });
           if (psErr) throw psErr;
 
-          if (group.primary.vacationBalance != null || group.primary.sickBalance != null) {
+          // The employee card must always mirror the NEWEST payslip. Never let
+          // an older period (re-upload of a past month) overwrite it.
+          const { data: newestSlip } = await admin.from('payslips')
+            .select('period_year, period_month')
+            .eq('employee_id', matched.id)
+            .order('period_year', { ascending: false })
+            .order('period_month', { ascending: false })
+            .limit(1).maybeSingle();
+          const isNewest = !newestSlip
+            || (recordYear * 12 + recordMonth) >= ((newestSlip.period_year ?? 0) * 12 + (newestSlip.period_month ?? 0));
+
+          if (isNewest && (group.primary.vacationBalance != null || group.primary.sickBalance != null)) {
             const updates: any = { balances_updated_at: new Date().toISOString(), balances_source: 'payslip' };
             if (group.primary.vacationBalance != null) updates.vacation_balance = group.primary.vacationBalance;
             if (group.primary.sickBalance != null) updates.sick_balance = group.primary.sickBalance;
