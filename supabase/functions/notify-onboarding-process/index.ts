@@ -199,15 +199,29 @@ Deno.serve(async (req) => {
         </table>`
       : "";
 
-    const portalBase = req.headers.get("origin") ?? "https://tiful360.lovable.app";
-    const url = `${portalBase}/onboarding`;
+    const url = `https://tiful360.com/onboarding`;
+
+    const docHtml = documentUrl
+      ? `<p style="margin:14px 0;">
+           <a href="${documentUrl}" style="background:#2563eb;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;display:inline-block;font-weight:600;">הורדת פרוטוקול בקשת פתיחת הרשאות וציוד (PDF)</a>
+         </p>
+         <p style="color:#64748b;font-size:12px;">המסמך נשמר גם במסמכים שבתיק העובד במערכת.</p>`
+      : "";
+
+    const heading = isFinal
+      ? "✅ תהליך הקליטה הושלם — פרוטוקול מעודכן (גרסה 2)"
+      : "🧑‍💼 התקבל טופס קליטת עובד חדש";
+    const intro = isFinal
+      ? "כל הפריטים בתהליך הקליטה בוצעו. מצורף הפרוטוקול המעודכן הכולל את מועדי הביצוע בפועל:"
+      : "משאבי אנוש שלחו לתפעול טופס צרכי קליטה:";
 
     const html = layout(
-      "טופס קליטת עובד",
-      `<h2 style="margin:0 0 8px;font-size:18px;">🧑‍💼 התקבל טופס קליטת עובד חדש</h2>
-       <p style="color:#475569;font-size:14px;">משאבי אנוש שלחו לתפעול טופס צרכי קליטה:</p>
+      isFinal ? "פרוטוקול קליטה מעודכן" : "טופס קליטת עובד",
+      `<h2 style="margin:0 0 8px;font-size:18px;">${heading}</h2>
+       <p style="color:#475569;font-size:14px;">${intro}</p>
        ${detailsTable(rows)}
        ${itemsHtml}
+       ${docHtml}
        <p style="margin:18px 0;">
          <a href="${url}" style="background:#0f172a;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;display:inline-block;font-weight:600;">פתח את הצ'קליסט במערכת</a>
        </p>`,
@@ -217,11 +231,13 @@ Deno.serve(async (req) => {
     for (const to of recipients) {
       const ok = await enqueueTransactionalEmail(supabase, {
         to,
-        subject: `🧑‍💼 טופס קליטת עובד — ${emp.full_name ?? ""}`,
+        subject: isFinal
+          ? `✅ פרוטוקול קליטה מעודכן — ${emp.full_name ?? ""}`
+          : `🧑‍💼 טופס קליטת עובד — ${emp.full_name ?? ""}`,
         html,
-        label: "onboarding-process-sent",
-        idempotencyKey: `onboarding-${process_id}-${to}`,
-        metadata: { process_id },
+        label: isFinal ? "onboarding-process-completed" : "onboarding-process-sent",
+        idempotencyKey: `onboarding-${isFinal ? "final-" : ""}${process_id}-${to}`,
+        metadata: { process_id, final: isFinal },
       });
       if (ok) sent++;
     }
