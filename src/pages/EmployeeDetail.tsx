@@ -165,14 +165,27 @@ export default function EmployeeDetail() {
   const isSelf = !!employee?.linked_user_id && employee.linked_user_id === user?.id;
   const canSeePayslips = isSuperAdmin || isAdmin || isPayroll || isHR || isSelf;
 
+  // Onboarding process of this employee — visible to HR, admins and operations/IT only.
+  const canSeeOnboarding = isSuperAdmin || isAdmin || isHR || isOperations;
+  const { data: onboardingProcess } = useEmployeeOnboardingProcess(canSeeOnboarding ? id : undefined);
+  const showOnboarding = canSeeOnboarding && !!onboardingProcess;
+  const onbItems = onboardingProcess?.onboarding_items ?? [];
+  const onbDone = onbItems.filter((i) => i.status === "done").length;
+  const onbDaysLeft = daysUntil(employee?.start_date);
 
-  const tabs = canSeePayslips ? allTabs : allTabs.filter((t) => t.id !== "payslips");
+  const tabs = [
+    ...(canSeePayslips ? allTabs : allTabs.filter((t) => t.id !== "payslips")),
+    ...(showOnboarding ? [{ id: "onboarding", label: "קליטה", icon: ClipboardList }] : []),
+  ];
 
   useEffect(() => {
     if (activeTab === "payslips" && !canSeePayslips) {
       setActiveTab("personal");
     }
-  }, [activeTab, canSeePayslips]);
+    if (activeTab === "onboarding" && !showOnboarding) {
+      setActiveTab("personal");
+    }
+  }, [activeTab, canSeePayslips, showOnboarding]);
 
   const stockAssets = (allAssets ?? []).filter((a: any) => !a.current_owner_id);
   const pickedAsset = stockAssets.find((a: any) => a.id === pickAssetId) ?? null;
