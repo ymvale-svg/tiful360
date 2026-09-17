@@ -270,35 +270,15 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
       return;
     }
     try {
-      const proc = await create.mutateAsync({ employee_id: employeeId, items, status });
-      let mailWarning: string | null = null;
+      // The process is always created as a draft; sending to operations happens
+      // in the protocol dialog (signature → PDF → ticket → email).
+      const proc = await create.mutateAsync({ employee_id: employeeId, items, status: "draft" });
       if (status === "sent" && proc?.id) {
-        const { data: mailData, error: mailErr } = await supabase.functions.invoke(
-          "notify-onboarding-process",
-          { body: { process_id: proc.id } },
-        );
-        if (mailErr) {
-          console.error("notify-onboarding-process failed", mailErr);
-          mailWarning = "שליחת המייל לתפעול נכשלה — בדוק את ההגדרות או נסה שוב";
-        } else if (mailData?.warning) {
-          mailWarning = "לא הוגדרו כתובות מייל לתפעול/IT בחברה — הטופס לא נשלח במייל";
-        } else if (typeof mailData?.sent === "number" && mailData.sent === 0) {
-          mailWarning = "המייל לתפעול לא נשלח — בדוק את הגדרות הנמענים";
-        } else if (
-          typeof mailData?.sent === "number" &&
-          typeof mailData?.total === "number" &&
-          mailData.sent < mailData.total
-        ) {
-          mailWarning = `המייל נשלח רק ל-${mailData.sent} מתוך ${mailData.total} נמענים`;
-        }
+        setPendingSend({ processId: proc.id, employeeId, count: items.length });
+        onOpenChange(false);
+        return;
       }
-      toast({
-        title: status === "sent" ? "נשלח לתפעול" : "נשמר כטיוטה",
-        description: `${items.length} פריטים בתהליך הקליטה`,
-      });
-      if (mailWarning) {
-        toast({ title: "שים לב", description: mailWarning, variant: "destructive" });
-      }
+      toast({ title: "נשמר כטיוטה", description: `${items.length} פריטים בתהליך הקליטה` });
       onOpenChange(false);
     } catch (e: any) {
       toast({ title: "שגיאה", description: e.message, variant: "destructive" });
