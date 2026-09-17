@@ -2169,6 +2169,7 @@ export type Database = {
       onboarding_items: {
         Row: {
           asset_id: string | null
+          assigned_at: string | null
           catalog_ref_id: string | null
           completed_at: string | null
           completed_by: string | null
@@ -2186,6 +2187,7 @@ export type Database = {
         }
         Insert: {
           asset_id?: string | null
+          assigned_at?: string | null
           catalog_ref_id?: string | null
           completed_at?: string | null
           completed_by?: string | null
@@ -2203,6 +2205,7 @@ export type Database = {
         }
         Update: {
           asset_id?: string | null
+          assigned_at?: string | null
           catalog_ref_id?: string | null
           completed_at?: string | null
           completed_by?: string | null
@@ -2258,35 +2261,47 @@ export type Database = {
       }
       onboarding_processes: {
         Row: {
+          audit_log: Json
           company_id: string
           completed_at: string | null
           created_at: string
           created_by: string | null
           employee_id: string
           id: string
+          it_ticket_id: string | null
           pdf_url: string | null
+          protocol_version: number
+          sent_at: string | null
           status: string
           updated_at: string
         }
         Insert: {
+          audit_log?: Json
           company_id: string
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
           employee_id: string
           id?: string
+          it_ticket_id?: string | null
           pdf_url?: string | null
+          protocol_version?: number
+          sent_at?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
+          audit_log?: Json
           company_id?: string
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
           employee_id?: string
           id?: string
+          it_ticket_id?: string | null
           pdf_url?: string | null
+          protocol_version?: number
+          sent_at?: string | null
           status?: string
           updated_at?: string
         }
