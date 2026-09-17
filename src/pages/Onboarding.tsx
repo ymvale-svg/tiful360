@@ -123,7 +123,7 @@ export default function Onboarding() {
                     className="gap-1.5"
                     onClick={(e) => {
                       e.stopPropagation();
-                      updateProcess.mutate({ id: p.id, status: "sent" });
+                      setSendTarget(p);
                     }}
                   >
                     <Send className="w-3.5 h-3.5" />
