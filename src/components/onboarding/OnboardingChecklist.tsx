@@ -232,8 +232,13 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
               <Printer className="w-4 h-4" /> פרוטוקול מסירה
             </Button>
             {process.status !== "done" && (
-              <Button size="sm" className="gap-1.5" onClick={finish} disabled={doneCount < items.length}>
-                <CheckCircle2 className="w-4 h-4" /> סיום תהליך
+              <Button
+                size="sm"
+                className="gap-1.5"
+                onClick={finish}
+                disabled={doneCount < items.length || finishing}
+              >
+                <CheckCircle2 className="w-4 h-4" /> {finishing ? "מפיק פרוטוקול..." : "סיום תהליך"}
               </Button>
             )}
           </div>
