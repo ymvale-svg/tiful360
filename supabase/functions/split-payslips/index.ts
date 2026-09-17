@@ -142,17 +142,18 @@ function extractFields(text: string, fallbackPeriod: { year: number; month: numb
     /([\d.,]+)\s*עבודה\s*שעות/
   );
 
-  // Vacation balance: try both orders
-  let vacBlock = t.match(/חשבון\s*חופשה[\s\S]{0,400}?יתרה\s*חדשה\s*([\d.,]+)/);
-  if (!vacBlock) vacBlock = t.match(/([\d.,]+)\s*חדשה\s*יתרה[\s\S]{0,400}?חופשה\s*חשבון/);
-  if (!vacBlock) vacBlock = t.match(/חופשה[\s\S]{0,200}?יתרה\s*חדשה\s*([\d.,]+)/);
-  if (!vacBlock) vacBlock = t.match(/([\d.,]+)\s*חדשה\s*יתרה[\s\S]{0,200}?חופשה/);
+  // Vacation balance: try both orders. The value may be negative, with the
+  // minus sign written before or after the number.
+  let vacBlock = t.match(/חשבון\s*חופשה[\s\S]{0,400}?יתרה\s*חדשה\s*(-?[\d.,]+-?)/);
+  if (!vacBlock) vacBlock = t.match(/(-?[\d.,]+-?)\s*חדשה\s*יתרה[\s\S]{0,400}?חופשה\s*חשבון/);
+  if (!vacBlock) vacBlock = t.match(/חופשה[\s\S]{0,200}?יתרה\s*חדשה\s*(-?[\d.,]+-?)/);
+  if (!vacBlock) vacBlock = t.match(/(-?[\d.,]+-?)\s*חדשה\s*יתרה[\s\S]{0,200}?חופשה/);
 
   // Sick balance: try both orders
-  let sickBlock = t.match(/חשבון\s*מחלה[\s\S]{0,400}?יתרה\s*חדשה\s*([\d.,]+)/);
-  if (!sickBlock) sickBlock = t.match(/([\d.,]+)\s*חדשה\s*יתרה[\s\S]{0,400}?מחלה\s*חשבון/);
-  if (!sickBlock) sickBlock = t.match(/מחלה[\s\S]{0,200}?יתרה\s*חדשה\s*([\d.,]+)/);
-  if (!sickBlock) sickBlock = t.match(/([\d.,]+)\s*חדשה\s*יתרה[\s\S]{0,200}?מחלה/);
+  let sickBlock = t.match(/חשבון\s*מחלה[\s\S]{0,400}?יתרה\s*חדשה\s*(-?[\d.,]+-?)/);
+  if (!sickBlock) sickBlock = t.match(/(-?[\d.,]+-?)\s*חדשה\s*יתרה[\s\S]{0,400}?מחלה\s*חשבון/);
+  if (!sickBlock) sickBlock = t.match(/מחלה[\s\S]{0,200}?יתרה\s*חדשה\s*(-?[\d.,]+-?)/);
+  if (!sickBlock) sickBlock = t.match(/(-?[\d.,]+-?)\s*חדשה\s*יתרה[\s\S]{0,200}?מחלה/);
 
   let employeeName: string | null = null;
   const nameM = t.match(/לכבוד\s+([^\n\r]+?)(?:\s{2,}|מספר|ת\.?ז|$)/);
