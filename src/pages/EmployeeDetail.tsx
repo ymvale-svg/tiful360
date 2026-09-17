@@ -259,6 +259,34 @@ export default function EmployeeDetail() {
         </div>
       </div>
 
+      {/* Active onboarding banner */}
+      {showOnboarding && onboardingProcess!.status !== "done" && (
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3 text-sm">
+            <ClipboardList className="w-5 h-5 text-primary shrink-0" />
+            <div>
+              <p className="font-semibold">
+                תהליך קליטה {ONBOARDING_STATUS_LABEL[onboardingProcess!.status] ?? ""}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {onbDone} מתוך {onbItems.length} פריטים בוצעו · תחילת עבודה{" "}
+                {new Date(employee.start_date).toLocaleDateString("en-GB")}
+                {onbDaysLeft !== null && onbDaysLeft >= 0 ? ` (בעוד ${onbDaysLeft} ימים)` : ""}
+              </p>
+            </div>
+          </div>
+          <Button size="sm" onClick={() => setActiveTab("onboarding")} className="gap-1.5">
+            <ClipboardList className="w-4 h-4" />
+            פתח את תהליך הקליטה
+          </Button>
+        </div>
+      )}
+
+      {/* Onboarding tab */}
+      {activeTab === "onboarding" && showOnboarding && (
+        <EmployeeOnboardingTab process={onboardingProcess!} />
+      )}
+
       {/* Tabs */}
       <div className="flex items-center gap-1 bg-card border border-border rounded-lg p-1 w-fit">
         {tabs.map((tab) => (
