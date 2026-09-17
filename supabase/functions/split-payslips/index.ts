@@ -29,9 +29,15 @@ interface PageInfo {
 
 function parseNumber(s: string | undefined | null): number | null {
   if (!s) return null;
-  const cleaned = s.replace(/,/g, '').trim();
-  const n = parseFloat(cleaned);
-  return isNaN(n) ? null : n;
+  let cleaned = s.replace(/,/g, '').trim();
+  // Hebrew payslips render negatives with the minus either before or after
+  // the digits ("-0.69" / "0.69-"). Both mean the same thing.
+  let negative = false;
+  if (cleaned.startsWith('-')) { negative = true; cleaned = cleaned.slice(1); }
+  if (cleaned.endsWith('-')) { negative = true; cleaned = cleaned.slice(0, -1); }
+  const n = parseFloat(cleaned.trim());
+  if (isNaN(n)) return null;
+  return negative ? -n : n;
 }
 
 function normalizeIdNumber(raw: string | null | undefined): string | null {
@@ -136,17 +142,18 @@ function extractFields(text: string, fallbackPeriod: { year: number; month: numb
     /([\d.,]+)\s*עבודה\s*שעות/
   );
 
-  // Vacation balance: try both orders
-  let vacBlock = t.match(/חשבון\s*חופשה[\s\S]{0,400}?יתרה\s*חדשה\s*([\d.,]+)/);
-  if (!vacBlock) vacBlock = t.match(/([\d.,]+)\s*חדשה\s*יתרה[\s\S]{0,400}?חופשה\s*חשבון/);
-  if (!vacBlock) vacBlock = t.match(/חופשה[\s\S]{0,200}?יתרה\s*חדשה\s*([\d.,]+)/);
-  if (!vacBlock) vacBlock = t.match(/([\d.,]+)\s*חדשה\s*יתרה[\s\S]{0,200}?חופשה/);
+  // Vacation balance: try both orders. The value may be negative, with the
+  // minus sign written before or after the number.
+  let vacBlock = t.match(/חשבון\s*חופשה[\s\S]{0,400}?יתרה\s*חדשה\s*(-?[\d.,]+-?)/);
+  if (!vacBlock) vacBlock = t.match(/(-?[\d.,]+-?)\s*חדשה\s*יתרה[\s\S]{0,400}?חופשה\s*חשבון/);
+  if (!vacBlock) vacBlock = t.match(/חופשה[\s\S]{0,200}?יתרה\s*חדשה\s*(-?[\d.,]+-?)/);
+  if (!vacBlock) vacBlock = t.match(/(-?[\d.,]+-?)\s*חדשה\s*יתרה[\s\S]{0,200}?חופשה/);
 
   // Sick balance: try both orders
-  let sickBlock = t.match(/חשבון\s*מחלה[\s\S]{0,400}?יתרה\s*חדשה\s*([\d.,]+)/);
-  if (!sickBlock) sickBlock = t.match(/([\d.,]+)\s*חדשה\s*יתרה[\s\S]{0,400}?מחלה\s*חשבון/);
-  if (!sickBlock) sickBlock = t.match(/מחלה[\s\S]{0,200}?יתרה\s*חדשה\s*([\d.,]+)/);
-  if (!sickBlock) sickBlock = t.match(/([\d.,]+)\s*חדשה\s*יתרה[\s\S]{0,200}?מחלה/);
+  let sickBlock = t.match(/חשבון\s*מחלה[\s\S]{0,400}?יתרה\s*חדשה\s*(-?[\d.,]+-?)/);
+  if (!sickBlock) sickBlock = t.match(/(-?[\d.,]+-?)\s*חדשה\s*יתרה[\s\S]{0,400}?מחלה\s*חשבון/);
+  if (!sickBlock) sickBlock = t.match(/מחלה[\s\S]{0,200}?יתרה\s*חדשה\s*(-?[\d.,]+-?)/);
+  if (!sickBlock) sickBlock = t.match(/(-?[\d.,]+-?)\s*חדשה\s*יתרה[\s\S]{0,200}?מחלה/);
 
   let employeeName: string | null = null;
   const nameM = t.match(/לכבוד\s+([^\n\r]+?)(?:\s{2,}|מספר|ת\.?ז|$)/);
@@ -430,7 +437,7 @@ Deno.serve(async (req) => {
                   {
                     role: 'user',
                     content: [
-                      { type: 'text', text: 'חלץ את הנתונים מתלוש השכר המצורף. ודא שאתה מחזיר ימי עבודה (לא שעות) בשדה work_days, ושעות עבודה (לא ימים) בשדה work_hours. חשוב מאוד: בחשבון חופשה ובחשבון מחלה יש שתי יתרות — "יתרה קודמת" (יתרה בתחילת התקופה) ו-"יתרה חדשה" (היתרה המעודכנת בסוף התקופה). החזר אך ורק את "יתרה חדשה", ולעולם לא את "יתרה קודמת".' },
+                      { type: 'text', text: 'חלץ את הנתונים מתלוש השכר המצורף. ודא שאתה מחזיר ימי עבודה (לא שעות) בשדה work_days, ושעות עבודה (לא ימים) בשדה work_hours. חשוב מאוד: בחשבון חופשה ובחשבון מחלה יש שתי יתרות — "יתרה קודמת" (יתרה בתחילת התקופה) ו-"יתרה חדשה" (השורה האחרונה, היתרה המעודכנת בסוף התקופה). החזר אך ורק את "יתרה חדשה", ולעולם לא את "יתרה קודמת". היתרה יכולה להיות שלילית (למשל -0.69, או 0.69- כשהמינוס מופיע אחרי המספר) — במקרה כזה החזר מספר שלילי, ואל תדלג על השדה ואל תחזיר במקומו את "יתרה קודמת".' },
                       { type: 'image_url', image_url: { url: dataUrl } },
                     ],
                   },
@@ -452,8 +459,8 @@ Deno.serve(async (req) => {
                           net_salary: { type: ['number', 'null'], description: 'שכר נטו לתשלום' },
                           work_days: { type: ['number', 'null'], description: 'ימי עבודה בפועל (מספר ימים, בד"כ 17-26). אל תחזיר שעות כאן.' },
                           work_hours: { type: ['number', 'null'], description: 'סך שעות עבודה בפועל בחודש (בד"כ 100-200 שעות). אל תחזיר ימים כאן.' },
-                          vacation_balance: { type: ['number', 'null'], description: 'יתרה חדשה של חופשה בלבד (בימים) — השורה המסומנת יתרה חדשה בתחשיב חופשה, לא יתרה קודמת' },
-                          sick_balance: { type: ['number', 'null'], description: 'יתרה חדשה של מחלה בלבד (בימים) — השורה המסומנת יתרה חדשה בתחשיב מחלה, לא יתרה קודמת' },
+                          vacation_balance: { type: ['number', 'null'], description: 'יתרה חדשה של חופשה בלבד (בימים) — השורה המסומנת יתרה חדשה בחשבון חופשה, לא יתרה קודמת. יכולה להיות שלילית — החזר מספר שלילי כפי שמופיע' },
+                          sick_balance: { type: ['number', 'null'], description: 'יתרה חדשה של מחלה בלבד (בימים) — השורה המסומנת יתרה חדשה בחשבון מחלה, לא יתרה קודמת. יכולה להיות שלילית — החזר מספר שלילי כפי שמופיע' },
                         },
                         required: ['id_number', 'gross_salary', 'net_salary', 'vacation_balance', 'sick_balance'],
                         additionalProperties: false,
@@ -579,7 +586,18 @@ Deno.serve(async (req) => {
           }, { onConflict: 'employee_id,period_year,period_month' });
           if (psErr) throw psErr;
 
-          if (group.primary.vacationBalance != null || group.primary.sickBalance != null) {
+          // The employee card must always mirror the NEWEST payslip. Never let
+          // an older period (re-upload of a past month) overwrite it.
+          const { data: newestSlip } = await admin.from('payslips')
+            .select('period_year, period_month')
+            .eq('employee_id', matched.id)
+            .order('period_year', { ascending: false })
+            .order('period_month', { ascending: false })
+            .limit(1).maybeSingle();
+          const isNewest = !newestSlip
+            || (recordYear * 12 + recordMonth) >= ((newestSlip.period_year ?? 0) * 12 + (newestSlip.period_month ?? 0));
+
+          if (isNewest && (group.primary.vacationBalance != null || group.primary.sickBalance != null)) {
             const updates: any = { balances_updated_at: new Date().toISOString(), balances_source: 'payslip' };
             if (group.primary.vacationBalance != null) updates.vacation_balance = group.primary.vacationBalance;
             if (group.primary.sickBalance != null) updates.sick_balance = group.primary.sickBalance;
