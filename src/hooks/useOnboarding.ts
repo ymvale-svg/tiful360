@@ -73,6 +73,26 @@ export function useOnboardingProcesses() {
   });
 }
 
+/** Latest onboarding process of a single employee (for the employee file). */
+export function useEmployeeOnboardingProcess(employeeId?: string) {
+  return useQuery({
+    queryKey: ["employee-onboarding-process", employeeId],
+    enabled: !!employeeId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("onboarding_processes")
+        .select(
+          "*, employees(full_name, employee_code, role, department, start_date, email), onboarding_items(*)"
+        )
+        .eq("employee_id", employeeId!)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (error) throw error;
+      return ((data ?? [])[0] ?? null) as unknown as OnboardingProcess | null;
+    },
+  });
+}
+
 export interface NewOnboardingItem {
   title: string;
   owner_role?: string;

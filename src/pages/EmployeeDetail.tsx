@@ -2,7 +2,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   ArrowRight, Shield, Key, Clock, AlertTriangle, UserMinus,
   FileText, RefreshCw, Package, User, Mail, Phone, Calendar, Building2, IdCard,
-  Pencil, Plus, Trash2, Upload, Unlink, CalendarDays, MapPin, Lock, Car,
+  Pencil, Plus, Trash2, Upload, Unlink, CalendarDays, MapPin, Lock, Car, ClipboardList,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,6 +33,8 @@ import { getDomain, domainKeyToSlug } from "@/lib/assetDomains";
 import { EmployeeActivityTimeline } from "@/components/EmployeeActivityTimeline";
 import { EmployeeVehiclesTab } from "@/components/vehicles/EmployeeVehiclesTab";
 import { isVehicleAsset } from "@/lib/vehicleLinkedGroups";
+import { useEmployeeOnboardingProcess, ONBOARDING_STATUS_LABEL, daysUntil } from "@/hooks/useOnboarding";
+import { EmployeeOnboardingTab } from "@/components/onboarding/EmployeeOnboardingTab";
 
 
 
@@ -163,14 +165,27 @@ export default function EmployeeDetail() {
   const isSelf = !!employee?.linked_user_id && employee.linked_user_id === user?.id;
   const canSeePayslips = isSuperAdmin || isAdmin || isPayroll || isHR || isSelf;
 
+  // Onboarding process of this employee — visible to HR, admins and operations/IT only.
+  const canSeeOnboarding = isSuperAdmin || isAdmin || isHR || isOperations;
+  const { data: onboardingProcess } = useEmployeeOnboardingProcess(canSeeOnboarding ? id : undefined);
+  const showOnboarding = canSeeOnboarding && !!onboardingProcess;
+  const onbItems = onboardingProcess?.onboarding_items ?? [];
+  const onbDone = onbItems.filter((i) => i.status === "done").length;
+  const onbDaysLeft = daysUntil(employee?.start_date);
 
-  const tabs = canSeePayslips ? allTabs : allTabs.filter((t) => t.id !== "payslips");
+  const tabs = [
+    ...(canSeePayslips ? allTabs : allTabs.filter((t) => t.id !== "payslips")),
+    ...(showOnboarding ? [{ id: "onboarding", label: "קליטה", icon: ClipboardList }] : []),
+  ];
 
   useEffect(() => {
     if (activeTab === "payslips" && !canSeePayslips) {
       setActiveTab("personal");
     }
-  }, [activeTab, canSeePayslips]);
+    if (activeTab === "onboarding" && !showOnboarding) {
+      setActiveTab("personal");
+    }
+  }, [activeTab, canSeePayslips, showOnboarding]);
 
   const stockAssets = (allAssets ?? []).filter((a: any) => !a.current_owner_id);
   const pickedAsset = stockAssets.find((a: any) => a.id === pickAssetId) ?? null;
@@ -244,6 +259,29 @@ export default function EmployeeDetail() {
         </div>
       </div>
 
+      {/* Active onboarding banner */}
+      {showOnboarding && onboardingProcess!.status !== "done" && (
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3 text-sm">
+            <ClipboardList className="w-5 h-5 text-primary shrink-0" />
+            <div>
+              <p className="font-semibold">
+                תהליך קליטה {ONBOARDING_STATUS_LABEL[onboardingProcess!.status] ?? ""}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {onbDone} מתוך {onbItems.length} פריטים בוצעו · תחילת עבודה{" "}
+                {new Date(employee.start_date).toLocaleDateString("en-GB")}
+                {onbDaysLeft !== null && onbDaysLeft >= 0 ? ` (בעוד ${onbDaysLeft} ימים)` : ""}
+              </p>
+            </div>
+          </div>
+          <Button size="sm" onClick={() => setActiveTab("onboarding")} className="gap-1.5">
+            <ClipboardList className="w-4 h-4" />
+            פתח את תהליך הקליטה
+          </Button>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex items-center gap-1 bg-card border border-border rounded-lg p-1 w-fit">
         {tabs.map((tab) => (
@@ -262,6 +300,11 @@ export default function EmployeeDetail() {
           </button>
         ))}
       </div>
+
+      {/* Onboarding tab */}
+      {activeTab === "onboarding" && showOnboarding && (
+        <EmployeeOnboardingTab process={onboardingProcess!} />
+      )}
 
       {/* Assets tab */}
       {activeTab === "assets" && (
