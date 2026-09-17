@@ -47,5 +47,7 @@
 - **מייל**: הרחבת `notify-onboarding-process` לצירוף ה-PDF ולשליחת גרסת הסיום; פונקציה חדשה `notify-asset-unassigned` לשלב 5.
 - **החתמה דיגיטלית**: שימוש חוזר ב-`MultiHandoverFlow` עם מצב מרוכז לדומיינים דיגיטלי/מנויים/רישיונות, דרך `asset_handover_forms` והקישור הקצר הקיים.
 - **עריכה**: הסרת נעילת הסטטוס ב-`OnboardingChecklist.tsx`/`useOnboarding.ts` והוספת רישום ל-`audit_log`.
+- **היסטוריית הקצאות**: hook חדש `useAssetAssignmentHistory` (מקבילה הפוכה ל-`useEmployeeResourceHistory`) מעל `activity_log`, `asset_handover_forms` ו-`signed_documents`, עם `performed_by` ושעה מלאה בכל הצמדה/שחרור.
+- **דוחות**: `src/lib/pdf/buildAssetReportPdf.ts` ו-`buildEmployeeEquipmentPdf.ts` על אותה תשתית RTL; כפתורים ב-`AssetDetailView.tsx` ובלשונית "ציוד וגישות" ב-`EmployeeDetail.tsx`.
 
 הערה: מיילים בפועל יצאו רק לאחר אימות רשומות ה-DNS של דומיין הדיוור; כל השאר יעבוד מיד.
