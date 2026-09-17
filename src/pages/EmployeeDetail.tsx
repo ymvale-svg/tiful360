@@ -282,11 +282,6 @@ export default function EmployeeDetail() {
         </div>
       )}
 
-      {/* Onboarding tab */}
-      {activeTab === "onboarding" && showOnboarding && (
-        <EmployeeOnboardingTab process={onboardingProcess!} />
-      )}
-
       {/* Tabs */}
       <div className="flex items-center gap-1 bg-card border border-border rounded-lg p-1 w-fit">
         {tabs.map((tab) => (
@@ -305,6 +300,11 @@ export default function EmployeeDetail() {
           </button>
         ))}
       </div>
+
+      {/* Onboarding tab */}
+      {activeTab === "onboarding" && showOnboarding && (
+        <EmployeeOnboardingTab process={onboardingProcess!} />
+      )}
 
       {/* Assets tab */}
       {activeTab === "assets" && (
