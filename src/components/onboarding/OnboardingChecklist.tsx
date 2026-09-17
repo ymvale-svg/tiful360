@@ -12,12 +12,19 @@ import {
   ONBOARDING_STATUS_LABEL,
   useUpdateOnboardingProcess,
   useUpsertOnboardingItem,
+  useDeleteOnboardingItem,
   daysUntil,
   type OnboardingProcess,
 } from "@/hooks/useOnboarding";
-import { getDomain, DOMAIN_META } from "@/lib/assetDomains";
+import {
+  appendOnboardingAudit,
+  useCompleteOnboardingProcess,
+} from "@/hooks/useOnboardingProtocol";
+import { useCompany } from "@/hooks/useCompany";
+import { EditAssetDialog } from "@/components/EditAssetDialog";
 import { OWNER_ROLE_LABEL, OWNER_ROLE_OPTIONS } from "@/lib/domainConfig";
-import { CheckCircle2, Printer, Package, StickyNote } from "lucide-react";
+import { formatDateTimeDMY } from "@/lib/utils";
+import { CheckCircle2, Printer, Package, StickyNote, Trash2 } from "lucide-react";
 
 interface Props {
   process: OnboardingProcess | null;
@@ -32,12 +39,17 @@ const FULFILLMENT_OPTIONS = [
 export function OnboardingChecklist({ process, onOpenChange }: Props) {
   const { toast } = useToast();
   const qc = useQueryClient();
+  const { activeCompanyId } = useCompany();
   const { data: assets = [] } = useAssets();
   const { data: categories = [] } = useAssetCategories();
   const { data: groups = [] } = useAssetGroups();
   const upsertItem = useUpsertOnboardingItem();
+  const deleteItem = useDeleteOnboardingItem();
   const updateProcess = useUpdateOnboardingProcess();
+  const completeProcess = useCompleteOnboardingProcess();
   const [ownerFilter, setOwnerFilter] = useState<string>("");
+  const [assetCard, setAssetCard] = useState<any | null>(null);
+  const [finishing, setFinishing] = useState(false);
 
   const items = useMemo(
     () => [...(process?.onboarding_items ?? [])].sort((a, b) => a.created_at.localeCompare(b.created_at)),
@@ -74,7 +86,7 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
         (a) =>
           (!categoryId || a.category_id === categoryId) &&
           (!groupId || a.group_id === groupId) &&
-          !a.current_owner_id
+          (!a.current_owner_id || a.current_owner_id === process.employee_id)
       )
       .map((a) => ({ value: a.id, label: `${a.asset_name} · ${a.asset_code}` }));
 
@@ -87,31 +99,94 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
   };
 
   const completeItem = async (item: (typeof items)[number], checked: boolean) => {
-    await setItem(item.id, { status: checked ? "done" : "pending" });
-    if (checked && item.asset_id) {
+    if (checked && !item.asset_id) {
+      toast({
+        title: "בחרו פריט מהמלאי",
+        description: "יש לבחור את הפריט שיוצמד לעובד לפני סימון 'בוצע'",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const now = new Date().toISOString();
+    await setItem(item.id, {
+      status: checked ? "done" : "pending",
+      assigned_at: checked ? now : null,
+    });
+
+    if (item.asset_id) {
+      // Every "done" tick assigns the item to the employee immediately.
       const { error } = await supabase
         .from("assets")
-        .update({ current_owner_id: process.employee_id, status: "in_use" } as any)
+        .update(
+          checked
+            ? { current_owner_id: process.employee_id, status: "in_use" }
+            : { current_owner_id: null, status: "in_stock" }
+        )
         .eq("id", item.asset_id);
       if (error) {
         toast({ title: "שגיאה בהצמדת הפריט", description: error.message, variant: "destructive" });
         return;
       }
+
+      const asset = (assets as any[]).find((a) => a.id === item.asset_id);
+      const { data: auth } = await supabase.auth.getUser();
+      await supabase.from("activity_log").insert({
+        company_id: activeCompanyId,
+        employee_id: checked ? process.employee_id : null,
+        action: checked
+          ? `הצמדת פריט בקליטת עובד: ${asset?.asset_name ?? item.title}`
+          : `ביטול הצמדה בקליטת עובד: ${asset?.asset_name ?? item.title}`,
+        details: asset?.asset_code ? `מזהה פריט: ${asset.asset_code}` : null,
+        entity_type: "asset",
+        entity_id: item.asset_id,
+        performed_by: auth?.user?.id ?? null,
+      } as any);
+
       qc.invalidateQueries({ queryKey: ["assets"] });
       qc.invalidateQueries({ queryKey: ["employee-assets"] });
+      qc.invalidateQueries({ queryKey: ["activity-log"] });
+      qc.invalidateQueries({ queryKey: ["asset-assignment-history"] });
+
+      if (checked && asset) {
+        // Open the asset card so operations can complete its details right away.
+        setAssetCard({ ...asset, current_owner_id: process.employee_id, status: "in_use" });
+      }
     }
+
+    await appendOnboardingAudit(
+      process.id,
+      `${checked ? "סומן כבוצע" : "בוטל סימון ביצוע"}: ${item.title}`
+    );
+
     if (process.status === "sent" && checked) {
       updateProcess.mutate({ id: process.id, status: "in_progress" });
     }
   };
 
+  const removeItem = async (item: (typeof items)[number]) => {
+    try {
+      await deleteItem.mutateAsync(item.id);
+      await appendOnboardingAudit(process.id, `פריט הוסר מהתהליך: ${item.title}`);
+      toast({ title: "הפריט הוסר" });
+    } catch (e: any) {
+      toast({ title: "שגיאה", description: e.message, variant: "destructive" });
+    }
+  };
+
   const finish = async () => {
-    await updateProcess.mutateAsync({
-      id: process.id,
-      status: "done",
-      completed_at: new Date().toISOString(),
-    });
-    toast({ title: "תהליך הקליטה הושלם" });
+    setFinishing(true);
+    try {
+      await completeProcess.mutateAsync({ processId: process.id });
+      toast({
+        title: "תהליך הקליטה הושלם",
+        description: "הופק פרוטוקול מעודכן (גרסה 2) ונשמר בתיק העובד",
+      });
+    } catch (e: any) {
+      toast({ title: "שגיאה", description: e.message, variant: "destructive" });
+    } finally {
+      setFinishing(false);
+    }
   };
 
   const printProtocol = () => {
@@ -157,8 +232,13 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
               <Printer className="w-4 h-4" /> פרוטוקול מסירה
             </Button>
             {process.status !== "done" && (
-              <Button size="sm" className="gap-1.5" onClick={finish} disabled={doneCount < items.length}>
-                <CheckCircle2 className="w-4 h-4" /> סיום תהליך
+              <Button
+                size="sm"
+                className="gap-1.5"
+                onClick={finish}
+                disabled={doneCount < items.length || finishing}
+              >
+                <CheckCircle2 className="w-4 h-4" /> {finishing ? "מפיק פרוטוקול..." : "סיום תהליך"}
               </Button>
             )}
           </div>
@@ -191,6 +271,20 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
                                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">
                                     {OWNER_ROLE_LABEL[item.owner_role] ?? item.owner_role}
                                   </span>
+                                  {item.assigned_at && (
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600">
+                                      הוצמד ב-{formatDateTimeDMY(item.assigned_at)}
+                                    </span>
+                                  )}
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-6 w-6 mr-auto text-muted-foreground hover:text-destructive"
+                                    onClick={() => removeItem(item)}
+                                    aria-label="הסר פריט"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </Button>
                                 </div>
                                 {item.notes && (
                                   <p className="text-xs mt-1.5 px-2.5 py-1.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-foreground flex items-start gap-1.5">
@@ -241,6 +335,11 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
           )}
         </div>
       </SheetContent>
+      <EditAssetDialog
+        open={!!assetCard}
+        onOpenChange={(o) => !o && setAssetCard(null)}
+        asset={assetCard}
+      />
     </Sheet>
   );
 }

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { UserPlus, Search, Send } from "lucide-react";
 import { NewOnboardingDialog } from "@/components/onboarding/NewOnboardingDialog";
 import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
+import { SendToOpsDialog } from "@/components/onboarding/SendToOpsDialog";
 import {
   ONBOARDING_STATUS_LABEL,
   daysUntil,
@@ -24,6 +25,7 @@ export default function Onboarding() {
   const updateProcess = useUpdateOnboardingProcess();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selected, setSelected] = useState<OnboardingProcess | null>(null);
+  const [sendTarget, setSendTarget] = useState<OnboardingProcess | null>(null);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<OnboardingStatus | "all">("all");
 
@@ -123,7 +125,7 @@ export default function Onboarding() {
                     className="gap-1.5"
                     onClick={(e) => {
                       e.stopPropagation();
-                      updateProcess.mutate({ id: p.id, status: "sent" });
+                      setSendTarget(p);
                     }}
                   >
                     <Send className="w-3.5 h-3.5" />
@@ -138,6 +140,15 @@ export default function Onboarding() {
 
       <NewOnboardingDialog open={dialogOpen} onOpenChange={setDialogOpen} />
       <OnboardingChecklist process={openProcess} onOpenChange={(o) => !o && setSelected(null)} />
+      <SendToOpsDialog
+        open={!!sendTarget}
+        onOpenChange={(o) => !o && setSendTarget(null)}
+        processId={sendTarget?.id ?? null}
+        employeeId={sendTarget?.employee_id ?? null}
+        employeeName={sendTarget?.employees?.full_name}
+        itemCount={sendTarget?.onboarding_items?.length}
+        onSent={() => setSendTarget(null)}
+      />
     </div>
   );
 }

@@ -19,6 +19,7 @@ export interface OnboardingItem {
   status: string;
   notes: string | null;
   completed_at: string | null;
+  assigned_at?: string | null;
   created_at: string;
 }
 
@@ -31,6 +32,10 @@ export interface OnboardingProcess {
   updated_at: string;
   completed_at: string | null;
   pdf_url: string | null;
+  sent_at?: string | null;
+  protocol_version?: number | null;
+  it_ticket_id?: string | null;
+  audit_log?: unknown;
   employees?: {
     full_name: string;
     employee_code: string;
