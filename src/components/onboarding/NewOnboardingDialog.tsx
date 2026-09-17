@@ -52,6 +52,9 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
   const [newEmployeeOpen, setNewEmployeeOpen] = useState(false);
   const [quickAdd, setQuickAdd] = useState<Record<string, string>>({});
   const [quickModel, setQuickModel] = useState<Record<string, string>>({});
+  const [pendingSend, setPendingSend] = useState<
+    { processId: string; employeeId: string; count: number } | null
+  >(null);
 
 
   useEffect(() => {
