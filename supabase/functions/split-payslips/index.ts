@@ -29,9 +29,15 @@ interface PageInfo {
 
 function parseNumber(s: string | undefined | null): number | null {
   if (!s) return null;
-  const cleaned = s.replace(/,/g, '').trim();
-  const n = parseFloat(cleaned);
-  return isNaN(n) ? null : n;
+  let cleaned = s.replace(/,/g, '').trim();
+  // Hebrew payslips render negatives with the minus either before or after
+  // the digits ("-0.69" / "0.69-"). Both mean the same thing.
+  let negative = false;
+  if (cleaned.startsWith('-')) { negative = true; cleaned = cleaned.slice(1); }
+  if (cleaned.endsWith('-')) { negative = true; cleaned = cleaned.slice(0, -1); }
+  const n = parseFloat(cleaned.trim());
+  if (isNaN(n)) return null;
+  return negative ? -n : n;
 }
 
 function normalizeIdNumber(raw: string | null | undefined): string | null {
