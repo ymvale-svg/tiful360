@@ -7,7 +7,8 @@
       "namespace": "android_app",
       "package_name": "com.tiful360.twa",
       "sha256_cert_fingerprints": [
-        "45:8F:D4:4D:5A:A3:C2:D0:6A:1B:AC:BA:3C:02:37:B9:FD:5A:28:F8:EB:BE:84:4B:8A:AC:58:22:4B:D4:68:AB"
+        "45:8F:D4:4D:5A:A3:C2:D0:6A:1B:AC:BA:3C:02:37:B9:FD:5A:28:F8:EB:BE:84:4B:8A:AC:58:22:4B:D4:68:AB",
+        "52:35:0C:3B:1A:FB:A0:A8:7D:F2:F6:87:A8:E6:C5:6D:3B:49:45:F4:91:DD:CB:38:2E:A7:A0:C7:31:DB:92:A8"
       ]
     }
   }
