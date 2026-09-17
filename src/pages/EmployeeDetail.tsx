@@ -2,7 +2,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   ArrowRight, Shield, Key, Clock, AlertTriangle, UserMinus,
   FileText, RefreshCw, Package, User, Mail, Phone, Calendar, Building2, IdCard,
-  Pencil, Plus, Trash2, Upload, Unlink, CalendarDays, MapPin, Lock, Car,
+  Pencil, Plus, Trash2, Upload, Unlink, CalendarDays, MapPin, Lock, Car, ClipboardList,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,6 +33,8 @@ import { getDomain, domainKeyToSlug } from "@/lib/assetDomains";
 import { EmployeeActivityTimeline } from "@/components/EmployeeActivityTimeline";
 import { EmployeeVehiclesTab } from "@/components/vehicles/EmployeeVehiclesTab";
 import { isVehicleAsset } from "@/lib/vehicleLinkedGroups";
+import { useEmployeeOnboardingProcess, ONBOARDING_STATUS_LABEL, daysUntil } from "@/hooks/useOnboarding";
+import { EmployeeOnboardingTab } from "@/components/onboarding/EmployeeOnboardingTab";
 
 
 
