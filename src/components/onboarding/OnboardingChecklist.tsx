@@ -23,7 +23,7 @@ import {
 import { useCompany } from "@/hooks/useCompany";
 import { EditAssetDialog } from "@/components/EditAssetDialog";
 import { OWNER_ROLE_LABEL, OWNER_ROLE_OPTIONS } from "@/lib/domainConfig";
-import { formatDateDMY } from "@/lib/utils";
+import { formatDateTimeDMY } from "@/lib/utils";
 import { CheckCircle2, Printer, Package, StickyNote, Trash2 } from "lucide-react";
 
 interface Props {
@@ -273,7 +273,7 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
                                   </span>
                                   {item.assigned_at && (
                                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600">
-                                      הוצמד ב-{formatDateDMY(item.assigned_at, true)}
+                                      הוצמד ב-{formatDateTimeDMY(item.assigned_at)}
                                     </span>
                                   )}
                                   <Button
@@ -335,6 +335,11 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
           )}
         </div>
       </SheetContent>
+      <EditAssetDialog
+        open={!!assetCard}
+        onOpenChange={(o) => !o && setAssetCard(null)}
+        asset={assetCard}
+      />
     </Sheet>
   );
 }
