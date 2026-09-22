@@ -343,6 +343,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
                     <p className="text-sm font-medium">תהליך מסירה במצב טיוטה</p>
                     <p className="text-xs text-muted-foreground">
                       נשמר ב־{formatDraftTime(handoverDraft.savedAt)}
+                      {handoverDraft.savedByName ? ` · ${handoverDraft.savedByName}` : ""}
                     </p>
                   </div>
                 </div>
