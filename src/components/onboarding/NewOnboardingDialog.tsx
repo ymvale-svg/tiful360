@@ -39,7 +39,7 @@ type SelectedEntry = {
   models: Record<string, string>;
 };
 
-export function NewOnboardingDialog({ open, onOpenChange }: Props) {
+export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) {
   const { toast } = useToast();
   const { data: employees = [] } = useEmployees();
   const { data: categories = [] } = useAssetCategories();
