@@ -50,6 +50,7 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
   const createGroup = useCreateAssetGroup();
   const createModel = useCreateAssetGroupModel();
   const create = useCreateOnboardingProcess();
+  const qc = useQueryClient();
 
   const [employeeId, setEmployeeId] = useState("");
   const [selected, setSelected] = useState<Record<string, SelectedEntry>>({});
@@ -287,6 +288,76 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
       });
     });
 
+
+  // Edit mode: apply the selection diff to the existing process.
+  // Items already done or with an assigned asset are never deleted; manual items
+  // (without a catalog reference) are kept as-is.
+  const saveEdit = async () => {
+    if (!editProcess) return;
+    const newItems = buildItems();
+    const key = (i: { catalog_ref_id?: string | null; selected_group_id?: string | null; selected_model_id?: string | null }) =>
+      `${i.catalog_ref_id ?? ""}|${i.selected_group_id ?? "_"}|${i.selected_model_id ?? ""}`;
+    const existing = editProcess.onboarding_items ?? [];
+    const newKeys = new Set(newItems.map(key));
+    const existingByKey = new Map(existing.map((i) => [key(i), i]));
+
+    const toDelete = existing.filter(
+      (i) => i.status !== "done" && !i.asset_id && i.catalog_ref_id && !newKeys.has(key(i))
+    );
+    const toInsert = newItems.filter((i) => !existingByKey.has(key(i)));
+    const toUpdate = newItems
+      .filter((i) => existingByKey.has(key(i)))
+      .map((i) => ({ id: existingByKey.get(key(i))!.id, item: i }))
+      .filter(({ id, item }) => {
+        const ex = existingByKey.get(key(item))!;
+        return ex.owner_role !== item.owner_role || (ex.notes ?? null) !== (item.notes ?? null) || ex.title !== item.title;
+      });
+
+    try {
+      for (const d of toDelete) {
+        const { error } = await supabase.from("onboarding_items").delete().eq("id", d.id);
+        if (error) throw error;
+      }
+      for (const u of toUpdate) {
+        const { error } = await supabase
+          .from("onboarding_items")
+          .update({ title: u.item.title, owner_role: u.item.owner_role, notes: u.item.notes ?? null } as any)
+          .eq("id", u.id);
+        if (error) throw error;
+      }
+      if (toInsert.length) {
+        const { error } = await supabase.from("onboarding_items").insert(
+          toInsert.map((i) => ({
+            process_id: editProcess.id,
+            title: i.title,
+            item_type: i.item_type ?? "asset",
+            owner_role: i.owner_role ?? "it_manager",
+            catalog_ref_id: i.catalog_ref_id ?? null,
+            selected_group_id: i.selected_group_id ?? null,
+            selected_model_id: i.selected_model_id ?? null,
+            fulfillment_type: i.fulfillment_type ?? null,
+            notes: i.notes ?? null,
+            status: "pending",
+          })) as any
+        );
+        if (error) throw error;
+      }
+      const changes: string[] = [];
+      if (toInsert.length) changes.push(`${toInsert.length} נוספו`);
+      if (toUpdate.length) changes.push(`${toUpdate.length} עודכנו`);
+      if (toDelete.length) changes.push(`${toDelete.length} הוסרו`);
+      await appendOnboardingAudit(
+        editProcess.id,
+        `התהליך נערך מחלון הקליטה${changes.length ? `: ${changes.join(", ")}` : " — ללא שינויים"}`
+      );
+      qc.invalidateQueries({ queryKey: ["onboarding-processes"] });
+      qc.invalidateQueries({ queryKey: ["employee-onboarding-process"] });
+      toast({ title: "השינויים נשמרו", description: changes.length ? changes.join(" · ") : "לא בוצעו שינויים" });
+      onOpenChange(false);
+    } catch (e: any) {
+      toast({ title: "שגיאה בשמירה", description: e.message, variant: "destructive" });
+    }
+  };
 
   const submit = async (status: "draft" | "sent") => {
     if (!employeeId) {
