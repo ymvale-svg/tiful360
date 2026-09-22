@@ -287,11 +287,22 @@ export function useCompleteOnboardingProcess() {
     mutationFn: async ({ processId }: { processId: string }) => {
       if (!activeCompanyId) throw new Error("לא נבחרה חברה");
 
-      await appendOnboardingAudit(processId, "התהליך הושלם והופקה גרסה 2 של הפרוטוקול (לאחר ביצוע)");
+      // Every closing round produces its own version, so earlier protocols stay intact.
+      const { data: current } = await supabase
+        .from("onboarding_processes")
+        .select("protocol_version")
+        .eq("id", processId)
+        .maybeSingle();
+      const version = Math.max(2, ((current as any)?.protocol_version ?? 1) + 1);
+
+      await appendOnboardingAudit(
+        processId,
+        `התהליך הושלם והופקה גרסה ${version} של הפרוטוקול (לאחר ביצוע)`
+      );
 
       const built = await generateProtocol({
         processId,
-        version: 2,
+        version,
         companyId: activeCompanyId,
         companyName: activeCompany?.name ?? "",
         companyLogoUrl: (activeCompany as any)?.logo_url ?? null,
@@ -308,10 +319,11 @@ export function useCompleteOnboardingProcess() {
         .update({
           status: "done",
           completed_at: new Date().toISOString(),
-          protocol_version: 2,
+          protocol_version: version,
           pdf_url: built.path,
         } as any)
         .eq("id", processId);
+
 
       const ticketId = (proc as any)?.it_ticket_id;
       if (ticketId) {
