@@ -230,6 +230,7 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
       key: draftKey,
       savedAt: new Date().toISOString(),
       label: `${asset?.asset_name ?? ""} ${asset?.asset_code ? `(${asset.asset_code})` : ""}`.trim(),
+      companyId: activeCompanyId ?? null,
       state: { step, mode, employeeId, selectedKeys, freeText, odometer },
       photos,
       video: videoFile,
@@ -705,8 +706,14 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
             {foundDraft && (
               <div className="rounded-lg border border-primary/40 bg-primary/5 p-3 space-y-2">
                 <p className="text-sm">
-                  נמצאה טיוטה שמורה מ־{formatDraftTime(foundDraft.savedAt)}. לשחזר ולהמשיך מהמקום שבו הפסקת?
+                  נמצאה טיוטה שמורה מ־{formatDraftTime(foundDraft.savedAt)}
+                  {foundDraft.savedByName ? ` (${foundDraft.savedByName})` : ""}. לשחזר ולהמשיך מהמקום שבו הפסקת?
                 </p>
+                {foundDraft.remoteOnly && foundDraft.hasMedia && (
+                  <p className="text-xs text-muted-foreground">
+                    הצילומים שצורפו נשמרו במכשיר שבו נפתח התהליך ואינם זמינים כאן.
+                  </p>
+                )}
                 <div className="flex gap-2">
                   <Button size="sm" className="gap-1.5" onClick={restoreDraft}>
                     <RotateCcw className="w-4 h-4" /> שחזר טיוטה
