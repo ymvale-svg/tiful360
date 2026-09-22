@@ -1745,6 +1745,47 @@ export type Database = {
           },
         ]
       }
+      handover_drafts: {
+        Row: {
+          company_id: string | null
+          has_media: boolean
+          key: string
+          label: string
+          saved_at: string
+          saved_by: string | null
+          saved_by_name: string | null
+          state: Json
+        }
+        Insert: {
+          company_id?: string | null
+          has_media?: boolean
+          key: string
+          label?: string
+          saved_at?: string
+          saved_by?: string | null
+          saved_by_name?: string | null
+          state?: Json
+        }
+        Update: {
+          company_id?: string | null
+          has_media?: boolean
+          key?: string
+          label?: string
+          saved_at?: string
+          saved_by?: string | null
+          saved_by_name?: string | null
+          state?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "handover_drafts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       it_tickets: {
         Row: {
           assigned_to: string | null

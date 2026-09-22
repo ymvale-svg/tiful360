@@ -15,6 +15,13 @@
       "when": 1790061085498,
       "tag": "0001_it_tickets_open_to_all_ops_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790068517945,
+      "tag": "0002_create_handover_drafts",
+      "breakpoints": true
     }
   ]
 }
