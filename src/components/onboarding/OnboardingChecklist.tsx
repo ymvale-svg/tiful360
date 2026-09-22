@@ -380,7 +380,35 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
               אין פריטים בתהליך זה
             </div>
           )}
+
+          <div className="border border-dashed border-border rounded-xl p-4 space-y-2">
+            <h3 className="text-sm font-semibold">הוספת פריט לתהליך</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <input
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                placeholder="שם הפריט / ההרשאה"
+                className="w-full px-3 py-2 bg-card border border-border rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
+              />
+              <SearchableSelect
+                value={newOwner}
+                onChange={setNewOwner}
+                options={OWNER_ROLE_OPTIONS}
+                placeholder="אחראי"
+              />
+            </div>
+            <input
+              value={newNotes}
+              onChange={(e) => setNewNotes(e.target.value)}
+              placeholder="הערה לאחראי (לא חובה)"
+              className="w-full px-3 py-2 bg-card border border-border rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
+            />
+            <Button size="sm" className="gap-1.5" onClick={addItem} disabled={!newTitle.trim() || adding}>
+              <Plus className="w-4 h-4" /> {adding ? "מוסיף..." : "הוסף פריט"}
+            </Button>
+          </div>
         </div>
+
       </SheetContent>
       <EditAssetDialog
         open={!!assetCard}
