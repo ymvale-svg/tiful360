@@ -74,10 +74,16 @@ export function HandoverFormsList({ forms, context, emptyText = "אין עדיי
         const snap = (f.form_snapshot ?? {}) as any;
         const isReturn = f.direction === "return";
         const title = snap.title || (isReturn ? "פרוטוקול הזדכות" : "פרוטוקול משיכה");
-        const subject =
+        const subjectText =
           context === "asset"
             ? f.employees?.full_name || snap.employee_name || "—"
             : f.assets?.asset_name || snap.employee_name || "פריט";
+        const subject =
+          context === "asset" && f.employee_id ? (
+            <EmployeeLink employeeId={f.employee_id} name={subjectText} />
+          ) : (
+            subjectText
+          );
         const code = context === "employee" ? f.assets?.asset_code : null;
         const url = f.pdf_url || f.attached_document_url;
         const pending = f.status !== "signed";
