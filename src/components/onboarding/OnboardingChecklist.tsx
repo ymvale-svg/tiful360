@@ -204,15 +204,28 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
     }
   };
 
+  // Reopening keeps the previous round intact: its closing date, its protocol version and
+  // its stored PDF all stay on record; the new round is added on top of them.
   const reopen = async () => {
     try {
+      const prevClosed = (process as any).completed_at
+        ? formatDateTimeDMY((process as any).completed_at)
+        : null;
+      const prevVersion = (process as any).protocol_version ?? 1;
       await updateProcess.mutateAsync({ id: process.id, status: "in_progress", completed_at: null });
-      await appendOnboardingAudit(process.id, "התהליך נפתח מחדש לעריכה");
-      toast({ title: "התהליך נפתח מחדש", description: "ניתן להוסיף ולערוך פריטים" });
+      await appendOnboardingAudit(
+        process.id,
+        `התהליך נפתח מחדש לעריכה — הסבב הקודם${prevClosed ? ` (נסגר ב-${prevClosed})` : ""} ופרוטוקול גרסה ${prevVersion} נשמרים בתיק העובד`
+      );
+      toast({
+        title: "התהליך נפתח מחדש",
+        description: `הסבב הקודם נשמר (פרוטוקול גרסה ${prevVersion}); בסיום יופק פרוטוקול גרסה ${prevVersion + 1}`,
+      });
     } catch (e: any) {
       toast({ title: "שגיאה", description: e.message, variant: "destructive" });
     }
   };
+
 
 
   const finish = async () => {
