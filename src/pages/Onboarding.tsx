@@ -5,6 +5,7 @@ import { UserPlus, Search, Send, UserRound, AlertCircle } from "lucide-react";
 import { NewOnboardingDialog } from "@/components/onboarding/NewOnboardingDialog";
 import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
 import { SendToOpsDialog } from "@/components/onboarding/SendToOpsDialog";
+import { EmployeeLink } from "@/components/EmployeeLink";
 import {
   ONBOARDING_STATUS_LABEL,
   daysUntil,
