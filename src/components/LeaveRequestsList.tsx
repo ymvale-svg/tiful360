@@ -54,7 +54,9 @@ export function LeaveRequestsList({ requests, showEmployee, allowCancel }: Props
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               {showEmployee && (
-                <p className="text-sm font-semibold">{r.employee?.full_name}</p>
+                <p className="text-sm font-semibold">
+                  <EmployeeLink employeeId={r.employee_id} name={r.employee?.full_name} />
+                </p>
               )}
               <p className="text-sm">
                 <span className="font-medium">{TYPE_LABELS[r.request_type]}</span>
