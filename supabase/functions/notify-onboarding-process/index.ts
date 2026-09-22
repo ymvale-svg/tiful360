@@ -295,9 +295,8 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
+    return new Response(JSON.stringify({ ok: true, sent, total }), {
 
-
-    return new Response(JSON.stringify({ ok: true, sent, total: recipients.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
