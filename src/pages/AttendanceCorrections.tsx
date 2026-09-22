@@ -97,7 +97,9 @@ export default function AttendanceCorrections() {
             <div key={r.id} className="bg-card rounded-xl border border-border/50 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-sm">{r.employee?.full_name}</p>
+                  <p className="font-semibold text-sm">
+                    <EmployeeLink employeeId={r.employee_id} name={r.employee?.full_name} />
+                  </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {r.employee?.department} • תאריך תיקון: {new Date(r.correction_date).toLocaleDateString("en-GB")}
                   </p>
