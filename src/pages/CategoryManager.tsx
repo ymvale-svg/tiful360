@@ -5,6 +5,7 @@ import {
   Plus, GripVertical, Trash2, Save, Pencil, Search,
   Type, Hash, Calendar, List, ListChecks, Settings2, Check, X, ChevronLeft, Users,
 } from "lucide-react";
+import { ManageGroupsDialog } from "@/components/ManageGroupsDialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAssetCategories } from "@/hooks/useData";
