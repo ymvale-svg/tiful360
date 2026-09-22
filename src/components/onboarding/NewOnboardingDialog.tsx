@@ -654,13 +654,21 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
 
           <div className="flex flex-col-reverse sm:flex-row gap-2 justify-end mt-4">
             <Button variant="ghost" onClick={() => onOpenChange(false)}>ביטול</Button>
-            <Button variant="outline" onClick={() => submit("draft")} disabled={create.isPending}>
-              שמור כטיוטה
-            </Button>
-            <Button onClick={() => submit("sent")} disabled={create.isPending} className="gap-2">
-              <Send className="w-4 h-4" />
-              שלח לתפעול
-            </Button>
+            {editProcess ? (
+              <Button onClick={saveEdit} className="gap-2">
+                שמור שינויים
+              </Button>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => submit("draft")} disabled={create.isPending}>
+                  שמור כטיוטה
+                </Button>
+                <Button onClick={() => submit("sent")} disabled={create.isPending} className="gap-2">
+                  <Send className="w-4 h-4" />
+                  שלח לתפעול
+                </Button>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>
