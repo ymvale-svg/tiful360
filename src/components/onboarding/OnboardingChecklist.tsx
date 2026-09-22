@@ -179,6 +179,42 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
     }
   };
 
+  // Items can be added at any stage — also after the process was sent or completed.
+  const addItem = async () => {
+    const title = newTitle.trim();
+    if (!title) return;
+    setAdding(true);
+    try {
+      await upsertItem.mutateAsync({
+        process_id: process.id,
+        title,
+        owner_role: newOwner,
+        item_type: "asset",
+        notes: newNotes.trim() || null,
+        status: "pending",
+      } as any);
+      await appendOnboardingAudit(process.id, `פריט נוסף לתהליך: ${title}`);
+      setNewTitle("");
+      setNewNotes("");
+      toast({ title: "הפריט נוסף" });
+    } catch (e: any) {
+      toast({ title: "שגיאה", description: e.message, variant: "destructive" });
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const reopen = async () => {
+    try {
+      await updateProcess.mutateAsync({ id: process.id, status: "in_progress", completed_at: null });
+      await appendOnboardingAudit(process.id, "התהליך נפתח מחדש לעריכה");
+      toast({ title: "התהליך נפתח מחדש", description: "ניתן להוסיף ולערוך פריטים" });
+    } catch (e: any) {
+      toast({ title: "שגיאה", description: e.message, variant: "destructive" });
+    }
+  };
+
+
   const finish = async () => {
     setFinishing(true);
     try {
