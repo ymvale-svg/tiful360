@@ -398,9 +398,13 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="w-5 h-5 text-primary" />
-              תהליך קליטת עובד
+              {editProcess ? "עריכת תהליך קליטה" : "תהליך קליטת עובד"}
             </DialogTitle>
-            <DialogDescription>בחר את העובד ואת המשאבים הנדרשים לו ליום הראשון</DialogDescription>
+            <DialogDescription>
+              {editProcess
+                ? `עריכת הצרכים של ${editProcess.employees?.full_name ?? "העובד"} — פריטים שכבר בוצעו נשמרים ולא יימחקו`
+                : "בחר את העובד ואת המשאבים הנדרשים לו ליום הראשון"}
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-5 mt-2">
@@ -408,18 +412,20 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
               <div>
                 <label className="text-sm font-medium mb-1.5 block">עובד נקלט</label>
                 <div className="flex gap-2">
-                  <div className="flex-1">
+                  <div className={`flex-1 ${editProcess ? "pointer-events-none opacity-60" : ""}`}>
                     <SearchableSelect value={employeeId} onChange={setEmployeeId} options={employeeOptions} />
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    title="עובד חדש"
-                    onClick={() => setNewEmployeeOpen(true)}
-                  >
-                    <UserPlus className="w-4 h-4" />
-                  </Button>
+                  {!editProcess && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      title="עובד חדש"
+                      onClick={() => setNewEmployeeOpen(true)}
+                    >
+                      <UserPlus className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
                 {employee && (
                   <div className="flex items-center gap-2 mt-1.5">
