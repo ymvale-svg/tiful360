@@ -173,7 +173,22 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
 
       if (revertingOffboarding) {
         await cancelOffboarding.mutateAsync(employee.id);
+        try {
+          const { data: authData } = await supabase.auth.getUser();
+          await supabase.from("activity_log").insert({
+            entity_type: "employee",
+            entity_id: employee.id,
+            employee_id: employee.id,
+            company_id: (employee as any)?.company_id ?? null,
+            action: `החזרת עובד לפעיל - ${employee.full_name ?? ""}`.trim(),
+            details: "תאריך העזיבה בוטל, חסימת הגישה למערכת הוסרה והעובד הוחזר למצב פעיל.",
+            performed_by: authData?.user?.id ?? null,
+          });
+        } catch {
+          // logging must never block the save
+        }
       }
+
 
       queryClient.invalidateQueries({ queryKey: ["employees-full"] });
       toast({
