@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
 
     const { data: company } = await supabase
       .from("companies")
-      .select("name, operations_emails, it_emails, hr_emails")
+      .select("name, operations_emails, it_emails, hr_emails, payroll_emails")
       .eq("id", (proc as any).company_id)
       .single();
 
@@ -134,27 +134,17 @@ Deno.serve(async (req) => {
     const requesterEmail =
       typeof (claims.claims as any)?.email === "string" ? (claims.claims as any).email : "";
 
-    const recipients = Array.from(
-      new Set(
-        [
-          company?.operations_emails ?? "",
-          company?.it_emails ?? "",
-          company?.hr_emails ?? "",
-          requesterEmail,
-        ]
-          .join(",")
-          .split(",")
-          .map((s: string) => s.trim().toLowerCase())
-          .filter((s: string) => s.length > 0 && /^\S+@\S+\.\S+$/.test(s)),
-      ),
-    );
-
-    if (recipients.length === 0) {
-      return new Response(
-        JSON.stringify({ ok: true, warning: "no operations recipients configured" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    const parseEmails = (...raw: Array<string | null | undefined>) =>
+      Array.from(
+        new Set(
+          raw
+            .map((s) => s ?? "")
+            .join(",")
+            .split(",")
+            .map((s: string) => s.trim().toLowerCase())
+            .filter((s: string) => s.length > 0 && /^\S+@\S+\.\S+$/.test(s)),
+        ),
       );
-    }
 
     // Long-lived signed link to the stored protocol PDF.
     let documentUrl: string | null = null;
@@ -176,17 +166,17 @@ Deno.serve(async (req) => {
       ["תאריך קליטה", emp.start_date ?? "—"],
       ["טלפון", emp.phone ?? "—"],
       ["חברה", company?.name ?? "—"],
-      ["מספר פריטים", String(items.length)],
     ];
 
-    const itemsHtml = items.length
-      ? `<table role="presentation" cellpadding="8" cellspacing="0" width="100%" style="border-collapse:collapse;font-size:14px;margin:12px 0;">
+    const itemsTable = (list: Array<any>) =>
+      list.length
+        ? `<table role="presentation" cellpadding="8" cellspacing="0" width="100%" style="border-collapse:collapse;font-size:14px;margin:12px 0;">
           <tr style="background:#f1f5f9;color:#475569;">
             <th align="right" style="padding:8px;">פריט</th>
             <th align="right" style="padding:8px;">אחראי</th>
             <th align="right" style="padding:8px;">הערות</th>
           </tr>
-          ${items
+          ${list
             .map(
               (i) =>
                 `<tr style="border-top:1px solid #e2e8f0;">
@@ -197,7 +187,7 @@ Deno.serve(async (req) => {
             )
             .join("")}
         </table>`
-      : "";
+        : `<p style="color:#64748b;font-size:14px;">אין פריטים בתחום זה.</p>`;
 
     const url = `https://tiful360.com/onboarding`;
 
@@ -208,39 +198,104 @@ Deno.serve(async (req) => {
          <p style="color:#64748b;font-size:12px;">המסמך נשמר גם במסמכים שבתיק העובד במערכת.</p>`
       : "";
 
-    const heading = isFinal
-      ? "✅ תהליך הקליטה הושלם — פרוטוקול מעודכן (גרסה 2)"
-      : "🧑‍💼 התקבל טופס קליטת עובד חדש";
-    const intro = isFinal
-      ? "כל הפריטים בתהליך הקליטה בוצעו. מצורף הפרוטוקול המעודכן הכולל את מועדי הביצוע בפועל:"
-      : "משאבי אנוש שלחו לתפעול טופס צרכי קליטה:";
-
-    const html = layout(
-      isFinal ? "פרוטוקול קליטה מעודכן" : "טופס קליטת עובד",
-      `<h2 style="margin:0 0 8px;font-size:18px;">${heading}</h2>
+    const buildHtml = (heading: string, intro: string, list: Array<any>) =>
+      layout(
+        isFinal ? "פרוטוקול קליטה מעודכן" : "טופס קליטת עובד",
+        `<h2 style="margin:0 0 8px;font-size:18px;">${heading}</h2>
        <p style="color:#475569;font-size:14px;">${intro}</p>
-       ${detailsTable(rows)}
-       ${itemsHtml}
+       ${detailsTable([...rows, ["מספר פריטים", String(list.length)]])}
+       ${itemsTable(list)}
        ${docHtml}
        <p style="margin:18px 0;">
          <a href="${url}" style="background:#0f172a;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;display:inline-block;font-weight:600;">פתח את הצ'קליסט במערכת</a>
        </p>`,
-    );
+      );
 
+    // Route each part of the request to the team that owns it:
+    // IT items go to IT only, payroll items to payroll, everything else to operations.
+    const audiences: Array<{
+      key: string;
+      label: string;
+      emails: string[];
+      items: Array<any>;
+      full?: boolean;
+    }> = [
+      {
+        key: "it",
+        label: "מיחשוב ו-IT",
+        emails: parseEmails(company?.it_emails),
+        items: items.filter((i) => i.owner_role === "it_manager"),
+      },
+      {
+        key: "payroll",
+        label: "חשבות שכר",
+        emails: parseEmails(company?.payroll_emails),
+        items: items.filter((i) => i.owner_role === "payroll"),
+      },
+      {
+        key: "operations",
+        label: "תפעול",
+        emails: parseEmails(company?.operations_emails),
+        items: items.filter(
+          (i) => !["it_manager", "payroll"].includes(i.owner_role ?? ""),
+        ),
+      },
+      {
+        key: "hr",
+        label: "משאבי אנוש",
+        emails: parseEmails(company?.hr_emails, requesterEmail),
+        items,
+        full: true,
+      },
+    ];
+
+    // Do not double-send: an address already covered by an earlier audience is skipped.
+    const alreadySent = new Set<string>();
     let sent = 0;
-    for (const to of recipients) {
-      const ok = await enqueueTransactionalEmail(supabase, {
-        to,
-        subject: isFinal
-          ? `✅ פרוטוקול קליטה מעודכן — ${emp.full_name ?? ""}`
-          : `🧑‍💼 טופס קליטת עובד — ${emp.full_name ?? ""}`,
-        html,
-        label: isFinal ? "onboarding-process-completed" : "onboarding-process-sent",
-        idempotencyKey: `onboarding-${isFinal ? "final-" : ""}${process_id}-${to}`,
-        metadata: { process_id, final: isFinal },
-      });
-      if (ok) sent++;
+    let total = 0;
+
+    for (const aud of audiences) {
+      if (!aud.emails.length) continue;
+      if (!aud.full && aud.items.length === 0) continue;
+
+      const heading = isFinal
+        ? `✅ תהליך הקליטה הושלם — ${aud.full ? "פרוטוקול מעודכן (גרסה 2)" : `הפריטים באחריות ${aud.label}`}`
+        : aud.full
+          ? "🧑‍💼 נפתח תהליך קליטת עובד"
+          : `🧑‍💼 בקשת קליטת עובד — הפריטים באחריות ${aud.label}`;
+      const intro = isFinal
+        ? "כל הפריטים בתהליך הקליטה בוצעו. מצורף הפרוטוקול המעודכן הכולל את מועדי הביצוע בפועל:"
+        : aud.full
+          ? "משאבי אנוש פתחו תהליך קליטה. להלן כלל הפריטים בבקשה:"
+          : `להלן הפריטים בבקשת הקליטה שנמצאים באחריות ${aud.label}:`;
+
+      const html = buildHtml(heading, intro, aud.items);
+
+      for (const to of aud.emails) {
+        if (alreadySent.has(to)) continue;
+        alreadySent.add(to);
+        total++;
+        const ok = await enqueueTransactionalEmail(supabase, {
+          to,
+          subject: isFinal
+            ? `✅ פרוטוקול קליטה מעודכן — ${emp.full_name ?? ""}`
+            : `🧑‍💼 קליטת עובד (${aud.label}) — ${emp.full_name ?? ""}`,
+          html,
+          label: isFinal ? "onboarding-process-completed" : "onboarding-process-sent",
+          idempotencyKey: `onboarding-${isFinal ? "final-" : ""}${process_id}-${aud.key}-${to}`,
+          metadata: { process_id, final: isFinal, audience: aud.key },
+        });
+        if (ok) sent++;
+      }
     }
+
+    if (total === 0) {
+      return new Response(
+        JSON.stringify({ ok: true, warning: "no recipients configured" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
 
     return new Response(JSON.stringify({ ok: true, sent, total: recipients.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
