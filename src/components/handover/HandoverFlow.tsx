@@ -236,6 +236,7 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
       video: videoFile,
       odometerPhoto,
     });
+    qc.invalidateQueries({ queryKey: ["handover-drafts"] });
     setDraftSavedAt(new Date().toISOString());
     setFoundDraft(null);
     toast({ title: "הטיוטה נשמרה", description: "אפשר להמשיך את המסירה מאוחר יותר מאותו פריט" });
@@ -259,6 +260,7 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
 
   const discardDraft = async () => {
     if (draftKey) await deleteHandoverDraft(draftKey);
+    qc.invalidateQueries({ queryKey: ["handover-drafts"] });
     setFoundDraft(null);
   };
 
@@ -596,6 +598,7 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
       qc.invalidateQueries({ queryKey: ["handover-forms"] });
       qc.invalidateQueries({ queryKey: ["pending-handover"] });
       if (draftKey) await deleteHandoverDraft(draftKey);
+      qc.invalidateQueries({ queryKey: ["handover-drafts"] });
       onAssigned?.();
       close();
     } catch (e: any) {
@@ -629,6 +632,7 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
       qc.invalidateQueries({ queryKey: ["handover-forms"] });
       qc.invalidateQueries({ queryKey: ["pending-handover"] });
       if (draftKey) await deleteHandoverDraft(draftKey);
+      qc.invalidateQueries({ queryKey: ["handover-drafts"] });
       onAssigned?.();
       close();
       setSignLinkOpen(true);

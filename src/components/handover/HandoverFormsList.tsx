@@ -14,6 +14,7 @@ interface Props {
   /** "asset" — show the employee name; "employee" — show the item name. */
   context: "asset" | "employee";
   emptyText?: string;
+  hideEmpty?: boolean;
 }
 
 const fmt = (iso?: string | null) =>
@@ -22,7 +23,7 @@ const fmt = (iso?: string | null) =>
     : "—";
 
 /** Shared list of handover / return protocols (item card + employee portal). */
-export function HandoverFormsList({ forms, context, emptyText = "אין עדיין פרוטוקולים" }: Props) {
+export function HandoverFormsList({ forms, context, emptyText = "אין עדיין פרוטוקולים", hideEmpty = false }: Props) {
   const [preview, setPreview] = useState<{ url: string; title: string } | null>(null);
   const [mediaPreview, setMediaPreview] = useState<{ items: ProtocolMedia[]; title: string } | null>(null);
   const [creatingPreview, setCreatingPreview] = useState(false);
@@ -62,6 +63,7 @@ export function HandoverFormsList({ forms, context, emptyText = "אין עדיי
 
 
   if (forms.length === 0) {
+    if (hideEmpty) return null;
     return <p className="text-sm text-muted-foreground">{emptyText}</p>;
   }
 

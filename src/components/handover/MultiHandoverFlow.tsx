@@ -185,6 +185,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
       photos,
       video: videoFile,
     });
+    qc.invalidateQueries({ queryKey: ["handover-drafts"] });
     setDraftSavedAt(new Date().toISOString());
     setFoundDraft(null);
     toast({ title: "הטיוטה נשמרה", description: "אפשר להמשיך את המסירה מאוחר יותר" });
@@ -205,6 +206,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
 
   const discardDraft = async () => {
     if (draftKey) await deleteHandoverDraft(draftKey);
+    qc.invalidateQueries({ queryKey: ["handover-drafts"] });
     setFoundDraft(null);
   };
 
@@ -471,6 +473,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
       });
       invalidate();
       if (draftKey) await deleteHandoverDraft(draftKey);
+      qc.invalidateQueries({ queryKey: ["handover-drafts"] });
       onAssigned?.();
       close();
     } catch (e: any) {
@@ -506,6 +509,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
       });
       invalidate();
       if (draftKey) await deleteHandoverDraft(draftKey);
+      qc.invalidateQueries({ queryKey: ["handover-drafts"] });
       onAssigned?.();
       close();
       setSignLinkOpen(true);
