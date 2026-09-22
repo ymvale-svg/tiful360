@@ -3708,6 +3708,7 @@ export type Database = {
         Returns: boolean
       }
       is_operations: { Args: { _user_id: string }; Returns: boolean }
+      is_ops_staff: { Args: { _user_id: string }; Returns: boolean }
       is_payroll: { Args: { _user_id: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       my_access_blocked: { Args: never; Returns: boolean }
