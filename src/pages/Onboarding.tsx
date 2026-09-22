@@ -111,7 +111,9 @@ export default function Onboarding() {
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-medium">{p.employees?.full_name}</span>
+                  <span className="font-medium">
+                    <EmployeeLink employeeId={p.employee_id} name={p.employees?.full_name} />
+                  </span>
                   <span className={`text-[11px] px-2 py-0.5 rounded-full ${STATUS_STYLE[p.status]}`}>
                     {ONBOARDING_STATUS_LABEL[p.status]}
                   </span>
