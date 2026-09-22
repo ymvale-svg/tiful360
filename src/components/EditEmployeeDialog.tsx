@@ -159,12 +159,15 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
         payload.hebrew_birth_month = null;
         payload.hebrew_birth_year = null;
       }
-      // Returning a leaving employee to active cancels the offboarding protocol
+      // Returning any non-active employee (leaving/inactive, or one with a leave date)
+      // back to active must also cancel the offboarding and restore system access
       const revertingOffboarding =
-        employee?.status === "leaving" && payload.status === "active";
+        payload.status === "active" &&
+        (employee?.status !== "active" || !!(employee as any)?.end_date);
       if (revertingOffboarding) {
         delete payload.status;
       }
+
 
       await update.mutateAsync({ id: employee.id, ...payload });
 
