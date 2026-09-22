@@ -8,7 +8,7 @@ import {
 import { ManageGroupsDialog } from "@/components/ManageGroupsDialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useAssetCategories } from "@/hooks/useData";
+import { useAssetCategories, useAssets } from "@/hooks/useData";
 import { useCategoryFields, useCreateCategory, useUpdateCategory, useSaveCategoryFields, useDeleteCategory } from "@/hooks/useCategories";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -80,6 +80,7 @@ export default function CategoryManager() {
   const [newCatDomain, setNewCatDomain] = useState<DomainKey | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; assetCount: number } | null>(null);
   const { data: groups } = useAssetGroups();
+  const { data: assets } = useAssets();
 
   // Focus the requested domain when arriving from the domain card "quick edit" button
   useEffect(() => {
@@ -195,7 +196,7 @@ export default function CategoryManager() {
                 })}
               </HierarchyColumn>
               <HierarchyColumn title={selectedCategory ? `תתי-קטגוריות ב${selectedCategory.category_name}` : "תתי-קטגוריות"}>
-                {selectedCategory ? <SubCategoryColumn category={selectedCategory} categories={categories ?? []} groups={groups ?? []} search={normalizedSearch} /> : <EmptyHierarchy text="בחר קטגוריה כדי להציג תתי-קטגוריות" />}
+                {selectedCategory ? <SubCategoryColumn category={selectedCategory} categories={categories ?? []} groups={groups ?? []} assets={assets ?? []} search={normalizedSearch} /> : <EmptyHierarchy text="בחר קטגוריה כדי להציג תתי-קטגוריות" />}
               </HierarchyColumn>
             </div>
             <div className="px-4 py-3 border-t border-border bg-muted/30 flex items-center gap-2 text-xs text-muted-foreground"><span className="font-medium text-foreground">{labels[selectedDomain].title}</span><ChevronLeft className="w-3.5 h-3.5" /><span className="font-medium text-foreground">{selectedCategory?.category_name ?? "בחר קטגוריה"}</span></div>
@@ -257,7 +258,7 @@ function EmptyHierarchy({ text }: { text: string }) {
   return <div className="h-28 flex items-center justify-center text-center text-xs text-muted-foreground border border-dashed border-border rounded-md px-4">{text}</div>;
 }
 
-function SubCategoryColumn({ category, categories, groups, search }: { category: any; categories: any[]; groups: any[]; search: string }) {
+function SubCategoryColumn({ category, categories, groups, assets, search }: { category: any; categories: any[]; groups: any[]; assets: any[]; search: string }) {
   const createGroup = useCreateAssetGroup();
   const updateGroup = useUpdateAssetGroup();
   const deleteGroup = useDeleteAssetGroup();
@@ -273,7 +274,7 @@ function SubCategoryColumn({ category, categories, groups, search }: { category:
   return <>
     <div className="flex gap-2 pb-1"><input value={newName} onChange={(event) => setNewName(event.target.value)} onKeyDown={(event) => event.key === "Enter" && create()} placeholder="שם תת-קטגוריה חדשה" className="min-w-0 flex-1 h-9 px-3 rounded-md border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/25" /><Button size="icon" className="h-9 w-9 shrink-0" onClick={create} disabled={!newName.trim() || createGroup.isPending} title="הוסף תת-קטגוריה"><Plus className="w-4 h-4" /></Button></div>
     {categoryGroups.length === 0 ? <EmptyHierarchy text="אין עדיין תתי-קטגוריות" /> : categoryGroups.map((group) => {
-      const assetCount = category.assets?.filter?.((asset: any) => asset.group_id === group.id).length ?? 0;
+      const assetCount = assets.filter((asset) => asset.group_id === group.id).length;
       return <div key={group.id} className="rounded-md border border-border bg-background p-3 space-y-2">
         {editingId === group.id ? <div className="flex gap-1"><input autoFocus value={editName} onChange={(event) => setEditName(event.target.value)} onKeyDown={(event) => event.key === "Enter" && rename(group.id)} className="min-w-0 flex-1 h-8 px-2 rounded border border-border bg-card text-sm outline-none focus:ring-2 focus:ring-primary/25" /><Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => rename(group.id)}><Check className="w-4 h-4" /></Button><Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingId(null)}><X className="w-4 h-4" /></Button></div> : <div className="flex items-center gap-1"><div className="min-w-0 flex-1"><p className="text-sm font-semibold truncate">{group.name}</p><p className="text-[11px] text-muted-foreground">{assetCount} פריטים · {OWNER_ROLE_OPTIONS.find((option) => option.value === group.default_owner_role)?.label ?? "אחראי מהקטגוריה"}</p></div><Button size="icon" variant="ghost" className="h-8 w-8" title="ערוך שם" onClick={() => { setEditingId(group.id); setEditName(group.name); }}><Pencil className="w-3.5 h-3.5" /></Button><Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" title="מחק" onClick={() => remove(group.id, group.name)}><Trash2 className="w-3.5 h-3.5" /></Button></div>}
         <div className="grid grid-cols-2 gap-2"><select value={group.default_owner_role ?? ""} onChange={(event) => updateGroup.mutate({ id: group.id, default_owner_role: event.target.value || null })} aria-label={`אחראי עבור ${group.name}`} className="min-w-0 h-8 px-2 rounded border border-border bg-muted/40 text-[11px] outline-none"><option value="">אחראי מהקטגוריה</option>{OWNER_ROLE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><select value={category.id} onChange={(event) => moveGroup.mutate({ groupId: group.id, categoryId: event.target.value })} aria-label={`העבר את ${group.name}`} className="min-w-0 h-8 px-2 rounded border border-border bg-muted/40 text-[11px] outline-none">{DOMAIN_ORDER.map((domain) => <optgroup key={domain} label={DOMAIN_META[domain].title}>{categories.filter((item) => getDomain(item) === domain).map((item) => <option key={item.id} value={item.id}>{item.category_name}</option>)}</optgroup>)}</select></div>
