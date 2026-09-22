@@ -13,7 +13,10 @@ import {
   useCreateOnboardingProcess,
   useRoleTemplates,
   type NewOnboardingItem,
+  type OnboardingProcess,
 } from "@/hooks/useOnboarding";
+import { appendOnboardingAudit } from "@/hooks/useOnboardingProtocol";
+import { useQueryClient } from "@tanstack/react-query";
 import { getDomain, DOMAIN_META, type DomainKey } from "@/lib/assetDomains";
 import { resolveOwnerRole, OWNER_ROLE_OPTIONS, OWNER_ROLE_LABEL } from "@/lib/domainConfig";
 import { Send, Copy, UserPlus, CalendarDays, AlertCircle, X } from "lucide-react";
@@ -24,6 +27,8 @@ import { supabase } from "@/integrations/supabase/client";
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** When provided, the dialog edits this existing process instead of creating a new one. */
+  editProcess?: OnboardingProcess | null;
 }
 
 type SelectedEntry = {
@@ -34,7 +39,7 @@ type SelectedEntry = {
   models: Record<string, string>;
 };
 
-export function NewOnboardingDialog({ open, onOpenChange }: Props) {
+export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) {
   const { toast } = useToast();
   const { data: employees = [] } = useEmployees();
   const { data: categories = [] } = useAssetCategories();
@@ -45,6 +50,7 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
   const createGroup = useCreateAssetGroup();
   const createModel = useCreateAssetGroupModel();
   const create = useCreateOnboardingProcess();
+  const qc = useQueryClient();
 
   const [employeeId, setEmployeeId] = useState("");
   const [selected, setSelected] = useState<Record<string, SelectedEntry>>({});
@@ -64,13 +70,33 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
       setCopyFromId("");
       setQuickAdd({});
       setQuickModel({});
+      return;
     }
-  }, [open]);
+    // Edit mode: prefill the selection from the process's existing items.
+    if (editProcess) {
+      setEmployeeId(editProcess.employee_id);
+      const next: Record<string, SelectedEntry> = {};
+      (editProcess.onboarding_items ?? []).forEach((i) => {
+        if (!i.catalog_ref_id) return;
+        const entry = next[i.catalog_ref_id] ?? { groupIds: [], notes: {}, owners: {}, models: {} };
+        const gk = i.selected_group_id ?? "_";
+        if (i.selected_group_id && !entry.groupIds.includes(i.selected_group_id)) {
+          entry.groupIds.push(i.selected_group_id);
+        }
+        entry.owners[gk] = i.owner_role ?? "";
+        if (i.notes) entry.notes[gk] = i.notes;
+        if (i.selected_group_id && i.selected_model_id) entry.models[i.selected_group_id] = i.selected_model_id;
+        next[i.catalog_ref_id] = entry;
+      });
+      setSelected(next);
+    }
+  }, [open, editProcess]);
 
   const employee = employees.find((e: any) => e.id === employeeId);
 
   // Pre-load from a matching role template when picking the employee.
   useEffect(() => {
+    if (editProcess) return; // edit mode keeps the process's own items
     if (!employee) return;
     const tpl =
       templates.find((t) => t.role_name === (employee as any).role && t.department === (employee as any).department) ??
@@ -263,6 +289,76 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
     });
 
 
+  // Edit mode: apply the selection diff to the existing process.
+  // Items already done or with an assigned asset are never deleted; manual items
+  // (without a catalog reference) are kept as-is.
+  const saveEdit = async () => {
+    if (!editProcess) return;
+    const newItems = buildItems();
+    const key = (i: { catalog_ref_id?: string | null; selected_group_id?: string | null; selected_model_id?: string | null }) =>
+      `${i.catalog_ref_id ?? ""}|${i.selected_group_id ?? "_"}|${i.selected_model_id ?? ""}`;
+    const existing = editProcess.onboarding_items ?? [];
+    const newKeys = new Set(newItems.map(key));
+    const existingByKey = new Map(existing.map((i) => [key(i), i]));
+
+    const toDelete = existing.filter(
+      (i) => i.status !== "done" && !i.asset_id && i.catalog_ref_id && !newKeys.has(key(i))
+    );
+    const toInsert = newItems.filter((i) => !existingByKey.has(key(i)));
+    const toUpdate = newItems
+      .filter((i) => existingByKey.has(key(i)))
+      .map((i) => ({ id: existingByKey.get(key(i))!.id, item: i }))
+      .filter(({ id, item }) => {
+        const ex = existingByKey.get(key(item))!;
+        return ex.owner_role !== item.owner_role || (ex.notes ?? null) !== (item.notes ?? null) || ex.title !== item.title;
+      });
+
+    try {
+      for (const d of toDelete) {
+        const { error } = await supabase.from("onboarding_items").delete().eq("id", d.id);
+        if (error) throw error;
+      }
+      for (const u of toUpdate) {
+        const { error } = await supabase
+          .from("onboarding_items")
+          .update({ title: u.item.title, owner_role: u.item.owner_role, notes: u.item.notes ?? null } as any)
+          .eq("id", u.id);
+        if (error) throw error;
+      }
+      if (toInsert.length) {
+        const { error } = await supabase.from("onboarding_items").insert(
+          toInsert.map((i) => ({
+            process_id: editProcess.id,
+            title: i.title,
+            item_type: i.item_type ?? "asset",
+            owner_role: i.owner_role ?? "it_manager",
+            catalog_ref_id: i.catalog_ref_id ?? null,
+            selected_group_id: i.selected_group_id ?? null,
+            selected_model_id: i.selected_model_id ?? null,
+            fulfillment_type: i.fulfillment_type ?? null,
+            notes: i.notes ?? null,
+            status: "pending",
+          })) as any
+        );
+        if (error) throw error;
+      }
+      const changes: string[] = [];
+      if (toInsert.length) changes.push(`${toInsert.length} נוספו`);
+      if (toUpdate.length) changes.push(`${toUpdate.length} עודכנו`);
+      if (toDelete.length) changes.push(`${toDelete.length} הוסרו`);
+      await appendOnboardingAudit(
+        editProcess.id,
+        `התהליך נערך מחלון הקליטה${changes.length ? `: ${changes.join(", ")}` : " — ללא שינויים"}`
+      );
+      qc.invalidateQueries({ queryKey: ["onboarding-processes"] });
+      qc.invalidateQueries({ queryKey: ["employee-onboarding-process"] });
+      toast({ title: "השינויים נשמרו", description: changes.length ? changes.join(" · ") : "לא בוצעו שינויים" });
+      onOpenChange(false);
+    } catch (e: any) {
+      toast({ title: "שגיאה בשמירה", description: e.message, variant: "destructive" });
+    }
+  };
+
   const submit = async (status: "draft" | "sent") => {
     if (!employeeId) {
       toast({ title: "בחר עובד", variant: "destructive" });
@@ -302,9 +398,13 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="w-5 h-5 text-primary" />
-              תהליך קליטת עובד
+              {editProcess ? "עריכת תהליך קליטה" : "תהליך קליטת עובד"}
             </DialogTitle>
-            <DialogDescription>בחר את העובד ואת המשאבים הנדרשים לו ליום הראשון</DialogDescription>
+            <DialogDescription>
+              {editProcess
+                ? `עריכת הצרכים של ${editProcess.employees?.full_name ?? "העובד"} — פריטים שכבר בוצעו נשמרים ולא יימחקו`
+                : "בחר את העובד ואת המשאבים הנדרשים לו ליום הראשון"}
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-5 mt-2">
@@ -312,18 +412,20 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
               <div>
                 <label className="text-sm font-medium mb-1.5 block">עובד נקלט</label>
                 <div className="flex gap-2">
-                  <div className="flex-1">
+                  <div className={`flex-1 ${editProcess ? "pointer-events-none opacity-60" : ""}`}>
                     <SearchableSelect value={employeeId} onChange={setEmployeeId} options={employeeOptions} />
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    title="עובד חדש"
-                    onClick={() => setNewEmployeeOpen(true)}
-                  >
-                    <UserPlus className="w-4 h-4" />
-                  </Button>
+                  {!editProcess && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      title="עובד חדש"
+                      onClick={() => setNewEmployeeOpen(true)}
+                    >
+                      <UserPlus className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
                 {employee && (
                   <div className="flex items-center gap-2 mt-1.5">
@@ -552,13 +654,21 @@ export function NewOnboardingDialog({ open, onOpenChange }: Props) {
 
           <div className="flex flex-col-reverse sm:flex-row gap-2 justify-end mt-4">
             <Button variant="ghost" onClick={() => onOpenChange(false)}>ביטול</Button>
-            <Button variant="outline" onClick={() => submit("draft")} disabled={create.isPending}>
-              שמור כטיוטה
-            </Button>
-            <Button onClick={() => submit("sent")} disabled={create.isPending} className="gap-2">
-              <Send className="w-4 h-4" />
-              שלח לתפעול
-            </Button>
+            {editProcess ? (
+              <Button onClick={saveEdit} className="gap-2">
+                שמור שינויים
+              </Button>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => submit("draft")} disabled={create.isPending}>
+                  שמור כטיוטה
+                </Button>
+                <Button onClick={() => submit("sent")} disabled={create.isPending} className="gap-2">
+                  <Send className="w-4 h-4" />
+                  שלח לתפעול
+                </Button>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>
