@@ -13,7 +13,10 @@ import {
   useCreateOnboardingProcess,
   useRoleTemplates,
   type NewOnboardingItem,
+  type OnboardingProcess,
 } from "@/hooks/useOnboarding";
+import { appendOnboardingAudit } from "@/hooks/useOnboardingProtocol";
+import { useQueryClient } from "@tanstack/react-query";
 import { getDomain, DOMAIN_META, type DomainKey } from "@/lib/assetDomains";
 import { resolveOwnerRole, OWNER_ROLE_OPTIONS, OWNER_ROLE_LABEL } from "@/lib/domainConfig";
 import { Send, Copy, UserPlus, CalendarDays, AlertCircle, X } from "lucide-react";
@@ -24,6 +27,8 @@ import { supabase } from "@/integrations/supabase/client";
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** When provided, the dialog edits this existing process instead of creating a new one. */
+  editProcess?: OnboardingProcess | null;
 }
 
 type SelectedEntry = {
