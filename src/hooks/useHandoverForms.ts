@@ -27,10 +27,12 @@ export function useAssetHandoverForms(assetId?: string) {
     queryKey: ["handover-forms", "asset", assetId],
     enabled: !!assetId,
     queryFn: async (): Promise<HandoverFormRow[]> => {
+      if (!assetId) return [];
       const { data, error } = await supabase
         .from("asset_handover_forms")
         .select(SELECT)
-        .eq("asset_id", assetId!)
+        .eq("asset_id", assetId)
+        .in("status", ["pending", "signed"])
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as any;
@@ -44,10 +46,11 @@ export function useEmployeeHandoverForms(employeeId?: string) {
     queryKey: ["handover-forms", "employee", employeeId],
     enabled: !!employeeId,
     queryFn: async (): Promise<HandoverFormRow[]> => {
+      if (!employeeId) return [];
       const { data, error } = await supabase
         .from("asset_handover_forms")
         .select(SELECT)
-        .eq("employee_id", employeeId!)
+        .eq("employee_id", employeeId)
         .eq("status", "signed")
         .order("created_at", { ascending: false });
       if (error) throw error;

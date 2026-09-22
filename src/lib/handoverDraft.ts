@@ -68,17 +68,20 @@ const delLocal = (key: string) => tx<void>("readwrite", (s) => s.delete(key));
 export async function saveHandoverDraft(draft: HandoverDraft) {
   await putLocal(draft);
   try {
-    const { data: auth } = await supabase.auth.getUser();
+    const { data: auth, error: authError } = await supabase.auth.getUser();
+    if (authError) throw authError;
     let savedByName: string | null = null;
     if (auth?.user?.id) {
-      const { data: emp } = await supabase
+      const { data: emp, error: employeeError } = await supabase
         .from("employees")
         .select("full_name")
         .eq("linked_user_id", auth.user.id)
+        .limit(1)
         .maybeSingle();
+      if (employeeError) throw employeeError;
       savedByName = emp?.full_name ?? auth.user.email ?? null;
     }
-    await supabase.from("handover_drafts").upsert(
+    const { error } = await supabase.from("handover_drafts").upsert(
       {
         key: draft.key,
         company_id: draft.companyId ?? null,
@@ -91,8 +94,10 @@ export async function saveHandoverDraft(draft: HandoverDraft) {
       },
       { onConflict: "key" }
     );
+    if (error) throw error;
   } catch (e) {
     console.warn("shared draft sync failed", e);
+    throw e;
   }
 }
 
@@ -123,6 +128,58 @@ export async function loadHandoverDraft(key: string): Promise<HandoverDraft | nu
     video: null,
     odometerPhoto: null,
   };
+}
+
+function remoteRowToDraft(remote: any): HandoverDraft {
+  return {
+    key: remote.key,
+    savedAt: remote.saved_at,
+    label: remote.label ?? "",
+    companyId: remote.company_id,
+    savedByName: remote.saved_by_name,
+    remoteOnly: true,
+    hasMedia: remote.has_media,
+    state: (remote.state ?? {}) as Record<string, any>,
+    photos: [],
+    video: null,
+    odometerPhoto: null,
+  };
+}
+
+/** All shared drafts that include an asset, including multi-item processes. */
+export async function listHandoverDraftsForAsset(assetId: string): Promise<HandoverDraft[]> {
+  const directPrefix = `asset:${assetId}:`;
+  const { data, error } = await supabase
+    .from("handover_drafts")
+    .select("*")
+    .or(`key.like.${directPrefix}%,key.like.multi:%${assetId}%`)
+    .order("saved_at", { ascending: false });
+  if (error) throw error;
+
+  const remoteDrafts = (data ?? [])
+    .filter((row) => {
+      if (row.key.startsWith(directPrefix)) return true;
+      if (!row.key.startsWith("multi:")) return false;
+      return row.key.slice("multi:".length).split(",").includes(assetId);
+    })
+    .map(remoteRowToDraft);
+
+  const localDrafts = await Promise.all([
+    getLocal(draftKeyForAsset(assetId, "handover")),
+    getLocal(draftKeyForAsset(assetId, "return")),
+  ]);
+  const byKey = new Map(remoteDrafts.map((draft) => [draft.key, draft]));
+  localDrafts.forEach((local) => {
+    if (!local) return;
+    const remote = byKey.get(local.key);
+    if (!remote || new Date(local.savedAt).getTime() >= new Date(remote.savedAt).getTime()) {
+      byKey.set(local.key, { ...local, savedByName: remote?.savedByName ?? local.savedByName });
+    }
+  });
+
+  return [...byKey.values()].sort(
+    (a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime(),
+  );
 }
 
 export async function deleteHandoverDraft(key: string) {

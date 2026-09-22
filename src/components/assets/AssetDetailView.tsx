@@ -7,7 +7,7 @@ import { ChevronLeft, Pencil, FileSignature, UserMinus, Trash2, User, Building2,
 import { useSites } from "@/hooks/useSites";
 import { useSiteContainers } from "@/hooks/useSiteContainers";
 import { cn } from "@/lib/utils";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { EditAssetDialog } from "@/components/EditAssetDialog";
 import { HandoverFlow } from "@/components/handover/HandoverFlow";
 import { AssetDocumentsSection } from "@/components/AssetDocumentsSection";
@@ -31,7 +31,9 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { draftKeyForAsset, formatDraftTime, loadHandoverDraft, type HandoverDraft } from "@/lib/handoverDraft";
+import { formatDraftTime, type HandoverDraft } from "@/lib/handoverDraft";
+import { useAssetHandoverDrafts } from "@/hooks/useHandoverDrafts";
+import type { ProtocolDirection } from "@/lib/pdf/types";
 
 const assetStatusLabels: Record<string, string> = {
   in_use: "בשימוש", in_stock: "במלאי", in_repair: "בתיקון", lost: "אבד",
@@ -50,6 +52,7 @@ interface Props {
 export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategories }: Props) {
   const { data: assets } = useAssets();
   const { data: handoverForms } = useAssetHandoverForms(assetId);
+  const { data: handoverDrafts = [] } = useAssetHandoverDrafts(assetId);
 
   const { data: categories } = useAssetCategories();
   const { data: employees } = useEmployees();
@@ -63,18 +66,10 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
   const [assignOpen, setAssignOpen] = useState(false);
   const [unassignConfirm, setUnassignConfirm] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
-  const [handoverDraft, setHandoverDraft] = useState<HandoverDraft | null>(null);
+  const [resumeDirection, setResumeDirection] = useState<ProtocolDirection>("handover");
 
   const asset = (assets ?? []).find((a: any) => a.id === assetId) as any;
   const category = (categories ?? []).find((c: any) => c.id === categoryId) as any;
-
-  useEffect(() => {
-    let cancelled = false;
-    void loadHandoverDraft(draftKeyForAsset(assetId, "handover")).then((draft) => {
-      if (!cancelled) setHandoverDraft(draft);
-    });
-    return () => { cancelled = true; };
-  }, [assetId, assignOpen]);
 
   // History from activity_log
   const { data: history } = useQuery({
@@ -208,14 +203,14 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
         </div>
         <div className="flex items-center gap-2">
           {isAssignable && !asset.current_owner_id && !asset.assigned_site_id && (
-            <Button onClick={() => setAssignOpen(true)} className="gap-2">
+            <Button onClick={() => { setResumeDirection("handover"); setAssignOpen(true); }} className="gap-2">
               <FileSignature className="w-4 h-4" />
               שיוך לעובד / לאתר
             </Button>
           )}
           {isAssignable && (asset.current_owner_id || asset.assigned_site_id) && (
             <>
-              <Button variant="outline" onClick={() => setAssignOpen(true)} className="gap-2">
+              <Button variant="outline" onClick={() => { setResumeDirection("handover"); setAssignOpen(true); }} className="gap-2">
                 <FileSignature className="w-4 h-4" />
                 העברה
               </Button>
@@ -335,24 +330,36 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
           {/* Handover / return protocols */}
           <div className="bg-card border border-border rounded-xl p-5">
             <h2 className="text-sm font-semibold text-muted-foreground mb-3">פרוטוקולי מסירה והזדכות</h2>
-            {handoverDraft && (
-              <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3">
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <Clock3 className="h-4 w-4 shrink-0 text-warning" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">תהליך מסירה במצב טיוטה</p>
-                    <p className="text-xs text-muted-foreground">
-                      נשמר ב־{formatDraftTime(handoverDraft.savedAt)}
-                      {handoverDraft.savedByName ? ` · ${handoverDraft.savedByName}` : ""}
-                    </p>
+            {handoverDrafts.map((draft: HandoverDraft) => {
+              const isMulti = draft.key.startsWith("multi:");
+              const direction: ProtocolDirection = draft.key.endsWith(":return") ? "return" : "handover";
+              return (
+                <div key={draft.key} className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3">
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
+                    <Clock3 className="h-4 w-4 shrink-0 text-warning" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">
+                        {isMulti ? "תהליך מסירה מרובת פריטים במצב טיוטה" : direction === "return" ? "תהליך הזדכות במצב טיוטה" : "תהליך מסירה במצב טיוטה"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        נשמר ב־{formatDraftTime(draft.savedAt)}
+                        {draft.savedByName ? ` · ${draft.savedByName}` : ""}
+                      </p>
+                    </div>
                   </div>
+                  {!isMulti && (
+                    <Button type="button" size="sm" variant="outline" onClick={() => { setResumeDirection(direction); setAssignOpen(true); }}>
+                      המשך תהליך
+                    </Button>
+                  )}
                 </div>
-                <Button type="button" size="sm" variant="outline" onClick={() => setAssignOpen(true)}>
-                  המשך תהליך
-                </Button>
-              </div>
-            )}
-            <HandoverFormsList forms={handoverForms ?? []} context="asset" />
+              );
+            })}
+            <HandoverFormsList
+              forms={handoverForms ?? []}
+              context="asset"
+              hideEmpty={handoverDrafts.length > 0}
+            />
           </div>
 
         </div>
@@ -425,7 +432,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
 
       {/* Dialogs */}
       <EditAssetDialog open={editOpen} onOpenChange={setEditOpen} asset={asset} />
-      <HandoverFlow open={assignOpen} onOpenChange={setAssignOpen} asset={asset} />
+      <HandoverFlow open={assignOpen} onOpenChange={setAssignOpen} asset={asset} direction={resumeDirection} />
 
       <AlertDialog open={unassignConfirm} onOpenChange={setUnassignConfirm}>
         <AlertDialogContent dir="rtl">
