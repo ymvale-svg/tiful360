@@ -386,7 +386,7 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
 
 
   const insertForm = async (values: Record<string, any>) => {
-    const { data, error } = await supabase.from("asset_handover_forms").insert({
+    const payload = {
       company_id: activeCompanyId,
       asset_id: asset!.id,
       employee_id: employeeId,
@@ -399,10 +399,41 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
       odometer_km: isVehicle && odometer ? Number(odometer) : null,
       created_by: user?.id,
       ...values,
-    } as any).select("id, sign_token, short_code").single();
+    } as any;
+
+    // Reuse an existing pending form for the same item/employee/direction so a repeated
+    // "send for signature" never creates a second waiting protocol for the same serial.
+    const { data: existing } = await supabase
+      .from("asset_handover_forms")
+      .select("id")
+      .eq("asset_id", asset!.id)
+      .eq("employee_id", employeeId)
+      .eq("direction", direction)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existing?.id) {
+      const { data, error } = await supabase
+        .from("asset_handover_forms")
+        .update(payload)
+        .eq("id", existing.id)
+        .select("id, sign_token, short_code")
+        .single();
+      if (error) throw error;
+      return data as { id: string; sign_token: string; short_code: string | null };
+    }
+
+    const { data, error } = await supabase
+      .from("asset_handover_forms")
+      .insert(payload)
+      .select("id, sign_token, short_code")
+      .single();
     if (error) throw error;
     return data as { id: string; sign_token: string; short_code: string | null };
   };
+
 
   const snapshot = (media: ProtocolMedia[]) => ({
     direction,

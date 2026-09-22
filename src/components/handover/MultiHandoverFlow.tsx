@@ -348,7 +348,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
     };
     const inserted: { id: string; sign_token: string; short_code?: string | null }[] = [];
     for (const a of assets) {
-      const { data, error } = await supabase.from("asset_handover_forms").insert({
+      const payload = {
         company_id: activeCompanyId,
         asset_id: a.id,
         employee_id: employeeId,
@@ -361,10 +361,28 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
         created_by: user?.id,
         ...values,
         form_snapshot: { ...baseSnapshot, ...(values.form_snapshot ?? {}) } as any,
-      } as any).select("id, sign_token, short_code").single();
+      } as any;
+
+      // Reuse a pending form for the same item/employee instead of creating a duplicate.
+      const { data: existing } = await supabase
+        .from("asset_handover_forms")
+        .select("id")
+        .eq("asset_id", a.id)
+        .eq("employee_id", employeeId)
+        .eq("direction", "handover")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const query = existing?.id
+        ? supabase.from("asset_handover_forms").update(payload).eq("id", existing.id)
+        : supabase.from("asset_handover_forms").insert(payload);
+      const { data, error } = await query.select("id, sign_token, short_code").single();
       if (error) throw error;
       inserted.push(data as { id: string; sign_token: string; short_code?: string | null });
     }
+
     return inserted;
   };
 
