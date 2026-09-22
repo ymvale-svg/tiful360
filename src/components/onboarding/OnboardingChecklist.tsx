@@ -24,7 +24,7 @@ import { useCompany } from "@/hooks/useCompany";
 import { EditAssetDialog } from "@/components/EditAssetDialog";
 import { OWNER_ROLE_LABEL, OWNER_ROLE_OPTIONS } from "@/lib/domainConfig";
 import { formatDateTimeDMY } from "@/lib/utils";
-import { CheckCircle2, Printer, Package, StickyNote, Trash2 } from "lucide-react";
+import { CheckCircle2, Printer, Package, StickyNote, Trash2, Plus, RotateCcw } from "lucide-react";
 
 interface Props {
   process: OnboardingProcess | null;
