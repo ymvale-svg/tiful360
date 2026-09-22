@@ -2,13 +2,13 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  Plus, GripVertical, Trash2, Save, Pencil,
-  Type, Hash, Calendar, List, ListChecks, Settings2, Check, X, ChevronDown, Users,
+  Plus, GripVertical, Trash2, Save, Pencil, Search,
+  Type, Hash, Calendar, List, ListChecks, Settings2, Check, X, ChevronLeft, Users,
 } from "lucide-react";
 import { ManageGroupsDialog } from "@/components/ManageGroupsDialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useAssetCategories } from "@/hooks/useData";
+import { useAssetCategories, useAssets } from "@/hooks/useData";
 import { useCategoryFields, useCreateCategory, useUpdateCategory, useSaveCategoryFields, useDeleteCategory } from "@/hooks/useCategories";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { DOMAIN_ORDER, DOMAIN_META, DOMAIN_DEFAULTS, getDomain, type DomainKey } from "@/lib/assetDomains";
 import { OWNER_ROLE_OPTIONS, getAllDomainLabels, type DomainLabels } from "@/lib/domainConfig";
-import { useCreateAssetGroup, useAssetGroups, useDeleteAssetGroup } from "@/hooks/useAssetGroups";
+import { useCreateAssetGroup, useAssetGroups, useDeleteAssetGroup, useMoveAssetGroup, useUpdateAssetGroup } from "@/hooks/useAssetGroups";
 import { useCompany } from "@/hooks/useCompany";
 
 type FieldType = "text" | "number" | "date" | "list" | "list_multi";
@@ -71,25 +71,25 @@ export default function CategoryManager() {
 
   const [searchParams] = useSearchParams();
   const focusDomain = searchParams.get("domain") as DomainKey | null;
+  const [selectedDomain, setSelectedDomain] = useState<DomainKey>(
+    focusDomain && DOMAIN_ORDER.includes(focusDomain) ? focusDomain : "physical"
+  );
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const [newCatOpen, setNewCatOpen] = useState(false);
   const [newCatDomain, setNewCatDomain] = useState<DomainKey | null>(null);
-  const [openDomains, setOpenDomains] = useState<Set<DomainKey>>(
-    () => new Set(focusDomain && DOMAIN_ORDER.includes(focusDomain) ? [focusDomain] : [])
-  );
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; assetCount: number } | null>(null);
-  const [quickEditId, setQuickEditId] = useState<string | null>(null);
+  const { data: groups } = useAssetGroups();
+  const { data: assets } = useAssets();
 
   // Focus the requested domain when arriving from the domain card "quick edit" button
   useEffect(() => {
     if (focusDomain && DOMAIN_ORDER.includes(focusDomain)) {
-      setOpenDomains((prev) => new Set(prev).add(focusDomain));
+      setSelectedDomain(focusDomain);
     }
   }, [focusDomain]);
   const { toast } = useToast();
   const deleteMutation = useDeleteCategory();
-  const updateCategoryMutation = useUpdateCategory();
-  const createGroupMutation = useCreateAssetGroup();
 
   // Group categories by domain
   const byDomain = useMemo(() => {
@@ -100,13 +100,28 @@ export default function CategoryManager() {
     return out;
   }, [categories]);
 
-  const toggleDomain = (k: DomainKey) => {
-    setOpenDomains((prev) => {
-      const next = new Set(prev);
-      if (next.has(k)) next.delete(k); else next.add(k);
-      return next;
+  const selectedCategory = useMemo(
+    () => (categories ?? []).find((category: any) => category.id === selectedId) ?? null,
+    [categories, selectedId],
+  );
+  const normalizedSearch = search.trim().toLocaleLowerCase("he");
+  const visibleCategories = useMemo(() => {
+    const domainCategories = byDomain[selectedDomain] ?? [];
+    if (!normalizedSearch) return domainCategories;
+    return domainCategories.filter((category: any) => {
+      const categoryMatches = `${category.category_name} ${category.prefix ?? ""}`.toLocaleLowerCase("he").includes(normalizedSearch);
+      const groupMatches = (groups ?? []).some((group) =>
+        group.category_id === category.id && group.name.toLocaleLowerCase("he").includes(normalizedSearch)
+      );
+      return categoryMatches || groupMatches;
     });
-  };
+  }, [byDomain, selectedDomain, normalizedSearch, groups]);
+
+  useEffect(() => {
+    if (selectedCategory && getDomain(selectedCategory) === selectedDomain) return;
+    const firstCategory = byDomain[selectedDomain]?.[0];
+    setSelectedId(firstCategory?.id ?? null);
+  }, [selectedDomain, byDomain, selectedCategory]);
 
   const handleDeleteClick = (e: React.MouseEvent, cat: any) => {
     e.stopPropagation();
@@ -135,142 +150,59 @@ export default function CategoryManager() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-start justify-between">
+    <div className="space-y-5 animate-fade-in" dir="rtl">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="page-header">
           <h1 className="page-title">ניהול דומיינים וקטגוריות</h1>
-          <p className="page-subtitle">
-            6 דומיינים קשיחים · קטגוריות נוצרות מתוך הדומיין שלהן עם שדות מותאמים
-          </p>
+          <p className="page-subtitle">דומיין ← קטגוריה ← תת-קטגוריה, במקום אחד</p>
         </div>
-        <Button variant="outline" className="gap-2" onClick={() => openNewInDomain(null)}>
-          <Plus className="w-4 h-4" />
-          קטגוריה חדשה
-        </Button>
+        <div className="relative w-full sm:w-72">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="חיפוש קטגוריה או תת-קטגוריה..." aria-label="חיפוש בהיררכיה" className="w-full h-10 pr-10 pl-3 rounded-lg border border-border bg-card text-sm outline-none focus:ring-2 focus:ring-primary/25" />
+        </div>
       </div>
 
       {isLoading ? (
         <div className="text-center py-12 text-muted-foreground">טוען...</div>
       ) : (
-        <div className={cn("grid gap-6", selectedId ? "grid-cols-1 lg:grid-cols-3" : "grid-cols-1")}>
-          {/* Domains accordion */}
-          <div className={cn("space-y-3", selectedId && "lg:order-last")}>
-            {DOMAIN_ORDER.map((key) => {
-              const meta = DOMAIN_META[key];
-              const Icon = meta.icon;
-              const cats = byDomain[key] ?? [];
-              const isOpen = openDomains.has(key);
-              const totalAssets = cats.reduce((s, c: any) => s + (c.assets?.[0]?.count ?? 0), 0);
-              return (
-                <div key={key} className="bg-card rounded-xl border border-border/60 overflow-hidden">
-                  <button
-                    onClick={() => toggleDomain(key)}
-                    className="w-full text-right p-3 flex items-center gap-3 hover:bg-muted/40 transition-colors"
-                  >
-                    <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", !isOpen && "-rotate-90")} />
-                    <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center shrink-0", meta.color.bg, meta.color.text)}>
-                      <Icon className="w-5 h-5" strokeWidth={1.75} />
+        <>
+          <section className="bg-card border border-border rounded-lg overflow-hidden shadow-card">
+            <div className="grid grid-cols-1 lg:grid-cols-3 lg:divide-x lg:divide-x-reverse lg:divide-border min-h-[430px] max-h-[64vh]">
+              <HierarchyColumn title={`דומיינים (${DOMAIN_ORDER.length})`}>
+                {DOMAIN_ORDER.map((key) => {
+                  const meta = DOMAIN_META[key];
+                  const Icon = meta.icon;
+                  const categoryCount = byDomain[key]?.length ?? 0;
+                  const groupCount = (groups ?? []).filter((group) => byDomain[key]?.some((category: any) => category.id === group.category_id)).length;
+                  return (
+                    <Button key={key} variant="ghost" onClick={() => setSelectedDomain(key)} className={cn("w-full h-auto min-h-14 justify-start gap-3 px-3 py-2.5 border", selectedDomain === key ? "border-primary bg-primary/10" : "border-border bg-background")}>
+                      <span className={cn("w-9 h-9 rounded-md flex items-center justify-center shrink-0", meta.color.bg, meta.color.text)}><Icon className="w-4.5 h-4.5" /></span>
+                      <span className="min-w-0 flex-1 text-right"><span className="block text-sm font-semibold truncate">{labels[key].title}</span><span className="block text-[11px] font-normal text-muted-foreground">{categoryCount} קטגוריות · {groupCount} תתי-קטגוריות</span></span>
+                      <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+                    </Button>
+                  );
+                })}
+              </HierarchyColumn>
+              <HierarchyColumn title={`קטגוריות ב${labels[selectedDomain].title}`} action={<Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openNewInDomain(selectedDomain)} title="קטגוריה חדשה"><Plus className="w-4 h-4" /></Button>}>
+                {visibleCategories.length === 0 ? <EmptyHierarchy text="לא נמצאו קטגוריות" /> : visibleCategories.map((category: any) => {
+                  const active = selectedId === category.id;
+                  const groupCount = (groups ?? []).filter((group) => group.category_id === category.id).length;
+                  return (
+                    <div key={category.id} className={cn("flex items-center gap-1 rounded-md border p-1", active ? "border-primary bg-primary/10" : "border-border bg-background")}>
+                      <Button variant="ghost" onClick={() => setSelectedId(category.id)} className="h-auto min-h-12 flex-1 justify-start px-2 text-right"><span className="min-w-0 flex-1"><span className="block text-sm font-semibold truncate">{category.category_name}</span><span className="block text-[11px] font-normal text-muted-foreground"><span className="font-mono">{category.prefix}</span> · {groupCount} תתי-קטגוריות · {category.assets?.[0]?.count ?? 0} פריטים</span></span><ChevronLeft className="w-4 h-4 text-muted-foreground" /></Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" title="מחק קטגוריה" onClick={(event) => handleDeleteClick(event, category)}><Trash2 className="w-3.5 h-3.5" /></Button>
                     </div>
-                    <div className="flex-1 min-w-0 text-right">
-                      <p className="font-medium text-sm">{labels[key].title}</p>
-                        <p className="text-[11px] text-muted-foreground truncate">
-                          {cats.length} קטגוריות · {totalAssets} פריטים
-                        </p>
-                      </div>
-                    </button>
-                    {isOpen && (
-                      <div className="border-t border-border/50 p-2 space-y-1">
-                        {cats.length === 0 && (
-                          <p className="text-[11px] text-muted-foreground px-2 py-3 text-center">
-                            אין עדיין קטגוריות בדומיין זה
-                          </p>
-                        )}
-                      {cats.map((cat: any) => {
-                        const assetCount = cat.assets?.[0]?.count ?? 0;
-                        const active = selectedId === cat.id;
-                        const quickEditing = quickEditId === cat.id;
-                        return (
-                          <div key={cat.id}>
-                            <div
-                              onClick={() => setSelectedId(active ? null : cat.id)}
-                              className={cn(
-                                "w-full text-right rounded-lg px-3 py-2 transition-all cursor-pointer group flex items-center gap-2",
-                                active ? "ring-2 ring-primary bg-primary/5" : "hover:bg-muted/50"
-                              )}
-                            >
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm">{cat.category_name}</p>
-                                <p className="text-[11px] text-muted-foreground">
-                                  <span className="font-mono">{cat.prefix}</span> · {assetCount} פריטים
-                                </p>
-                              </div>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setQuickEditId(quickEditing ? null : cat.id); }}
-                                title="עריכה מהירה"
-                                className={cn(
-                                  "text-muted-foreground/40 hover:text-primary transition-colors shrink-0",
-                                  quickEditing ? "opacity-100 text-primary" : "opacity-0 group-hover:opacity-100"
-                                )}
-                              >
-                                <Pencil className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={(e) => handleDeleteClick(e, cat)}
-                              title="מחק קטגוריה"
-                              className="text-muted-foreground/40 hover:text-destructive transition-colors shrink-0 opacity-0 group-hover:opacity-100"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                          {quickEditing && (
-                            <QuickCategoryEdit
-                              category={cat}
-                              onClose={() => setQuickEditId(null)}
-                              updateMutation={updateCategoryMutation}
-                              createGroupMutation={createGroupMutation}
-                            />
-                          )}
-                        </div>
-                      );
-                    })}
-                    <button
-                      onClick={() => openNewInDomain(key)}
-                      className={cn(
-                        "w-full text-right rounded-lg px-3 py-2 text-xs text-muted-foreground hover:text-primary hover:bg-primary/5 border border-dashed border-border/60 hover:border-primary/40 transition-colors flex items-center gap-2 justify-center"
-                      )}
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      קטגוריה חדשה ב{labels[key].title}
-                    </button>
-                  </div>
-                )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Fields editor - only when a category is selected */}
-          {selectedId && (
-            <div className="lg:col-span-2 lg:order-first">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="text-xs text-muted-foreground">
-                    עריכת קטגוריה
-                  </div>
-                  <Button variant="ghost" size="sm" className="gap-1.5 h-7" onClick={() => setSelectedId(null)}>
-                    <X className="w-3.5 h-3.5" />
-                    סגור
-                  </Button>
-                </div>
-                <CategoryEditor category={categories?.find((c) => c.id === selectedId)!} />
-                <FieldsEditor
-                  categoryId={selectedId}
-                  categoryName={categories?.find((c) => c.id === selectedId)?.category_name ?? ""}
-                />
-              </div>
+                  );
+                })}
+              </HierarchyColumn>
+              <HierarchyColumn title={selectedCategory ? `תתי-קטגוריות ב${selectedCategory.category_name}` : "תתי-קטגוריות"}>
+                {selectedCategory ? <SubCategoryColumn category={selectedCategory} categories={categories ?? []} groups={groups ?? []} assets={assets ?? []} search={normalizedSearch} /> : <EmptyHierarchy text="בחר קטגוריה כדי להציג תתי-קטגוריות" />}
+              </HierarchyColumn>
             </div>
-          )}
-        </div>
+            <div className="px-4 py-3 border-t border-border bg-muted/30 flex items-center gap-2 text-xs text-muted-foreground"><span className="font-medium text-foreground">{labels[selectedDomain].title}</span><ChevronLeft className="w-3.5 h-3.5" /><span className="font-medium text-foreground">{selectedCategory?.category_name ?? "בחר קטגוריה"}</span></div>
+          </section>
+          {selectedCategory && <section className="space-y-4 pt-1"><div><h2 className="text-base font-semibold">הגדרות הקטגוריה</h2><p className="text-xs text-muted-foreground">פרטים, התנהגות ושדות מותאמים עבור {selectedCategory.category_name}</p></div><CategoryEditor category={selectedCategory} /><FieldsEditor categoryId={selectedCategory.id} categoryName={selectedCategory.category_name} /></section>}
+        </>
 
       )}
 
@@ -316,6 +248,39 @@ export default function CategoryManager() {
       </AlertDialog>
     </div>
   );
+}
+
+function HierarchyColumn({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
+  return <div className="min-w-0 flex flex-col overflow-hidden border-b lg:border-b-0 border-border"><div className="h-12 px-4 border-b border-border bg-muted/35 flex items-center justify-between gap-2"><span className="text-xs font-semibold text-muted-foreground truncate">{title}</span>{action}</div><div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-40">{children}</div></div>;
+}
+
+function EmptyHierarchy({ text }: { text: string }) {
+  return <div className="h-28 flex items-center justify-center text-center text-xs text-muted-foreground border border-dashed border-border rounded-md px-4">{text}</div>;
+}
+
+function SubCategoryColumn({ category, categories, groups, assets, search }: { category: any; categories: any[]; groups: any[]; assets: any[]; search: string }) {
+  const createGroup = useCreateAssetGroup();
+  const updateGroup = useUpdateAssetGroup();
+  const deleteGroup = useDeleteAssetGroup();
+  const moveGroup = useMoveAssetGroup();
+  const { toast } = useToast();
+  const [newName, setNewName] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const categoryGroups = groups.filter((group) => group.category_id === category.id && (!search || group.name.toLocaleLowerCase("he").includes(search)));
+  const create = async () => { if (!newName.trim()) return; try { await createGroup.mutateAsync({ category_id: category.id, name: newName.trim(), default_owner_role: category.default_owner_role ?? null, company_id: category.company_id ?? null }); setNewName(""); toast({ title: "תת-הקטגוריה נוצרה" }); } catch (error: any) { toast({ title: "שגיאה", description: error.message, variant: "destructive" }); } };
+  const rename = async (id: string) => { if (!editName.trim()) return; try { await updateGroup.mutateAsync({ id, name: editName.trim() }); setEditingId(null); toast({ title: "תת-הקטגוריה עודכנה" }); } catch (error: any) { toast({ title: "שגיאה", description: error.message, variant: "destructive" }); } };
+  const remove = async (id: string, name: string) => { if (!window.confirm(`למחוק את תת-הקטגוריה "${name}"? הפריטים יישארו ללא תת-קטגוריה.`)) return; try { await deleteGroup.mutateAsync(id); toast({ title: "תת-הקטגוריה נמחקה" }); } catch (error: any) { toast({ title: "שגיאה", description: error.message, variant: "destructive" }); } };
+  return <>
+    <div className="flex gap-2 pb-1"><input value={newName} onChange={(event) => setNewName(event.target.value)} onKeyDown={(event) => event.key === "Enter" && create()} placeholder="שם תת-קטגוריה חדשה" className="min-w-0 flex-1 h-9 px-3 rounded-md border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/25" /><Button size="icon" className="h-9 w-9 shrink-0" onClick={create} disabled={!newName.trim() || createGroup.isPending} title="הוסף תת-קטגוריה"><Plus className="w-4 h-4" /></Button></div>
+    {categoryGroups.length === 0 ? <EmptyHierarchy text="אין עדיין תתי-קטגוריות" /> : categoryGroups.map((group) => {
+      const assetCount = assets.filter((asset) => asset.group_id === group.id).length;
+      return <div key={group.id} className="rounded-md border border-border bg-background p-3 space-y-2">
+        {editingId === group.id ? <div className="flex gap-1"><input autoFocus value={editName} onChange={(event) => setEditName(event.target.value)} onKeyDown={(event) => event.key === "Enter" && rename(group.id)} className="min-w-0 flex-1 h-8 px-2 rounded border border-border bg-card text-sm outline-none focus:ring-2 focus:ring-primary/25" /><Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => rename(group.id)}><Check className="w-4 h-4" /></Button><Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingId(null)}><X className="w-4 h-4" /></Button></div> : <div className="flex items-center gap-1"><div className="min-w-0 flex-1"><p className="text-sm font-semibold truncate">{group.name}</p><p className="text-[11px] text-muted-foreground">{assetCount} פריטים · {OWNER_ROLE_OPTIONS.find((option) => option.value === group.default_owner_role)?.label ?? "אחראי מהקטגוריה"}</p></div><Button size="icon" variant="ghost" className="h-8 w-8" title="ערוך שם" onClick={() => { setEditingId(group.id); setEditName(group.name); }}><Pencil className="w-3.5 h-3.5" /></Button><Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" title="מחק" onClick={() => remove(group.id, group.name)}><Trash2 className="w-3.5 h-3.5" /></Button></div>}
+        <div className="grid grid-cols-2 gap-2"><select value={group.default_owner_role ?? ""} onChange={(event) => updateGroup.mutate({ id: group.id, default_owner_role: event.target.value || null })} aria-label={`אחראי עבור ${group.name}`} className="min-w-0 h-8 px-2 rounded border border-border bg-muted/40 text-[11px] outline-none"><option value="">אחראי מהקטגוריה</option>{OWNER_ROLE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><select value={category.id} onChange={(event) => moveGroup.mutate({ groupId: group.id, categoryId: event.target.value })} aria-label={`העבר את ${group.name}`} className="min-w-0 h-8 px-2 rounded border border-border bg-muted/40 text-[11px] outline-none">{DOMAIN_ORDER.map((domain) => <optgroup key={domain} label={DOMAIN_META[domain].title}>{categories.filter((item) => getDomain(item) === domain).map((item) => <option key={item.id} value={item.id}>{item.category_name}</option>)}</optgroup>)}</select></div>
+      </div>;
+    })}
+  </>;
 }
 
 // ============================
