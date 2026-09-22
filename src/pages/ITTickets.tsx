@@ -206,14 +206,15 @@ export default function ITTickets() {
                     </div>
                     <p className="text-sm font-medium truncate">{ticket.title}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {subjectLabel(ticket.subject_category ?? ticket.ticket_type)} · {ticket.employees?.full_name}
+                      {subjectLabel(ticket.subject_category ?? ticket.ticket_type)} ·{" "}
+                      <EmployeeLink employeeId={ticket.employee_id} name={ticket.employees?.full_name} />
                     </p>
                   </div>
                   {ticket.status === "done"
                     ? <CheckCircle2 className="w-5 h-5 text-success shrink-0" aria-hidden="true" />
                     : <SlaBadge deadline={ticket.sla_deadline} done={false} />}
                 </div>
-              </button>
+              </div>
             ))}
             {filtered.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">אין קריאות להצגה</div>
