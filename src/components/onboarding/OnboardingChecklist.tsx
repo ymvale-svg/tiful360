@@ -282,6 +282,12 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
                 <CheckCircle2 className="w-4 h-4" /> {finishing ? "מפיק פרוטוקול..." : "סיום תהליך"}
               </Button>
             )}
+            {process.status === "done" && (
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={reopen}>
+                <RotateCcw className="w-4 h-4" /> פתח מחדש לעריכה
+              </Button>
+            )}
+
           </div>
         </div>
 
