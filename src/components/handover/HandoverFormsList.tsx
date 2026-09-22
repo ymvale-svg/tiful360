@@ -8,6 +8,7 @@ import { buildProtocolPdf } from "@/lib/pdf/lazy";
 import { isProtocolSnapshot, protocolDataFromSnapshot } from "@/lib/pdf/protocolSnapshot";
 import type { ProtocolMedia } from "@/lib/pdf/types";
 import { getHandoverSignedUrl, openHandoverFile, useHandoverSignedUrls } from "@/lib/handoverUrl";
+import { EmployeeLink } from "@/components/EmployeeLink";
 
 interface Props {
   forms: HandoverFormRow[];
