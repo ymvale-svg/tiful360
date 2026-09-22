@@ -5,6 +5,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { signLinkFor, sendSignLink } from "@/lib/signLink";
 import { formatDateDMY } from "@/lib/utils";
@@ -114,9 +115,9 @@ export function PendingSignatureDialog({ formId, open, onOpenChange }: Props) {
               </div>
               <div className="flex justify-between gap-2">
                 <span className="text-muted-foreground">סטטוס</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full border bg-warning/15 text-warning-foreground border-warning/40">
+                <Badge variant="warning" className="text-[10px] px-1.5 py-0.5">
                   ממתין לחתימה
-                </span>
+                </Badge>
               </div>
             </div>
 

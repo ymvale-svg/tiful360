@@ -8,6 +8,7 @@ import { formatDateDMY } from "@/lib/utils";
 import { snapshotItemLabel } from "@/lib/pdf/formPdf";
 import { getDomain } from "@/lib/assetDomains";
 import { PendingSignatureDialog } from "@/components/handover/PendingSignatureDialog";
+import { Badge } from "@/components/ui/badge";
 
 interface PendingFormRow {
   id: string;
@@ -99,9 +100,9 @@ export function PendingSignaturesCard() {
                   </p>
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full border bg-warning/15 text-warning-foreground border-warning/40">
+                  <Badge variant="warning" className="text-[10px] px-1.5 py-0.5">
                     ממתין לחתימה
-                  </span>
+                  </Badge>
                   <span className="text-[10px] text-muted-foreground">
                     נשלח {formatDateDMY(form.created_at)}
                     {waitingDays >= 3 ? ` • ${waitingDays} ימים` : ""}
