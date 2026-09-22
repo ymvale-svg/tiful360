@@ -176,11 +176,19 @@ export default function ITTickets() {
           {/* Ticket list */}
           <div className={cn("lg:col-span-1 space-y-2", selectedTicket && "hidden lg:block")}>
             {filtered.map((ticket: any) => (
-              <button
+              <div
                 key={ticket.id}
+                role="button"
+                tabIndex={0}
                 onClick={() => setSelectedId(ticket.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelectedId(ticket.id);
+                  }
+                }}
                 className={cn(
-                  "w-full text-right bg-card rounded-xl border p-4 transition-all hover:shadow-md",
+                  "w-full text-right bg-card rounded-xl border p-4 transition-all hover:shadow-md cursor-pointer",
                   ticket.ticket_type === "offboarding" ? "border-destructive/30" : "border-border/50",
                   selectedId === ticket.id && "ring-2 ring-primary",
                 )}
