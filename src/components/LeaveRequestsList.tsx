@@ -5,6 +5,7 @@ import { useCancelLeaveRequest } from "@/hooks/useLeaveRequests";
 import { useToast } from "@/hooks/use-toast";
 import { EditSickLeaveDialog } from "@/components/EditSickLeaveDialog";
 import { buildGoogleCalendarUrl } from "@/lib/googleCalendar";
+import { EmployeeLink } from "@/components/EmployeeLink";
 
 const TYPE_LABELS: Record<string, string> = {
   vacation: "חופשה", sick: "מחלה", reserve: "מילואים", personal: "יום אישי", other: "אחר",
