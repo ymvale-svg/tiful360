@@ -3,11 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAssets, useAssetCategories, useEmployees } from "@/hooks/useData";
 import { getCategoryIcon, getCategoryColor } from "@/lib/categoryIcons";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Pencil, FileSignature, UserMinus, Trash2, User, Building2, History, MapPin } from "lucide-react";
+import { ChevronLeft, Pencil, FileSignature, UserMinus, Trash2, User, Building2, History, MapPin, Clock3 } from "lucide-react";
 import { useSites } from "@/hooks/useSites";
 import { useSiteContainers } from "@/hooks/useSiteContainers";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { EditAssetDialog } from "@/components/EditAssetDialog";
 import { HandoverFlow } from "@/components/handover/HandoverFlow";
 import { AssetDocumentsSection } from "@/components/AssetDocumentsSection";
@@ -31,6 +31,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { draftKeyForAsset, formatDraftTime, loadHandoverDraft, type HandoverDraft } from "@/lib/handoverDraft";
 
 const assetStatusLabels: Record<string, string> = {
   in_use: "בשימוש", in_stock: "במלאי", in_repair: "בתיקון", lost: "אבד",
@@ -62,9 +63,18 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
   const [assignOpen, setAssignOpen] = useState(false);
   const [unassignConfirm, setUnassignConfirm] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [handoverDraft, setHandoverDraft] = useState<HandoverDraft | null>(null);
 
   const asset = (assets ?? []).find((a: any) => a.id === assetId) as any;
   const category = (categories ?? []).find((c: any) => c.id === categoryId) as any;
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadHandoverDraft(draftKeyForAsset(assetId, "handover")).then((draft) => {
+      if (!cancelled) setHandoverDraft(draft);
+    });
+    return () => { cancelled = true; };
+  }, [assetId, assignOpen]);
 
   // History from activity_log
   const { data: history } = useQuery({
@@ -325,6 +335,22 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
           {/* Handover / return protocols */}
           <div className="bg-card border border-border rounded-xl p-5">
             <h2 className="text-sm font-semibold text-muted-foreground mb-3">פרוטוקולי מסירה והזדכות</h2>
+            {handoverDraft && (
+              <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3">
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <Clock3 className="h-4 w-4 shrink-0 text-warning" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">תהליך מסירה במצב טיוטה</p>
+                    <p className="text-xs text-muted-foreground">
+                      נשמר ב־{formatDraftTime(handoverDraft.savedAt)}
+                    </p>
+                  </div>
+                </div>
+                <Button type="button" size="sm" variant="outline" onClick={() => setAssignOpen(true)}>
+                  המשך תהליך
+                </Button>
+              </div>
+            )}
             <HandoverFormsList forms={handoverForms ?? []} context="asset" />
           </div>
 
