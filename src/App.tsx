@@ -95,7 +95,7 @@ const App = () => (
 
 
                   <Route path="/categories" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations", "legal"]}><CategoryManager /></ProtectedRoute>} />
-                  <Route path="/it-tickets" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin", "operations"]}><ITTickets /></ProtectedRoute>} />
+                  <Route path="/it-tickets" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin", "operations", "direct_manager", "payroll", "hr", "finance", "legal", "secretariat", "ceo"]}><ITTickets /></ProtectedRoute>} />
                   <Route path="/alerts" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin"]}><Alerts /></ProtectedRoute>} />
                   <Route path="/user-management" element={<Navigate to="/employees?tab=users" replace />} />
                   <Route path="/companies" element={<ProtectedRoute requiredRoles={["super_admin"]}><Companies /></ProtectedRoute>} />
