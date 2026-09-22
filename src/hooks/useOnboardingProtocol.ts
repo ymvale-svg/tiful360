@@ -282,6 +282,7 @@ export function useSendOnboardingToOps() {
 export function useCompleteOnboardingProcess() {
   const qc = useQueryClient();
   const { activeCompanyId, activeCompany } = useCompany();
+  const { data: slaSettings } = useSlaSettings();
 
   return useMutation({
     mutationFn: async ({ processId }: { processId: string }) => {
@@ -308,29 +309,65 @@ export function useCompleteOnboardingProcess() {
         companyLogoUrl: (activeCompany as any)?.logo_url ?? null,
       });
 
-      const { data: proc } = await supabase
+      const { data: proc, error: procError } = await supabase
         .from("onboarding_processes")
-        .select("it_ticket_id")
+        .select("it_ticket_id, employee_id, employees(full_name, start_date), onboarding_items(title, owner_role, notes)")
         .eq("id", processId)
         .maybeSingle();
+      if (procError) throw procError;
+      if (!proc) throw new Error("תהליך הקליטה לא נמצא");
 
-      await supabase
+      let ticketId = (proc as any).it_ticket_id as string | null;
+      if (!ticketId) {
+        const employee = (proc as any).employees;
+        const itemRows = ((proc as any).onboarding_items ?? []) as Array<{ title: string; owner_role: string; notes: string | null }>;
+        const description = [
+          `בקשת פתיחת הרשאות וציוד לעובד/ת ${employee?.full_name ?? ""}`,
+          employee?.start_date ? `תאריך תחילת עבודה: ${new Date(employee.start_date).toLocaleDateString("en-GB")}` : "",
+          `מזהה פרוטוקול: ${built.documentId}`,
+          "",
+          ...itemRows.map((item) => `• ${item.title} — אחראי: ${OWNER_ROLE_LABEL[item.owner_role] ?? item.owner_role}${item.notes ? ` (${item.notes})` : ""}`),
+        ].filter(Boolean).join("\n");
+        const hours = resolveSlaHours(slaSettings, ONBOARDING_SUBJECT, "medium");
+        const { data: ticket, error: ticketError } = await supabase
+          .from("it_tickets")
+          .insert({
+            company_id: activeCompanyId,
+            employee_id: (proc as any).employee_id,
+            ticket_code: generateTicketCode(),
+            title: `קליטת עובד — ${employee?.full_name ?? ""}`,
+            description,
+            subject_category: ONBOARDING_SUBJECT,
+            ticket_type: "onboarding" as any,
+            priority: "medium" as any,
+            status: "done" as any,
+            resolved_at: new Date().toISOString(),
+            sla_deadline: slaDeadlineFrom(hours),
+          })
+          .select("id")
+          .single();
+        if (ticketError) throw ticketError;
+        ticketId = ticket.id;
+      }
+
+      const { error: updateError } = await supabase
         .from("onboarding_processes")
         .update({
           status: "done",
           completed_at: new Date().toISOString(),
           protocol_version: version,
           pdf_url: built.path,
+          it_ticket_id: ticketId,
         } as any)
         .eq("id", processId);
+      if (updateError) throw updateError;
 
-
-      const ticketId = (proc as any)?.it_ticket_id;
       if (ticketId) {
-        await supabase
+        const { error: closeError } = await supabase
           .from("it_tickets")
           .update({ status: "done" as any, resolved_at: new Date().toISOString() })
           .eq("id", ticketId);
+        if (closeError) throw closeError;
       }
 
       await supabase.functions

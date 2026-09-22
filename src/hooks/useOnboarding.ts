@@ -70,6 +70,7 @@ export function useOnboardingProcesses() {
       if (error) throw error;
       return (data ?? []) as unknown as OnboardingProcess[];
     },
+    enabled: !!activeCompanyId,
   });
 }
 
@@ -118,10 +119,18 @@ export function useCreateOnboardingProcess() {
       items: NewOnboardingItem[];
       status?: OnboardingStatus;
     }) => {
+      const { data: employee, error: employeeError } = await supabase
+        .from("employees")
+        .select("company_id")
+        .eq("id", employee_id)
+        .single();
+      if (employeeError) throw employeeError;
+      if (!employee?.company_id) throw new Error("לא נמצאה חברה לעובד");
+
       const { data: proc, error } = await supabase
         .from("onboarding_processes")
         .insert({
-          company_id: activeCompanyId,
+          company_id: employee.company_id,
           employee_id,
           status,
           created_by: user?.id ?? null,

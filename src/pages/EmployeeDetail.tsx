@@ -81,7 +81,7 @@ export default function EmployeeDetail() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState(() => {
     const t = new URLSearchParams(window.location.search).get("tab");
-    return t && ["personal", "assets", "vehicles", "documents", "leave", "payslips", "history"].includes(t) ? t : "personal";
+    return t && ["personal", "assets", "vehicles", "documents", "leave", "payslips", "history", "onboarding"].includes(t) ? t : "personal";
   });
   const [offboardingOpen, setOffboardingOpen] = useState(false);
   const [transferAsset, setTransferAsset] = useState<any>(null);
@@ -259,14 +259,14 @@ export default function EmployeeDetail() {
         </div>
       </div>
 
-      {/* Active onboarding banner */}
-      {showOnboarding && onboardingProcess!.status !== "done" && (
+      {/* Employee-level access to the onboarding form, including completed processes. */}
+      {showOnboarding && (
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3 text-sm">
             <ClipboardList className="w-5 h-5 text-primary shrink-0" />
             <div>
               <p className="font-semibold">
-                תהליך קליטה {ONBOARDING_STATUS_LABEL[onboardingProcess!.status] ?? ""}
+                טופס קליטת עובד · {ONBOARDING_STATUS_LABEL[onboardingProcess!.status] ?? ""}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {onbDone} מתוך {onbItems.length} פריטים בוצעו · תחילת עבודה{" "}
@@ -277,7 +277,7 @@ export default function EmployeeDetail() {
           </div>
           <Button size="sm" onClick={() => setActiveTab("onboarding")} className="gap-1.5">
             <ClipboardList className="w-4 h-4" />
-            פתח את תהליך הקליטה
+            פתח טופס קליטה
           </Button>
         </div>
       )}
