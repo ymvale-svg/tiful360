@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { UserPlus, Search, Send } from "lucide-react";
+import { UserPlus, Search, Send, UserRound, AlertCircle } from "lucide-react";
 import { NewOnboardingDialog } from "@/components/onboarding/NewOnboardingDialog";
 import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
 import { SendToOpsDialog } from "@/components/onboarding/SendToOpsDialog";
@@ -21,7 +22,8 @@ const STATUS_STYLE: Record<OnboardingStatus, string> = {
 };
 
 export default function Onboarding() {
-  const { data: processes = [], isLoading } = useOnboardingProcesses();
+  const navigate = useNavigate();
+  const { data: processes = [], isLoading, isError, error, refetch } = useOnboardingProcesses();
   const updateProcess = useUpdateOnboardingProcess();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selected, setSelected] = useState<OnboardingProcess | null>(null);
@@ -84,7 +86,17 @@ export default function Onboarding() {
 
       <div className="bg-card rounded-xl border border-border/50 shadow-card divide-y divide-border/50">
         {isLoading && <div className="p-8 text-center text-muted-foreground text-sm">טוען...</div>}
-        {!isLoading && filtered.length === 0 && (
+        {!isLoading && isError && (
+          <div className="p-8 text-center space-y-3">
+            <AlertCircle className="w-6 h-6 text-destructive mx-auto" />
+            <div>
+              <p className="text-sm font-medium">לא ניתן לטעון את תהליכי הקליטה</p>
+              <p className="text-xs text-muted-foreground mt-1">{error instanceof Error ? error.message : "אירעה שגיאה בטעינה"}</p>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => void refetch()}>נסה שוב</Button>
+          </div>
+        )}
+        {!isLoading && !isError && filtered.length === 0 && (
           <div className="p-10 text-center text-muted-foreground text-sm">אין תהליכי קליטה להצגה</div>
         )}
         {filtered.map((p) => {
@@ -132,6 +144,18 @@ export default function Onboarding() {
                     שלח לתפעול
                   </Button>
                 )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="gap-1.5"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/employees/${p.employee_id}?tab=onboarding`);
+                  }}
+                >
+                  <UserRound className="w-3.5 h-3.5" />
+                  תיק עובד
+                </Button>
               </div>
             </div>
           );
