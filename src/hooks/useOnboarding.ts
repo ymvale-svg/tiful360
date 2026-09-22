@@ -107,7 +107,6 @@ export interface NewOnboardingItem {
 
 export function useCreateOnboardingProcess() {
   const qc = useQueryClient();
-  const { activeCompanyId } = useCompany();
   const { user } = useAuth();
   return useMutation({
     mutationFn: async ({
