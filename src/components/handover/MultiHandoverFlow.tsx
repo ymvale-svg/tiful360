@@ -176,19 +176,24 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
 
   const handleSaveDraft = async () => {
     if (!draftKey) return;
-    await saveHandoverDraft({
-      key: draftKey,
-      savedAt: new Date().toISOString(),
-      label: assets.map((a) => a.asset_name ?? "").filter(Boolean).join(", "),
-      companyId: activeCompanyId ?? null,
-      state: { step, mode, employeeId, freeText },
-      photos,
-      video: videoFile,
-    });
-    qc.invalidateQueries({ queryKey: ["handover-drafts"] });
-    setDraftSavedAt(new Date().toISOString());
-    setFoundDraft(null);
-    toast({ title: "הטיוטה נשמרה", description: "אפשר להמשיך את המסירה מאוחר יותר" });
+    const savedAt = new Date().toISOString();
+    try {
+      await saveHandoverDraft({
+        key: draftKey,
+        savedAt,
+        label: assets.map((a) => a.asset_name ?? "").filter(Boolean).join(", "),
+        companyId: activeCompanyId ?? null,
+        state: { step, mode, employeeId, freeText },
+        photos,
+        video: videoFile,
+      });
+      qc.invalidateQueries({ queryKey: ["handover-drafts"] });
+      setDraftSavedAt(savedAt);
+      setFoundDraft(null);
+      toast({ title: "הטיוטה נשמרה", description: "אפשר להמשיך את המסירה מאוחר יותר" });
+    } catch (error: any) {
+      toast({ title: "הטיוטה לא נשמרה במערכת", description: error?.message ?? "יש לנסות שוב", variant: "destructive" });
+    }
   };
 
   const restoreDraft = () => {

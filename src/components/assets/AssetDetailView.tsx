@@ -7,7 +7,7 @@ import { ChevronLeft, Pencil, FileSignature, UserMinus, Trash2, User, Building2,
 import { useSites } from "@/hooks/useSites";
 import { useSiteContainers } from "@/hooks/useSiteContainers";
 import { cn } from "@/lib/utils";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { EditAssetDialog } from "@/components/EditAssetDialog";
 import { HandoverFlow } from "@/components/handover/HandoverFlow";
 import { AssetDocumentsSection } from "@/components/AssetDocumentsSection";
@@ -203,14 +203,14 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
         </div>
         <div className="flex items-center gap-2">
           {isAssignable && !asset.current_owner_id && !asset.assigned_site_id && (
-            <Button onClick={() => setAssignOpen(true)} className="gap-2">
+            <Button onClick={() => { setResumeDirection("handover"); setAssignOpen(true); }} className="gap-2">
               <FileSignature className="w-4 h-4" />
               שיוך לעובד / לאתר
             </Button>
           )}
           {isAssignable && (asset.current_owner_id || asset.assigned_site_id) && (
             <>
-              <Button variant="outline" onClick={() => setAssignOpen(true)} className="gap-2">
+              <Button variant="outline" onClick={() => { setResumeDirection("handover"); setAssignOpen(true); }} className="gap-2">
                 <FileSignature className="w-4 h-4" />
                 העברה
               </Button>

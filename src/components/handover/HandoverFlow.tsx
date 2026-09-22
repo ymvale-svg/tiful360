@@ -226,20 +226,25 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
 
   const handleSaveDraft = async () => {
     if (!draftKey) return;
-    await saveHandoverDraft({
-      key: draftKey,
-      savedAt: new Date().toISOString(),
-      label: `${asset?.asset_name ?? ""} ${asset?.asset_code ? `(${asset.asset_code})` : ""}`.trim(),
-      companyId: activeCompanyId ?? null,
-      state: { step, mode, employeeId, selectedKeys, freeText, odometer },
-      photos,
-      video: videoFile,
-      odometerPhoto,
-    });
-    qc.invalidateQueries({ queryKey: ["handover-drafts"] });
-    setDraftSavedAt(new Date().toISOString());
-    setFoundDraft(null);
-    toast({ title: "הטיוטה נשמרה", description: "אפשר להמשיך את המסירה מאוחר יותר מאותו פריט" });
+    const savedAt = new Date().toISOString();
+    try {
+      await saveHandoverDraft({
+        key: draftKey,
+        savedAt,
+        label: `${asset?.asset_name ?? ""} ${asset?.asset_code ? `(${asset.asset_code})` : ""}`.trim(),
+        companyId: activeCompanyId ?? null,
+        state: { step, mode, employeeId, selectedKeys, freeText, odometer },
+        photos,
+        video: videoFile,
+        odometerPhoto,
+      });
+      qc.invalidateQueries({ queryKey: ["handover-drafts"] });
+      setDraftSavedAt(savedAt);
+      setFoundDraft(null);
+      toast({ title: "הטיוטה נשמרה", description: "אפשר להמשיך את המסירה מאוחר יותר מאותו פריט" });
+    } catch (error: any) {
+      toast({ title: "הטיוטה לא נשמרה במערכת", description: error?.message ?? "יש לנסות שוב", variant: "destructive" });
+    }
   };
 
   const restoreDraft = () => {
