@@ -24,7 +24,8 @@ import { useCompany } from "@/hooks/useCompany";
 import { EditAssetDialog } from "@/components/EditAssetDialog";
 import { OWNER_ROLE_LABEL, OWNER_ROLE_OPTIONS } from "@/lib/domainConfig";
 import { formatDateTimeDMY } from "@/lib/utils";
-import { CheckCircle2, Printer, Package, StickyNote, Trash2, Plus, RotateCcw } from "lucide-react";
+import { CheckCircle2, Printer, Package, StickyNote, Trash2, Plus, RotateCcw, Pencil } from "lucide-react";
+import { NewOnboardingDialog } from "@/components/onboarding/NewOnboardingDialog";
 
 interface Props {
   process: OnboardingProcess | null;
@@ -54,6 +55,7 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
   const [newOwner, setNewOwner] = useState("operations");
   const [newNotes, setNewNotes] = useState("");
   const [adding, setAdding] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
 
   const items = useMemo(
@@ -282,6 +284,9 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
               options={[{ value: "", label: "כל האחראים" }, ...OWNER_ROLE_OPTIONS]}
               placeholder="סנן לפי אחראי"
             />
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setEditOpen(true)}>
+              <Pencil className="w-4 h-4" /> עריכה
+            </Button>
             <Button size="sm" variant="outline" className="gap-1.5" onClick={printProtocol}>
               <Printer className="w-4 h-4" /> פרוטוקול מסירה
             </Button>
@@ -427,6 +432,11 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
         open={!!assetCard}
         onOpenChange={(o) => !o && setAssetCard(null)}
         asset={assetCard}
+      />
+      <NewOnboardingDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        editProcess={process}
       />
     </Sheet>
   );
