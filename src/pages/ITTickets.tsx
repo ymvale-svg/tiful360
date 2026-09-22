@@ -13,6 +13,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useUpdateTicketStatus } from "@/hooks/useServiceTickets";
 import { NewITTicketDialog } from "@/components/NewITTicketDialog";
+import { EmployeeLink } from "@/components/EmployeeLink";
 import { ExportExcelButton } from "@/components/ExcelActionButtons";
 import { exportToExcel } from "@/lib/exportExcel";
 import { toast } from "sonner";
@@ -176,11 +177,19 @@ export default function ITTickets() {
           {/* Ticket list */}
           <div className={cn("lg:col-span-1 space-y-2", selectedTicket && "hidden lg:block")}>
             {filtered.map((ticket: any) => (
-              <button
+              <div
                 key={ticket.id}
+                role="button"
+                tabIndex={0}
                 onClick={() => setSelectedId(ticket.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelectedId(ticket.id);
+                  }
+                }}
                 className={cn(
-                  "w-full text-right bg-card rounded-xl border p-4 transition-all hover:shadow-md",
+                  "w-full text-right bg-card rounded-xl border p-4 transition-all hover:shadow-md cursor-pointer",
                   ticket.ticket_type === "offboarding" ? "border-destructive/30" : "border-border/50",
                   selectedId === ticket.id && "ring-2 ring-primary",
                 )}
@@ -198,14 +207,15 @@ export default function ITTickets() {
                     </div>
                     <p className="text-sm font-medium truncate">{ticket.title}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {subjectLabel(ticket.subject_category ?? ticket.ticket_type)} · {ticket.employees?.full_name}
+                      {subjectLabel(ticket.subject_category ?? ticket.ticket_type)} ·{" "}
+                      <EmployeeLink employeeId={ticket.employee_id} name={ticket.employees?.full_name} />
                     </p>
                   </div>
                   {ticket.status === "done"
                     ? <CheckCircle2 className="w-5 h-5 text-success shrink-0" aria-hidden="true" />
                     : <SlaBadge deadline={ticket.sla_deadline} done={false} />}
                 </div>
-              </button>
+              </div>
             ))}
             {filtered.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">אין קריאות להצגה</div>
@@ -234,7 +244,8 @@ export default function ITTickets() {
                       </div>
                       <h2 className="text-lg font-bold">{selectedTicket.title}</h2>
                       <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
-                        <User className="w-3.5 h-3.5" aria-hidden="true" />{selectedTicket.employees?.full_name}
+                        <User className="w-3.5 h-3.5" aria-hidden="true" />
+                        <EmployeeLink employeeId={selectedTicket.employee_id} name={selectedTicket.employees?.full_name} className="font-medium" />
                       </p>
                     </div>
                     <div className="flex flex-col items-end gap-2">

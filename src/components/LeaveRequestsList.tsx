@@ -5,6 +5,7 @@ import { useCancelLeaveRequest } from "@/hooks/useLeaveRequests";
 import { useToast } from "@/hooks/use-toast";
 import { EditSickLeaveDialog } from "@/components/EditSickLeaveDialog";
 import { buildGoogleCalendarUrl } from "@/lib/googleCalendar";
+import { EmployeeLink } from "@/components/EmployeeLink";
 
 const TYPE_LABELS: Record<string, string> = {
   vacation: "חופשה", sick: "מחלה", reserve: "מילואים", personal: "יום אישי", other: "אחר",
@@ -54,7 +55,9 @@ export function LeaveRequestsList({ requests, showEmployee, allowCancel }: Props
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               {showEmployee && (
-                <p className="text-sm font-semibold">{r.employee?.full_name}</p>
+                <p className="text-sm font-semibold">
+                  <EmployeeLink employeeId={r.employee_id} name={r.employee?.full_name} />
+                </p>
               )}
               <p className="text-sm">
                 <span className="font-medium">{TYPE_LABELS[r.request_type]}</span>
