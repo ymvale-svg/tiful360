@@ -50,6 +50,11 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
   const [ownerFilter, setOwnerFilter] = useState<string>("");
   const [assetCard, setAssetCard] = useState<any | null>(null);
   const [finishing, setFinishing] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newOwner, setNewOwner] = useState("operations");
+  const [newNotes, setNewNotes] = useState("");
+  const [adding, setAdding] = useState(false);
+
 
   const items = useMemo(
     () => [...(process?.onboarding_items ?? [])].sort((a, b) => a.created_at.localeCompare(b.created_at)),
