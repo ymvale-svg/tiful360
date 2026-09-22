@@ -24,7 +24,7 @@ import { useCompany } from "@/hooks/useCompany";
 import { EditAssetDialog } from "@/components/EditAssetDialog";
 import { OWNER_ROLE_LABEL, OWNER_ROLE_OPTIONS } from "@/lib/domainConfig";
 import { formatDateTimeDMY } from "@/lib/utils";
-import { CheckCircle2, Printer, Package, StickyNote, Trash2 } from "lucide-react";
+import { CheckCircle2, Printer, Package, StickyNote, Trash2, Plus, RotateCcw } from "lucide-react";
 
 interface Props {
   process: OnboardingProcess | null;
@@ -50,6 +50,11 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
   const [ownerFilter, setOwnerFilter] = useState<string>("");
   const [assetCard, setAssetCard] = useState<any | null>(null);
   const [finishing, setFinishing] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newOwner, setNewOwner] = useState("operations");
+  const [newNotes, setNewNotes] = useState("");
+  const [adding, setAdding] = useState(false);
+
 
   const items = useMemo(
     () => [...(process?.onboarding_items ?? [])].sort((a, b) => a.created_at.localeCompare(b.created_at)),
@@ -174,6 +179,42 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
     }
   };
 
+  // Items can be added at any stage — also after the process was sent or completed.
+  const addItem = async () => {
+    const title = newTitle.trim();
+    if (!title) return;
+    setAdding(true);
+    try {
+      await upsertItem.mutateAsync({
+        process_id: process.id,
+        title,
+        owner_role: newOwner,
+        item_type: "asset",
+        notes: newNotes.trim() || null,
+        status: "pending",
+      } as any);
+      await appendOnboardingAudit(process.id, `פריט נוסף לתהליך: ${title}`);
+      setNewTitle("");
+      setNewNotes("");
+      toast({ title: "הפריט נוסף" });
+    } catch (e: any) {
+      toast({ title: "שגיאה", description: e.message, variant: "destructive" });
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const reopen = async () => {
+    try {
+      await updateProcess.mutateAsync({ id: process.id, status: "in_progress", completed_at: null });
+      await appendOnboardingAudit(process.id, "התהליך נפתח מחדש לעריכה");
+      toast({ title: "התהליך נפתח מחדש", description: "ניתן להוסיף ולערוך פריטים" });
+    } catch (e: any) {
+      toast({ title: "שגיאה", description: e.message, variant: "destructive" });
+    }
+  };
+
+
   const finish = async () => {
     setFinishing(true);
     try {
@@ -241,6 +282,12 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
                 <CheckCircle2 className="w-4 h-4" /> {finishing ? "מפיק פרוטוקול..." : "סיום תהליך"}
               </Button>
             )}
+            {process.status === "done" && (
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={reopen}>
+                <RotateCcw className="w-4 h-4" /> פתח מחדש לעריכה
+              </Button>
+            )}
+
           </div>
         </div>
 
@@ -333,7 +380,35 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
               אין פריטים בתהליך זה
             </div>
           )}
+
+          <div className="border border-dashed border-border rounded-xl p-4 space-y-2">
+            <h3 className="text-sm font-semibold">הוספת פריט לתהליך</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <input
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                placeholder="שם הפריט / ההרשאה"
+                className="w-full px-3 py-2 bg-card border border-border rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
+              />
+              <SearchableSelect
+                value={newOwner}
+                onChange={setNewOwner}
+                options={OWNER_ROLE_OPTIONS}
+                placeholder="אחראי"
+              />
+            </div>
+            <input
+              value={newNotes}
+              onChange={(e) => setNewNotes(e.target.value)}
+              placeholder="הערה לאחראי (לא חובה)"
+              className="w-full px-3 py-2 bg-card border border-border rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
+            />
+            <Button size="sm" className="gap-1.5" onClick={addItem} disabled={!newTitle.trim() || adding}>
+              <Plus className="w-4 h-4" /> {adding ? "מוסיף..." : "הוסף פריט"}
+            </Button>
+          </div>
         </div>
+
       </SheetContent>
       <EditAssetDialog
         open={!!assetCard}
