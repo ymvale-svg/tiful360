@@ -53,27 +53,27 @@ const ROLE_CONFIG: Record<AppRole, DashboardConfig> = {
   },
   legal: {
     kpis: ["totalAssets"],
-    widgets: ["expiring"],
+    widgets: ["expiring", "openTickets"],
     expiryDomains: ["insurance", "real_estate"],
   },
   finance: {
     kpis: ["totalAssets"],
-    widgets: ["expiring"],
+    widgets: ["expiring", "openTickets"],
     expiryDomains: ["insurance", "license", "real_estate"],
   },
   hr: {
     kpis: ["activeEmployees", "onboardingEmployees"],
-    widgets: ["onboarding", "leave", "leaving", "attendanceMissing", "activity"],
+    widgets: ["onboarding", "leave", "leaving", "attendanceMissing", "activity", "openTickets"],
     expiryDomains: null,
   },
   payroll: {
     kpis: ["activeEmployees"],
-    widgets: ["attendanceMissing", "leave", "tax101"],
+    widgets: ["attendanceMissing", "leave", "tax101", "openTickets"],
     expiryDomains: null,
   },
   direct_manager: {
     kpis: ["activeEmployees"],
-    widgets: ["leave", "attendanceMissing"],
+    widgets: ["leave", "attendanceMissing", "openTickets"],
     expiryDomains: null,
   },
   ceo: {
@@ -83,7 +83,7 @@ const ROLE_CONFIG: Record<AppRole, DashboardConfig> = {
   },
   secretariat: {
     kpis: ["activeEmployees"],
-    widgets: ["leave", "onboarding"],
+    widgets: ["leave", "onboarding", "openTickets"],
     expiryDomains: null,
   },
   employee: {
