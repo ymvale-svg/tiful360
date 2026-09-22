@@ -243,7 +243,8 @@ export default function ITTickets() {
                       </div>
                       <h2 className="text-lg font-bold">{selectedTicket.title}</h2>
                       <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
-                        <User className="w-3.5 h-3.5" aria-hidden="true" />{selectedTicket.employees?.full_name}
+                        <User className="w-3.5 h-3.5" aria-hidden="true" />
+                        <EmployeeLink employeeId={selectedTicket.employee_id} name={selectedTicket.employees?.full_name} className="font-medium" />
                       </p>
                     </div>
                     <div className="flex flex-col items-end gap-2">
