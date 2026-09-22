@@ -3,6 +3,7 @@ import { useCompanyAttendanceCorrections } from "@/hooks/useAttendanceCorrection
 import { Clock4 } from "lucide-react";
 import { ExportExcelButton } from "@/components/ExcelActionButtons";
 import { exportToExcel } from "@/lib/exportExcel";
+import { EmployeeLink } from "@/components/EmployeeLink";
 
 const FILTERS = [
   { id: "approved", label: "מאושרות" },
