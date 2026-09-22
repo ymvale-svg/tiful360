@@ -938,7 +938,7 @@ function InstancesTable({
             )}
             <div className={cn("truncate", showSecond ? "col-span-3" : "col-span-6")}>
               {a.employees?.full_name ? (
-                a.employees.full_name
+                <EmployeeLink employeeId={a.current_owner_id} name={a.employees.full_name} />
               ) : a.sites?.name ? (
                 <span className="inline-flex items-center gap-1">
                   <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
