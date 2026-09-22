@@ -69,13 +69,33 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
       setCopyFromId("");
       setQuickAdd({});
       setQuickModel({});
+      return;
     }
-  }, [open]);
+    // Edit mode: prefill the selection from the process's existing items.
+    if (editProcess) {
+      setEmployeeId(editProcess.employee_id);
+      const next: Record<string, SelectedEntry> = {};
+      (editProcess.onboarding_items ?? []).forEach((i) => {
+        if (!i.catalog_ref_id) return;
+        const entry = next[i.catalog_ref_id] ?? { groupIds: [], notes: {}, owners: {}, models: {} };
+        const gk = i.selected_group_id ?? "_";
+        if (i.selected_group_id && !entry.groupIds.includes(i.selected_group_id)) {
+          entry.groupIds.push(i.selected_group_id);
+        }
+        entry.owners[gk] = i.owner_role ?? "";
+        if (i.notes) entry.notes[gk] = i.notes;
+        if (i.selected_group_id && i.selected_model_id) entry.models[i.selected_group_id] = i.selected_model_id;
+        next[i.catalog_ref_id] = entry;
+      });
+      setSelected(next);
+    }
+  }, [open, editProcess]);
 
   const employee = employees.find((e: any) => e.id === employeeId);
 
   // Pre-load from a matching role template when picking the employee.
   useEffect(() => {
+    if (editProcess) return; // edit mode keeps the process's own items
     if (!employee) return;
     const tpl =
       templates.find((t) => t.role_name === (employee as any).role && t.department === (employee as any).department) ??
