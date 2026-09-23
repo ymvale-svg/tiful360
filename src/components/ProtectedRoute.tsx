@@ -1,5 +1,5 @@
 import { useAuth } from "@/hooks/useAuth";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 
 type AppRole = "admin" | "it_manager" | "employee" | "super_admin" | "direct_manager" | "payroll" | "hr" | "operations" | "finance" | "legal" | "secretariat" | "ceo";
 
@@ -10,6 +10,7 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps) {
   const { session, loading, roles, accessBlocked, signOut } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -23,7 +24,10 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
   }
 
   if (!session) {
-    return <Navigate to="/login" replace />;
+    // Keep the requested page (e.g. a ticket deep link) so login can continue to it.
+    const target = `${location.pathname}${location.search}`;
+    const to = target && target !== "/" ? `/login?redirect=${encodeURIComponent(target)}` : "/login";
+    return <Navigate to={to} replace />;
   }
 
   if (accessBlocked) {

@@ -9,6 +9,7 @@ import {
   SUBSCRIPTION_PROVIDERS,
   SUBSCRIPTION_STATUS_LABELS,
   useSaveVehicleSubscription,
+  useDeleteVehicleSubscription,
   type VehicleSubscription,
 } from "@/hooks/useVehicleSubscriptions";
 
@@ -32,6 +33,7 @@ export function VehicleSubscriptionDialog({
 }: Props) {
   const { toast } = useToast();
   const save = useSaveVehicleSubscription();
+  const remove = useDeleteVehicleSubscription();
   const [provider, setProvider] = useState<string>(SUBSCRIPTION_PROVIDERS[0]);
   const [customProvider, setCustomProvider] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -135,6 +137,25 @@ export function VehicleSubscriptionDialog({
         <DialogFooter className="gap-2 sm:justify-start">
           <Button onClick={handleSave} disabled={save.isPending}>שמור</Button>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>ביטול</Button>
+          {subscription?.id && (
+            <Button
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+              disabled={remove.isPending}
+              onClick={async () => {
+                if (!window.confirm("למחוק את המנוי?")) return;
+                try {
+                  await remove.mutateAsync(subscription.id);
+                  toast({ title: "המנוי נמחק" });
+                  onOpenChange(false);
+                } catch (e: any) {
+                  toast({ title: "שגיאה במחיקה", description: e.message, variant: "destructive" });
+                }
+              }}
+            >
+              מחיקה
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

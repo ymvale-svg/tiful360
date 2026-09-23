@@ -8,6 +8,7 @@ import { formatDateDMY } from "@/lib/utils";
 import { snapshotItemLabel } from "@/lib/pdf/formPdf";
 import { getDomain } from "@/lib/assetDomains";
 import { PendingSignatureDialog } from "@/components/handover/PendingSignatureDialog";
+import { useCompany } from "@/hooks/useCompany";
 import { Badge } from "@/components/ui/badge";
 
 interface PendingFormRow {
@@ -28,15 +29,18 @@ interface PendingFormRow {
 /** Handover/return protocols that were sent for remote signing and still await the employee's signature. */
 export function PendingSignaturesCard() {
   const navigate = useNavigate();
+  const { activeCompanyId } = useCompany();
   const [dialogFormId, setDialogFormId] = useState<string | null>(null);
 
   const { data: forms, isLoading } = useQuery({
-    queryKey: ["pending-signature-forms"],
+    queryKey: ["pending-signature-forms", activeCompanyId],
+    enabled: !!activeCompanyId,
     queryFn: async (): Promise<PendingFormRow[]> => {
       const { data, error } = await supabase
         .from("asset_handover_forms")
         .select("id, employee_id, asset_id, direction, created_at, form_snapshot, assets(asset_name, asset_code, asset_categories(domain, prefix, protocol_type)), employees(full_name)")
         .eq("status", "pending")
+        .eq("company_id", activeCompanyId!)
         .order("created_at", { ascending: true })
         .limit(6);
       if (error) throw error;

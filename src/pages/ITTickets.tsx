@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn, formatDateTimeDMY } from "@/lib/utils";
 import { useITTickets } from "@/hooks/useData";
+import { useCompany } from "@/hooks/useCompany";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -52,6 +53,7 @@ function SlaBadge({ deadline, done }: { deadline: string | null; done: boolean }
 
 export default function ITTickets() {
   const { data: tickets, isLoading } = useITTickets();
+  const { activeCompanyId, setActiveCompanyId } = useCompany();
   const updateStatus = useUpdateTicketStatus();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
@@ -61,20 +63,40 @@ export default function ITTickets() {
   // Deep link from email: /it-tickets?ticket=<id|ticket_code>
   const deepLink = searchParams.get("ticket");
   useEffect(() => {
-    if (!deepLink || !tickets?.length) return;
+    if (!deepLink || !tickets) return;
+    const clearParam = () => {
+      const next = new URLSearchParams(searchParams);
+      next.delete("ticket");
+      setSearchParams(next, { replace: true });
+    };
     const match = (tickets as any[]).find(
       (t: any) => t.id === deepLink || t.ticket_code?.toLowerCase() === deepLink.toLowerCase(),
     );
     if (match) {
       setSelectedId(match.id);
       setStatusFilter("all");
-    } else {
-      toast.error("הקריאה לא נמצאה או שאין לך הרשאה לצפות בה");
+      clearParam();
+      return;
     }
-    const next = new URLSearchParams(searchParams);
-    next.delete("ticket");
-    setSearchParams(next, { replace: true });
-  }, [deepLink, tickets]);
+    // Not in the active company — the ticket may belong to another company the user has access to.
+    let cancelled = false;
+    (async () => {
+      const isUuid = /^[0-9a-f-]{36}$/i.test(deepLink);
+      const { data } = await supabase
+        .from("it_tickets")
+        .select("id, company_id")
+        .or(isUuid ? `id.eq.${deepLink}` : `ticket_code.eq.${deepLink}`)
+        .maybeSingle();
+      if (cancelled) return;
+      if (data?.company_id && data.company_id !== activeCompanyId) {
+        setActiveCompanyId(data.company_id); // keep the param so the effect re-runs after reload
+        return;
+      }
+      toast.error("הקריאה לא נמצאה או שאין לך הרשאה לצפות בה");
+      clearParam();
+    })();
+    return () => { cancelled = true; };
+  }, [deepLink, tickets, activeCompanyId]);
 
   const filtered = (tickets ?? []).filter((t: any) =>
     statusFilter === "all" ? true : statusFilter === "open_all" ? t.status !== "done" : t.status === statusFilter,

@@ -8,6 +8,7 @@ import { useAssetGroups } from "@/hooks/useAssetGroups";
 import { usePersistentFilter } from "@/hooks/usePersistentFilter";
 import { exportToExcel } from "@/lib/exportExcel";
 import { QuickAddSubscriptionDialog } from "@/components/vehicles/QuickAddSubscriptionDialog";
+import { VehicleSubscriptionDialog } from "@/components/vehicles/VehicleSubscriptionDialog";
 
 import {
   SUBSCRIPTION_PROVIDERS,
@@ -92,6 +93,9 @@ export default function VehicleSubscriptions() {
   const [quickAdd, setQuickAdd] = useState<
     { employeeId: string | null; employeeName: string; plate: string } | null
   >(null);
+
+  /** Editing an older subscription row (pre-asset records) from its tag. */
+  const [editSub, setEditSub] = useState<{ sub: VehicleSubscription; label: string } | null>(null);
 
   const [filters, setFilters, resetFilters] = usePersistentFilter("vehicle-subscriptions", {
     q: "",
@@ -444,10 +448,11 @@ export default function VehicleSubscriptions() {
                           <button
                             key={s.id}
                             type="button"
-                            title={s.source === "asset" ? "פתיחת כרטיס הפריט" : s.notes || undefined}
+                            title={s.source === "asset" ? "פתיחת כרטיס הפריט" : s.notes || "עריכת המנוי"}
                             onClick={(e) => {
                               e.stopPropagation();
                               if (s.source_asset_id) navigate(`/assets/licenses/${s.source_asset_id}`);
+                              else setEditSub({ sub: s, label: `${r.employee_name} · ${r.plate}` });
                             }}
                             className={`text-xs px-2 py-1 rounded-full border transition-opacity hover:opacity-80 ${statusClass[s.status] ?? "bg-muted text-muted-foreground border-border"}`}
                           >
@@ -491,6 +496,13 @@ export default function VehicleSubscriptions() {
         employeeId={quickAdd?.employeeId ?? null}
         employeeName={quickAdd?.employeeName ?? ""}
         plate={quickAdd?.plate}
+      />
+
+      <VehicleSubscriptionDialog
+        open={!!editSub}
+        onOpenChange={(o) => !o && setEditSub(null)}
+        subscription={editSub?.sub ?? null}
+        vehicleLabel={editSub?.label}
       />
     </div>
   );
