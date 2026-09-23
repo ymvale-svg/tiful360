@@ -117,6 +117,13 @@ export function PendingHandoverForms({ employeeId }: Props) {
         }).catch((e) => console.error("protocol email failed", e));
       }
 
+      // Let the person who sent the form know it was signed (same as the remote link flow).
+      if (active.sign_token) {
+        void supabase.functions
+          .invoke("notify-form-signed", { body: { token: active.sign_token } })
+          .catch(() => undefined);
+      }
+
       toast({ title: "נחתם בהצלחה", description: "המסמך נשמר באזור האישי ונשלח אליך במייל" });
       qc.invalidateQueries({ queryKey: ["pending-handover", employeeId] });
       qc.invalidateQueries({ queryKey: ["handover-forms"] });
