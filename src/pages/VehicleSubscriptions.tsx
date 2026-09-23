@@ -451,6 +451,7 @@ export default function VehicleSubscriptions() {
                             onClick={(e) => {
                               e.stopPropagation();
                               if (s.source_asset_id) navigate(`/assets/licenses/${s.source_asset_id}`);
+                              else setEditSub({ sub: s, label: `${r.employee_name} · ${r.plate}` });
                             }}
                             className={`text-xs px-2 py-1 rounded-full border transition-opacity hover:opacity-80 ${statusClass[s.status] ?? "bg-muted text-muted-foreground border-border"}`}
                           >
