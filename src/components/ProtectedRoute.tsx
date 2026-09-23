@@ -24,7 +24,10 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
   }
 
   if (!session) {
-    return <Navigate to="/login" replace />;
+    // Keep the requested page (e.g. a ticket deep link) so login can continue to it.
+    const target = `${location.pathname}${location.search}`;
+    const to = target && target !== "/" ? `/login?redirect=${encodeURIComponent(target)}` : "/login";
+    return <Navigate to={to} replace />;
   }
 
   if (accessBlocked) {
