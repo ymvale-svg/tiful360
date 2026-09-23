@@ -70,18 +70,7 @@ export function AppLayout() {
             >
               <Menu className="w-5 h-5" aria-hidden="true" />
             </button>
-            <div className="hidden md:flex items-center gap-3 bg-muted rounded-lg px-3 py-2 w-56 lg:w-80">
-              <Search className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-              <label htmlFor="global-search" className="sr-only">חיפוש כללי</label>
-              <input
-                id="global-search"
-                type="search"
-                value={headerSearch}
-                onChange={(e) => onHeaderSearchChange(e.target.value)}
-                placeholder="חיפוש עובדים, ציוד, משימות..."
-                className="bg-transparent text-sm outline-none w-full placeholder:text-muted-foreground"
-              />
-            </div>
+            <GlobalSearch />
             <CompanySelector />
           </div>
 
