@@ -16,7 +16,6 @@ export function AppLayout() {
   const { user, signOut, isSuperAdmin, roles } = useAuth();
   const { data: profile } = useProfile();
   const navigate = useNavigate();
-  const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useSignedFormAlerts();
