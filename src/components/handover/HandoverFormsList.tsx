@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { formatDateTimeDMY } from "@/lib/utils";
-import { FileSignature, FileDown, Clock, Eye, ExternalLink, Images, Play } from "lucide-react";
+import { FileSignature, FileDown, Clock, Eye, ExternalLink, Images, Play, Send } from "lucide-react";
+import { sendSignLink, signLinkFor } from "@/lib/signLink";
+import { toast } from "sonner";
 import type { HandoverFormRow } from "@/hooks/useHandoverForms";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -28,6 +30,19 @@ export function HandoverFormsList({ forms, context, emptyText = "אין עדיי
   const [preview, setPreview] = useState<{ url: string; title: string } | null>(null);
   const [mediaPreview, setMediaPreview] = useState<{ items: ProtocolMedia[]; title: string } | null>(null);
   const [creatingPreview, setCreatingPreview] = useState(false);
+  const [resendingId, setResendingId] = useState<string | null>(null);
+
+  const resend = async (f: HandoverFormRow) => {
+    if (!f.sign_token && !f.short_code) return;
+    setResendingId(f.id);
+    try {
+      const { sent } = await sendSignLink([f.id], [signLinkFor(f.sign_token, f.short_code)]);
+      if (sent) toast.success(`נשלח מייל חוזר ל${f.employees?.full_name || "עובד"} עם קישור לחתימה`);
+      else toast.error("שליחת המייל נכשלה — נסו שוב מאוחר יותר");
+    } finally {
+      setResendingId(null);
+    }
+  };
 
   useEffect(() => () => {
     if (preview?.url.startsWith("blob:")) URL.revokeObjectURL(preview.url);
@@ -110,6 +125,20 @@ export function HandoverFormsList({ forms, context, emptyText = "אין עדיי
               </p>
             </div>
             <div className="flex items-center gap-1 shrink-0">
+              {pending && (f.sign_token || f.short_code) && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1 px-2 text-xs"
+                  disabled={resendingId === f.id}
+                  onClick={() => void resend(f)}
+                  title="שליחת מייל חוזר לעובד עם קישור לחתימה"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  {resendingId === f.id ? "שולח..." : "שלח שוב"}
+                </Button>
+              )}
               {media.length > 0 && (
                 <Button
                   type="button"
