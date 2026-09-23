@@ -625,12 +625,15 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
         media: media as any,
       });
       await applyAssetUpdate();
-      const { links, sent } = await sendSignLink([row.id], [signLinkFor(row.sign_token, (row as any).short_code)]);
+      const { links, sent, reason } = await sendSignLink([row.id], [signLinkFor(row.sign_token, (row as any).short_code)]);
       setSignLinks(links);
       setSignEmailSent(sent);
       toast({
         title: "נשלח לחתימה",
-        description: sent ? "נשלח מייל לעובד עם קישור לחתימה" : "הפרוטוקול ממתין לעובד בפורטל",
+        description: sent
+          ? "נשלח מייל לעובד עם קישור לחתימה"
+          : `${describeSignEmailReason(reason)} — הפרוטוקול ממתין לעובד בפורטל`,
+        variant: sent ? undefined : "destructive",
       });
       qc.invalidateQueries({ queryKey: ["assets"] });
       qc.invalidateQueries({ queryKey: ["activity-log"] });
