@@ -60,8 +60,24 @@ Deno.serve(async (req) => {
 
   if (!employee?.email) return json({ success: false, reason: 'no_email' })
 
+  // The bucket is private and callers store an object path — turn it into a
+  // long-lived signed link so the button in the email actually opens the PDF.
+  let pdfUrl: string | null =
+    typeof templateData.pdfUrl === 'string' && templateData.pdfUrl ? templateData.pdfUrl : null
+  if (pdfUrl && !/^https?:\/\//i.test(pdfUrl)) {
+    const path = pdfUrl.split('?')[0].replace(/^\/+/, '').replace(/^handover-forms\//, '')
+    const { data: signed, error: signErr } = await admin.storage
+      .from('handover-forms')
+      .createSignedUrl(path, 60 * 60 * 24 * 30)
+    pdfUrl = signErr ? null : signed?.signedUrl ?? null
+  }
+
   const result = await sendTemplateEmailLogged(admin, 'handover-protocol', employee.email, {
-    templateData: { ...templateData, employeeName: templateData.employeeName || employee.full_name || '' },
+    templateData: {
+      ...templateData,
+      pdfUrl,
+      employeeName: templateData.employeeName || employee.full_name || '',
+    },
     idempotencyKey,
   })
 
