@@ -167,7 +167,7 @@ export function GlobalSearch() {
       </div>
 
       {open && term.trim().length >= 2 && (
-        <div className="absolute top-full mt-2 w-[22rem] lg:w-[26rem] left-0 rounded-xl border border-border bg-popover shadow-xl z-50 max-h-[70vh] overflow-y-auto p-2">
+        <div className="absolute top-full mt-2 w-[22rem] lg:w-[26rem] max-w-[90vw] right-0 rounded-xl border border-border bg-popover shadow-xl z-[60] max-h-[70vh] overflow-y-auto p-2">
           {hits.length === 0 ? (
             <p className="text-sm text-muted-foreground px-3 py-4 text-center">לא נמצאו תוצאות עבור „{term}”</p>
           ) : (
