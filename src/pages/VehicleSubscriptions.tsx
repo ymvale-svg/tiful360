@@ -497,6 +497,13 @@ export default function VehicleSubscriptions() {
         employeeName={quickAdd?.employeeName ?? ""}
         plate={quickAdd?.plate}
       />
+
+      <VehicleSubscriptionDialog
+        open={!!editSub}
+        onOpenChange={(o) => !o && setEditSub(null)}
+        subscription={editSub?.sub ?? null}
+        vehicleLabel={editSub?.label}
+      />
     </div>
   );
 }
