@@ -8,6 +8,7 @@ import { useAssetGroups } from "@/hooks/useAssetGroups";
 import { usePersistentFilter } from "@/hooks/usePersistentFilter";
 import { exportToExcel } from "@/lib/exportExcel";
 import { QuickAddSubscriptionDialog } from "@/components/vehicles/QuickAddSubscriptionDialog";
+import { VehicleSubscriptionDialog } from "@/components/vehicles/VehicleSubscriptionDialog";
 
 import {
   SUBSCRIPTION_PROVIDERS,
