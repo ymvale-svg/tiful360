@@ -14,12 +14,14 @@ export interface HandoverFormRow {
   created_at: string;
   form_snapshot: any;
   media: any;
+  sign_token: string | null;
+  short_code: string | null;
   assets?: { asset_name: string | null; asset_code: string | null } | null;
   employees?: { full_name: string | null } | null;
 }
 
 const SELECT =
-  "id, asset_id, employee_id, direction, protocol_type, status, pdf_url, attached_document_url, signed_at, created_at, form_snapshot, media, assets(asset_name, asset_code), employees(full_name)";
+  "id, asset_id, employee_id, direction, protocol_type, status, pdf_url, attached_document_url, signed_at, created_at, form_snapshot, media, sign_token, short_code, assets(asset_name, asset_code), employees(full_name)";
 
 /** Signed handover / return protocols of a single asset (item card). */
 export function useAssetHandoverForms(assetId?: string) {
