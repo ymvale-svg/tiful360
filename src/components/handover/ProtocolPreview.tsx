@@ -26,6 +26,10 @@ export function ProtocolPreview({ snapshot }: { snapshot: any }) {
         freeText: snapshot?.notes ?? null,
       } as any;
 
+  const issuerSignature: string | null = snapshot?.issuer_signature ?? null;
+  const employeeSignature: string | null =
+    snapshot?.employee_signature ?? snapshot?.receiver_signature ?? null;
+
   const rows: { label: string; value: string }[] = [
     { label: "עובד", value: data.employeeName || "" },
     ...(data.employeeIdNumber ? [{ label: "ת.ז.", value: String(data.employeeIdNumber) }] : []),
