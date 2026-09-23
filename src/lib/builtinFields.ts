@@ -59,7 +59,7 @@ export const BUILTIN_FIELDS: Partial<Record<DomainKey, BuiltinField[]>> = {
     { key: "account_url", label: "כתובת / URL", defaultVisible: true },
     { key: "license_expires_at", label: "תפוגת רישיון", defaultVisible: true },
     { key: "expiry_date", label: "תאריך תפוגה", defaultVisible: true },
-    { key: "serial_number", label: "מס׳ סידורי / מס׳ כרטיס", defaultVisible: false },
+    { key: "serial_number", label: "מס׳ סידורי / מס׳ כרטיס", defaultVisible: true },
     { key: "manufacturer_model", label: "יצרן ודגם", defaultVisible: false },
     { key: "condition", label: "מצב הציוד", defaultVisible: false },
     { key: "assigned_site_id", label: "שיוך לאתר", defaultVisible: false },
