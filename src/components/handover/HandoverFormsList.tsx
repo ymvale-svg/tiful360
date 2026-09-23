@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { formatDateTimeDMY } from "@/lib/utils";
-import { FileSignature, FileDown, Clock, Eye, ExternalLink, Images, Play } from "lucide-react";
+import { FileSignature, FileDown, Clock, Eye, ExternalLink, Images, Play, Send } from "lucide-react";
+import { sendSignLink, signLinkFor } from "@/lib/signLink";
+import { toast } from "sonner";
 import type { HandoverFormRow } from "@/hooks/useHandoverForms";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
