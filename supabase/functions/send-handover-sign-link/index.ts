@@ -78,6 +78,11 @@ Deno.serve(async (req) => {
     }
   })
 
+  // A resend must reach the inbox again, so it never reuses the original
+  // idempotency key (the managed API would otherwise drop it as a duplicate).
+  const baseKey = `handover-sign-${forms.map((f: any) => f.id).sort().join('-')}`
+  const idempotencyKey = body?.resend ? `${baseKey}-r${Date.now()}` : baseKey
+
   const result = await sendTemplateEmailLogged(admin, 'handover-sign-request', employee.email, {
     templateData: {
       employeeName: employee.full_name ?? snap.employee_name ?? '',
@@ -89,9 +94,12 @@ Deno.serve(async (req) => {
       items,
       signUrl: links[0],
     },
-    idempotencyKey: `handover-sign-${forms.map((f: any) => f.id).sort().join('-')}`,
+    idempotencyKey,
   })
 
-  if (!result.sent && result.error) return json({ error: 'Failed to send email', links }, 500)
+  if (!result.sent && result.error) {
+    console.error('sign-link email failed', { to: employee.email, error: result.error })
+    return json({ success: false, reason: 'send_failed', error: result.error, links }, 200)
+  }
   return json({ success: result.sent, reason: result.reason ?? null, links })
 })

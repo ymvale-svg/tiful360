@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { formatDateTimeDMY } from "@/lib/utils";
 import { FileSignature, FileDown, Clock, Eye, ExternalLink, Images, Play, Send } from "lucide-react";
-import { sendSignLink, signLinkFor } from "@/lib/signLink";
+import { sendSignLink, signLinkFor, describeSignEmailReason } from "@/lib/signLink";
 import { toast } from "sonner";
 import type { HandoverFormRow } from "@/hooks/useHandoverForms";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -36,9 +36,13 @@ export function HandoverFormsList({ forms, context, emptyText = "אין עדיי
     if (!f.sign_token && !f.short_code) return;
     setResendingId(f.id);
     try {
-      const { sent } = await sendSignLink([f.id], [signLinkFor(f.sign_token, f.short_code)]);
+      const { sent, reason } = await sendSignLink(
+        [f.id],
+        [signLinkFor(f.sign_token, f.short_code)],
+        { resend: true },
+      );
       if (sent) toast.success(`נשלח מייל חוזר ל${f.employees?.full_name || "עובד"} עם קישור לחתימה`);
-      else toast.error("שליחת המייל נכשלה — נסו שוב מאוחר יותר");
+      else toast.error(describeSignEmailReason(reason));
     } finally {
       setResendingId(null);
     }

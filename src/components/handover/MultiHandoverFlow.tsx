@@ -31,7 +31,7 @@ import type { ProtocolMedia } from "@/lib/pdf/types";
 import { uploadProtocolFile, compressImage, describeUploadError } from "@/lib/protocolUpload";
 import { getDomain, type DomainKey } from "@/lib/assetDomains";
 import { SignLinkDialog } from "@/components/handover/SignLinkDialog";
-import { signLinkFor, sendSignLink } from "@/lib/signLink";
+import { signLinkFor, sendSignLink, describeSignEmailReason } from "@/lib/signLink";
 import { compressVideo, VIDEO_TARGET_BYTES } from "@/lib/videoCompress";
 import {
   saveHandoverDraft, loadHandoverDraft, deleteHandoverDraft, draftKeyForAssets, formatDraftTime,
@@ -500,7 +500,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
         media: media as any,
       }, media);
       await applyAssetsUpdate();
-      const { links, sent } = await sendSignLink(
+      const { links, sent, reason } = await sendSignLink(
         rows.map((r) => r.id),
         rows.map((r) => signLinkFor(r.sign_token, (r as any).short_code)),
       );
@@ -510,7 +510,8 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
         title: "נשלח לחתימה",
         description: sent
           ? `נשלח מייל לעובד עם קישור לחתימה על ${assets.length} פרוטוקולים`
-          : `${assets.length} פרוטוקולים ממתינים לעובד בפורטל`,
+          : `${describeSignEmailReason(reason)} — ${assets.length} פרוטוקולים ממתינים לעובד בפורטל`,
+        variant: sent ? undefined : "destructive",
       });
       invalidate();
       if (draftKey) await deleteHandoverDraft(draftKey);
