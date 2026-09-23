@@ -159,20 +159,30 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
         payload.hebrew_birth_month = null;
         payload.hebrew_birth_year = null;
       }
-      // Returning any non-active employee (leaving/inactive, or one with a leave date)
-      // back to active must also cancel the offboarding and restore system access
-      const revertingOffboarding =
-        payload.status === "active" &&
-        (employee?.status !== "active" || !!(employee as any)?.end_date);
-      if (revertingOffboarding) {
-        delete payload.status;
-      }
-
+      // Returning an employee that actually has an offboarding (leaving, or a recorded
+      // leave date / revoked access) back to active must also cancel the offboarding.
+      // A plain onboarding/inactive → active change is just a status update.
+      const hasOffboarding =
+        employee?.status === "leaving" ||
+        !!(employee as any)?.end_date ||
+        !!(employee as any)?.access_revoked_at;
+      const wantsRevert = payload.status === "active" && hasOffboarding;
 
       await update.mutateAsync({ id: employee.id, ...payload });
 
+      let revertingOffboarding = false;
+      if (wantsRevert) {
+        try {
+          await cancelOffboarding.mutateAsync(employee.id);
+          revertingOffboarding = true;
+        } catch {
+          // Users without permission to cancel an offboarding still get the plain
+          // status change saved above — no partial failure, no error toast.
+          revertingOffboarding = false;
+        }
+      }
+
       if (revertingOffboarding) {
-        await cancelOffboarding.mutateAsync(employee.id);
         try {
           const { data: authData } = await supabase.auth.getUser();
           await supabase.from("activity_log").insert({
