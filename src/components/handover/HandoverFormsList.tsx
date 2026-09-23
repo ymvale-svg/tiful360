@@ -125,6 +125,20 @@ export function HandoverFormsList({ forms, context, emptyText = "אין עדיי
               </p>
             </div>
             <div className="flex items-center gap-1 shrink-0">
+              {pending && (f.sign_token || f.short_code) && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1 px-2 text-xs"
+                  disabled={resendingId === f.id}
+                  onClick={() => void resend(f)}
+                  title="שליחת מייל חוזר לעובד עם קישור לחתימה"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  {resendingId === f.id ? "שולח..." : "שלח שוב"}
+                </Button>
+              )}
               {media.length > 0 && (
                 <Button
                   type="button"
