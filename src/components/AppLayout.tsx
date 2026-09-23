@@ -1,8 +1,8 @@
-import { Suspense, useEffect, useState } from "react";
-import { Outlet, useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import { Suspense, useState } from "react";
+import { Outlet, useNavigate } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { CompanySelector } from "./CompanySelector";
-import { Bell, Search, LogOut, Menu, UserRound } from "lucide-react";
+import { Bell, LogOut, Menu, UserRound } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useData";
@@ -10,37 +10,16 @@ import { hasDualAccess } from "@/lib/dualAccess";
 import { SkipLink } from "./SkipLink";
 import { AiAssistantWidget } from "./AiAssistantWidget";
 import { useSignedFormAlerts } from "@/hooks/useSignedFormAlerts";
+import { GlobalSearch } from "./GlobalSearch";
 
 export function AppLayout() {
   const { user, signOut, isSuperAdmin, roles } = useAuth();
   const { data: profile } = useProfile();
   const navigate = useNavigate();
-  const location = useLocation();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [headerSearch, setHeaderSearch] = useState(searchParams.get("q") ?? "");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useSignedFormAlerts();
 
-  // Keep header input in sync when route/url changes
-  useEffect(() => {
-    setHeaderSearch(searchParams.get("q") ?? "");
-  }, [location.pathname, searchParams]);
-
-  const supportsSearch = ["/assets", "/employees"].some((p) => location.pathname.startsWith(p));
-
-  const onHeaderSearchChange = (val: string) => {
-    setHeaderSearch(val);
-    if (!supportsSearch) {
-      // Jump to assets search when typing from elsewhere
-      if (val.trim().length >= 2) navigate(`/assets?q=${encodeURIComponent(val)}`);
-      return;
-    }
-    const next = new URLSearchParams(searchParams);
-    if (val) next.set("q", val);
-    else next.delete("q");
-    setSearchParams(next, { replace: true });
-  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -70,18 +49,7 @@ export function AppLayout() {
             >
               <Menu className="w-5 h-5" aria-hidden="true" />
             </button>
-            <div className="hidden md:flex items-center gap-3 bg-muted rounded-lg px-3 py-2 w-56 lg:w-80">
-              <Search className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-              <label htmlFor="global-search" className="sr-only">חיפוש כללי</label>
-              <input
-                id="global-search"
-                type="search"
-                value={headerSearch}
-                onChange={(e) => onHeaderSearchChange(e.target.value)}
-                placeholder="חיפוש עובדים, ציוד, משימות..."
-                className="bg-transparent text-sm outline-none w-full placeholder:text-muted-foreground"
-              />
-            </div>
+            <GlobalSearch />
             <CompanySelector />
           </div>
 
