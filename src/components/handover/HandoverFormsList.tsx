@@ -30,6 +30,19 @@ export function HandoverFormsList({ forms, context, emptyText = "אין עדיי
   const [preview, setPreview] = useState<{ url: string; title: string } | null>(null);
   const [mediaPreview, setMediaPreview] = useState<{ items: ProtocolMedia[]; title: string } | null>(null);
   const [creatingPreview, setCreatingPreview] = useState(false);
+  const [resendingId, setResendingId] = useState<string | null>(null);
+
+  const resend = async (f: HandoverFormRow) => {
+    if (!f.sign_token && !f.short_code) return;
+    setResendingId(f.id);
+    try {
+      const { sent } = await sendSignLink([f.id], [signLinkFor(f.sign_token, f.short_code)]);
+      if (sent) toast.success(`נשלח מייל חוזר ל${f.employees?.full_name || "עובד"} עם קישור לחתימה`);
+      else toast.error("שליחת המייל נכשלה — נסו שוב מאוחר יותר");
+    } finally {
+      setResendingId(null);
+    }
+  };
 
   useEffect(() => () => {
     if (preview?.url.startsWith("blob:")) URL.revokeObjectURL(preview.url);
