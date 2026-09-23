@@ -8,6 +8,7 @@ import { formatDateDMY } from "@/lib/utils";
 import { snapshotItemLabel } from "@/lib/pdf/formPdf";
 import { getDomain } from "@/lib/assetDomains";
 import { PendingSignatureDialog } from "@/components/handover/PendingSignatureDialog";
+import { useCompany } from "@/hooks/useCompany";
 import { Badge } from "@/components/ui/badge";
 
 interface PendingFormRow {
