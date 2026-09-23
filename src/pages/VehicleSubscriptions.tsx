@@ -93,6 +93,9 @@ export default function VehicleSubscriptions() {
     { employeeId: string | null; employeeName: string; plate: string } | null
   >(null);
 
+  /** Editing an older subscription row (pre-asset records) from its tag. */
+  const [editSub, setEditSub] = useState<{ sub: VehicleSubscription; label: string } | null>(null);
+
   const [filters, setFilters, resetFilters] = usePersistentFilter("vehicle-subscriptions", {
     q: "",
     provider: "all",
