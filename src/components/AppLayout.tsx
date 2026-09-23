@@ -10,6 +10,7 @@ import { hasDualAccess } from "@/lib/dualAccess";
 import { SkipLink } from "./SkipLink";
 import { AiAssistantWidget } from "./AiAssistantWidget";
 import { useSignedFormAlerts } from "@/hooks/useSignedFormAlerts";
+import { GlobalSearch } from "./GlobalSearch";
 
 export function AppLayout() {
   const { user, signOut, isSuperAdmin, roles } = useAuth();
