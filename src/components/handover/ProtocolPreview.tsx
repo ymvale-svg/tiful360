@@ -67,6 +67,26 @@ export function ProtocolPreview({ snapshot }: { snapshot: any }) {
       {data.freeText && (
         <section className="rounded-lg bg-muted/50 p-3 whitespace-pre-wrap leading-6">{data.freeText}</section>
       )}
+
+      {/* Signatures already captured on the form (operations rep, and the employee when signed). */}
+      {(issuerSignature || employeeSignature) && (
+        <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {issuerSignature && (
+            <div className="rounded-lg border p-3 space-y-1">
+              <p className="text-xs text-muted-foreground">חתימת נציג התפעול</p>
+              <img src={issuerSignature} alt="חתימת נציג התפעול" className="h-20 w-full object-contain bg-white rounded" />
+              {data.issuerName && <p className="text-xs text-muted-foreground">{data.issuerName}</p>}
+            </div>
+          )}
+          {employeeSignature && (
+            <div className="rounded-lg border p-3 space-y-1">
+              <p className="text-xs text-muted-foreground">חתימת העובד</p>
+              <img src={employeeSignature} alt="חתימת העובד" className="h-20 w-full object-contain bg-white rounded" />
+              {data.employeeName && <p className="text-xs text-muted-foreground">{data.employeeName}</p>}
+            </div>
+          )}
+        </section>
+      )}
     </article>
   );
 }
