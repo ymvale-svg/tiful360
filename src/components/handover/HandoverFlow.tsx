@@ -40,7 +40,7 @@ import type { ProtocolDirection, ProtocolMedia } from "@/lib/pdf/types";
 import { uploadProtocolFile, compressImage, describeUploadError } from "@/lib/protocolUpload";
 import { compressVideo, VIDEO_TARGET_BYTES } from "@/lib/videoCompress";
 import { SignLinkDialog } from "@/components/handover/SignLinkDialog";
-import { signLinkFor, sendSignLink } from "@/lib/signLink";
+import { signLinkFor, sendSignLink, describeSignEmailReason } from "@/lib/signLink";
 import {
   saveHandoverDraft, loadHandoverDraft, deleteHandoverDraft, draftKeyForAsset, formatDraftTime,
   type HandoverDraft,
