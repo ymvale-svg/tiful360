@@ -53,6 +53,7 @@ function SlaBadge({ deadline, done }: { deadline: string | null; done: boolean }
 
 export default function ITTickets() {
   const { data: tickets, isLoading } = useITTickets();
+  const { activeCompanyId, setActiveCompanyId } = useCompany();
   const updateStatus = useUpdateTicketStatus();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
