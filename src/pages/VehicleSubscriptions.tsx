@@ -447,7 +447,7 @@ export default function VehicleSubscriptions() {
                           <button
                             key={s.id}
                             type="button"
-                            title={s.source === "asset" ? "פתיחת כרטיס הפריט" : s.notes || undefined}
+                            title={s.source === "asset" ? "פתיחת כרטיס הפריט" : s.notes || "עריכת המנוי"}
                             onClick={(e) => {
                               e.stopPropagation();
                               if (s.source_asset_id) navigate(`/assets/licenses/${s.source_asset_id}`);
