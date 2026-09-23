@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { signLinkFor, sendSignLink } from "@/lib/signLink";
+import { signLinkFor, sendSignLink, describeSignEmailReason } from "@/lib/signLink";
 import { formatDateDMY } from "@/lib/utils";
 import { snapshotItemLabel } from "@/lib/pdf/formPdf";
 import { toast } from "sonner";
@@ -70,10 +70,10 @@ export function PendingSignatureDialog({ formId, open, onOpenChange }: Props) {
   const resend = async () => {
     if (!form || !link) return;
     setSending(true);
-    const { sent } = await sendSignLink([form.id], [link]);
+    const { sent, reason } = await sendSignLink([form.id], [link], { resend: true });
     setSending(false);
     if (sent) toast.success(`נשלח מייל ל${form.employees?.full_name || "עובד"} עם קישור לחתימה`);
-    else toast.error("שליחת המייל נכשלה — אפשר לשתף את הקישור באופן עצמאי");
+    else toast.error(describeSignEmailReason(reason));
   };
 
   return (
