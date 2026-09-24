@@ -695,6 +695,10 @@ function termVariants(term: string): string[] {
   return Array.from(new Set([term, ...(TERM_SYNONYMS[term] ?? [])]));
 }
 
+function unfinal(s: string) {
+  return s.replace(/ך/g, "כ").replace(/ם/g, "מ").replace(/ן/g, "נ").replace(/ף/g, "פ").replace(/ץ/g, "צ");
+}
+
 function cleanWord(w: string) {
   return w.replace(/["'״׳.,!?;:()[\]{}<>]/g, "").trim();
 }
@@ -793,7 +797,6 @@ async function tryAnswerAssetDocumentSearch(message: string, supabase: any, comp
   }
 
   let assets = Array.from(assetMap.values());
-  console.log("DBG", employee?.full_name, JSON.stringify(terms), assets.length, (cats ?? []).length);
   if (isInsurance && !employee && insuranceCatIds.length) {
     const ins = assets.filter((a) => insuranceCatIds.includes(a.category_id));
     if (ins.length) assets = ins;
