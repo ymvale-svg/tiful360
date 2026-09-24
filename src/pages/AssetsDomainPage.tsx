@@ -791,7 +791,7 @@ function InstancesTable({
   onToggleSelect?: (id: string) => void;
 }) {
   const isInsurance = domain === "insurance";
-  const cols = isInsurance ? "grid-cols-[2fr_2fr_1.2fr_1.5fr_2rem]" : "grid-cols-12";
+  const cols = isInsurance ? "grid-cols-[2fr_1.6fr_1.6fr_1.2fr_1.5fr_2rem]" : "grid-cols-12";
   // Second column (serial / username / vendor) is hidden when no item in the list has a value.
   const secondValue = (a: any) =>
     (domain === "digital"
@@ -800,6 +800,11 @@ function InstancesTable({
         ? (a.custom_fields?.["ספק"] ?? a.manufacturer_model)
         : a.serial_number) ?? null;
   const showSecond = items.some((a) => !!secondValue(a));
+  const siteOf = (a: any): string => {
+    const cf = a.custom_fields ?? {};
+    const k = Object.keys(cf).find((key) => /^שיוך לאתר/.test(key.trim()));
+    return (k ? String(cf[k] ?? "") : "") || a.sites?.name || "";
+  };
 
   const [colSort, setColSort] = usePersistentFilter<{ key: string; dir: "asc" | "desc" } | null>(
     `assets:${domain}:colsort`,
@@ -819,6 +824,7 @@ function InstancesTable({
       case "name": return a.asset_name ?? "";
       case "insurer": return cf["חברת ביטוח"] ?? "";
       case "agent": return cf["שם סוכן ביטוח"] ?? "";
+      case "site": return siteOf(a);
       case "expiry":
         { const e = expiryOf(a, domain); return e ? new Date(e).getTime() : Number.MAX_SAFE_INTEGER; }
       default: return "";
@@ -868,6 +874,7 @@ function InstancesTable({
         {isInsurance ? (
           <>
             <SortHead label="שם הביטוח" sortKey="name" />
+            <SortHead label="אתר" sortKey="site" />
             <SortHead label="חברת ביטוח" sortKey="insurer" />
             <SortHead label="תוקף פוליסה" sortKey="expiry" />
             <SortHead label="סוכן ביטוח" sortKey="agent" />
@@ -913,6 +920,7 @@ function InstancesTable({
               className={cn("w-full grid gap-2 px-4 py-3 text-sm border-t border-border hover:bg-muted/40 text-right items-center transition-colors cursor-pointer", cols)}
             >
               <div className="font-medium truncate flex items-center">{checkbox}{a.asset_name ?? "—"}</div>
+              <div className="truncate" title={siteOf(a)}>{siteOf(a) || <span className="text-muted-foreground">—</span>}</div>
               <div className="truncate">{cf["חברת ביטוח"] ?? <span className="text-muted-foreground">—</span>}</div>
               <div className={cn("text-xs", expiryCls)}>{expiryTxt}</div>
               <div className="truncate text-muted-foreground">{cf["שם סוכן ביטוח"] ?? "—"}</div>
