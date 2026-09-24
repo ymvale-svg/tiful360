@@ -807,7 +807,8 @@ async function tryAnswerAssetDocumentSearch(message: string, supabase: any, comp
     const scoreAsset = (a: any) => {
       const hay = [a.asset_name, a.asset_code, a.serial_number, a.license_plate, a.manufacturer_model,
         catMap.get(a.category_id)?.category_name, groupMap.get(a.group_id)?.name].filter(Boolean).join(" ").toLowerCase();
-      return terms.reduce((n, t) => n + (termVariants(t).some((v) => hay.includes(v.toLowerCase())) ? 1 : 0), 0);
+      const hayN = unfinal(hay);
+      return terms.reduce((n, t) => n + (termVariants(t).some((v) => hayN.includes(unfinal(v.toLowerCase()))) ? 1 : 0), 0);
     };
     const scored = assets.map((a) => ({ a, s: scoreAsset(a) }));
     const max = Math.max(0, ...scored.map((x) => x.s));
