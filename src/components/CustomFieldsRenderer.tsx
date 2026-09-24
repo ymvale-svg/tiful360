@@ -7,7 +7,7 @@ import { AlertCircle, Info, ChevronDown, X as XIcon, Plus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAddCategoryFieldOption } from "@/hooks/useCategories";
 import { toast } from "@/hooks/use-toast";
-import { useSites } from "@/hooks/useSites";
+import { useSites, useCreateSite } from "@/hooks/useSites";
 
 /** Fields whose values come from the company's existing sites list */
 const isSiteField = (name: string) => /^שיוך לאתר/.test(name.trim());
@@ -56,6 +56,7 @@ export function CustomFieldsRenderer({
     () => (sites ?? []).filter((s: any) => s.is_active).map((s: any) => String(s.name)),
     [sites],
   );
+  const createSite = useCreateSite();
   const { isAdmin } = useAuth();
   const addOption = useAddCategoryFieldOption();
   const canAddOptions = isAdmin && !readOnly;
@@ -225,7 +226,26 @@ export function CustomFieldsRenderer({
                       <PopoverContent className="w-[--radix-popover-trigger-width] p-1" align="start">
                         <div className="max-h-64 overflow-auto">
                           {opts.length === 0 && (
-                            <p className="text-xs text-muted-foreground p-2 text-center">אין אפשרויות מוגדרות</p>
+                            <p className="text-xs text-muted-foreground p-2 text-center">{isSiteField(cf.field_name) ? "אין אתרים — הוסיפו אתר חדש" : "אין אפשרויות מוגדרות"}</p>
+                          )}
+                          {isSiteField(cf.field_name) && (
+                            <button
+                              type="button"
+                              className="w-full flex items-center gap-1 px-2 py-1.5 rounded hover:bg-muted text-sm text-primary border-b border-border/50 mb-1"
+                              onClick={async () => {
+                                const name = window.prompt("שם האתר החדש:");
+                                if (!name?.trim()) return;
+                                try {
+                                  const site = await createSite.mutateAsync({ name: name.trim(), address: "", contact_name: "", phone: "" } as any);
+                                  toast({ title: "האתר נוסף", description: site.name });
+                                  if (!selected.includes(site.name)) onChange(cf.field_name, [...selected, site.name].join(", "));
+                                } catch (e: any) {
+                                  toast({ title: "שגיאה בהוספת אתר", description: e?.message, variant: "destructive" });
+                                }
+                              }}
+                            >
+                              <Plus className="w-3.5 h-3.5" /> אתר חדש
+                            </button>
                           )}
                           {opts.map((opt) => {
                             const checked = selected.includes(opt);
