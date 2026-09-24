@@ -747,8 +747,8 @@ async function tryAnswerAssetDocumentSearch(message: string, supabase: any, comp
 
   // ---------- 2. Load candidate assets ----------
   const [{ data: cats }, { data: groups }] = await Promise.all([
-    supabase.from("asset_categories").select("id, category_name, domain").eq("company_id", companyId),
-    supabase.from("asset_groups").select("id, name, category_id").eq("company_id", companyId),
+    supabase.from("asset_categories").select("id, category_name, domain").or(`company_id.eq.${companyId},company_id.is.null`),
+    supabase.from("asset_groups").select("id, name, category_id").or(`company_id.eq.${companyId},company_id.is.null`),
   ]);
   const catMap = new Map<string, any>((cats ?? []).map((c: any) => [c.id, c]));
   const groupMap = new Map<string, any>((groups ?? []).map((g: any) => [g.id, g]));
