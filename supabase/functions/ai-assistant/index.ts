@@ -722,28 +722,21 @@ async function tryAnswerAssetDocumentSearch(message: string, supabase: any, comp
     .from("employees").select("id, full_name").eq("company_id", companyId).limit(3000);
   let employee: any = null;
   const consumed = new Set<string>();
-  const candidates: { text: string; words: string[] }[] = [];
-  for (let i = 0; i < rawWords.length; i++) {
-    if (i + 1 < rawWords.length) candidates.push({ text: `${rawWords[i]} ${rawWords[i + 1]}`, words: [rawWords[i], rawWords[i + 1]] });
+  const wordHits = (w: string, e: any) => {
+    const q = normalizeName(w);
+    if (q.length < 2) return false;
+    return normalizeName(e.full_name).split(" ").some((t) => t === q || (q.length >= 5 && t.length >= 5 && levenshtein(q, t) <= 1));
+  };
+  const nameWords = rawWords.filter((w) => !DOC_STOP_WORDS.has(w));
+  // Prefer two consecutive words that both belong to the same employee
+  for (let i = 0; i + 1 < nameWords.length && !employee; i++) {
+    const hits = (emps ?? []).filter((e: any) => wordHits(nameWords[i], e) && wordHits(nameWords[i + 1], e));
+    if (hits.length === 1) { employee = hits[0]; consumed.add(nameWords[i]); consumed.add(nameWords[i + 1]); }
   }
-  for (const w of rawWords) if (w.length >= 2 && !DOC_STOP_WORDS.has(w)) candidates.push({ text: w, words: [w] });
-  for (const cand of candidates) {
-    const scored = (emps ?? [])
-      .map((e: any) => ({ e, s: Number(scoreEmployeeName(cand.text, e.full_name)) }))
-      .filter((x: any) => x.s >= 0.85)
-      .sort((a: any, b: any) => b.s - a.s);
-    if (!scored.length) continue;
-    // Ambiguous first names: pick only when clearly best
-    if (scored.length > 1 && scored[0].s - scored[1].s < 0.1 && cand.words.length === 1) {
-      // multiple people with same first name — still accept only if exact token equals
-      const exact = scored.filter((x: any) => normalizeName(x.e.full_name).split(" ").includes(normalizeName(cand.text)));
-      if (exact.length !== 1) continue;
-      employee = exact[0].e;
-    } else {
-      employee = scored[0].e;
-    }
-    cand.words.forEach((w) => consumed.add(w));
-    break;
+  for (const w of nameWords) {
+    if (employee) break;
+    const hits = (emps ?? []).filter((e: any) => wordHits(w, e));
+    if (hits.length === 1) { employee = hits[0]; consumed.add(w); }
   }
 
   if (!employee && !docIntent) return null;
