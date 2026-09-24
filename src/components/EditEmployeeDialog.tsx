@@ -58,6 +58,7 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
         role: employee.role ?? "",
         email: employee.email ?? "",
         phone: employee.phone ?? "",
+        extension: employee.extension ?? "",
         birth_date: employee.birth_date ?? "",
         start_date: employee.start_date ?? "",
         status: employee.status ?? "active",
@@ -140,6 +141,9 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
       if (!payload.birth_date) delete payload.birth_date;
       if (!payload.email) delete payload.email;
       if (!payload.phone) delete payload.phone;
+      // Cleared on purpose has to reach the database as null: an empty string
+      // still occupies the extension and nobody else could be given it.
+      payload.extension = (payload.extension ?? "").trim() || null;
       if (!payload.direct_manager_id || payload.direct_manager_id === "__none__") {
         payload.direct_manager_id = null;
       }
@@ -247,6 +251,17 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
           <div>
             <Label>טלפון</Label>
             <Input value={form.phone ?? ""} onChange={(e) => set("phone", e.target.value)} />
+          </div>
+          <div>
+            <Label>שלוחה</Label>
+            <Input
+              value={form.extension ?? ""}
+              onChange={(e) => set("extension", e.target.value)}
+              placeholder="204"
+              dir="ltr"
+              inputMode="numeric"
+            />
+            <p className="mt-1 text-xs text-muted-foreground">מופיעה בספר הטלפונים שבמכשירים</p>
           </div>
           <div>
             <Label>תאריך לידה</Label>
