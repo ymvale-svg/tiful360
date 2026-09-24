@@ -701,7 +701,11 @@ function cleanWord(w: string) {
 
 async function signPath(supabase: any, bucket: string, path: string | null | undefined): Promise<string | null> {
   if (!path) return null;
-  if (/^https?:\/\//i.test(path)) return path;
+  if (/^https?:\/\//i.test(path)) {
+    const m = path.match(new RegExp(`/storage/v1/object/(?:public|sign)/${bucket}/([^?]+)`));
+    if (!m) return path;
+    path = decodeURIComponent(m[1]);
+  }
   const clean = path.replace(new RegExp(`^/?${bucket}/+`), "").replace(/^\/+/, "");
   const { data } = await supabase.storage.from(bucket).createSignedUrl(clean, 60 * 10);
   return data?.signedUrl ?? null;
@@ -742,7 +746,6 @@ async function tryAnswerAssetDocumentSearch(message: string, supabase: any, comp
     break;
   }
 
-  console.log("docsearch", JSON.stringify({ emps: (emps ?? []).length, employee: employee?.full_name, docIntent }));
   if (!employee && !docIntent) return null;
 
   const terms = extractAssetSearchTerms(
