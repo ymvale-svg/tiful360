@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Wrench, CheckCircle2, User, Timer, ChevronLeft, Plus, Package,
-  MapPin, Phone, Paperclip, CalendarClock, AlertTriangle, ListChecks,
+  MapPin, Phone, Paperclip, CalendarClock, AlertTriangle, ListChecks, Send,
 } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -102,6 +102,28 @@ export default function ITTickets() {
     statusFilter === "all" ? true : statusFilter === "open_all" ? t.status !== "done" : t.status === statusFilter,
   );
   const selectedTicket: any = tickets?.find((t: any) => t.id === selectedId);
+  const [sendingIT, setSendingIT] = useState(false);
+  const sendToIT = async () => {
+    if (!selectedTicket) return;
+    const note = window.prompt("הערה לאיש ה-IT (לא חובה):") ;
+    if (note === null) return;
+    setSendingIT(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("notify-it-ticket", {
+        body: { ticket_id: selectedTicket.id, target: "it", note },
+      });
+      if (error) throw error;
+      if (!data?.sent) toast.error("לא הוגדרו כתובות IT לחברה — יש להגדיר בהגדרות החברה");
+      else toast.success(`הקריאה נשלחה ל-IT (${data.sent} נמענים)`);
+    } catch (e: any) {
+      toast.error("שליחה ל-IT נכשלה", { description: e?.message } as any);
+    } finally {
+      setSendingIT(false);
+    }
+  };
+  useEffect(() => {
+    if (selectedId) document.getElementById("ticket-details")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [selectedId]);
 
   const attachments: { name: string; url: string }[] = Array.isArray(selectedTicket?.attachments)
     ? (selectedTicket.attachments as any[])
@@ -247,7 +269,7 @@ export default function ITTickets() {
           {/* Detail */}
           <div className="lg:col-span-2">
             {selectedTicket ? (
-              <div className="bg-card rounded-xl border border-border/50 shadow-card animate-fade-in">
+              <div id="ticket-details" className="bg-card rounded-xl border border-border/50 shadow-card animate-fade-in">
                 <div className="p-5 border-b border-border/50">
                   <button onClick={() => setSelectedId(null)} className="lg:hidden flex items-center gap-1 text-sm text-muted-foreground mb-3">
                     <ChevronLeft className="w-4 h-4 rotate-180" aria-hidden="true" />
@@ -272,6 +294,16 @@ export default function ITTickets() {
                     </div>
                     <div className="flex flex-col items-end gap-2">
                       <SlaBadge deadline={selectedTicket.sla_deadline} done={selectedTicket.status === "done"} />
+                      <button
+                        type="button"
+                        onClick={sendToIT}
+                        disabled={sendingIT}
+                        className="text-xs px-3 py-1.5 rounded-md border border-border hover:bg-muted flex items-center gap-1 disabled:opacity-50"
+                        title="שליחת הקריאה במייל לאנשי ה-IT שהוגדרו לחברה"
+                      >
+                        <Send className="w-3.5 h-3.5" aria-hidden="true" />
+                        {sendingIT ? "שולח..." : "שלח לאיש IT"}
+                      </button>
                       <Select value={selectedTicket.status} onValueChange={changeStatus}>
                         <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
                         <SelectContent>
