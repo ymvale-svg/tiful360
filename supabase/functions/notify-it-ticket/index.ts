@@ -110,7 +110,8 @@ Deno.serve(async (req) => {
     if (!claims?.claims) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    const { ticket_id } = await req.json();
+    const { ticket_id, target, note } = await req.json();
+    const toIT = target === "it";
     if (!ticket_id) {
       return new Response(JSON.stringify({ error: "ticket_id required" }), {
         status: 400,
@@ -153,18 +154,14 @@ Deno.serve(async (req) => {
         .map((s: string) => s.trim())
         .filter((s: string) => s.length > 0 && /^\S+@\S+\.\S+$/.test(s));
 
-    // Operations owns service tickets; IT addresses are kept as extra recipients.
+    // New tickets go to Operations only; Operations may forward a ticket to IT from the ticket screen.
     const recipients = Array.from(
-      new Set([
-        ...parseEmails(company?.operations_emails),
-        ...parseEmails(company?.it_emails),
-        ...parseEmails(employee?.email),
-      ]),
+      new Set(toIT ? parseEmails(company?.it_emails) : parseEmails(company?.operations_emails)),
     );
 
     if (recipients.length === 0) {
       return new Response(
-        JSON.stringify({ ok: true, warning: "no recipients configured" }),
+        JSON.stringify({ ok: true, sent: 0, warning: "no recipients configured" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -175,7 +172,7 @@ Deno.serve(async (req) => {
     const asset = (ticket as any).related_asset;
     const attachments = Array.isArray(ticket.attachments) ? ticket.attachments : [];
 
-    const ticketUrl = `${APP_BASE}/it-tickets?ticket=${encodeURIComponent(ticket.ticket_code ?? ticket.id)}`;
+    const ticketUrl = `${APP_BASE}/it-tickets?ticket=${encodeURIComponent(ticket.id)}`;
 
     const rows: Array<[string, string]> = [
       ["מספר קריאה", ticket.ticket_code],
@@ -200,8 +197,9 @@ Deno.serve(async (req) => {
     ];
 
     const html = layout(
-      "קריאת שירות חדשה",
-      `<h2 style="margin:0 0 8px;font-size:18px;">🛠️ נפתחה קריאת שירות חדשה</h2>
+      toIT ? "קריאת שירות הועברה לטיפולך" : "קריאת שירות חדשה",
+      `<h2 style="margin:0 0 8px;font-size:18px;">${toIT ? "🛠️ קריאת שירות הועברה לטיפול IT" : "🛠️ נפתחה קריאת שירות חדשה"}</h2>
+       ${toIT && note ? `<p style="font-size:14px;"><strong>הערת תפעול:</strong><br>${escapeHtml(String(note).slice(0, 2000)).replaceAll("\n", "<br>")}</p>` : ""}
        <p style="color:#475569;font-size:14px;">פרטי הקריאה:</p>
        ${detailsTable(rows)}
        ${description ? `<p style="font-size:14px;"><strong>תיאור מפורט:</strong><br>${escapeHtml(description).replaceAll("\n", "<br>")}</p>` : ""}
@@ -216,7 +214,7 @@ Deno.serve(async (req) => {
       const ok = await enqueueEmail(
         supabase,
         to,
-        `🛠️ קריאת שירות חדשה — ${ticket.ticket_code} — ${ticket.title}`,
+        `${toIT ? "🛠️ הועברה לטיפול IT" : "🛠️ קריאת שירות חדשה"} — ${ticket.ticket_code} — ${ticket.title}`,
         html,
       );
       if (ok) sent++;
