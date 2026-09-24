@@ -742,6 +742,7 @@ async function tryAnswerAssetDocumentSearch(message: string, supabase: any, comp
     break;
   }
 
+  console.log("docsearch", JSON.stringify({ emps: (emps ?? []).length, employee: employee?.full_name, docIntent }));
   if (!employee && !docIntent) return null;
 
   const terms = extractAssetSearchTerms(
