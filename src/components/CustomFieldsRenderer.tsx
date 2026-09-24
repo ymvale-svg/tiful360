@@ -7,6 +7,10 @@ import { AlertCircle, Info, ChevronDown, X as XIcon, Plus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAddCategoryFieldOption } from "@/hooks/useCategories";
 import { toast } from "@/hooks/use-toast";
+import { useSites } from "@/hooks/useSites";
+
+/** Fields whose values come from the company's existing sites list */
+const isSiteField = (name: string) => /^שיוך לאתר/.test(name.trim());
 
 export interface CustomField {
   id: string;
@@ -47,6 +51,11 @@ export function CustomFieldsRenderer({
     [fields],
   );
 
+  const { data: sites } = useSites();
+  const siteNames = useMemo(
+    () => (sites ?? []).filter((s: any) => s.is_active).map((s: any) => String(s.name)),
+    [sites],
+  );
   const { isAdmin } = useAuth();
   const addOption = useAddCategoryFieldOption();
   const canAddOptions = isAdmin && !readOnly;
@@ -170,9 +179,11 @@ export function CustomFieldsRenderer({
                   placeholder="בחר..."
                   error={!!errors[errKey]}
                 />
-              ) : cf.field_type === "list_multi" ? (
+              ) : cf.field_type === "list_multi" || isSiteField(cf.field_name) ? (
                 (() => {
-                  const opts = (Array.isArray(cf.field_options) ? cf.field_options : []).map(String);
+                  const opts = isSiteField(cf.field_name)
+                    ? siteNames
+                    : (Array.isArray(cf.field_options) ? cf.field_options : []).map(String);
                   const selected = value ? value.split(",").map((s) => s.trim()).filter(Boolean) : [];
                   const toggle = (opt: string) => {
                     const next = selected.includes(opt)
