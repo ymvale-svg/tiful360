@@ -35,6 +35,10 @@ project_id = "rhzmhiknbcipucfvgkok"
     verify_jwt = false
   [functions.leave-ics]
     verify_jwt = false
+  # The desk phones fetch this themselves and cannot hold a JWT; the
+  # per-company token in the URL is what guards it.
+  [functions.phonebook]
+    verify_jwt = false
   [functions.send-handover-protocol-email]
     verify_jwt = true
 
