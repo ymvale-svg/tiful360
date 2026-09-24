@@ -659,17 +659,30 @@ function normalizeHebrewSearchTerm(term: string): string {
   return value;
 }
 
+const DOC_STOP_WORDS = new Set([
+  "תן", "לי", "את", "של", "על", "עם", "כל", "מה", "מי", "איפה", "איזה", "איזו", "אלו", "יש", "אני", "רוצה",
+  "נא", "בבקשה", "פתח", "הצג", "תציג", "תראה", "קישור", "קישורים", "לינק", "מסמך", "מסמכים", "מסמכי", "מסמכ", "תצוגה", "תצוג",
+  "ביטוח", "הביטוח", "ביטוחים", "פוליסה", "פוליסת", "פוליסות", "אישור", "אישורי", "תוקף", "בתוקף", "פג", "פרטי", "פרט",
+]);
+
+const TERM_SYNONYMS: Record<string, string[]> = {
+  "לפטופ": ["מחשב", "נייד"],
+  "laptop": ["מחשב", "נייד"],
+  "פלאפונ": ["טלפונ"],
+  "פלאפון": ["טלפון"],
+  "סלולר": ["טלפון"],
+  "סלולרי": ["טלפון"],
+  "טלפונ": ["טלפון"],
+  "מכונית": ["רכב"],
+  "אוטו": ["רכב"],
+};
+
 function extractAssetSearchTerms(message: string): string[] {
-  const stopWords = new Set([
-    "תן", "לי", "את", "של", "על", "עם", "כל", "מה", "מי", "איפה", "איזה", "איזו", "אלו", "יש",
-    "נא", "בבקשה", "פתח", "הצג", "תציג", "תראה", "קישור", "לינק", "מסמך", "מסמכים", "תצוגה",
-    "ביטוח", "הביטוח", "ביטוחים", "פוליסה", "פוליסת", "פוליסות", "אישור", "אישורי", "תוקף", "בתוקף", "פג",
-  ]);
   const words = message.split(/\s+/).map((word) => word.trim()).filter(Boolean);
   const terms = new Set<string>();
   for (const word of words) {
     const normalized = normalizeHebrewSearchTerm(word);
-    if (normalized.length >= 3 && !stopWords.has(word) && !stopWords.has(normalized)) terms.add(normalized);
+    if (normalized.length >= 3 && !DOC_STOP_WORDS.has(word) && !DOC_STOP_WORDS.has(normalized)) terms.add(normalized);
   }
   return Array.from(terms);
 }
@@ -678,84 +691,202 @@ function isAssetDocumentIntent(message: string): boolean {
   return /(ביטוח|פוליס|מסמך|מסמכ|קישור|לינק|פתח|תצוג|חוזה|אישור|תעודה|רישיון|רשיון)/.test(message);
 }
 
+function termVariants(term: string): string[] {
+  return Array.from(new Set([term, ...(TERM_SYNONYMS[term] ?? [])]));
+}
+
+function cleanWord(w: string) {
+  return w.replace(/["'״׳.,!?;:()[\]{}<>]/g, "").trim();
+}
+
+async function signPath(supabase: any, bucket: string, path: string | null | undefined): Promise<string | null> {
+  if (!path) return null;
+  if (/^https?:\/\//i.test(path)) return path;
+  const clean = path.replace(new RegExp(`^/?${bucket}/+`), "").replace(/^\/+/, "");
+  const { data } = await supabase.storage.from(bucket).createSignedUrl(clean, 60 * 10);
+  return data?.signedUrl ?? null;
+}
+
 async function tryAnswerAssetDocumentSearch(message: string, supabase: any, companyId: string | null): Promise<string | null> {
-  if (!companyId || !isAssetDocumentIntent(message)) return null;
-
+  if (!companyId) return null;
+  const docIntent = isAssetDocumentIntent(message);
   const isInsurance = /(ביטוח|פוליס)/.test(message);
-  const searchTerms = extractAssetSearchTerms(message);
-  const categoryIds: string[] = [];
 
-  if (isInsurance) {
-    const { data: categories } = await supabase
-      .from("asset_categories")
-      .select("id")
-      .eq("company_id", companyId)
-      .eq("domain", "insurance");
-    categoryIds.push(...(categories ?? []).map((row: any) => row.id).filter(Boolean));
+  // ---------- 1. Detect employee name in the message ----------
+  const rawWords = message.split(/\s+/).map(cleanWord).filter(Boolean);
+  const { data: emps } = await supabase
+    .from("employees").select("id, full_name").eq("company_id", companyId).limit(3000);
+  let employee: any = null;
+  const consumed = new Set<string>();
+  const candidates: { text: string; words: string[] }[] = [];
+  for (let i = 0; i < rawWords.length; i++) {
+    if (i + 1 < rawWords.length) candidates.push({ text: `${rawWords[i]} ${rawWords[i + 1]}`, words: [rawWords[i], rawWords[i + 1]] });
+  }
+  for (const w of rawWords) if (w.length >= 2 && !DOC_STOP_WORDS.has(w)) candidates.push({ text: w, words: [w] });
+  for (const cand of candidates) {
+    const scored = (emps ?? [])
+      .map((e: any) => ({ e, s: Number(scoreEmployeeName(cand.text, e.full_name)) }))
+      .filter((x: any) => x.s >= 0.85)
+      .sort((a: any, b: any) => b.s - a.s);
+    if (!scored.length) continue;
+    // Ambiguous first names: pick only when clearly best
+    if (scored.length > 1 && scored[0].s - scored[1].s < 0.1 && cand.words.length === 1) {
+      // multiple people with same first name — still accept only if exact token equals
+      const exact = scored.filter((x: any) => normalizeName(x.e.full_name).split(" ").includes(normalizeName(cand.text)));
+      if (exact.length !== 1) continue;
+      employee = exact[0].e;
+    } else {
+      employee = scored[0].e;
+    }
+    cand.words.forEach((w) => consumed.add(w));
+    break;
   }
 
+  if (!employee && !docIntent) return null;
+
+  const terms = extractAssetSearchTerms(
+    rawWords.filter((w) => !consumed.has(w)).join(" "),
+  );
+
+  // ---------- 2. Load candidate assets ----------
+  const [{ data: cats }, { data: groups }] = await Promise.all([
+    supabase.from("asset_categories").select("id, category_name, domain").eq("company_id", companyId),
+    supabase.from("asset_groups").select("id, name, category_id").eq("company_id", companyId),
+  ]);
+  const catMap = new Map<string, any>((cats ?? []).map((c: any) => [c.id, c]));
+  const groupMap = new Map<string, any>((groups ?? []).map((g: any) => [g.id, g]));
+  const insuranceCatIds = (cats ?? []).filter((c: any) => c.domain === "insurance").map((c: any) => c.id);
+
+  const assetCols = "id, asset_name, asset_code, serial_number, license_plate, manufacturer_model, category_id, group_id, expiry_date, insurance_expiry, current_owner_id";
   const assetMap = new Map<string, any>();
-  const attempts = searchTerms.length ? searchTerms : isInsurance ? ["ביטוח", "פוליס"] : [];
-  for (const term of attempts) {
-    let q = supabase
-      .from("assets")
-      .select("id, asset_name, asset_code, category_id, expiry_date, insurance_expiry, insurance_company, insurance_policy_number")
-      .eq("company_id", companyId)
-      .ilike("asset_name", `%${term}%`)
-      .limit(10);
-    if (categoryIds.length) q = q.in("category_id", categoryIds);
-    const { data, error } = await q;
-    if (!error) for (const asset of data ?? []) assetMap.set(asset.id, asset);
-    if (assetMap.size) break;
-  }
 
-  if (!assetMap.size && searchTerms.length) {
-    for (const term of searchTerms) {
-      const { data, error } = await supabase
-        .from("assets")
-        .select("id, asset_name, asset_code, category_id, expiry_date, insurance_expiry, insurance_company, insurance_policy_number")
-        .eq("company_id", companyId)
-        .ilike("asset_name", `%${term}%`)
-        .limit(10);
-      if (!error) for (const asset of data ?? []) assetMap.set(asset.id, asset);
-      if (assetMap.size) break;
+  if (employee) {
+    const { data } = await supabase.from("assets").select(assetCols)
+      .eq("company_id", companyId).eq("current_owner_id", employee.id).limit(500);
+    for (const a of data ?? []) assetMap.set(a.id, a);
+  } else {
+    const allVariants = Array.from(new Set(terms.flatMap(termVariants)));
+    const docAssetIds = new Set<string>();
+    await Promise.all(allVariants.map(async (t) => {
+      const safe = t.replace(/[,()%]/g, "");
+      if (!safe) return;
+      const [a, d] = await Promise.all([
+        supabase.from("assets").select(assetCols).eq("company_id", companyId)
+          .or(`asset_name.ilike.%${safe}%,asset_code.ilike.%${safe}%,serial_number.ilike.%${safe}%,license_plate.ilike.%${safe}%,manufacturer_model.ilike.%${safe}%`)
+          .limit(100),
+        supabase.from("asset_documents").select("asset_id").eq("company_id", companyId)
+          .or(`document_label.ilike.%${safe}%,file_name.ilike.%${safe}%`).limit(100),
+      ]);
+      for (const row of a.data ?? []) assetMap.set(row.id, row);
+      for (const row of d.data ?? []) if (row.asset_id) docAssetIds.add(row.asset_id);
+    }));
+    // category / subcategory name matches
+    const matchCat = (cats ?? []).filter((c: any) => allVariants.some((t) => (c.category_name ?? "").includes(t))).map((c: any) => c.id);
+    const matchGrp = (groups ?? []).filter((g: any) => allVariants.some((t) => (g.name ?? "").includes(t))).map((g: any) => g.id);
+    const extraIds = Array.from(docAssetIds).filter((id) => !assetMap.has(id));
+    const extraQueries: Promise<any>[] = [];
+    if (extraIds.length) extraQueries.push(supabase.from("assets").select(assetCols).in("id", extraIds.slice(0, 200)));
+    if (matchCat.length) extraQueries.push(supabase.from("assets").select(assetCols).eq("company_id", companyId).in("category_id", matchCat).limit(200));
+    if (matchGrp.length) extraQueries.push(supabase.from("assets").select(assetCols).eq("company_id", companyId).in("group_id", matchGrp).limit(200));
+    for (const r of await Promise.all(extraQueries)) for (const row of r.data ?? []) assetMap.set(row.id, row);
+    if (!terms.length && isInsurance) {
+      const { data } = await supabase.from("assets").select(assetCols).eq("company_id", companyId).in("category_id", insuranceCatIds).limit(100);
+      for (const row of data ?? []) assetMap.set(row.id, row);
     }
   }
 
-  const assets = Array.from(assetMap.values());
-  if (!assets.length) return null;
-
-  const assetIds = assets.map((asset: any) => asset.id);
-  const { data: docs } = await supabase
-    .from("asset_documents")
-    .select("id, asset_id, file_url, file_name, document_label, document_type, expiry_date")
-    .eq("company_id", companyId)
-    .in("asset_id", assetIds)
-    .order("uploaded_at", { ascending: false });
-
-  const docsByAsset = new Map<string, any[]>();
-  for (const doc of docs ?? []) {
-    const list = docsByAsset.get(doc.asset_id) ?? [];
-    list.push(doc);
-    docsByAsset.set(doc.asset_id, list);
+  let assets = Array.from(assetMap.values());
+  if (isInsurance && !employee && insuranceCatIds.length) {
+    const ins = assets.filter((a) => insuranceCatIds.includes(a.category_id));
+    if (ins.length) assets = ins;
   }
 
-  const lines: string[] = [assets.length === 1 ? "מצאתי את הנכס:" : "מצאתי את הנכסים:"];
-  for (const asset of assets) {
-    const expiry = formatDateDDMMYYYY(asset.expiry_date ?? asset.insurance_expiry);
-    lines.push(`- **${asset.asset_name}**${expiry ? ` — בתוקף עד ${expiry}` : ""}`);
-    const assetDocs = docsByAsset.get(asset.id) ?? [];
-    if (!assetDocs.length) {
-      lines.push("  - אין מסמכים מצורפים לנכס זה.");
-      continue;
-    }
-    for (const doc of assetDocs) {
-      const { data: signed } = await supabase.storage.from("asset-documents").createSignedUrl(doc.file_url, 60 * 10);
-      const label = doc.document_label || doc.file_name || "צפייה במסמך";
-      if (signed?.signedUrl) lines.push(`  - [${label}](${signed.signedUrl})`);
+  // ---------- 3. Rank by how many terms match (name, category, subcategory, codes) ----------
+  if (terms.length) {
+    const scoreAsset = (a: any) => {
+      const hay = [a.asset_name, a.asset_code, a.serial_number, a.license_plate, a.manufacturer_model,
+        catMap.get(a.category_id)?.category_name, groupMap.get(a.group_id)?.name].filter(Boolean).join(" ").toLowerCase();
+      return terms.reduce((n, t) => n + (termVariants(t).some((v) => hay.includes(v.toLowerCase())) ? 1 : 0), 0);
+    };
+    const scored = assets.map((a) => ({ a, s: scoreAsset(a) }));
+    const max = Math.max(0, ...scored.map((x) => x.s));
+    if (max > 0) assets = scored.filter((x) => x.s === max).map((x) => x.a);
+    else if (employee) {
+      // Employee found but no item of the requested type
+      if (!docIntent) return null;
+      assets = [];
+    } else {
+      // no term matched at all — keep items found through document-name match only
     }
   }
-  if ((docs ?? []).length) lines.push("הקישורים תקפים ל-10 דקות.");
+  if (!employee && !assets.length) return null;
+  assets = assets.slice(0, 40);
+
+  // ---------- 4. Fetch documents + signed protocols ----------
+  const assetIds = assets.map((a) => a.id);
+  const [docsRes, formsRes, empDocsRes] = await Promise.all([
+    assetIds.length
+      ? supabase.from("asset_documents").select("id, asset_id, file_url, file_name, document_label, expiry_date")
+        .eq("company_id", companyId).in("asset_id", assetIds).order("uploaded_at", { ascending: false })
+      : Promise.resolve({ data: [] }),
+    assetIds.length
+      ? supabase.from("asset_handover_forms").select("id, asset_id, pdf_url, signed_at, direction, status")
+        .eq("company_id", companyId).in("asset_id", assetIds).eq("status", "signed").not("pdf_url", "is", null)
+        .order("signed_at", { ascending: false })
+      : Promise.resolve({ data: [] }),
+    employee && (!terms.length)
+      ? supabase.from("employee_documents").select("id, file_url, file_name, document_label, document_type")
+        .eq("employee_id", employee.id).neq("document_type", "payslip").order("uploaded_at", { ascending: false })
+      : Promise.resolve({ data: [] }),
+  ]);
+  const group = <T extends { asset_id: string }>(rows: T[]) => {
+    const m = new Map<string, T[]>();
+    for (const r of rows) { const l = m.get(r.asset_id) ?? []; l.push(r); m.set(r.asset_id, l); }
+    return m;
+  };
+  const docsBy = group((docsRes.data ?? []) as any[]);
+  const formsBy = group((formsRes.data ?? []) as any[]);
+
+  const lines: string[] = [];
+  if (employee) {
+    lines.push(assets.length
+      ? `נמצאו ${assets.length} פריטים אצל **${employee.full_name}**:`
+      : `לא נמצאו אצל **${employee.full_name}** פריטים מהסוג שביקשת.`);
+  } else {
+    lines.push(assets.length === 1 ? "מצאתי את הפריט:" : `מצאתי ${assets.length} פריטים:`);
+  }
+
+  let anyLink = false;
+  for (const a of assets) {
+    const cat = catMap.get(a.category_id)?.category_name;
+    const sub = groupMap.get(a.group_id)?.name;
+    const expiry = formatDateDDMMYYYY(a.expiry_date ?? a.insurance_expiry);
+    const meta = [a.asset_code, sub ?? cat, a.serial_number ? `ס"ד ${a.serial_number}` : null, a.license_plate ? `רישוי ${a.license_plate}` : null, expiry ? `בתוקף עד ${expiry}` : null]
+      .filter(Boolean).join(" · ");
+    lines.push("", `**${a.asset_name}**${meta ? ` — ${meta}` : ""}`);
+    const docs = docsBy.get(a.id) ?? [];
+    const forms = formsBy.get(a.id) ?? [];
+    if (!docs.length && !forms.length) { lines.push("- אין מסמכים מצורפים."); continue; }
+    for (const d of docs) {
+      const url = await signPath(supabase, "asset-documents", d.file_url);
+      if (url) { lines.push(`- [${d.document_label || d.file_name || "מסמך"}](${url})`); anyLink = true; }
+    }
+    for (const f of forms.slice(0, 3)) {
+      const url = await signPath(supabase, "handover-forms", f.pdf_url);
+      const kind = f.direction === "return" ? "פרוטוקול הזדכות" : "פרוטוקול מסירה";
+      if (url) { lines.push(`- [${kind} ${formatDateDDMMYYYY(f.signed_at) ?? ""}](${url})`); anyLink = true; }
+    }
+  }
+
+  const empDocs = (empDocsRes.data ?? []) as any[];
+  if (employee && empDocs.length) {
+    lines.push("", `**מסמכי תיק העובד**`);
+    for (const d of empDocs) {
+      const url = await signPath(supabase, "employee-documents", d.file_url);
+      if (url) { lines.push(`- [${d.document_label || d.file_name || "מסמך"}](${url})`); anyLink = true; }
+    }
+  }
+  if (anyLink) lines.push("", "הקישורים תקפים ל-10 דקות.");
   return lines.join("\n");
 }
 // ---------- Fuzzy employee name matching ----------
