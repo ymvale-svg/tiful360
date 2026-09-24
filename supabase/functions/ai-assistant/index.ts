@@ -782,8 +782,8 @@ async function tryAnswerAssetDocumentSearch(message: string, supabase: any, comp
       for (const row of d.data ?? []) if (row.asset_id) docAssetIds.add(row.asset_id);
     }));
     // category / subcategory name matches
-    const matchCat = (cats ?? []).filter((c: any) => allVariants.some((t) => (c.category_name ?? "").includes(t))).map((c: any) => c.id);
-    const matchGrp = (groups ?? []).filter((g: any) => allVariants.some((t) => (g.name ?? "").includes(t))).map((g: any) => g.id);
+    const matchCat = (cats ?? []).filter((c: any) => allVariants.some((t) => unfinal(c.category_name ?? "").includes(unfinal(t)))).map((c: any) => c.id);
+    const matchGrp = (groups ?? []).filter((g: any) => allVariants.some((t) => unfinal(g.name ?? "").includes(unfinal(t)))).map((g: any) => g.id);
     const extraIds = Array.from(docAssetIds).filter((id) => !assetMap.has(id));
     const extraQueries: Promise<any>[] = [];
     if (extraIds.length) extraQueries.push(supabase.from("assets").select(assetCols).in("id", extraIds.slice(0, 200)));
