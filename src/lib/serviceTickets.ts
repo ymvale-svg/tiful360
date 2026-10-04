@@ -166,3 +166,9 @@ export function slaRemaining(deadline: string | null | undefined, holidays?: Set
   const ms = businessMsBetween(now, dl, holidays);
   return { breached, label: formatBusinessDuration(ms) };
 }
+
+export function generateTicketCode() {
+  const ts = Date.now().toString(36).toUpperCase();
+  const rand = Math.floor(Math.random() * 1000).toString().padStart(3, "0");
+  return `IT-${ts}-${rand}`;
+}
