@@ -112,7 +112,7 @@ export default function Settings() {
         <p className="page-subtitle">ניהול הגדרות המערכת, התראות ואבטחה</p>
       </div>
 
-      <Tabs defaultValue="general" dir="rtl">
+      <Tabs defaultValue={new URLSearchParams(window.location.search).get("tab") || "general"} dir="rtl">
         <TabsList className="mb-4">
           <TabsTrigger value="general" className="gap-1.5">
             <SettingsIcon className="w-4 h-4" />

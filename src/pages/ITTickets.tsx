@@ -10,7 +10,11 @@ import { cn, formatDateTimeDMY } from "@/lib/utils";
 import { useITTickets } from "@/hooks/useData";
 import { useCompany } from "@/hooks/useCompany";
 import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useUpdateTicketStatus } from "@/hooks/useServiceTickets";
 import { NewITTicketDialog } from "@/components/NewITTicketDialog";
@@ -19,7 +23,7 @@ import { ExportExcelButton } from "@/components/ExcelActionButtons";
 import { exportToExcel } from "@/lib/exportExcel";
 import { toast } from "sonner";
 import {
-  PRIORITY_LABELS, STATUS_CLASSES, STATUS_LABELS, slaRemaining, subjectLabel,
+  PRIORITY_LABELS, STATUS_CLASSES, STATUS_LABELS, slaRemaining, subjectLabel, addBusinessHours,
 } from "@/lib/serviceTickets";
 
 const priorityColors: Record<string, string> = {
@@ -29,25 +33,118 @@ const priorityColors: Record<string, string> = {
   low: "bg-muted text-muted-foreground",
 };
 
-function SlaBadge({ deadline, done }: { deadline: string | null; done: boolean }) {
+function useCompanyHolidaySet() {
+  const { activeCompanyId } = useCompany();
+  const { data } = useQuery({
+    queryKey: ["company_holidays", activeCompanyId],
+    enabled: !!activeCompanyId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("company_holidays" as any)
+        .select("holiday_date")
+        .eq("company_id", activeCompanyId!);
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+  return useMemo(() => new Set((data ?? []).map((h: any) => String(h.holiday_date).slice(0, 10))), [data]);
+}
+
+function SlaBadge({ deadline, done, holidays }: { deadline: string | null; done: boolean; holidays?: Set<string> }) {
   const [, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 60000);
     return () => clearInterval(id);
   }, []);
   if (!deadline || done) return null;
-  const sla = slaRemaining(deadline);
+  const sla = slaRemaining(deadline, holidays);
   if (!sla) return null;
   return (
     <div
+      title={`יעד טיפול: ${formatDateTimeDMY(deadline)} (שעות עבודה)`}
       className={cn(
-        "flex items-center gap-1 text-xs font-mono px-2 py-1 rounded-md",
+        "flex items-center gap-1 text-xs px-2 py-1 rounded-md whitespace-nowrap",
         sla.breached ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground",
       )}
     >
       {sla.breached ? <AlertTriangle className="w-3 h-3" aria-hidden="true" /> : <Timer className="w-3 h-3" aria-hidden="true" />}
-      {sla.breached ? `חריגה ${sla.label}` : sla.label}
+      {sla.breached ? `חריגה ${sla.label}` : `נותרו ${sla.label}`}
     </div>
+  );
+}
+
+const toLocalInput = (iso: string | null) => {
+  const d = iso ? new Date(iso) : new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+
+function EditSlaDialog({ ticket, open, onOpenChange, holidays }: { ticket: any; open: boolean; onOpenChange: (v: boolean) => void; holidays: Set<string> }) {
+  const qc = useQueryClient();
+  const [value, setValue] = useState("");
+  const [addHours, setAddHours] = useState("");
+  const [reason, setReason] = useState("");
+  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    if (open) { setValue(toLocalInput(ticket?.sla_deadline)); setAddHours(""); setReason(""); }
+  }, [open, ticket?.id]);
+
+  const applyAdd = () => {
+    const h = Number(addHours);
+    if (!h || h <= 0) return;
+    const base = ticket?.sla_deadline && new Date(ticket.sla_deadline) > new Date() ? new Date(ticket.sla_deadline) : new Date();
+    setValue(toLocalInput(addBusinessHours(base, h, holidays).toISOString()));
+  };
+
+  const save = async () => {
+    const d = new Date(value);
+    if (isNaN(d.getTime())) { toast.error("יש לבחור תאריך ושעה"); return; }
+    setSaving(true);
+    const { error } = await supabase.from("it_tickets").update({ sla_deadline: d.toISOString() }).eq("id", ticket.id);
+    if (error) { setSaving(false); toast.error(error.message); return; }
+    const { data: u } = await supabase.auth.getUser();
+    await supabase.from("activity_log").insert({
+      entity_type: "it_ticket",
+      entity_id: ticket.id,
+      employee_id: ticket.employee_id ?? null,
+      company_id: ticket.company_id ?? null,
+      action: `עדכון יעד טיפול - ${ticket.ticket_code ?? ""}`.trim(),
+      details: `מ-${ticket.sla_deadline ? formatDateTimeDMY(ticket.sla_deadline) : "—"} ל-${formatDateTimeDMY(d.toISOString())}${reason ? ` · סיבה: ${reason}` : ""}`,
+      performed_by: u.user?.id ?? null,
+    } as any);
+    setSaving(false);
+    qc.invalidateQueries({ queryKey: ["it-tickets"] });
+    toast.success("יעד הטיפול עודכן");
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent dir="rtl" className="max-w-md">
+        <DialogHeader><DialogTitle>עריכת יעד טיפול (SLA)</DialogTitle></DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="sla-dt">מועד יעד חדש</Label>
+            <Input id="sla-dt" type="datetime-local" value={value} onChange={(e) => setValue(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="sla-add">או הוספת שעות עבודה</Label>
+            <div className="flex gap-2">
+              <Input id="sla-add" type="number" min={1} value={addHours} onChange={(e) => setAddHours(e.target.value)} placeholder="למשל 8" />
+              <Button type="button" variant="outline" onClick={applyAdd}>הוסף</Button>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="sla-reason">סיבה</Label>
+            <Textarea id="sla-reason" value={reason} onChange={(e) => setReason(e.target.value)} rows={2} />
+          </div>
+          <Link to="/settings?tab=alerts" className="text-xs text-primary hover:underline">ערוך זמני תקן כלליים</Link>
+        </div>
+        <DialogFooter>
+          <Button onClick={save} disabled={saving}>{saving ? "שומר..." : "שמור"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -57,6 +154,8 @@ export default function ITTickets() {
   const updateStatus = useUpdateTicketStatus();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
+  const [slaEditOpen, setSlaEditOpen] = useState(false);
+  const holidays = useCompanyHolidaySet();
   const [statusFilter, setStatusFilter] = useState<string>("open_all");
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -257,7 +356,7 @@ export default function ITTickets() {
                   </div>
                   {ticket.status === "done"
                     ? <CheckCircle2 className="w-5 h-5 text-success shrink-0" aria-hidden="true" />
-                    : <SlaBadge deadline={ticket.sla_deadline} done={false} />}
+                    : <SlaBadge deadline={ticket.sla_deadline} done={false} holidays={holidays} />}
                 </div>
               </div>
             ))}
@@ -293,7 +392,16 @@ export default function ITTickets() {
                       </p>
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      <SlaBadge deadline={selectedTicket.sla_deadline} done={selectedTicket.status === "done"} />
+                      <div className="flex items-center gap-1">
+                        <SlaBadge deadline={selectedTicket.sla_deadline} done={selectedTicket.status === "done"} holidays={holidays} />
+                        {selectedTicket.status !== "done" && (
+                          <button type="button" onClick={() => setSlaEditOpen(true)} className="text-xs px-2 py-1 rounded-md border border-border hover:bg-muted flex items-center gap-1" title="עריכת יעד הטיפול">
+                            <CalendarClock className="w-3.5 h-3.5" aria-hidden="true" />
+                            ערוך SLA
+                          </button>
+                        )}
+                      </div>
+                      <EditSlaDialog ticket={selectedTicket} open={slaEditOpen} onOpenChange={setSlaEditOpen} holidays={holidays} />
                       <button
                         type="button"
                         onClick={sendToIT}
