@@ -6,7 +6,13 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Timer, Loader2 } from "lucide-react";
-import { TICKET_PRIORITIES, TICKET_SUBJECTS, defaultSlaHours } from "@/lib/serviceTickets";
+import { TICKET_PRIORITIES, TICKET_SUBJECTS as BASE_SUBJECTS, defaultSlaHours, ONBOARDING_SUBJECT, OFFBOARDING_SUBJECT } from "@/lib/serviceTickets";
+
+const TICKET_SUBJECTS = [
+  ...BASE_SUBJECTS,
+  { value: ONBOARDING_SUBJECT, label: "קליטת עובד" },
+  { value: OFFBOARDING_SUBJECT, label: "ניתוקים / סיום העסקה" },
+];
 import { useSaveSlaSetting, useSlaSettings } from "@/hooks/useServiceTickets";
 
 type Draft = Record<string, { hours: number; notify: boolean }>;
@@ -67,7 +73,7 @@ export function SlaSettingsCard() {
           זמני תקן לקריאות שירות (SLA)
         </CardTitle>
         <CardDescription>
-          זמן היעד לטיפול בשעות לכל נושא ורמת דחיפות. בפתיחת קריאה מחושב תאריך יעד לפי ההגדרה.
+          זמן היעד לטיפול בשעות עבודה (א׳-ה׳ 08:00-17:00, ללא חגי החברה) לכל נושא ורמת דחיפות. בפתיחת קריאה מחושב תאריך יעד לפי ההגדרה.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
