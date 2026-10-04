@@ -167,7 +167,7 @@ export default function CategoryManager() {
       ) : (
         <>
           <section className="bg-card border border-border rounded-lg overflow-hidden shadow-card">
-            <div className="grid grid-cols-1 lg:grid-cols-3 lg:divide-x lg:divide-x-reverse lg:divide-border min-h-[430px] max-h-[64vh]">
+            <div className="grid grid-cols-1 lg:grid-cols-3 lg:divide-x lg:divide-x-reverse lg:divide-border min-h-[430px] lg:h-[64vh] lg:grid-rows-[minmax(0,1fr)]">
               <HierarchyColumn title={`דומיינים (${DOMAIN_ORDER.length})`}>
                 {DOMAIN_ORDER.map((key) => {
                   const meta = DOMAIN_META[key];
@@ -251,7 +251,7 @@ export default function CategoryManager() {
 }
 
 function HierarchyColumn({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
-  return <div className="min-w-0 flex flex-col overflow-hidden border-b lg:border-b-0 border-border"><div className="h-12 px-4 border-b border-border bg-muted/35 flex items-center justify-between gap-2"><span className="text-xs font-semibold text-muted-foreground truncate">{title}</span>{action}</div><div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-40">{children}</div></div>;
+  return <div className="min-w-0 min-h-0 flex flex-col overflow-hidden border-b lg:border-b-0 border-border"><div className="h-12 px-4 border-b border-border bg-muted/35 flex items-center justify-between gap-2"><span className="text-xs font-semibold text-muted-foreground truncate">{title}</span>{action}</div><div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-40">{children}</div></div>;
 }
 
 function EmptyHierarchy({ text }: { text: string }) {
