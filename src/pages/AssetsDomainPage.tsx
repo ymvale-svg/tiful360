@@ -4,10 +4,14 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ChevronRight, ChevronDown, Search, Plus, ArrowRight, Users, AlertTriangle,
   ArrowUpDown, LayoutGrid, List, FolderPlus, Check, X, Link2, Trash2, FileSignature,
-  ChevronUp, ChevronsUpDown, Building2,
+  ChevronUp, ChevronsUpDown, Building2, Columns3,
 
 } from "lucide-react";
 
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel,
+  DropdownMenuSeparator, DropdownMenuCheckboxItem, DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SubCategorySelect } from "@/components/assets/SubCategorySelect";
@@ -50,7 +54,13 @@ type SortMode = "count" | "alpha" | "expiry";
 function expiryOf(a: any, domain: DomainKey): string | null {
   if (domain === "digital") return a.license_expires_at || a.password_expires_at || null;
   if (domain === "licenses") return a.license_expires_at || null;
-  return a.expiry_date || null;
+  if (a.expiry_date) return a.expiry_date;
+  // Fallback: a custom date field such as "תוקף חוזה" / "תפוגה" / "תאריך סיום".
+  const cf = a.custom_fields ?? {};
+  for (const k of Object.keys(cf)) {
+    if (/תוקף|תפוגה|סיום/.test(k) && typeof cf[k] === "string" && /^\d{4}-\d{2}-\d{2}/.test(cf[k])) return cf[k];
+  }
+  return null;
 }
 
 interface SubCard {
@@ -530,6 +540,7 @@ export default function AssetsDomainPage() {
             <InstancesTable
               items={drilledItems}
               domain={domain}
+              columnsKey={`${domain}:${catParam ?? ""}:${subParam ?? ""}`}
               selectable
               selectedIds={selectedIds}
               onToggleSelect={(id) => setSelectedIds((prev) => {
@@ -780,8 +791,27 @@ function SubCategoryCard({
   );
 }
 
+interface ColDef {
+  key: string;
+  label: string;
+  render: (a: any) => React.ReactNode;
+  sortVal: (a: any) => string | number;
+}
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}/;
+function fmtCustom(v: unknown): string {
+  if (v === null || v === undefined || v === "") return "";
+  if (Array.isArray(v)) return v.join(", ");
+  if (typeof v === "boolean") return v ? "כן" : "לא";
+  if (typeof v === "string" && DATE_RE.test(v)) {
+    const d = new Date(v);
+    if (!isNaN(d.getTime())) return d.toLocaleDateString("en-GB");
+  }
+  return String(v);
+}
+
 function InstancesTable({
-  items, domain, onSelect, selectable, selectedIds, onToggleSelect,
+  items, domain, onSelect, selectable, selectedIds, onToggleSelect, columnsKey,
 }: {
   items: any[];
   domain: DomainKey;
@@ -789,59 +819,136 @@ function InstancesTable({
   selectable?: boolean;
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
+  columnsKey?: string;
 }) {
   const isInsurance = domain === "insurance";
-  const cols = isInsurance ? "grid-cols-[2fr_1.6fr_1.6fr_1.2fr_1.5fr_2rem]" : "grid-cols-12";
-  // Second column (serial / username / vendor) is hidden when no item in the list has a value.
+  const siteOf = (a: any): string => {
+    const cf = a.custom_fields ?? {};
+    const k = Object.keys(cf).find((key) => /^שיוך לאתר/.test(key.trim()));
+    return (k ? fmtCustom(cf[k]) : "") || a.sites?.name || "";
+  };
   const secondValue = (a: any) =>
     (domain === "digital"
       ? a.account_username
       : domain === "licenses"
         ? (a.custom_fields?.["ספק"] ?? a.manufacturer_model)
         : a.serial_number) ?? null;
-  const showSecond = items.some((a) => !!secondValue(a));
-  const siteOf = (a: any): string => {
-    const cf = a.custom_fields ?? {};
-    const k = Object.keys(cf).find((key) => /^שיוך לאתר/.test(key.trim()));
-    return (k ? String(cf[k] ?? "") : "") || a.sites?.name || "";
+
+  const expiryInfo = (a: any) => {
+    const exp = expiryOf(a, domain);
+    const days = exp ? Math.ceil((new Date(exp).getTime() - Date.now()) / 86400000) : null;
+    const cls = days === null ? "text-muted-foreground" : days < 0 ? "text-destructive font-semibold" : days <= 30 ? "text-amber-600 dark:text-amber-400 font-semibold" : "text-foreground";
+    const txt = days === null ? "—" : days < 0 ? `פג לפני ${Math.abs(days)}י׳` : days === 0 ? "פג היום" : days <= 30 ? `בעוד ${days}י׳` : new Date(exp!).toLocaleDateString("en-GB");
+    return { exp, cls, txt };
+  };
+  const dash = <span className="text-muted-foreground">—</span>;
+
+  // All available columns: built-in + every custom field present in this list.
+  const allCols = useMemo<ColDef[]>(() => {
+    const cols: ColDef[] = [
+      { key: "code", label: "קוד", render: (a) => <span className="font-mono text-xs">{a.asset_code ?? "—"}</span>, sortVal: (a) => a.asset_code ?? "" },
+      { key: "name", label: "שם פריט", render: (a) => <span className="font-medium">{a.asset_name ?? "—"}</span>, sortVal: (a) => a.asset_name ?? "" },
+      {
+        key: "second",
+        label: domain === "digital" ? "שם משתמש" : domain === "licenses" ? "ספק" : "מס׳ סידורי",
+        render: (a) => <span className="text-xs text-muted-foreground" dir={domain === "digital" ? "ltr" : undefined}>{secondValue(a) ?? "—"}</span>,
+        sortVal: (a) => secondValue(a) ?? "",
+      },
+      {
+        key: "employee", label: "עובד / אתר",
+        render: (a) => a.employees?.full_name ? (
+          <EmployeeLink employeeId={a.current_owner_id} name={a.employees.full_name} />
+        ) : a.sites?.name ? (
+          <span className="inline-flex items-center gap-1">
+            <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            <span className="truncate">{a.sites.name}{a.container?.asset_name ? ` · ${a.container.asset_name}` : ""}</span>
+          </span>
+        ) : dash,
+        sortVal: (a) => a.employees?.full_name ?? a.sites?.name ?? "",
+      },
+      { key: "site", label: "אתר", render: (a) => siteOf(a) || dash, sortVal: siteOf },
+      {
+        key: "expiry", label: isInsurance ? "תוקף פוליסה" : "תפוגה",
+        render: (a) => { const e = expiryInfo(a); return <span className={cn("text-xs", e.cls)}>{e.txt}</span>; },
+        sortVal: (a) => { const e = expiryOf(a, domain); return e ? new Date(e).getTime() : Number.MAX_SAFE_INTEGER; },
+      },
+    ];
+    if (domain === "physical") {
+      cols.push({
+        key: "status", label: "סטטוס",
+        render: (a) => <span className={cn("text-xs px-2 py-0.5 rounded-full", assetStatusClasses[a.status])}>{assetStatusLabels[a.status] ?? a.status}</span>,
+        sortVal: (a) => assetStatusLabels[a.status] ?? a.status ?? "",
+      });
+    }
+    const customKeys = new Set<string>();
+    items.forEach((a) => Object.keys(a.custom_fields ?? {}).forEach((k) => {
+      if (!/^שיוך לאתר/.test(k.trim())) customKeys.add(k);
+    }));
+    [...customKeys].sort((x, y) => x.localeCompare(y, "he")).forEach((k) => {
+      cols.push({
+        key: `cf:${k}`, label: k,
+        render: (a) => fmtCustom(a.custom_fields?.[k]) || dash,
+        sortVal: (a) => {
+          const v = a.custom_fields?.[k];
+          if (typeof v === "string" && DATE_RE.test(v)) return new Date(v).getTime();
+          if (typeof v === "number") return v;
+          return fmtCustom(v);
+        },
+      });
+    });
+    return cols;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, domain]);
+
+  const defaultKeys = useMemo(() => {
+    if (isInsurance) return ["name", "site", "cf:חברת ביטוח", "expiry", "cf:שם סוכן ביטוח"];
+    const keys = ["code"];
+    if (items.some((a) => !!secondValue(a))) keys.push("second");
+    keys.push("employee");
+    // Address-like custom field (e.g. real-estate "כתובת/תיאור הנכס").
+    allCols.filter((c) => c.key.startsWith("cf:") && /כתובת/.test(c.label)).forEach((c) => keys.push(c.key));
+    keys.push(domain === "physical" ? "status" : "expiry");
+    return keys;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allCols, isInsurance, domain]);
+
+  // Per-resource column choice, saved in this browser.
+  const storeKey = `asset-cols:${columnsKey ?? domain}`;
+  const [chosen, setChosenState] = useState<string[] | null>(() => {
+    try { const raw = localStorage.getItem(storeKey); return raw ? JSON.parse(raw) : null; } catch { return null; }
+  });
+  const [loadedKey, setLoadedKey] = useState(storeKey);
+  if (loadedKey !== storeKey) {
+    setLoadedKey(storeKey);
+    try { const raw = localStorage.getItem(storeKey); setChosenState(raw ? JSON.parse(raw) : null); } catch { setChosenState(null); }
+  }
+  const setChosen = (next: string[] | null) => {
+    setChosenState(next);
+    try { if (next) localStorage.setItem(storeKey, JSON.stringify(next)); else localStorage.removeItem(storeKey); } catch { /* ignore */ }
+  };
+  const activeKeys = chosen ?? defaultKeys;
+  const visibleCols = activeKeys.map((k) => allCols.find((c) => c.key === k)).filter(Boolean) as ColDef[];
+  const toggleCol = (key: string) => {
+    const base = activeKeys.filter((k) => allCols.some((c) => c.key === k));
+    const next = base.includes(key) ? base.filter((k) => k !== key) : [...base, key];
+    setChosen(next.length ? next : base);
   };
 
   const [colSort, setColSort] = usePersistentFilter<{ key: string; dir: "asc" | "desc" } | null>(
     `assets:${domain}:colsort`,
     null,
   );
-
-  const valueFor = (a: any, key: string): string | number => {
-    const cf = a.custom_fields ?? {};
-    switch (key) {
-      case "code": return a.asset_code ?? "";
-      case "second":
-        return (domain === "digital" ? a.account_username : domain === "licenses" ? (cf["ספק"] ?? a.manufacturer_model) : a.serial_number) ?? "";
-      case "employee": return a.employees?.full_name ?? a.sites?.name ?? "";
-      case "status":
-        if (domain === "physical") return assetStatusLabels[a.status] ?? a.status ?? "";
-        { const e = expiryOf(a, domain); return e ? new Date(e).getTime() : Number.MAX_SAFE_INTEGER; }
-      case "name": return a.asset_name ?? "";
-      case "insurer": return cf["חברת ביטוח"] ?? "";
-      case "agent": return cf["שם סוכן ביטוח"] ?? "";
-      case "site": return siteOf(a);
-      case "expiry":
-        { const e = expiryOf(a, domain); return e ? new Date(e).getTime() : Number.MAX_SAFE_INTEGER; }
-      default: return "";
-    }
-  };
-
-  const sorted = colSort
+  const sortCol = colSort ? allCols.find((c) => c.key === colSort.key) : null;
+  const sorted = sortCol
     ? [...items].sort((a, b) => {
-        const va = valueFor(a, colSort.key);
-        const vb = valueFor(b, colSort.key);
+        const va = sortCol.sortVal(a);
+        const vb = sortCol.sortVal(b);
         const cmp = typeof va === "number" && typeof vb === "number"
           ? va - vb
           : String(va).localeCompare(String(vb), "he", { numeric: true });
-        return colSort.dir === "asc" ? cmp : -cmp;
+        return colSort!.dir === "asc" ? cmp : -cmp;
       })
     : items;
-
   const toggleSort = (key: string) =>
     setColSort((prev) =>
       prev && prev.key === key
@@ -849,132 +956,84 @@ function InstancesTable({
         : { key, dir: "asc" },
     );
 
-  const SortHead = ({ label, sortKey, className }: { label: string; sortKey: string; className?: string }) => {
-    const active = colSort?.key === sortKey;
-    return (
-      <button
-        type="button"
-        onClick={() => toggleSort(sortKey)}
-        className={cn("text-right flex items-center gap-1 hover:text-foreground transition-colors", active && "text-foreground", className)}
-        title="מיין לפי עמודה זו"
-      >
-        <span>{label}</span>
-        {active ? (
-          colSort!.dir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
-        ) : (
-          <ChevronsUpDown className="w-3 h-3 opacity-40" />
-        )}
-      </button>
-    );
-  };
+  const gridStyle = { gridTemplateColumns: `repeat(${Math.max(visibleCols.length, 1)}, minmax(0, 1fr)) 2rem` };
 
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">
-      <div className={cn("grid gap-2 px-4 py-2 bg-muted/40 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide", cols)}>
-        {isInsurance ? (
-          <>
-            <SortHead label="שם הביטוח" sortKey="name" />
-            <SortHead label="אתר" sortKey="site" />
-            <SortHead label="חברת ביטוח" sortKey="insurer" />
-            <SortHead label="תוקף פוליסה" sortKey="expiry" />
-            <SortHead label="סוכן ביטוח" sortKey="agent" />
-            <div></div>
-          </>
-        ) : (
-          <>
-            <SortHead label="קוד" sortKey="code" className="col-span-3" />
-            {showSecond && (
-              <SortHead label={domain === "digital" ? "שם משתמש" : domain === "licenses" ? "ספק" : "מס׳ סידורי"} sortKey="second" className="col-span-3" />
-            )}
-            <SortHead label="עובד / אתר" sortKey="employee" className={showSecond ? "col-span-3" : "col-span-6"} />
-            <SortHead label={domain === "physical" ? "סטטוס" : "תפוגה"} sortKey="status" className="col-span-2" />
-            <div className="col-span-1 text-left"></div>
-          </>
-        )}
-      </div>
-      {sorted.map((a: any) => {
-        const exp = expiryOf(a, domain);
-        const days = exp ? Math.ceil((new Date(exp).getTime() - Date.now()) / 86400000) : null;
-        const expiryCls = days === null ? "text-muted-foreground" : days < 0 ? "text-destructive font-semibold" : days <= 30 ? "text-amber-600 dark:text-amber-400 font-semibold" : "text-foreground";
-        const expiryTxt = days === null ? "—" : days < 0 ? `פג לפני ${Math.abs(days)}י׳` : days === 0 ? "פג היום" : days <= 30 ? `בעוד ${days}י׳` : new Date(exp!).toLocaleDateString("en-GB");
-        const checkbox = selectable ? (
-          <input
-            type="checkbox"
-            checked={selectedIds?.has(a.id) ?? false}
-            onClick={(e) => e.stopPropagation()}
-            onChange={() => onToggleSelect?.(a.id)}
-            className="ml-2 accent-primary"
-            aria-label="בחר פריט"
-          />
-        ) : null;
-
-        if (isInsurance) {
-          const cf = a.custom_fields ?? {};
+      <div className="grid gap-2 px-4 py-2 bg-muted/40 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide items-center" style={gridStyle}>
+        {visibleCols.map((c) => {
+          const active = colSort?.key === c.key;
           return (
-            <div
-              key={a.id}
-              role="button"
-              tabIndex={0}
-              onClick={() => onSelect(a.id)}
-              onKeyDown={(e) => { if (e.key === "Enter") onSelect(a.id); }}
-              className={cn("w-full grid gap-2 px-4 py-3 text-sm border-t border-border hover:bg-muted/40 text-right items-center transition-colors cursor-pointer", cols)}
+            <button
+              key={c.key}
+              type="button"
+              onClick={() => toggleSort(c.key)}
+              className={cn("text-right flex items-center gap-1 hover:text-foreground transition-colors min-w-0", active && "text-foreground")}
+              title="מיין לפי עמודה זו"
             >
-              <div className="font-medium truncate flex items-center">{checkbox}{a.asset_name ?? "—"}</div>
-              <div className="truncate" title={siteOf(a)}>{siteOf(a) || <span className="text-muted-foreground">—</span>}</div>
-              <div className="truncate">{cf["חברת ביטוח"] ?? <span className="text-muted-foreground">—</span>}</div>
-              <div className={cn("text-xs", expiryCls)}>{expiryTxt}</div>
-              <div className="truncate text-muted-foreground">{cf["שם סוכן ביטוח"] ?? "—"}</div>
-              <div className="text-left text-muted-foreground">
-                <ArrowRight className="w-4 h-4 mr-auto rtl:rotate-180" />
-              </div>
-            </div>
+              <span className="truncate">{c.label}</span>
+              {active ? (
+                colSort!.dir === "asc" ? <ChevronUp className="w-3 h-3 shrink-0" /> : <ChevronDown className="w-3 h-3 shrink-0" />
+              ) : (
+                <ChevronsUpDown className="w-3 h-3 opacity-40 shrink-0" />
+              )}
+            </button>
           );
-        }
-        return (
-          <div
-            key={a.id}
-            role="button"
-            tabIndex={0}
-            onClick={() => onSelect(a.id)}
-            onKeyDown={(e) => { if (e.key === "Enter") onSelect(a.id); }}
-            className="w-full grid grid-cols-12 gap-2 px-4 py-3 text-sm border-t border-border hover:bg-muted/40 text-right items-center transition-colors cursor-pointer"
-          >
-            <div className="col-span-3 font-mono text-xs flex items-center">{checkbox}{a.asset_code}</div>
-            {showSecond && (
-              <div className="col-span-3 text-xs text-muted-foreground truncate" dir={domain === "digital" ? "ltr" : undefined}>
-                {secondValue(a) ?? "—"}
-              </div>
-            )}
-            <div className={cn("truncate", showSecond ? "col-span-3" : "col-span-6")}>
-              {a.employees?.full_name ? (
-                <EmployeeLink employeeId={a.current_owner_id} name={a.employees.full_name} />
-              ) : a.sites?.name ? (
-                <span className="inline-flex items-center gap-1">
-                  <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                  <span className="truncate">
-                    {a.sites.name}
-                    {a.container?.asset_name ? ` · ${a.container.asset_name}` : ""}
-                  </span>
-                </span>
-              ) : (
-                <span className="text-muted-foreground">—</span>
+        })}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button type="button" className="justify-self-end p-1 rounded hover:bg-muted hover:text-foreground" title="בחירת עמודות" aria-label="בחירת עמודות">
+              <Columns3 className="w-4 h-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="max-h-[60vh] overflow-y-auto w-60 text-right">
+            <DropdownMenuLabel>עמודות להצגה</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {allCols.map((c) => (
+              <DropdownMenuCheckboxItem
+                key={c.key}
+                checked={activeKeys.includes(c.key)}
+                onCheckedChange={() => toggleCol(c.key)}
+                onSelect={(e) => e.preventDefault()}
+              >
+                {c.label}
+              </DropdownMenuCheckboxItem>
+            ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setChosen(null)}>איפוס לברירת מחדל</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      {sorted.map((a: any) => (
+        <div
+          key={a.id}
+          role="button"
+          tabIndex={0}
+          onClick={() => onSelect(a.id)}
+          onKeyDown={(e) => { if (e.key === "Enter") onSelect(a.id); }}
+          className="w-full grid gap-2 px-4 py-3 text-sm border-t border-border hover:bg-muted/40 text-right items-center transition-colors cursor-pointer"
+          style={gridStyle}
+        >
+          {visibleCols.map((c, i) => (
+            <div key={c.key} className="truncate min-w-0 flex items-center">
+              {i === 0 && selectable && (
+                <input
+                  type="checkbox"
+                  checked={selectedIds?.has(a.id) ?? false}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={() => onToggleSelect?.(a.id)}
+                  className="ml-2 accent-primary shrink-0"
+                  aria-label="בחר פריט"
+                />
               )}
+              <span className="truncate">{c.render(a)}</span>
             </div>
-            <div className="col-span-2">
-              {domain === "physical" ? (
-                <span className={cn("text-xs px-2 py-0.5 rounded-full", assetStatusClasses[a.status])}>
-                  {assetStatusLabels[a.status] ?? a.status}
-                </span>
-              ) : (
-                <span className={cn("text-xs", expiryCls)}>{expiryTxt}</span>
-              )}
-            </div>
-            <div className="col-span-1 text-left text-muted-foreground">
-              <ArrowRight className="w-4 h-4 mr-auto rtl:rotate-180" />
-            </div>
+          ))}
+          <div className="text-left text-muted-foreground">
+            <ArrowRight className="w-4 h-4 mr-auto rtl:rotate-180" />
           </div>
-        );
-      })}
+        </div>
+      ))}
     </div>
   );
 }
