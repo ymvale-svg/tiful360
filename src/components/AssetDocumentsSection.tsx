@@ -142,6 +142,86 @@ export function AssetDocumentsSection({ assetId }: Props) {
 
   const typeLabel = (t: string) => DOCUMENT_TYPES.find(d => d.value === t)?.label ?? t;
 
+  const renderDocRow = (doc: AssetDocument) => {
+    const expiringSoon = doc.expiry_date
+      ? Math.ceil((new Date(doc.expiry_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+      : null;
+    const isExpired = !doc.is_archived && expiringSoon !== null && expiringSoon <= 0;
+    const isWarning = !doc.is_archived && expiringSoon !== null && expiringSoon > 0 && expiringSoon <= 14;
+    return (
+      <li
+        key={doc.id}
+        className="flex items-start justify-between gap-2 text-xs border-b border-border/50 last:border-0 pb-1.5 last:pb-0"
+      >
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-medium text-foreground break-words break-all">
+              {doc.document_label || doc.file_name}
+            </span>
+            <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground text-[10px]">
+              {typeLabel(doc.document_type)}
+            </span>
+            {isExpired && (
+              <span className="px-1.5 py-0.5 rounded bg-destructive/10 text-destructive text-[10px] flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" /> פג תוקף
+              </span>
+            )}
+            {isWarning && (
+              <span className="px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 text-[10px] flex items-center gap-1">
+                <Calendar className="w-3 h-3" /> {expiringSoon} ימים
+              </span>
+            )}
+          </div>
+          <div className="text-muted-foreground mt-0.5 flex items-center gap-2">
+            <span>{new Date(doc.uploaded_at).toLocaleDateString("en-GB")}</span>
+            {doc.file_size_bytes && <span>· {fmtSize(doc.file_size_bytes)}</span>}
+            {doc.expiry_date && <span>· תפוגה: {new Date(doc.expiry_date).toLocaleDateString("en-GB")}</span>}
+          </div>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            onClick={() => handlePreview(doc)}
+            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary"
+            title="צפה"
+          >
+            <Eye className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => handleDownload(doc)}
+            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+            title="הורד"
+          >
+            <Download className="w-4 h-4" />
+          </button>
+          {doc.is_archived ? (
+            <button
+              onClick={() => handleArchive(doc, false)}
+              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary"
+              title="שחזר מארכיון"
+            >
+              <ArchiveRestore className="w-4 h-4" />
+            </button>
+          ) : (
+            <button
+              onClick={() => handleArchive(doc, true)}
+              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary"
+              title="העבר לארכיון"
+            >
+              <Archive className="w-4 h-4" />
+            </button>
+          )}
+          <button
+            onClick={() => handleDelete(doc)}
+            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-destructive"
+            title="מחק"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </li>
+    );
+  };
+
   return (
     <div
       className={cn(
