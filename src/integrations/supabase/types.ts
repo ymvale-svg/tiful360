@@ -272,7 +272,9 @@ export type Database = {
           file_size_bytes: number | null
           file_url: string
           id: string
+          is_archived: boolean
           notes: string | null
+          period: string | null
           uploaded_at: string
           uploaded_by: string | null
         }
@@ -286,7 +288,9 @@ export type Database = {
           file_size_bytes?: number | null
           file_url: string
           id?: string
+          is_archived?: boolean
           notes?: string | null
+          period?: string | null
           uploaded_at?: string
           uploaded_by?: string | null
         }
@@ -300,7 +304,9 @@ export type Database = {
           file_size_bytes?: number | null
           file_url?: string
           id?: string
+          is_archived?: boolean
           notes?: string | null
+          period?: string | null
           uploaded_at?: string
           uploaded_by?: string | null
         }

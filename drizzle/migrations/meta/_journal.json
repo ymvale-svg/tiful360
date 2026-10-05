@@ -29,6 +29,13 @@
       "when": 1790073761188,
       "tag": "0003_grant_handover_drafts",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791209180529,
+      "tag": "0004_asset_documents_archive",
+      "breakpoints": true
     }
   ]
 }
