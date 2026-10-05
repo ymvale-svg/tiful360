@@ -762,6 +762,32 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
             </div>
           )}
 
+          {!bulkMode && selectedCategory?.prefix !== "CINS" && (selectedCategory as any)?.is_assignable !== false && showBuiltin("assigned_site_id") && (
+            <div>
+              <SiteSelect
+                value={form.assigned_site_id}
+                onChange={(v) => setForm(prev => ({ ...prev, assigned_site_id: v, container_id: "", ...(v ? { current_owner_id: "" } : {}) }))}
+                label="שיוך לאתר (במקום עובד)"
+              />
+              {form.assigned_site_id && (
+                <div className="mt-2 space-y-2">
+                  <ContainerSelect
+                    siteId={form.assigned_site_id}
+                    value={form.container_id}
+                    onChange={(v) => setForm(prev => ({ ...prev, container_id: v }))}
+                  />
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground hover:text-destructive"
+                    onClick={() => setForm(prev => ({ ...prev, assigned_site_id: "", container_id: "" }))}
+                  >
+                    הסר שיוך לאתר
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {!bulkMode && showBuiltin("notification_days_before") && (
             <div>
               <label className="text-sm font-medium mb-1 block">
