@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { 
   Package, Clock, Megaphone, BookOpen, Phone, ExternalLink,
@@ -57,6 +57,27 @@ export default function EmployeePortal() {
   const portalLogoSrc = activeCompany?.portal_logo_url || portalLogo.url;
   const navigate = useNavigate();
   const createPunch = useCreateRemotePunch();
+
+  // Pre-warm GPS while the portal is open so a punch can use a fresh reading instantly.
+  const warmPosRef = useRef<GeolocationPosition | null>(null);
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    let id: number | null = null;
+    try {
+      id = navigator.geolocation.watchPosition(
+        (pos) => {
+          const prev = warmPosRef.current;
+          const prevFresh = prev && Date.now() - prev.timestamp < 60000;
+          if (!prevFresh || pos.coords.accuracy <= (prev?.coords.accuracy ?? Infinity)) {
+            warmPosRef.current = pos;
+          }
+        },
+        () => undefined,
+        { enableHighAccuracy: true, maximumAge: 30000, timeout: 60000 },
+      );
+    } catch { /* ignore */ }
+    return () => { if (id !== null) navigator.geolocation.clearWatch(id); };
+  }, []);
   const { toast } = useToast();
 
   const handleSignOut = async () => {
