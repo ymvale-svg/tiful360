@@ -323,22 +323,9 @@ Deno.serve(async (req) => {
       'employees loaded=', employees?.length ?? 0,
       'idMap size=', idMap.size);
 
-    // Overwrite: delete existing payslips for the same company+period
-    // (covers re-uploads of the same monthly file).
-    const { error: delPsErr } = await admin.from('payslips')
-      .delete()
-      .eq('company_id', company_id)
-      .eq('period_year', period_year)
-      .eq('period_month', period_month);
-    if (delPsErr) console.error('overwrite delete payslips failed:', delPsErr);
-    // Mark prior batches for the same period as superseded so reports stay clean.
-    await admin.from('payslip_batches')
-      .update({ status: 'superseded' })
-      .eq('company_id', company_id)
-      .eq('period_year', period_year)
-      .eq('period_month', period_month)
-      .neq('status', 'superseded');
-
+    // No blanket delete: each employee's payslip is upserted on
+    // (employee_id, period). A partial re-upload (e.g. 6 corrected pages)
+    // must never wipe the payslips of everyone else for that month.
     // Create batch
     const { data: batchRow, error: batchErr } = await admin.from('payslip_batches').insert({
       company_id,
