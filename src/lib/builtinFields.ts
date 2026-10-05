@@ -25,7 +25,7 @@ export const BUILTIN_FIELDS: Partial<Record<DomainKey, BuiltinField[]>> = {
     { key: "manufacturer_model", label: "יצרן ודגם", defaultVisible: true },
     { key: "condition", label: "מצב הציוד", defaultVisible: true },
     { key: "assigned_site_id", label: "שיוך לאתר", defaultVisible: true },
-    { key: "expiry_date", label: "תאריך תפוגה", defaultVisible: true },
+    { key: "expiry_date", label: "תאריך תפוגה", defaultVisible: false },
     // Vehicle-specific fields (relevant when the category is a vehicle category):
     { key: "license_plate", label: "לוחית רישוי", defaultVisible: true },
     { key: "vehicle_type", label: "סוג בעלות", defaultVisible: true },
@@ -74,7 +74,7 @@ export const BUILTIN_FIELDS: Partial<Record<DomainKey, BuiltinField[]>> = {
     ...COMMON_ASSIGN,
   ],
   insurance: [
-    { key: "expiry_date", label: "תוקף עד", defaultVisible: true },
+    { key: "expiry_date", label: "תוקף עד", defaultVisible: false },
     { key: "serial_number", label: "מס׳ סידורי", defaultVisible: false },
     { key: "manufacturer_model", label: "יצרן ודגם", defaultVisible: false },
     { key: "condition", label: "מצב הציוד", defaultVisible: false },
@@ -84,7 +84,7 @@ export const BUILTIN_FIELDS: Partial<Record<DomainKey, BuiltinField[]>> = {
   ],
   real_estate: [
     { key: "assigned_site_id", label: "שיוך לאתר", defaultVisible: true },
-    { key: "expiry_date", label: "תאריך תפוגה", defaultVisible: true },
+    { key: "expiry_date", label: "תאריך תפוגה", defaultVisible: false },
     { key: "serial_number", label: "מס׳ סידורי", defaultVisible: false },
     { key: "manufacturer_model", label: "יצרן ודגם", defaultVisible: false },
     { key: "condition", label: "מצב הציוד", defaultVisible: false },
@@ -153,4 +153,30 @@ export function showFieldRow(
   if (!isBuiltinFieldVisible(group, key, domain)) return false;
   if (editing) return true;
   return !(value === null || value === undefined || value === "");
+}
+
+/**
+ * Does a handover/return protocol make sense for this item?
+ * Only items that physically pass hand-to-hand (equipment, vehicles, digital
+ * access, trainings, cards handed to employees). Insurance, real estate and
+ * plain software licenses never get protocols.
+ */
+export function isHandoverRelevant(
+  domain: DomainKey | null | undefined,
+  category?: { protocol_type?: string | null } | null,
+  group?: { name?: string | null } | null,
+): boolean {
+  if (category?.protocol_type === "vehicle") return true;
+  switch (domain) {
+    case "physical":
+    case "digital":
+    case "training":
+      return true;
+    case "licenses": {
+      const n = `${group?.name ?? ""}`;
+      return /כרטיס|דלק|תדלוק|פנגו|כביש|מנהר|חוצה/.test(n);
+    }
+    default:
+      return false;
+  }
 }

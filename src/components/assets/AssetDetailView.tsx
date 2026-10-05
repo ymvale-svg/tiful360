@@ -20,7 +20,7 @@ import { TrainingDetailsPanel } from "@/components/assets/TrainingDetailsPanel";
 import { InsuranceDetailsPanel } from "@/components/assets/InsuranceDetailsPanel";
 import { RealEstateDetailsPanel } from "@/components/assets/RealEstateDetailsPanel";
 import { getDomain, getPanelOwnedCustomFieldKeys } from "@/lib/assetDomains";
-import { isBuiltinFieldVisible } from "@/lib/builtinFields";
+import { isBuiltinFieldVisible, isHandoverRelevant } from "@/lib/builtinFields";
 import { VehicleLinkPanel } from "@/components/assets/VehicleLinkPanel";
 import { isVehicleLinkedGroup } from "@/lib/vehicleLinkedGroups";
 import { useAssetGroups } from "@/hooks/useAssetGroups";
@@ -243,7 +243,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
               const hideCondition = domain === "insurance" || !isBuiltinFieldVisible(group, "condition", domain);
               const showSerial = isBuiltinFieldVisible(group, "serial_number", domain);
               const showModel = isBuiltinFieldVisible(group, "manufacturer_model", domain);
-              const showExpiry = isBuiltinFieldVisible(group, "expiry_date", domain);
+              const showExpiry = isBuiltinFieldVisible(group, "expiry_date", domain) || (domain === "physical" && category?.protocol_type !== "vehicle" && !!expiry);
               const customEntries = asset.custom_fields
                 ? Object.entries(asset.custom_fields).filter(([k]) => !panelKeys.has(k))
                 : [];
@@ -328,6 +328,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
           </div>
 
           {/* Handover / return protocols */}
+          {(isHandoverRelevant(category ? getDomain(category) : null, category, (assetGroups ?? []).find((g: any) => g.id === asset.group_id) as any) || handoverDrafts.length > 0 || (handoverForms ?? []).length > 0) && (
           <div className="bg-card border border-border rounded-xl p-5">
             <h2 className="text-sm font-semibold text-muted-foreground mb-3">פרוטוקולי מסירה והזדכות</h2>
             {handoverDrafts.map((draft: HandoverDraft) => {
@@ -361,6 +362,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
               hideEmpty={handoverDrafts.length > 0}
             />
           </div>
+          )}
 
         </div>
 
