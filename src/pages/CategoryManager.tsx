@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import {
   Plus, GripVertical, Trash2, Save, Pencil, Search,
-  Type, Hash, Calendar, List, ListChecks, Settings2, Check, X, ChevronLeft, Users,
+  Type, Hash, Calendar, List, ListChecks, Settings2, Check, X, ChevronLeft, ChevronDown, Users,
 } from "lucide-react";
 import { ManageGroupsDialog } from "@/components/ManageGroupsDialog";
 import { Button } from "@/components/ui/button";
@@ -470,6 +470,7 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
   const saveMutation = useSaveCategoryFields();
   const { toast } = useToast();
   const [fields, setFields] = useState<LocalField[]>([]);
+  const [expandedOptionsField, setExpandedOptionsField] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
@@ -592,16 +593,20 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
       </div>
 
       <div className="p-5 space-y-2">
-        {fields.map((field, index) => (
-          <div
-            key={field.tempId}
-            onDragEnter={() => handleDragEnter(index)}
-            onDragOver={(e) => e.preventDefault()}
-            className={cn(
-              "flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-background",
-              "hover:border-primary/30 transition-all group"
-            )}
-          >
+        {fields.map((field, index) => {
+          const hasOptions = field.field_type === "list" || field.field_type === "list_multi";
+          const optionsExpanded = expandedOptionsField === field.tempId;
+
+          return (
+          <div key={field.tempId} className="space-y-1.5">
+            <div
+              onDragEnter={() => handleDragEnter(index)}
+              onDragOver={(e) => e.preventDefault()}
+              className={cn(
+                "flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-background",
+                "hover:border-primary/30 transition-all group"
+              )}
+            >
             {/* Drag handle */}
             <div
               draggable
@@ -667,6 +672,20 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
               </select>
             )}
 
+            {hasOptions && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setExpandedOptionsField(optionsExpanded ? null : field.tempId)}
+                className="h-7 gap-1 px-2 text-xs text-muted-foreground shrink-0"
+                aria-expanded={optionsExpanded}
+              >
+                {(field.field_options ?? []).filter((option) => option.trim()).length} אפשרויות
+                <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", optionsExpanded && "rotate-180")} />
+              </Button>
+            )}
+
             {/* Required toggle */}
             <button
               onClick={() => updateField(field.tempId, { is_required: !field.is_required })}
@@ -688,48 +707,52 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
             >
               <Trash2 className="w-4 h-4" />
             </button>
-          </div>
-        ))}
+            </div>
 
-        {/* List options editor for selected list fields */}
-        {fields.filter(f => f.field_type === "list" || f.field_type === "list_multi").map((field) => (
-          <div key={`opts-${field.tempId}`} className="mr-7 p-3 rounded-lg border border-dashed border-border bg-muted/30 space-y-2">
-            <p className="text-xs font-medium text-muted-foreground">
-              אפשרויות {field.field_type === "list_multi" ? "(בחירה מרובה) " : ""}עבור "{field.field_name || "ללא שם"}"
-            </p>
-            {(field.field_options ?? [""]).map((opt, oi) => (
-              <div key={oi} className="flex items-center gap-2">
-                <input
-                  value={opt}
-                  onChange={(e) => {
-                    const newOpts = [...(field.field_options ?? [""])];
-                    newOpts[oi] = e.target.value;
-                    updateField(field.tempId, { field_options: newOpts });
-                  }}
-                  placeholder={`אפשרות ${oi + 1}`}
-                  className="flex-1 bg-background rounded-md px-3 py-1.5 text-sm outline-none border border-border/50 focus:ring-1 focus:ring-primary/30"
-                />
-                <button
-                  onClick={() => {
-                    const newOpts = (field.field_options ?? [""]).filter((_, i) => i !== oi);
-                    updateField(field.tempId, { field_options: newOpts.length ? newOpts : [""] });
-                  }}
-                  className="text-muted-foreground hover:text-destructive"
+            {hasOptions && optionsExpanded && (
+              <div className="mr-7 p-3 rounded-lg border border-dashed border-border bg-muted/30 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">
+                  אפשרויות {field.field_type === "list_multi" ? "(בחירה מרובה) " : ""}עבור "{field.field_name || "ללא שם"}"
+                </p>
+                {(field.field_options ?? [""]).map((opt, oi) => (
+                  <div key={oi} className="flex items-center gap-2">
+                    <input
+                      value={opt}
+                      onChange={(e) => {
+                        const newOpts = [...(field.field_options ?? [""])];
+                        newOpts[oi] = e.target.value;
+                        updateField(field.tempId, { field_options: newOpts });
+                      }}
+                      placeholder={`אפשרות ${oi + 1}`}
+                      className="flex-1 bg-background rounded-md px-3 py-1.5 text-sm outline-none border border-border/50 focus:ring-1 focus:ring-primary/30"
+                    />
+                    <button
+                      onClick={() => {
+                        const newOpts = (field.field_options ?? [""]).filter((_, i) => i !== oi);
+                        updateField(field.tempId, { field_options: newOpts.length ? newOpts : [""] });
+                      }}
+                      className="text-muted-foreground hover:text-destructive"
+                      aria-label={`מחק אפשרות ${oi + 1}`}
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => updateField(field.tempId, { field_options: [...(field.field_options ?? [""]), ""] })}
+                  className="h-7 px-2 text-xs text-primary"
                 >
-                  <X className="w-3.5 h-3.5" />
-                </button>
+                  <Plus className="w-3.5 h-3.5" />
+                  הוסף אפשרות
+                </Button>
               </div>
-            ))}
-            <button
-              onClick={() => {
-                updateField(field.tempId, { field_options: [...(field.field_options ?? [""]), ""] });
-              }}
-              className="text-xs text-primary hover:underline"
-            >
-              + הוסף אפשרות
-            </button>
+            )}
           </div>
-        ))}
+          );
+        })}
 
         {/* Add field button */}
         <button
