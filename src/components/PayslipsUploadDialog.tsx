@@ -109,7 +109,7 @@ export function PayslipsUploadDialog({ open, onOpenChange }: Props) {
           <DialogDescription>
             העלה את קובץ ה-PDF המאוחד של תלושי השכר. המערכת תפצל אותו אוטומטית לכל עובד לפי תעודת זהות ותעדכן יתרות חופשה ומחלה.
             <br />
-            <span className="text-warning font-medium">שים לב: העלאה חוזרת לאותו חודש תדרוס את התלושים הקיימים לאותה תקופה.</span>
+            <span className="text-warning font-medium">העלאה חדשה מעדכנת רק את התלושים של תעודות הזהות שבקובץ — כל שאר התלושים הקיימים נשארים ללא שינוי.</span>
           </DialogDescription>
         </DialogHeader>
 

@@ -615,6 +615,13 @@ Deno.serve(async (req) => {
             });
           }
         } else {
+          // IRON RULE: replace only the older unmatched slip of this same ID+period.
+          await admin.from('payslips').delete()
+            .eq('company_id', company_id)
+            .is('employee_id', null)
+            .eq('id_number_detected', normalizedId)
+            .eq('period_year', recordYear)
+            .eq('period_month', recordMonth);
           await admin.from('payslips').insert({
             company_id,
             employee_id: null,
