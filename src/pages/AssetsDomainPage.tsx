@@ -837,7 +837,7 @@ function InstancesTable({
   const expiryInfo = (a: any) => {
     const exp = expiryOf(a, domain);
     const days = exp ? Math.ceil((new Date(exp).getTime() - Date.now()) / 86400000) : null;
-    const cls = days === null ? "text-muted-foreground" : days < 0 ? "text-destructive font-semibold" : days <= 30 ? "text-amber-600 dark:text-amber-400 font-semibold" : "text-foreground";
+    const cls = days === null ? "text-muted-foreground" : days < 0 ? "text-destructive" : days <= 30 ? "text-amber-600 dark:text-amber-400" : "text-foreground";
     const txt = days === null ? "—" : days < 0 ? `פג לפני ${Math.abs(days)}י׳` : days === 0 ? "פג היום" : days <= 30 ? `בעוד ${days}י׳` : new Date(exp!).toLocaleDateString("en-GB");
     return { exp, cls, txt };
   };
