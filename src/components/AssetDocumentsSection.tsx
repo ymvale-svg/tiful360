@@ -115,6 +115,24 @@ export function AssetDocumentsSection({ assetId }: Props) {
     }
   };
 
+  const handleArchive = async (doc: AssetDocument, toArchive: boolean) => {
+    try {
+      await archive.mutateAsync({ doc, archive: toArchive });
+      toast({ title: toArchive ? "המסמך הועבר לארכיון" : "המסמך שוחזר מהארכיון" });
+    } catch (err: any) {
+      toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const currentDocs = (documents ?? []).filter((d) => !d.is_archived);
+  const archivedDocs = (documents ?? []).filter((d) => d.is_archived);
+  const archiveGroups = archivedDocs.reduce<Record<string, AssetDocument[]>>((acc, d) => {
+    const key = d.period || "ללא תקופה";
+    (acc[key] ??= []).push(d);
+    return acc;
+  }, {});
+  const archivePeriods = Object.keys(archiveGroups).sort().reverse();
+
   const fmtSize = (bytes: number | null) => {
     if (!bytes) return "";
     if (bytes < 1024) return `${bytes} B`;
