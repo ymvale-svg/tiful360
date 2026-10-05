@@ -986,7 +986,7 @@ function InstancesTable({
               <Columns3 className="w-4 h-4" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="max-h-[60vh] overflow-y-auto w-60" dir="rtl">
+          <DropdownMenuContent align="end" className="max-h-[60vh] overflow-y-auto w-60 text-right">
             <DropdownMenuLabel>עמודות להצגה</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {allCols.map((c) => (
