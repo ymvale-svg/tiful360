@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCompany } from "@/hooks/useCompany";
 import type { ExpiringAsset } from "@/hooks/useExpiringAssets";
+import { periodFromExpiry } from "@/hooks/useAssetDocuments";
 
 interface Props {
   open: boolean;

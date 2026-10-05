@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FileText, Upload, Trash2, Download, AlertCircle, Calendar, Eye } from "lucide-react";
+import { FileText, Upload, Trash2, Download, AlertCircle, Calendar, Eye, Archive, ArchiveRestore, ChevronDown, ChevronUp } from "lucide-react";
 import { DocumentPreviewDialog } from "@/components/DocumentPreviewDialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
