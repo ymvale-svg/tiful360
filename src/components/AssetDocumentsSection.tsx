@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FileText, Upload, Trash2, Download, AlertCircle, Calendar, Eye } from "lucide-react";
+import { FileText, Upload, Trash2, Download, AlertCircle, Calendar, Eye, Archive, ArchiveRestore, ChevronDown, ChevronUp } from "lucide-react";
 import { DocumentPreviewDialog } from "@/components/DocumentPreviewDialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -7,6 +7,7 @@ import {
   useAssetDocuments,
   useUploadAssetDocument,
   useDeleteAssetDocument,
+  useArchiveAssetDocument,
   getAssetDocumentSignedUrl,
   DOCUMENT_TYPES,
   type AssetDocument,
@@ -24,6 +25,7 @@ export function AssetDocumentsSection({ assetId }: Props) {
   const { data: documents, isLoading } = useAssetDocuments(assetId);
   const upload = useUploadAssetDocument();
   const del = useDeleteAssetDocument();
+  const archive = useArchiveAssetDocument();
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -35,6 +37,7 @@ export function AssetDocumentsSection({ assetId }: Props) {
   const [notes, setNotes] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [preview, setPreview] = useState<{ url: string | null; name: string; fileName: string } | null>(null);
+  const [showArchive, setShowArchive] = useState(false);
 
   const reset = () => {
     setFile(null); setDocType("other"); setLabel(""); setExpiryDate(""); setNotes(""); setShowForm(false);
@@ -112,6 +115,24 @@ export function AssetDocumentsSection({ assetId }: Props) {
     }
   };
 
+  const handleArchive = async (doc: AssetDocument, toArchive: boolean) => {
+    try {
+      await archive.mutateAsync({ doc, archive: toArchive });
+      toast({ title: toArchive ? "המסמך הועבר לארכיון" : "המסמך שוחזר מהארכיון" });
+    } catch (err: any) {
+      toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const currentDocs = (documents ?? []).filter((d) => !d.is_archived);
+  const archivedDocs = (documents ?? []).filter((d) => d.is_archived);
+  const archiveGroups = archivedDocs.reduce<Record<string, AssetDocument[]>>((acc, d) => {
+    const key = d.period || "ללא תקופה";
+    (acc[key] ??= []).push(d);
+    return acc;
+  }, {});
+  const archivePeriods = Object.keys(archiveGroups).sort().reverse();
+
   const fmtSize = (bytes: number | null) => {
     if (!bytes) return "";
     if (bytes < 1024) return `${bytes} B`;
@@ -120,6 +141,86 @@ export function AssetDocumentsSection({ assetId }: Props) {
   };
 
   const typeLabel = (t: string) => DOCUMENT_TYPES.find(d => d.value === t)?.label ?? t;
+
+  const renderDocRow = (doc: AssetDocument) => {
+    const expiringSoon = doc.expiry_date
+      ? Math.ceil((new Date(doc.expiry_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+      : null;
+    const isExpired = !doc.is_archived && expiringSoon !== null && expiringSoon <= 0;
+    const isWarning = !doc.is_archived && expiringSoon !== null && expiringSoon > 0 && expiringSoon <= 14;
+    return (
+      <li
+        key={doc.id}
+        className="flex items-start justify-between gap-2 text-xs border-b border-border/50 last:border-0 pb-1.5 last:pb-0"
+      >
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-medium text-foreground break-words break-all">
+              {doc.document_label || doc.file_name}
+            </span>
+            <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground text-[10px]">
+              {typeLabel(doc.document_type)}
+            </span>
+            {isExpired && (
+              <span className="px-1.5 py-0.5 rounded bg-destructive/10 text-destructive text-[10px] flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" /> פג תוקף
+              </span>
+            )}
+            {isWarning && (
+              <span className="px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 text-[10px] flex items-center gap-1">
+                <Calendar className="w-3 h-3" /> {expiringSoon} ימים
+              </span>
+            )}
+          </div>
+          <div className="text-muted-foreground mt-0.5 flex items-center gap-2">
+            <span>{new Date(doc.uploaded_at).toLocaleDateString("en-GB")}</span>
+            {doc.file_size_bytes && <span>· {fmtSize(doc.file_size_bytes)}</span>}
+            {doc.expiry_date && <span>· תפוגה: {new Date(doc.expiry_date).toLocaleDateString("en-GB")}</span>}
+          </div>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            onClick={() => handlePreview(doc)}
+            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary"
+            title="צפה"
+          >
+            <Eye className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => handleDownload(doc)}
+            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+            title="הורד"
+          >
+            <Download className="w-4 h-4" />
+          </button>
+          {doc.is_archived ? (
+            <button
+              onClick={() => handleArchive(doc, false)}
+              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary"
+              title="שחזר מארכיון"
+            >
+              <ArchiveRestore className="w-4 h-4" />
+            </button>
+          ) : (
+            <button
+              onClick={() => handleArchive(doc, true)}
+              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary"
+              title="העבר לארכיון"
+            >
+              <Archive className="w-4 h-4" />
+            </button>
+          )}
+          <button
+            onClick={() => handleDelete(doc)}
+            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-destructive"
+            title="מחק"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </li>
+    );
+  };
 
   return (
     <div
@@ -201,70 +302,43 @@ export function AssetDocumentsSection({ assetId }: Props) {
       ) : !documents || documents.length === 0 ? (
         <p className="text-xs text-muted-foreground text-center py-2">אין מסמכים מצורפים</p>
       ) : (
-        <ul className="space-y-1.5 max-h-56 overflow-y-auto">
-          {documents.map((doc) => {
-            const expiringSoon = doc.expiry_date
-              ? Math.ceil((new Date(doc.expiry_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-              : null;
-            const isExpired = expiringSoon !== null && expiringSoon <= 0;
-            const isWarning = expiringSoon !== null && expiringSoon > 0 && expiringSoon <= 14;
-            return (
-              <li
-                key={doc.id}
-                className="flex items-start justify-between gap-2 text-xs border-b border-border/50 last:border-0 pb-1.5 last:pb-0"
+        <>
+          {currentDocs.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-2">אין מסמכים נוכחיים</p>
+          ) : (
+            <ul className="space-y-1.5 max-h-56 overflow-y-auto">
+              {currentDocs.map(renderDocRow)}
+            </ul>
+          )}
+
+          {archivedDocs.length > 0 && (
+            <div className="border-t pt-2">
+              <button
+                onClick={() => setShowArchive((v) => !v)}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
               >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium text-foreground break-words break-all">
-                      {doc.document_label || doc.file_name}
-                    </span>
-                    <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground text-[10px]">
-                      {typeLabel(doc.document_type)}
-                    </span>
-                    {isExpired && (
-                      <span className="px-1.5 py-0.5 rounded bg-destructive/10 text-destructive text-[10px] flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" /> פג תוקף
-                      </span>
-                    )}
-                    {isWarning && (
-                      <span className="px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 text-[10px] flex items-center gap-1">
-                        <Calendar className="w-3 h-3" /> {expiringSoon} ימים
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-muted-foreground mt-0.5 flex items-center gap-2">
-                    <span>{new Date(doc.uploaded_at).toLocaleDateString("en-GB")}</span>
-                    {doc.file_size_bytes && <span>· {fmtSize(doc.file_size_bytes)}</span>}
-                    {doc.expiry_date && <span>· תפוגה: {new Date(doc.expiry_date).toLocaleDateString("en-GB")}</span>}
-                  </div>
+                <Archive className="w-3.5 h-3.5" />
+                ארכיון ({archivedDocs.length})
+                {showArchive ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+              {showArchive && (
+                <div className="mt-2 space-y-3">
+                  {archivePeriods.map((period) => (
+                    <div key={period}>
+                      <div className="text-[11px] font-medium text-muted-foreground mb-1 flex items-center gap-1.5">
+                        <Archive className="w-3 h-3" />
+                        {period}
+                      </div>
+                      <ul className="space-y-1.5 opacity-80">
+                        {archiveGroups[period].map(renderDocRow)}
+                      </ul>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    onClick={() => handlePreview(doc)}
-                    className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary"
-                    title="צפה"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDownload(doc)}
-                    className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-                    title="הורד"
-                  >
-                    <Download className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(doc)}
-                    className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-destructive"
-                    title="מחק"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+              )}
+            </div>
+          )}
+        </>
       )}
       <DocumentPreviewDialog
         open={!!preview}

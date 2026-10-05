@@ -15,6 +15,8 @@ export interface AssetDocument {
   uploaded_by: string | null;
   uploaded_at: string;
   notes: string | null;
+  period: string | null;
+  is_archived: boolean;
 }
 
 export const DOCUMENT_TYPES: Array<{ value: string; label: string }> = [
@@ -101,6 +103,41 @@ export function useDeleteAssetDocument() {
       qc.invalidateQueries({ queryKey: ["expiring-assets"] });
     },
   });
+}
+
+export function useArchiveAssetDocument() {
+  const qc = useQueryClient();
+  const { activeCompanyId } = useCompany();
+  return useMutation({
+    mutationFn: async (params: { doc: AssetDocument; archive: boolean; period?: string }) => {
+      const { doc, archive, period } = params;
+      const updates: any = archive
+        ? { is_archived: true, period: period ?? doc.period ?? null }
+        : { is_archived: false, period: null };
+      const { error } = await supabase
+        .from("asset_documents" as any)
+        .update(updates)
+        .eq("id", doc.id);
+      if (error) throw error;
+      await supabase.from("activity_log").insert({
+        company_id: activeCompanyId,
+        entity_type: "asset",
+        entity_id: doc.asset_id,
+        action: archive ? "ארכוב מסמך" : "שחזור מסמך מארכיון",
+        details: `${doc.document_label || doc.file_name}${archive && updates.period ? ` — ארכיון ${updates.period}` : ""}`,
+      });
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["asset-documents", vars.doc.asset_id] });
+      qc.invalidateQueries({ queryKey: ["expiring-assets"] });
+    },
+  });
+}
+
+/** Derive a period label like "2025/2026" from an expiry date. */
+export function periodFromExpiry(expiryDate: string): string {
+  const y = new Date(expiryDate).getFullYear();
+  return `${y - 1}/${y}`;
 }
 
 export async function getAssetDocumentSignedUrl(filePath: string): Promise<string | null> {

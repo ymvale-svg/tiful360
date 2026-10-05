@@ -1,0 +1,1 @@
+ALTER TABLE public.asset_documents ADD COLUMN period text, ADD COLUMN is_archived boolean NOT NULL DEFAULT false; COMMENT ON COLUMN public.asset_documents.period IS 'Period label for archived documents, e.g. 2025/2026'; COMMENT ON COLUMN public.asset_documents.is_archived IS 'True when the document was archived on renewal';
