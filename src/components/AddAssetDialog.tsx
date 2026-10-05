@@ -26,6 +26,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { SubCategorySelect } from "@/components/assets/SubCategorySelect";
+import { SiteSelect } from "@/components/sites/SiteSelect";
+import { ContainerSelect } from "@/components/sites/ContainerSelect";
 import { ManufacturerModelInput } from "@/components/assets/ManufacturerModelInput";
 
 import { cn } from "@/lib/utils";
@@ -85,6 +87,8 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
     manufacturer_model: "",
 
     current_owner_id: "",
+    assigned_site_id: "",
+    container_id: "",
     status: "in_stock" as "in_use" | "in_stock" | "in_repair",
     expiry_date: "",
     notes: "",
@@ -147,7 +151,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
     if (!open) {
       setForm({
         asset_code: "", asset_name: "", category_id: "", group_id: "", serial_number: "", manufacturer_model: "",
-        current_owner_id: "", status: "in_stock", expiry_date: "", notes: "",
+        current_owner_id: "", assigned_site_id: "", container_id: "", status: "in_stock", expiry_date: "", notes: "",
         notification_days_before: "",
         account_username: "", account_url: "", mfa_enabled: false, password_expires_at: "",
       });
@@ -378,7 +382,9 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
         manufacturer_model: form.manufacturer_model || undefined,
 
         current_owner_id: form.current_owner_id || undefined,
-        status: form.status,
+        assigned_site_id: form.assigned_site_id || null,
+        container_id: form.assigned_site_id ? (form.container_id || null) : null,
+        status: (form.current_owner_id || form.assigned_site_id) ? "in_use" : form.status,
         custom_fields: Object.keys(customFields).length > 0 ? customFields : undefined,
         expiry_date: form.expiry_date || undefined,
         notes: form.notes || undefined,
@@ -723,7 +729,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                   <label className="text-sm font-medium mb-1 block">שיוך לעובד</label>
                   <SearchableSelect
                     value={form.current_owner_id}
-                    onChange={(v) => set("current_owner_id", v)}
+                    onChange={(v) => setForm(prev => ({ ...prev, current_owner_id: v, ...(v ? { assigned_site_id: "", container_id: "" } : {}) }))}
                     options={[
                       { value: "", label: "במלאי (ללא שיוך)" },
                       ...activeEmployees.map(e => ({ value: e.id, label: `${e.full_name} (${e.employee_code})` })),
@@ -751,6 +757,32 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                     className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
                     dir="ltr"
                   />
+                </div>
+              )}
+            </div>
+          )}
+
+          {!bulkMode && selectedCategory?.prefix !== "CINS" && (selectedCategory as any)?.is_assignable !== false && showBuiltin("assigned_site_id") && (
+            <div>
+              <SiteSelect
+                value={form.assigned_site_id}
+                onChange={(v) => setForm(prev => ({ ...prev, assigned_site_id: v, container_id: "", ...(v ? { current_owner_id: "" } : {}) }))}
+                label="שיוך לאתר (במקום עובד)"
+              />
+              {form.assigned_site_id && (
+                <div className="mt-2 space-y-2">
+                  <ContainerSelect
+                    siteId={form.assigned_site_id}
+                    value={form.container_id}
+                    onChange={(v) => setForm(prev => ({ ...prev, container_id: v }))}
+                  />
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground hover:text-destructive"
+                    onClick={() => setForm(prev => ({ ...prev, assigned_site_id: "", container_id: "" }))}
+                  >
+                    הסר שיוך לאתר
+                  </button>
                 </div>
               )}
             </div>
