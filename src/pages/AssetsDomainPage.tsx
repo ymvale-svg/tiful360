@@ -846,12 +846,12 @@ function InstancesTable({
   // All available columns: built-in + every custom field present in this list.
   const allCols = useMemo<ColDef[]>(() => {
     const cols: ColDef[] = [
-      { key: "code", label: "קוד", render: (a) => <span className="font-mono text-xs">{a.asset_code ?? "—"}</span>, sortVal: (a) => a.asset_code ?? "" },
-      { key: "name", label: "שם פריט", render: (a) => <span className="font-medium">{a.asset_name ?? "—"}</span>, sortVal: (a) => a.asset_name ?? "" },
+      { key: "code", label: "קוד", render: (a) => <span dir="ltr">{a.asset_code ?? "—"}</span>, sortVal: (a) => a.asset_code ?? "" },
+      { key: "name", label: "שם פריט", render: (a) => a.asset_name ?? "—", sortVal: (a) => a.asset_name ?? "" },
       {
         key: "second",
         label: domain === "digital" ? "שם משתמש" : domain === "licenses" ? "ספק" : "מס׳ סידורי",
-        render: (a) => <span className="text-xs text-muted-foreground" dir={domain === "digital" ? "ltr" : undefined}>{secondValue(a) ?? "—"}</span>,
+        render: (a) => <span dir={domain === "digital" ? "ltr" : undefined}>{secondValue(a) ?? "—"}</span>,
         sortVal: (a) => secondValue(a) ?? "",
       },
       {
@@ -869,14 +869,14 @@ function InstancesTable({
       { key: "site", label: "אתר", render: (a) => siteOf(a) || dash, sortVal: siteOf },
       {
         key: "expiry", label: isInsurance ? "תוקף פוליסה" : "תפוגה",
-        render: (a) => { const e = expiryInfo(a); return <span className={cn("text-xs", e.cls)}>{e.txt}</span>; },
+        render: (a) => { const e = expiryInfo(a); return <span className={cn(e.cls)}>{e.txt}</span>; },
         sortVal: (a) => { const e = expiryOf(a, domain); return e ? new Date(e).getTime() : Number.MAX_SAFE_INTEGER; },
       },
     ];
     if (domain === "physical") {
       cols.push({
         key: "status", label: "סטטוס",
-        render: (a) => <span className={cn("text-xs px-2 py-0.5 rounded-full", assetStatusClasses[a.status])}>{assetStatusLabels[a.status] ?? a.status}</span>,
+        render: (a) => <span className={cn("px-2 py-0.5 rounded-full", assetStatusClasses[a.status])}>{assetStatusLabels[a.status] ?? a.status}</span>,
         sortVal: (a) => assetStatusLabels[a.status] ?? a.status ?? "",
       });
     }
