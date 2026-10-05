@@ -359,27 +359,34 @@ export default function EmployeePortal() {
       }
     };
 
-    // High-accuracy stream — accept first reading ≤100m, otherwise keep collecting.
+    // Fast path: fresh, reasonably accurate pre-warmed reading → send immediately.
+    const warm = warmPosRef.current;
+    if (warm && Date.now() - warm.timestamp < 60000 && warm.coords.accuracy <= 150) {
+      finish(warm);
+      return;
+    }
+    if (warm && Date.now() - warm.timestamp < 120000) bestPos = warm;
+
+    // High-accuracy stream — accept first reading ≤150m, otherwise keep collecting.
     try {
       watchId = navigator.geolocation.watchPosition(
         (pos) => {
           if (!bestPos || pos.coords.accuracy < bestPos.coords.accuracy) {
             bestPos = pos;
           }
-          if (pos.coords.accuracy <= 100) finish(pos);
+          if (pos.coords.accuracy <= 150) finish(pos);
         },
         (err) => {
           if (err.code === 1) finish(null, err);
-          // codes 2/3 → keep waiting for fallback timers
         },
-        { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 },
+        { enableHighAccuracy: true, timeout: 20000, maximumAge: 30000 },
       );
     } catch (e: any) {
       finish(null, { message: e?.message ?? "watch failed" });
       return;
     }
 
-    // After 8s — accept best reading or trigger low-accuracy fallback (Wi-Fi/cell).
+    // After 3s — accept best reading or trigger low-accuracy fallback (Wi-Fi/cell).
     fallbackTimer = window.setTimeout(() => {
       if (bestPos) {
         finish(bestPos);
@@ -390,15 +397,15 @@ export default function EmployeePortal() {
         (err) => {
           if (err.code === 1) finish(null, err);
         },
-        { enableHighAccuracy: false, timeout: 12000, maximumAge: 120000 },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
       );
-    }, 8000);
+    }, 3000);
 
-    // Absolute give-up after 25s.
+    // Absolute give-up after 15s.
     hardTimer = window.setTimeout(() => {
       if (bestPos) finish(bestPos);
       else finish(null, { code: 3, message: "timeout" } as GeolocationPositionError);
-    }, 25000);
+    }, 15000);
   };
 
 
