@@ -37,6 +37,7 @@ export function AssetDocumentsSection({ assetId }: Props) {
   const [notes, setNotes] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [preview, setPreview] = useState<{ url: string | null; name: string; fileName: string } | null>(null);
+  const [showArchive, setShowArchive] = useState(false);
 
   const reset = () => {
     setFile(null); setDocType("other"); setLabel(""); setExpiryDate(""); setNotes(""); setShowForm(false);
