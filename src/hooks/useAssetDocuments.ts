@@ -15,6 +15,8 @@ export interface AssetDocument {
   uploaded_by: string | null;
   uploaded_at: string;
   notes: string | null;
+  period: string | null;
+  is_archived: boolean;
 }
 
 export const DOCUMENT_TYPES: Array<{ value: string; label: string }> = [
