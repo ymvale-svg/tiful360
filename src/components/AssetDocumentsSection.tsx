@@ -7,6 +7,7 @@ import {
   useAssetDocuments,
   useUploadAssetDocument,
   useDeleteAssetDocument,
+  useArchiveAssetDocument,
   getAssetDocumentSignedUrl,
   DOCUMENT_TYPES,
   type AssetDocument,
@@ -24,6 +25,7 @@ export function AssetDocumentsSection({ assetId }: Props) {
   const { data: documents, isLoading } = useAssetDocuments(assetId);
   const upload = useUploadAssetDocument();
   const del = useDeleteAssetDocument();
+  const archive = useArchiveAssetDocument();
   const { toast } = useToast();
   const qc = useQueryClient();
 
