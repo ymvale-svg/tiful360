@@ -90,22 +90,46 @@ export function RenewExpiryDialog({ open, onOpenChange, item }: Props) {
           .eq("id", item.asset_id);
         if (error) throw error;
       } else if (item.source_type === "document") {
-        let updates: any = { expiry_date: newDate };
-        // Optional file replacement
         if (replaceFile && activeCompanyId) {
+          // Archive the previous document instead of overwriting it
+          const period = periodFromExpiry(item.expiry_date);
+          const { error: archErr } = await supabase
+            .from("asset_documents" as any)
+            .update({ is_archived: true, period })
+            .eq("id", item.source_id);
+          if (archErr) throw archErr;
+
+          // Upload the new file as the current document
           const safeName = replaceFile.name.replace(/[^\w.\-א-ת]+/g, "_");
           const path = `${activeCompanyId}/${item.asset_id}/${Date.now()}_${safeName}`;
           const up = await supabase.storage.from("asset-documents").upload(path, replaceFile);
           if (up.error) throw up.error;
-          updates.file_url = path;
-          updates.file_name = replaceFile.name;
-          updates.file_size_bytes = replaceFile.size;
+          const { data: oldDoc } = await supabase
+            .from("asset_documents" as any)
+            .select("document_type, document_label, notes")
+            .eq("id", item.source_id)
+            .single();
+          const { data: { user } } = await supabase.auth.getUser();
+          const { error } = await supabase.from("asset_documents" as any).insert({
+            asset_id: item.asset_id,
+            company_id: activeCompanyId,
+            document_type: (oldDoc as any)?.document_type ?? "other",
+            document_label: (oldDoc as any)?.document_label ?? null,
+            file_url: path,
+            file_name: replaceFile.name,
+            file_size_bytes: replaceFile.size,
+            expiry_date: newDate,
+            notes: (oldDoc as any)?.notes ?? null,
+            uploaded_by: user?.id ?? null,
+          } as any);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from("asset_documents" as any)
+            .update({ expiry_date: newDate })
+            .eq("id", item.source_id);
+          if (error) throw error;
         }
-        const { error } = await supabase
-          .from("asset_documents" as any)
-          .update(updates)
-          .eq("id", item.source_id);
-        if (error) throw error;
       }
 
       // 2. Activity log
