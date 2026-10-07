@@ -39,7 +39,7 @@ function isValidIsraeliId(id: string): boolean {
 }
 
 function isValidPhone(phone: string): boolean {
-  const cleaned = phone.replace(/[\s\-()]/g, "");
+  const cleaned = phone.trim().replace(/(?!^\+)[^\d]/g, "");
   return /^(\+972|0)(5\d)\d{7}$/.test(cleaned) || /^\+?\d{7,15}$/.test(cleaned);
 }
 
