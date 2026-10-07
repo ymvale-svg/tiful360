@@ -29,7 +29,7 @@ export function RowContextMenu({ actions, children }: { actions: ContextAction[]
   return (
     <ContextMenu dir="rtl">
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
-      <ContextMenuContent dir="rtl" className="min-w-[200px] text-right" onClick={(e) => e.stopPropagation()}>
+      <ContextMenuContent className="min-w-[200px] text-right" onClick={(e) => e.stopPropagation()}>
         {visible.map((a, i) => (
           <div key={a.label}>
             {(a.separator || a.danger) && i > 0 && <ContextMenuSeparator />}
