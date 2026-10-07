@@ -35,6 +35,34 @@ export function InsuranceDetailsPanel({ asset }: Props) {
     agent_email: cf["אימייל סוכן"] ?? cf["מייל סוכן"] ?? cf.agent_email ?? "",
   });
   const [form, setForm] = useState(initial());
+  const [known, setKnown] = useState<{ insurers: string[]; agents: Record<string, { name: string; phone: string; email: string }> }>({ insurers: [], agents: {} });
+  useEffect(() => {
+    if (!editing || !asset.company_id) return;
+    (async () => {
+      const { data } = await supabase.from("assets").select("custom_fields, insurance_company, updated_at")
+        .eq("company_id", asset.company_id).order("updated_at", { ascending: false }).limit(1000);
+      const ins = new Map<string, string>();
+      const agents: Record<string, { name: string; phone: string; email: string }> = {};
+      for (const r of (data ?? []) as any[]) {
+        const c = r.custom_fields ?? {};
+        const i = String(c["חברת ביטוח"] ?? c.insurance_company ?? r.insurance_company ?? "").trim();
+        if (i && !ins.has(i.toLowerCase())) ins.set(i.toLowerCase(), i);
+        const n = String(c["שם סוכן ביטוח"] ?? c["סוכן"] ?? c.agent_name ?? "").trim();
+        if (!n) continue;
+        const k = n.toLowerCase();
+        const a = agents[k] ?? { name: n, phone: "", email: "" };
+        a.phone = a.phone || String(c["טלפון סוכן"] ?? c.agent_phone ?? "");
+        a.email = a.email || String(c["אימייל סוכן"] ?? c["מייל סוכן"] ?? c.agent_email ?? "");
+        agents[k] = a;
+      }
+      setKnown({ insurers: [...ins.values()].sort(), agents });
+    })();
+  }, [editing, asset.company_id]);
+  const pickAgent = (v: string) => {
+    const a = known.agents[v.trim().toLowerCase()];
+    setForm((p) => ({ ...p, agent_name: v, ...(a ? { agent_phone: a.phone || p.agent_phone, agent_email: a.email || p.agent_email } : {}) }));
+    if (a && (a.phone || a.email)) setAutoFilled(a.phone && a.email ? "both" : a.phone ? "phone" : "email");
+  };
   useEffect(() => { setForm(initial()); setAutoFilled(null); /* eslint-disable-next-line */ }, [asset.id]);
 
   const daysTo = (d?: string | null) => !d ? null : Math.ceil((new Date(d).getTime() - Date.now()) / 86400000);
@@ -135,7 +163,7 @@ export function InsuranceDetailsPanel({ asset }: Props) {
   };
 
 
-  const F = ({ label, value, v, onChange, ltr, type = "text", onBlur, hint, field }: any) => (
+  const F = ({ label, value, v, onChange, ltr, type = "text", onBlur, hint, field, list }: any) => (
     <div>
       <Label className="text-xs text-muted-foreground flex items-center gap-1">
         {label}
@@ -143,7 +171,7 @@ export function InsuranceDetailsPanel({ asset }: Props) {
           : hint && <span className="text-[10px] text-primary flex items-center gap-0.5"><Sparkles className="w-3 h-3" /> {hint}</span>}
       </Label>
       {editing ? (
-        <Input type={type} value={v} onChange={(e) => onChange(e.target.value)} onBlur={onBlur} className={cn("mt-1", ltr && "text-left")} dir={ltr ? "ltr" : undefined} />
+        <Input type={type} list={list} autoComplete="off" value={v} onChange={(e) => onChange(e.target.value)} onBlur={onBlur} className={cn("mt-1", ltr && "text-left")} dir={ltr ? "ltr" : undefined} />
       ) : (
         <div className={cn("font-medium mt-1 text-sm", ltr && "font-mono")}>{value || "—"}</div>
       )}
@@ -231,14 +259,16 @@ export function InsuranceDetailsPanel({ asset }: Props) {
         </div>
       </div>
 
+      <datalist id="ins-companies-list">{known.insurers.map((i) => <option key={i} value={i} />)}</datalist>
+      <datalist id="ins-agents-list">{Object.values(known.agents).map((a) => <option key={a.name} value={a.name} />)}</datalist>
       <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-        {F({ field: "insurance_company", label: "חברת ביטוח / גוף רגולטורי", value: form.insurance_company, v: form.insurance_company, onChange: (v: string) => setForm({ ...form, insurance_company: v }) })}
+        {F({ field: "insurance_company", label: "חברת ביטוח / גוף רגולטורי", value: form.insurance_company, v: form.insurance_company, onChange: (v: string) => setForm({ ...form, insurance_company: v }), list: "ins-companies-list" })}
         {F({ field: "policy_number", label: "מספר פוליסה / רישום", value: form.policy_number, v: form.policy_number, onChange: (v: string) => setForm({ ...form, policy_number: v }), ltr: true })}
         {F({ field: "coverage_type", label: "סוג כיסוי", value: form.coverage_type, v: form.coverage_type, onChange: (v: string) => setForm({ ...form, coverage_type: v }) })}
         {F({ field: "coverage_amount", label: "סכום כיסוי", value: form.coverage_amount ? `${Number(form.coverage_amount).toLocaleString()} ₪` : "", v: form.coverage_amount, onChange: (v: string) => setForm({ ...form, coverage_amount: v }), type: "number" })}
         {F({ field: "premium", label: "פרמיה", value: form.premium ? `${Number(form.premium).toLocaleString()} ₪` : "", v: form.premium, onChange: (v: string) => setForm({ ...form, premium: v }), type: "number" })}
         {F({ field: "start_date", label: "תאריך תחילה", value: form.start_date, v: form.start_date, onChange: (v: string) => setForm({ ...form, start_date: v }), type: "date", ltr: true })}
-        {F({ field: "agent_name", label: "שם סוכן ביטוח", value: form.agent_name, v: form.agent_name, onChange: (v: string) => setForm({ ...form, agent_name: v }), onBlur: () => editing && form.agent_name && lookupAgent(form.agent_name), hint: editing ? "מילוי אוטומטי לפי שם" : null })}
+        {F({ field: "agent_name", label: "שם סוכן ביטוח", value: form.agent_name, v: form.agent_name, onChange: pickAgent, list: "ins-agents-list", onBlur: () => editing && form.agent_name && lookupAgent(form.agent_name), hint: editing ? "מילוי אוטומטי לפי שם" : null })}
         {F({ field: "agent_phone", label: "טלפון סוכן", value: form.agent_phone, v: form.agent_phone, onChange: (v: string) => setForm({ ...form, agent_phone: v }), hint: editing && (autoFilled === "phone" || autoFilled === "both") ? "מולא אוטומטית" : null, ltr: true })}
         {F({ field: "agent_email", label: "אימייל סוכן", value: form.agent_email, v: form.agent_email, onChange: (v: string) => setForm({ ...form, agent_email: v }), type: "email", hint: editing && (autoFilled === "email" || autoFilled === "both") ? "מולא אוטומטית" : null, ltr: true })}
       </div>
