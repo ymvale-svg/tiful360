@@ -112,8 +112,16 @@ export function useArchiveAssetDocument() {
   return useMutation({
     mutationFn: async (params: { doc: AssetDocument; archive: boolean; period?: string }) => {
       const { doc, archive, period } = params;
+      const derivedPeriod =
+        period ??
+        doc.period ??
+        (doc.expiry_date
+          ? periodFromExpiry(doc.expiry_date)
+          : doc.uploaded_at
+            ? `${new Date(doc.uploaded_at).getFullYear()}`
+            : null);
       const updates: any = archive
-        ? { is_archived: true, period: period ?? doc.period ?? null }
+        ? { is_archived: true, period: derivedPeriod }
         : { is_archived: false, period: null };
       const { error } = await supabase
         .from("asset_documents" as any)
