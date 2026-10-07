@@ -4012,7 +4012,7 @@ export type Database = {
         | "hr"
         | "secretariat"
         | "ceo"
-      asset_status: "in_use" | "in_stock" | "in_repair" | "lost"
+      asset_status: "in_use" | "in_stock" | "in_repair" | "lost" | "inactive"
       birthday_calendar_pref: "gregorian" | "hebrew"
       employee_status: "active" | "onboarding" | "leaving" | "inactive"
       field_type: "text" | "number" | "date" | "list" | "list_multi"
@@ -4179,7 +4179,7 @@ export const Constants = {
         "secretariat",
         "ceo",
       ],
-      asset_status: ["in_use", "in_stock", "in_repair", "lost"],
+      asset_status: ["in_use", "in_stock", "in_repair", "lost", "inactive"],
       birthday_calendar_pref: ["gregorian", "hebrew"],
       employee_status: ["active", "onboarding", "leaving", "inactive"],
       field_type: ["text", "number", "date", "list", "list_multi"],
