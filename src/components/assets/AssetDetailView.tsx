@@ -480,6 +480,25 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
         </AlertDialogContent>
       </AlertDialog>
 
+      <AlertDialog open={inactiveConfirm} onOpenChange={setInactiveConfirm}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{isInactive ? "הפעלה מחדש" : "סימון כלא פעיל"}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {isInactive
+                ? <>להפעיל מחדש את <strong>{asset.asset_name}</strong>? התראות תפוגה יחודשו.</>
+                : <>לסמן את <strong>{asset.asset_name}</strong> כלא פעיל? הפוליסה תישאר בתיק לצורך תיעוד, אך לא יישלחו עליה התראות תפוגה.</>}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ביטול</AlertDialogCancel>
+            <AlertDialogAction onClick={handleToggleInactive}>
+              {isInactive ? "הפעל מחדש" : "סמן כלא פעיל"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={deleteConfirm} onOpenChange={setDeleteConfirm}>
         <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
