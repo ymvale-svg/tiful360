@@ -169,12 +169,20 @@ export function DomainsGrid({ onQuickAssign }: Props) {
             {totalSoon30} פגים תוך 30 יום
           </span>
         )}
-        {totalExpired > 0 && (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/10 text-destructive border border-destructive/20 text-xs font-medium">
-            <AlertTriangle className="w-3.5 h-3.5" />
-            {totalExpired} פריטים פגי תוקף
-          </span>
-        )}
+        {totalExpired > 0 && (() => {
+          const first = grouped.find((g) => g.expired > 0);
+          return (
+            <button
+              type="button"
+              title="הצג את הפריטים שפג תוקפם"
+              onClick={() => first && navigate(`/assets/${domainKeyToSlug(first.meta.key)}?expired=1`)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/10 text-destructive border border-destructive/20 text-xs font-medium cursor-pointer hover:bg-destructive/20 transition-colors"
+            >
+              <AlertTriangle className="w-3.5 h-3.5" />
+              {totalExpired} פריטים פגי תוקף
+            </button>
+          );
+        })()}
       </div>
 
       {/* Domain cards */}
