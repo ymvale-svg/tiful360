@@ -134,9 +134,20 @@ export function PendingSignaturesCard() {
                   </p>
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">
-                  <Badge variant="warning" className="text-[10px] px-1.5 py-0.5">
-                    ממתין לחתימה
-                  </Badge>
+                  <div className="flex items-center gap-1">
+                    <Badge variant="warning" className="text-[10px] px-1.5 py-0.5">
+                      ממתין לחתימה
+                    </Badge>
+                    <button
+                      type="button"
+                      aria-label="מחיקת תהליך המסירה"
+                      title="מחיקת תהליך המסירה"
+                      className="p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                      onClick={(e) => { e.stopPropagation(); setDeleteTarget(form); }}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                   <span className="text-[10px] text-muted-foreground">
                     נשלח {formatDateDMY(form.created_at)}
                     {waitingDays >= 3 ? ` • ${waitingDays} ימים` : ""}
