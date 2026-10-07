@@ -274,9 +274,22 @@ export function InsuranceDetailsPanel({ asset }: Props) {
       </div>
 
       <div className="pt-3 border-t border-border flex items-center justify-between gap-3">
-        <div className="text-sm text-muted-foreground">תאריך סיום / חידוש</div>
+        <div className="text-sm text-muted-foreground flex items-center gap-1">
+          תאריך סיום / חידוש
+          {fromPolicy.includes("end_date") && editing && (
+            <span className="text-[10px] text-primary flex items-center gap-0.5"><Sparkles className="w-3 h-3" /> מולא מהפוליסה</span>
+          )}
+        </div>
         {editing ? (
-          <Input type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} className="w-44 text-left" dir="ltr" />
+          <div className="flex flex-col items-end gap-1">
+            <Input type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} className="w-44 text-left" dir="ltr" />
+            {suggestions.end_date && (
+              <button type="button" className="text-[11px] text-primary underline" onClick={() => {
+                setForm((p) => ({ ...p, end_date: suggestions.end_date }));
+                setSuggestions((p) => { const n = { ...p }; delete n.end_date; return n; });
+              }}>בפוליסה: {new Date(suggestions.end_date).toLocaleDateString("en-GB")} — החלף</button>
+            )}
+          </div>
         ) : (
           <div className={cn("text-sm flex items-center gap-1", expiryClass(form.end_date))}>
             {daysTo(form.end_date) !== null && daysTo(form.end_date)! <= 30 && <AlertTriangle className="w-3.5 h-3.5" />}
