@@ -311,7 +311,7 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                   </div>
                 )}
 
-                <div className="flex items-start justify-between mb-3">
+                <div className={cn("flex items-start justify-between mb-3", badge && "ml-20")}>
                   <div className="flex-1 text-right pr-2">
                     <h3 className="text-base font-semibold leading-tight">{label.title}</h3>
                     <p className="text-xs text-muted-foreground mt-1">
