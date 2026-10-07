@@ -92,6 +92,7 @@ const emptyForm = {
   system_role: "employee" as AppRole,
   send_invite: true,
   exclude_from_contacts: false,
+  is_freelancer: false,
 };
 
 export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
@@ -137,12 +138,17 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
     return ALL_ROLES.filter(r => r.value === "employee");
   }, [isAdmin, isSuperAdmin, isOperations, isHR, isPayroll]);
 
-  const fullEmployeeCode = form.employee_number.trim() ? `EMP-${form.employee_number.trim()}` : "";
+  const fullEmployeeCode = form.is_freelancer
+    ? (form.id_number.trim() ? `FRL-${form.id_number.trim()}` : "")
+    : (form.employee_number.trim() ? `EMP-${form.employee_number.trim()}` : "");
 
   const validateStep = (s: number): FieldErrors => {
     const e: FieldErrors = {};
     if (s === 0) {
-      if (!form.employee_number.trim()) e.employee_number = "שדה חובה";
+      if (form.is_freelancer) {
+        if (fullEmployeeCode && existingEmployees?.some(emp => emp.employee_code === fullEmployeeCode))
+          e.id_number = "פרילנסר עם ת.ז. זו כבר קיים";
+      } else if (!form.employee_number.trim()) e.employee_number = "שדה חובה";
       else if (!/^\d{1,6}$/.test(form.employee_number.trim())) e.employee_number = "ספרות בלבד (עד 6)";
       else if (existingEmployees?.some(emp => emp.employee_code === fullEmployeeCode))
         e.employee_number = "מזהה כבר קיים במערכת";
@@ -227,6 +233,7 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
         direct_manager_id: form.direct_manager_id || null,
         sub_employer_id: form.sub_employer_id || null,
         exclude_from_contacts: form.exclude_from_contacts,
+        ...(form.is_freelancer ? { tracks_attendance: false } : {}),
       } as any);
 
       toast({ title: "עובד נוסף בהצלחה" });
@@ -346,7 +353,14 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
           {/* Step 0 — personal */}
           {step === 0 && (
             <div className="space-y-3 animate-fade-in">
-              <div>
+              <div className="flex items-center justify-between rounded-xl border border-border bg-muted/30 px-3 py-2">
+                <div>
+                  <label className="text-sm font-medium">פרילנסר</label>
+                  <p className="text-xs text-muted-foreground">לא מחתים נוכחות — ללא מס' עובד</p>
+                </div>
+                <Switch checked={form.is_freelancer} onCheckedChange={(v) => set("is_freelancer", v)} />
+              </div>
+              {!form.is_freelancer && <div>
                 <label className="text-sm font-medium mb-1 block">מס' עובד<span className="text-destructive mr-1">*</span></label>
                 <div className="flex gap-2 items-center" dir="ltr">
                   <span className="px-3 py-2 bg-muted/60 rounded-lg text-sm font-mono text-muted-foreground select-none">EMP-</span>
@@ -358,7 +372,7 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
                   />
                 </div>
                 {errMsg("employee_number")}
-              </div>
+              </div>}
               <div>
                 <label className="text-sm font-medium mb-1 block">שם מלא<span className="text-destructive mr-1">*</span></label>
                 <input value={form.full_name} maxLength={100} onChange={(e) => set("full_name", e.target.value)} placeholder="ישראל ישראלי" className={inputCls("full_name")} />
