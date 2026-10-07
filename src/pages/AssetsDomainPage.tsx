@@ -1,3 +1,4 @@
+import { formatDateDMY } from "@/lib/utils";
 import { useNextInsurancePayments } from "@/hooks/useInsurancePayments";
 import { RowContextMenu, copyAction, openInNewTab } from "@/components/context/RowContextMenu";
 import { useMemo, useState } from "react";
@@ -87,7 +88,6 @@ export default function AssetsDomainPage() {
   const navigate = useNavigate();
 
   const { data: assets, isLoading } = useAssets();
-  const { data: nextPayments } = useNextInsurancePayments(domain === "insurance" ? (localStorage.getItem("activeCompanyId")) : null);
   const { data: categories } = useAssetCategories();
   const { data: groups } = useAssetGroups();
   const { data: expiring } = useExpiringAssets(30);
@@ -139,6 +139,7 @@ export default function AssetsDomainPage() {
 
   const domainKey = domainSlugToKey(params.domain);
   const domain = (domainKey ?? "physical") as DomainKey;
+  const { data: nextPayments } = useNextInsurancePayments(domain === "insurance" ? (localStorage.getItem("activeCompanyId")) : null);
   const meta = DOMAIN_META[domain];
   const Icon = meta.icon;
   const catParam = searchParams.get("cat");
@@ -911,7 +912,7 @@ function InstancesTable({
     if (isInsurance) {
       cols.push({
         key: "next_payment", label: "תשלום הבא",
-        render: (a) => { const n = nextPayments?.get(a.id); return n ? <span className={cn(n.due_date < todayStr && "text-destructive")}>{formatDateDMY(n.due_date)}{n.amount != null ? ` · ₪${Number(n.amount).toLocaleString()}` : ""}</span> : dash; },
+        render: (a) => { const n = nextPayments?.get(a.id); return n ? <span className={cn(n.due_date < new Date().toISOString().slice(0, 10) && "text-destructive")}>{formatDateDMY(n.due_date)}{n.amount != null ? ` · ₪${Number(n.amount).toLocaleString()}` : ""}</span> : dash; },
         sortVal: (a) => { const n = nextPayments?.get(a.id); return n ? new Date(n.due_date).getTime() : Number.MAX_SAFE_INTEGER; },
       });
     }
