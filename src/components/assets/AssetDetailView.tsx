@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAssets, useAssetCategories, useEmployees } from "@/hooks/useData";
 import { getCategoryIcon, getCategoryColor } from "@/lib/categoryIcons";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Pencil, FileSignature, UserMinus, Trash2, User, Building2, History, MapPin, Clock3 } from "lucide-react";
+import { ChevronLeft, Pencil, FileSignature, UserMinus, Trash2, User, Building2, History, MapPin, Clock3, Ban, PlayCircle } from "lucide-react";
 import { useSites } from "@/hooks/useSites";
 import { useSiteContainers } from "@/hooks/useSiteContainers";
 import { cn } from "@/lib/utils";
@@ -59,6 +59,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
   const { data: sites } = useSites();
   const { data: assetGroups } = useAssetGroups();
   const deleteMutation = useDeleteAsset();
+  const updateAsset = useUpdateAsset();
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -66,6 +67,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
   const [assignOpen, setAssignOpen] = useState(false);
   const [unassignConfirm, setUnassignConfirm] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [inactiveConfirm, setInactiveConfirm] = useState(false);
   const [resumeDirection, setResumeDirection] = useState<ProtocolDirection>("handover");
 
   const asset = (assets ?? []).find((a: any) => a.id === assetId) as any;
