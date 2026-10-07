@@ -101,7 +101,33 @@ Deno.serve(async (req) => {
       const { data: items, error: iErr } = await supabase.rpc("get_expiring_assets", {
         _company_id: company.id, _days_ahead: 60,
       });
-      if (iErr) { console.error("get_expiring_assets", company.id, iErr); continue; }
+      if (iErr) { console.error("get_expiring_assets", company.id, iErr); }
+
+      // Insurance payment reminders — 7 days before, once per payment
+      try {
+        const target = new Date(Date.now() + 7 * 86400000).toLocaleDateString("en-CA", { timeZone: "Asia/Jerusalem" });
+        const { data: pays } = await supabase.from("insurance_payments")
+          .select("id, due_date, amount, asset_id, assets!inner(name, asset_code, status)")
+          .eq("company_id", company.id).is("paid_at", null).is("reminder_sent_at", null)
+          .lte("due_date", target).gte("due_date", new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Jerusalem" }));
+        for (const p of (pays ?? []).filter((x: any) => x.assets?.status !== "inactive")) {
+          const a: any = (p as any).assets;
+          const d = String(p.due_date).split("-").reverse().join("/");
+          const amt = p.amount != null ? ` בסך ₪${Number(p.amount).toLocaleString()}` : "";
+          const link = `${PORTAL_BASE}/assets/insurance/${p.asset_id}?pay=${p.id}`;
+          const html = layout("תשלום פוליסה מתקרב", `<h2 style="margin:0 0 8px;font-size:18px;">💳 תשלום פוליסה מתקרב</h2>
+            <p style="font-size:14px;">פוליסה: <b>${escapeHtml(a?.name ?? "")}</b> (${escapeHtml(a?.asset_code ?? "")})</p>
+            <p style="font-size:14px;">תאריך תשלום: <b>${d}</b>${amt}</p>
+            <p style="margin:18px 0;"><a href="${link}" style="background:#16a34a;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;display:inline-block;font-weight:600;">שולם</a></p>`);
+          let ok = 0;
+          for (const to of recipients) {
+            if (await enqueueTransactionalEmail(supabase, { to, subject: `💳 תשלום פוליסה ${d} — ${a?.name ?? ""}`, html, label: "insurance-payment-reminder", idempotencyKey: `ins-pay-${p.id}-${to}` })) ok++;
+          }
+          if (ok > 0) await supabase.from("insurance_payments").update({ reminder_sent_at: new Date().toISOString() }).eq("id", p.id);
+          totalSent += ok;
+        }
+      } catch (e) { console.error("insurance payments", company.id, e); }
+      if (iErr) continue;
 
       // Load assets to get notification_days_before + category default
       const assetIds = Array.from(new Set((items ?? []).map((it: any) => it.asset_id)));

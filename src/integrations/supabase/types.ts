@@ -1792,6 +1792,53 @@ export type Database = {
           },
         ]
       }
+      insurance_payments: {
+        Row: {
+          amount: number | null
+          asset_id: string
+          company_id: string
+          created_at: string
+          due_date: string
+          id: string
+          note: string | null
+          paid_at: string | null
+          paid_by: string | null
+          reminder_sent_at: string | null
+        }
+        Insert: {
+          amount?: number | null
+          asset_id: string
+          company_id: string
+          created_at?: string
+          due_date: string
+          id?: string
+          note?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          reminder_sent_at?: string | null
+        }
+        Update: {
+          amount?: number | null
+          asset_id?: string
+          company_id?: string
+          created_at?: string
+          due_date?: string
+          id?: string
+          note?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          reminder_sent_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insurance_payments_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       it_tickets: {
         Row: {
           assigned_to: string | null
