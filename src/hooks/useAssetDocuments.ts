@@ -20,6 +20,7 @@ export interface AssetDocument {
 }
 
 export const DOCUMENT_TYPES: Array<{ value: string; label: string }> = [
+  { value: "policy", label: "פוליסה" },
   { value: "insurance_certificate", label: "אישור ביטוח" },
   { value: "signed_license", label: "רישיון חתום" },
   { value: "contract", label: "חוזה" },
