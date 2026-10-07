@@ -353,7 +353,14 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
           {/* Step 0 — personal */}
           {step === 0 && (
             <div className="space-y-3 animate-fade-in">
-              <div>
+              <div className="flex items-center justify-between rounded-xl border border-border bg-muted/30 px-3 py-2">
+                <div>
+                  <label className="text-sm font-medium">פרילנסר</label>
+                  <p className="text-xs text-muted-foreground">לא מחתים נוכחות — ללא מס' עובד</p>
+                </div>
+                <Switch checked={form.is_freelancer} onCheckedChange={(v) => set("is_freelancer", v)} />
+              </div>
+              {!form.is_freelancer && <div>
                 <label className="text-sm font-medium mb-1 block">מס' עובד<span className="text-destructive mr-1">*</span></label>
                 <div className="flex gap-2 items-center" dir="ltr">
                   <span className="px-3 py-2 bg-muted/60 rounded-lg text-sm font-mono text-muted-foreground select-none">EMP-</span>
@@ -365,7 +372,7 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
                   />
                 </div>
                 {errMsg("employee_number")}
-              </div>
+              </div>}
               <div>
                 <label className="text-sm font-medium mb-1 block">שם מלא<span className="text-destructive mr-1">*</span></label>
                 <input value={form.full_name} maxLength={100} onChange={(e) => set("full_name", e.target.value)} placeholder="ישראל ישראלי" className={inputCls("full_name")} />
