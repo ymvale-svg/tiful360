@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { RowContextMenu, copyAction, openInNewTab } from "@/components/context/RowContextMenu";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import type { ReactNode } from "react";
@@ -27,6 +28,7 @@ interface Props {
  */
 export function EmployeeLink({ employeeId, name, className, tab }: Props) {
   const { roles } = useAuth();
+  const navigate = useNavigate();
   const canOpen = !!employeeId && roles.some((r) => (ALLOWED_ROLES as readonly string[]).includes(r));
 
   if (!canOpen) return <span className={className}>{name}</span>;
