@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ShieldCheck, Save, AlertTriangle, Sparkles, FileUp, Loader2 } from "lucide-react";
+import { ShieldCheck, Save, AlertTriangle, Sparkles, FileUp, Loader2, FileText } from "lucide-react";
 import { periodFromExpiry } from "@/hooks/useAssetDocuments";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface Props { asset: any }
 
@@ -20,6 +21,8 @@ export function InsuranceDetailsPanel({ asset }: Props) {
   const [extracting, setExtracting] = useState(false);
   const [fromPolicy, setFromPolicy] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<Record<string, string>>({});
+  const [existingDocs, setExistingDocs] = useState<any[]>([]);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const cf = asset.custom_fields ?? {};
 
   const initial = () => ({
@@ -203,7 +206,35 @@ export function InsuranceDetailsPanel({ asset }: Props) {
       } as any);
       if (insErr) throw insErr;
       qc.invalidateQueries({ queryKey: ["asset-documents", asset.id] });
+      await extractFromPath(path);
+    } catch (e: any) {
+      toast({ title: "לא ניתן לקרוא את הפוליסה", description: e.message, variant: "destructive" });
+    } finally {
+      setExtracting(false);
+    }
+  };
 
+  const loadExistingDocs = async () => {
+    const { data } = await supabase.from("asset_documents" as any)
+      .select("id, file_url, file_name, document_label, document_type")
+      .eq("asset_id", asset.id).eq("is_archived", false).order("created_at", { ascending: false });
+    setExistingDocs(((data as any[]) ?? []).filter((d) => /\.(pdf|png|jpe?g|webp)$/i.test(d.file_name ?? d.file_url ?? "")));
+  };
+
+  const handleExistingDoc = async (doc: any) => {
+    setPickerOpen(false);
+    setExtracting(true);
+    try {
+      await extractFromPath(doc.file_url);
+    } catch (e: any) {
+      toast({ title: "לא ניתן לקרוא את המסמך", description: e.message, variant: "destructive" });
+    } finally {
+      setExtracting(false);
+    }
+  };
+
+  const extractFromPath = async (path: string) => {
+    {
       const { data, error } = await supabase.functions.invoke("extract-insurance-policy", { body: { path } });
       if (error) {
         let msg = error.message;
@@ -229,10 +260,6 @@ export function InsuranceDetailsPanel({ asset }: Props) {
         setSuggestions(sugg);
         toast({ title: "הפוליסה נקראה", description: `מולאו ${filled.length} שדות. בדוק ולחץ שמור.` });
       }, 0);
-    } catch (e: any) {
-      toast({ title: "לא ניתן לקרוא את הפוליסה", description: e.message, variant: "destructive" });
-    } finally {
-      setExtracting(false);
     }
   };
 
@@ -243,11 +270,33 @@ export function InsuranceDetailsPanel({ asset }: Props) {
           <ShieldCheck className="w-4 h-4" /> פרטי ביטוח / רגולציה
         </h2>
         <div className="flex gap-2 items-center">
-        <label className={cn("inline-flex items-center gap-1 text-xs px-3 h-9 rounded-md border border-border cursor-pointer hover:bg-muted", extracting && "opacity-60 pointer-events-none")}>
-          {extracting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileUp className="w-3.5 h-3.5" />}
-          {extracting ? "קורא פוליסה..." : "מלא מפוליסה"}
-          <input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) handlePolicy(f); }} />
-        </label>
+        <input id={`policy-file-${asset.id}`} type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) handlePolicy(f); }} />
+        <Popover open={pickerOpen} onOpenChange={(o) => { setPickerOpen(o); if (o) loadExistingDocs(); }}>
+          <PopoverTrigger asChild>
+            <Button size="sm" variant="outline" className="gap-1 text-xs" disabled={extracting}>
+              {extracting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileUp className="w-3.5 h-3.5" />}
+              {extracting ? "קורא פוליסה..." : "מלא מפוליסה"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-72 p-2" dir="rtl">
+            <div className="text-xs font-medium text-muted-foreground px-2 py-1">מסמכים מצורפים</div>
+            {existingDocs.length === 0 ? (
+              <div className="text-xs text-muted-foreground px-2 py-2">אין מסמכים מצורפים</div>
+            ) : existingDocs.map((d) => (
+              <button key={d.id} type="button" onClick={() => handleExistingDoc(d)}
+                className="w-full text-right text-xs px-2 py-1.5 rounded hover:bg-muted flex items-center gap-2">
+                <FileText className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{d.document_label ? `${d.document_label} — ` : ""}{d.file_name}</span>
+              </button>
+            ))}
+            <div className="border-t border-border mt-1 pt-1">
+              <label htmlFor={`policy-file-${asset.id}`} onClick={() => setPickerOpen(false)}
+                className="w-full text-xs px-2 py-1.5 rounded hover:bg-muted flex items-center gap-2 cursor-pointer">
+                <FileUp className="w-3.5 h-3.5" /> העלה קובץ חדש
+              </label>
+            </div>
+          </PopoverContent>
+        </Popover>
         {!editing ? (
           <Button size="sm" variant="outline" onClick={() => setEditing(true)}>ערוך</Button>
         ) : (
