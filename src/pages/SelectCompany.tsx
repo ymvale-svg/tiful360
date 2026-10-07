@@ -46,8 +46,14 @@ export default function SelectCompany() {
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
-      navigate("/login");
-      return;
+      // Right after Google sign-in the session may not have reached the auth
+      // context yet; re-check before bouncing to the login screen.
+      let cancelled = false;
+      const t = setTimeout(async () => {
+        const { data } = await supabase.auth.getSession();
+        if (!cancelled && !data.session) navigate("/login");
+      }, 800);
+      return () => { cancelled = true; clearTimeout(t); };
     }
 
     const fetchCompanies = async () => {
