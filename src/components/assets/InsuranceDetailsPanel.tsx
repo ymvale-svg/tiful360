@@ -129,7 +129,7 @@ export function InsuranceDetailsPanel({ asset }: Props) {
   };
 
 
-  const F = ({ label, value, v, onChange, ltr, type = "text", onBlur, hint }: any) => (
+  const F = ({ label, value, v, onChange, ltr, type = "text", onBlur, hint, suggestion }: any) => (
     <div>
       <Label className="text-xs text-muted-foreground flex items-center gap-1">
         {label}
@@ -160,37 +160,15 @@ export function InsuranceDetailsPanel({ asset }: Props) {
       </div>
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-        <F label="חברת ביטוח / גוף רגולטורי" value={form.insurance_company} v={form.insurance_company} onChange={(v: string) => setForm({ ...form, insurance_company: v })} />
-        <F label="מספר פוליסה / רישום" value={form.policy_number} v={form.policy_number} onChange={(v: string) => setForm({ ...form, policy_number: v })} ltr />
-        <F label="סוג כיסוי" value={form.coverage_type} v={form.coverage_type} onChange={(v: string) => setForm({ ...form, coverage_type: v })} />
-        <F label="סכום כיסוי" value={form.coverage_amount ? `${Number(form.coverage_amount).toLocaleString()} ₪` : ""} v={form.coverage_amount} onChange={(v: string) => setForm({ ...form, coverage_amount: v })} type="number" />
-        <F label="פרמיה" value={form.premium ? `${Number(form.premium).toLocaleString()} ₪` : ""} v={form.premium} onChange={(v: string) => setForm({ ...form, premium: v })} type="number" />
-        <F label="תאריך תחילה" value={form.start_date} v={form.start_date} onChange={(v: string) => setForm({ ...form, start_date: v })} type="date" ltr />
-        <F
-          label="שם סוכן ביטוח"
-          value={form.agent_name}
-          v={form.agent_name}
-          onChange={(v: string) => setForm({ ...form, agent_name: v })}
-          onBlur={() => editing && form.agent_name && lookupAgent(form.agent_name)}
-          hint={editing ? "מילוי אוטומטי לפי שם" : null}
-        />
-        <F
-          label="טלפון סוכן"
-          value={form.agent_phone}
-          v={form.agent_phone}
-          onChange={(v: string) => setForm({ ...form, agent_phone: v })}
-          ltr
-          hint={editing && (autoFilled === "phone" || autoFilled === "both") ? "מולא אוטומטית" : null}
-        />
-        <F
-          label="אימייל סוכן"
-          value={form.agent_email}
-          v={form.agent_email}
-          onChange={(v: string) => setForm({ ...form, agent_email: v })}
-          ltr
-          type="email"
-          hint={editing && (autoFilled === "email" || autoFilled === "both") ? "מולא אוטומטית" : null}
-        />
+        {F({ label: "חברת ביטוח / גוף רגולטורי", value: form.insurance_company, v: form.insurance_company, onChange: (v: string) => setForm({ ...form, insurance_company: v }) })}
+        {F({ label: "מספר פוליסה / רישום", value: form.policy_number, v: form.policy_number, onChange: (v: string) => setForm({ ...form, policy_number: v }), ltr: true })}
+        {F({ label: "סוג כיסוי", value: form.coverage_type, v: form.coverage_type, onChange: (v: string) => setForm({ ...form, coverage_type: v }) })}
+        {F({ label: "סכום כיסוי", value: form.coverage_amount ? `${Number(form.coverage_amount).toLocaleString()} ₪` : "", v: form.coverage_amount, onChange: (v: string) => setForm({ ...form, coverage_amount: v }), type: "number" })}
+        {F({ label: "פרמיה", value: form.premium ? `${Number(form.premium).toLocaleString()} ₪` : "", v: form.premium, onChange: (v: string) => setForm({ ...form, premium: v }), type: "number" })}
+        {F({ label: "תאריך תחילה", value: form.start_date, v: form.start_date, onChange: (v: string) => setForm({ ...form, start_date: v }), type: "date", ltr: true })}
+        {F({ label: "שם סוכן ביטוח", value: form.agent_name, v: form.agent_name, onChange: (v: string) => setForm({ ...form, agent_name: v }), onBlur: () => editing && form.agent_name && lookupAgent(form.agent_name), hint: editing ? "מילוי אוטומטי לפי שם" : null })}
+        {F({ label: "טלפון סוכן", value: form.agent_phone, v: form.agent_phone, onChange: (v: string) => setForm({ ...form, agent_phone: v }), hint: editing && (autoFilled === "phone" || autoFilled === "both") ? "מולא אוטומטית" : null, ltr: true })}
+        {F({ label: "אימייל סוכן", value: form.agent_email, v: form.agent_email, onChange: (v: string) => setForm({ ...form, agent_email: v }), type: "email", hint: editing && (autoFilled === "email" || autoFilled === "both") ? "מולא אוטומטית" : null, ltr: true })}
       </div>
 
       <div className="pt-3 border-t border-border flex items-center justify-between gap-3">
