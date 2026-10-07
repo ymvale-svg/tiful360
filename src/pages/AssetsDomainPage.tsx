@@ -42,12 +42,14 @@ const assetStatusLabels: Record<string, string> = {
   in_stock: "במלאי",
   in_repair: "בתיקון",
   lost: "אבד",
+  inactive: "לא פעיל",
 };
 const assetStatusClasses: Record<string, string> = {
   in_use: "status-active",
   in_stock: "status-onboarding",
   in_repair: "status-leaving",
   lost: "status-inactive",
+  inactive: "status-inactive",
 };
 
 type SortMode = "count" | "alpha" | "expiry";
@@ -908,7 +910,7 @@ function InstancesTable({
     keys.push("employee");
     // Address-like custom field (e.g. real-estate "כתובת/תיאור הנכס").
     allCols.filter((c) => c.key.startsWith("cf:") && /כתובת/.test(c.label)).forEach((c) => keys.push(c.key));
-    keys.push(domain === "physical" ? "status" : "expiry");
+    keys.push(domain === "physical" || domain === "insurance" ? "status" : "expiry");
     return keys;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allCols, isInsurance, domain]);
