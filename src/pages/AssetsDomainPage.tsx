@@ -396,6 +396,23 @@ export default function AssetsDomainPage() {
         </Button>
       </div>
 
+      {expiredOnly && (
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/10 text-destructive border border-destructive/20 text-xs font-medium">
+            <AlertTriangle className="w-3.5 h-3.5" />
+            מציג רק פריטים שפג תוקפם ({visibleAssets.length})
+            <button
+              onClick={() => updateParams({ expired: null })}
+              className="mr-1 rounded-full hover:bg-destructive/20 p-0.5"
+              aria-label="בטל סינון פגי תוקף"
+              title="בטל סינון"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </span>
+        </div>
+      )}
+
       {/* Search + category chips + sort */}
       <div className="space-y-3">
         <div className="flex items-center gap-2 bg-card border border-border rounded-xl px-3 py-2">
