@@ -24,7 +24,7 @@ import { isBuiltinFieldVisible, isHandoverRelevant } from "@/lib/builtinFields";
 import { VehicleLinkPanel } from "@/components/assets/VehicleLinkPanel";
 import { isVehicleLinkedGroup } from "@/lib/vehicleLinkedGroups";
 import { useAssetGroups } from "@/hooks/useAssetGroups";
-import { useDeleteAsset } from "@/hooks/useMutations";
+import { useDeleteAsset, useUpdateAsset } from "@/hooks/useMutations";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -36,10 +36,10 @@ import { useAssetHandoverDrafts } from "@/hooks/useHandoverDrafts";
 import type { ProtocolDirection } from "@/lib/pdf/types";
 
 const assetStatusLabels: Record<string, string> = {
-  in_use: "בשימוש", in_stock: "במלאי", in_repair: "בתיקון", lost: "אבד",
+  in_use: "בשימוש", in_stock: "במלאי", in_repair: "בתיקון", lost: "אבד", inactive: "לא פעיל",
 };
 const assetStatusClasses: Record<string, string> = {
-  in_use: "status-active", in_stock: "status-onboarding", in_repair: "status-leaving", lost: "status-inactive",
+  in_use: "status-active", in_stock: "status-onboarding", in_repair: "status-leaving", lost: "status-inactive", inactive: "status-inactive",
 };
 
 interface Props {
