@@ -35,7 +35,32 @@ interface PendingFormRow {
 export function PendingSignaturesCard() {
   const navigate = useNavigate();
   const { activeCompanyId } = useCompany();
+  const queryClient = useQueryClient();
   const [dialogFormId, setDialogFormId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<PendingFormRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("asset_handover_forms")
+        .delete()
+        .eq("id", deleteTarget.id)
+        .eq("status", "pending");
+      if (error) throw error;
+      toast.success("תהליך המסירה נמחק");
+      queryClient.invalidateQueries({ queryKey: ["pending-signature-forms"] });
+      queryClient.invalidateQueries({ queryKey: ["handover-forms"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-handover"] });
+    } catch (err: any) {
+      toast.error(err?.message || "המחיקה נכשלה");
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
+    }
+  };
 
   const { data: forms, isLoading } = useQuery({
     queryKey: ["pending-signature-forms", activeCompanyId],
