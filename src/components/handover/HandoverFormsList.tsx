@@ -174,6 +174,19 @@ export function HandoverFormsList({ forms, context, emptyText = "אין עדיי
                   {resendingId === f.id ? "שולח..." : "שלח שוב"}
                 </Button>
               )}
+              {pending && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 text-xs text-muted-foreground hover:text-destructive"
+                  title="מחיקת תהליך המסירה"
+                  aria-label="מחיקת תהליך המסירה"
+                  onClick={() => setDeleteTarget(f)}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              )}
               {media.length > 0 && (
                 <Button
                   type="button"
@@ -244,6 +257,27 @@ export function HandoverFormsList({ forms, context, emptyText = "אין עדיי
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>מחיקת תהליך מסירה</AlertDialogTitle>
+            <AlertDialogDescription>
+              הטופס יימחק לצמיתות והעובד לא יוכל לחתום עליו יותר. הפעולה לא משנה את שיוך הפריט עצמו.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>ביטול</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); void handleDelete(); }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "מוחק..." : "מחק"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={!!mediaPreview} onOpenChange={(open) => !open && setMediaPreview(null)}>
         <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto" dir="rtl">
