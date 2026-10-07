@@ -1,3 +1,4 @@
+import { RowContextMenu, copyAction, openInNewTab } from "@/components/context/RowContextMenu";
 import { useState, useMemo, useEffect } from "react";
 import { usePersistentFilter } from "@/hooks/usePersistentFilter";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -339,8 +340,14 @@ export default function Employees() {
                       const inContacts = !full?.exclude_from_contacts;
                       const currentManagerId = full?.direct_manager_id ?? "__none__";
                       return (
+                        <RowContextMenu key={emp.id} actions={[
+                          { label: "פתח תיק עובד", onSelect: () => navigate(`/employees/${emp.id}`) },
+                          { label: "פתח בלשונית חדשה", onSelect: () => openInNewTab(`/employees/${emp.id}`) },
+                          copyAction("העתק שם", emp.full_name, true),
+                          copyAction("העתק מס' עובד", emp.employee_code),
+                          copyAction("העתק מייל", full?.email),
+                        ]}>
                         <tr
-                          key={emp.id}
                           onClick={() => navigate(`/employees/${emp.id}`)}
                           className="cursor-pointer hover:bg-muted/50"
                         >
@@ -414,6 +421,7 @@ export default function Employees() {
                             </span>
                           </td>
                         </tr>
+                        </RowContextMenu>
                       );
                     })}
                     {filtered.length === 0 && (

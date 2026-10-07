@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { RowContextMenu, copyAction, openInNewTab } from "@/components/context/RowContextMenu";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import type { ReactNode } from "react";
@@ -27,18 +28,28 @@ interface Props {
  */
 export function EmployeeLink({ employeeId, name, className, tab }: Props) {
   const { roles } = useAuth();
+  const navigate = useNavigate();
   const canOpen = !!employeeId && roles.some((r) => (ALLOWED_ROLES as readonly string[]).includes(r));
 
   if (!canOpen) return <span className={className}>{name}</span>;
 
+  const path = `/employees/${employeeId}${tab ? `?tab=${tab}` : ""}`;
   return (
-    <Link
-      to={`/employees/${employeeId}${tab ? `?tab=${tab}` : ""}`}
-      onClick={(e) => e.stopPropagation()}
-      title="פתיחת תיק העובד"
-      className={cn("hover:text-primary hover:underline underline-offset-2 transition-colors", className)}
+    <RowContextMenu
+      actions={[
+        { label: "פתח תיק עובד", onSelect: () => navigate(path) },
+        { label: "פתח בלשונית חדשה", onSelect: () => openInNewTab(path) },
+        copyAction("העתק שם", name, true),
+      ]}
     >
-      {name}
-    </Link>
+      <Link
+        to={path}
+        onClick={(e) => e.stopPropagation()}
+        title="פתיחת תיק העובד"
+        className={cn("hover:text-primary hover:underline underline-offset-2 transition-colors", className)}
+      >
+        {name}
+      </Link>
+    </RowContextMenu>
   );
 }
