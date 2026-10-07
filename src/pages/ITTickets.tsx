@@ -4,7 +4,7 @@ import {
   Wrench, CheckCircle2, User, Timer, ChevronLeft, Plus, Package,
   MapPin, Phone, Paperclip, CalendarClock, AlertTriangle, ListChecks, Send,
 } from "lucide-react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn, formatDateTimeDMY } from "@/lib/utils";
@@ -150,6 +150,7 @@ function EditSlaDialog({ ticket, open, onOpenChange, holidays }: { ticket: any; 
 }
 
 export default function ITTickets() {
+  const navigate = useNavigate();
   const { data: tickets, isLoading } = useITTickets();
   const { activeCompanyId, setActiveCompanyId } = useCompany();
   const updateStatus = useUpdateTicketStatus();
