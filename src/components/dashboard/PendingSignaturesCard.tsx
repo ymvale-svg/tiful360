@@ -164,6 +164,27 @@ export function PendingSignaturesCard() {
         open={!!dialogFormId}
         onOpenChange={(o) => { if (!o) setDialogFormId(null); }}
       />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>מחיקת תהליך מסירה</AlertDialogTitle>
+            <AlertDialogDescription>
+              הטופס יימחק לצמיתות והעובד לא יוכל לחתום עליו יותר. הפעולה לא משנה את שיוך הפריט עצמו.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>ביטול</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); void handleDelete(); }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "מוחק..." : "מחק"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
