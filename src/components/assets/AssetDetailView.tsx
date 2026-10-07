@@ -219,6 +219,12 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
                   {allValid ? "בתוקף" : "לא בתוקף"}
                 </span>
               )}
+              {isInactive && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border bg-muted text-muted-foreground border-border">
+                  <Ban className="w-3 h-3" />
+                  לא פעיל
+                </span>
+              )}
             </h1>
             <p className="text-xs font-mono text-muted-foreground">{asset.asset_code}</p>
           </div>
