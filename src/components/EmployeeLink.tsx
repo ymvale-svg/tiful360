@@ -31,14 +31,23 @@ export function EmployeeLink({ employeeId, name, className, tab }: Props) {
 
   if (!canOpen) return <span className={className}>{name}</span>;
 
+  const path = `/employees/${employeeId}${tab ? `?tab=${tab}` : ""}`;
   return (
-    <Link
-      to={`/employees/${employeeId}${tab ? `?tab=${tab}` : ""}`}
-      onClick={(e) => e.stopPropagation()}
-      title="פתיחת תיק העובד"
-      className={cn("hover:text-primary hover:underline underline-offset-2 transition-colors", className)}
+    <RowContextMenu
+      actions={[
+        { label: "פתח תיק עובד", onSelect: () => navigate(path) },
+        { label: "פתח בלשונית חדשה", onSelect: () => openInNewTab(path) },
+        copyAction("העתק שם", name, true),
+      ]}
     >
-      {name}
-    </Link>
+      <Link
+        to={path}
+        onClick={(e) => e.stopPropagation()}
+        title="פתיחת תיק העובד"
+        className={cn("hover:text-primary hover:underline underline-offset-2 transition-colors", className)}
+      >
+        {name}
+      </Link>
+    </RowContextMenu>
   );
 }
