@@ -1,3 +1,4 @@
+import { useNextInsurancePayments } from "@/hooks/useInsurancePayments";
 import { RowContextMenu, copyAction, openInNewTab } from "@/components/context/RowContextMenu";
 import { useMemo, useState } from "react";
 import { usePersistentFilter } from "@/hooks/usePersistentFilter";
@@ -86,6 +87,7 @@ export default function AssetsDomainPage() {
   const navigate = useNavigate();
 
   const { data: assets, isLoading } = useAssets();
+  const { data: nextPayments } = useNextInsurancePayments(domain === "insurance" ? (localStorage.getItem("activeCompanyId")) : null);
   const { data: categories } = useAssetCategories();
   const { data: groups } = useAssetGroups();
   const { data: expiring } = useExpiringAssets(30);
@@ -906,6 +908,13 @@ function InstancesTable({
         sortVal: (a) => { const e = expiryOf(a, domain); return e ? new Date(e).getTime() : Number.MAX_SAFE_INTEGER; },
       },
     ];
+    if (isInsurance) {
+      cols.push({
+        key: "next_payment", label: "תשלום הבא",
+        render: (a) => { const n = nextPayments?.get(a.id); return n ? <span className={cn(n.due_date < todayStr && "text-destructive")}>{formatDateDMY(n.due_date)}{n.amount != null ? ` · ₪${Number(n.amount).toLocaleString()}` : ""}</span> : dash; },
+        sortVal: (a) => { const n = nextPayments?.get(a.id); return n ? new Date(n.due_date).getTime() : Number.MAX_SAFE_INTEGER; },
+      });
+    }
     if (domain === "physical" || isInsurance) {
       cols.push({
         key: "status", label: "סטטוס",

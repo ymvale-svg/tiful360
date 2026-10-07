@@ -94,9 +94,9 @@ export function useInsurancePaymentMutations(assetId: string) {
         .update({ paid_at: paid ? new Date().toISOString() : null, paid_by: paid ? u.user?.id : null }).eq("id", p.id);
       if (error) throw error;
       await db.from("activity_log").insert({
-        company_id: p.company_id, entity_type: "asset", entity_id: p.asset_id, user_id: u.user?.id,
+        company_id: p.company_id, entity_type: "asset", entity_id: p.asset_id,
         action: paid ? "insurance_payment_paid" : "insurance_payment_unpaid",
-        details: { payment_id: p.id, due_date: p.due_date, amount: p.amount },
+        details: `${paid ? "תשלום סומן כשולם" : "בוטל סימון תשלום"} — ${p.due_date.split("-").reverse().join("/")}${p.amount ? ` (₪${p.amount})` : ""}`,
       });
     },
     onSuccess: inv,

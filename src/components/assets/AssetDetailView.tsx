@@ -18,6 +18,7 @@ import { DigitalAccessPanel } from "@/components/assets/DigitalAccessPanel";
 import { LicenseDetailsPanel } from "@/components/assets/LicenseDetailsPanel";
 import { TrainingDetailsPanel } from "@/components/assets/TrainingDetailsPanel";
 import { InsuranceDetailsPanel } from "@/components/assets/InsuranceDetailsPanel";
+import { InsurancePaymentsSection } from "@/components/assets/InsurancePaymentsSection";
 import { RealEstateDetailsPanel } from "@/components/assets/RealEstateDetailsPanel";
 import { getDomain, getPanelOwnedCustomFieldKeys } from "@/lib/assetDomains";
 import { isBuiltinFieldVisible, isHandoverRelevant } from "@/lib/builtinFields";
@@ -350,7 +351,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
             if (domain === "digital") return <DigitalAccessPanel asset={asset} />;
             if (domain === "licenses") return <LicenseDetailsPanel asset={asset} />;
             if (domain === "training") return <TrainingDetailsPanel asset={asset} />;
-            if (domain === "insurance") return <InsuranceDetailsPanel asset={asset} />;
+            if (domain === "insurance") return <><InsuranceDetailsPanel asset={asset} /><InsurancePaymentsSection asset={asset} /></>;
             if (domain === "real_estate") return <RealEstateDetailsPanel asset={asset} />;
             return null;
           })()}
