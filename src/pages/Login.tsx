@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,25 @@ export default function Login() {
     if (error) return false;
     return data === true;
   };
+
+  // If a session already exists (e.g. returning from Google via redirect),
+  // continue into the system instead of leaving the user on the login screen.
+  useEffect(() => {
+    let done = false;
+    const proceed = async (hasSession: boolean) => {
+      if (done || !hasSession) return;
+      done = true;
+      const ok = await verifyActiveEmployee("", null);
+      if (ok) navigate(afterLogin, { replace: true });
+      else done = false;
+    };
+    supabase.auth.getSession().then(({ data }) => proceed(!!data.session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+      if (event === "SIGNED_IN") setTimeout(() => proceed(!!s), 0);
+    });
+    return () => subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
 
   const handleGoogleLogin = async () => {
