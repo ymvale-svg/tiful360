@@ -1,3 +1,4 @@
+import { RowContextMenu, copyAction, openInNewTab } from "@/components/context/RowContextMenu";
 import { useMemo, useState } from "react";
 import { usePersistentFilter } from "@/hooks/usePersistentFilter";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -1005,8 +1006,16 @@ function InstancesTable({
         </DropdownMenu>
       </div>
       {sorted.map((a: any) => (
+        <RowContextMenu key={a.id} actions={[
+          { label: "פתח כרטיס פריט", onSelect: () => onSelect(a.id) },
+          { label: "פתח בלשונית חדשה", onSelect: () => openInNewTab(`/assets/${domain}/${a.id}`) },
+          ...(onToggleSelect ? [{ label: selectedIds?.has(a.id) ? "בטל בחירה" : "בחר לפעולה מרובה", onSelect: () => onToggleSelect(a.id) }] : []),
+          copyAction("העתק קוד", a.asset_code, true),
+          copyAction("העתק מס' סידורי", a.serial_number),
+          copyAction("העתק מס' רישוי", a.license_plate),
+          copyAction("העתק שם", a.name),
+        ]}>
         <div
-          key={a.id}
           role="button"
           tabIndex={0}
           onClick={() => onSelect(a.id)}
@@ -1033,6 +1042,7 @@ function InstancesTable({
             <ArrowRight className="w-4 h-4 mr-auto rtl:rotate-180" />
           </div>
         </div>
+        </RowContextMenu>
       ))}
     </div>
   );

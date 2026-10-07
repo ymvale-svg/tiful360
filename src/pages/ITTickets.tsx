@@ -1,3 +1,4 @@
+import { RowContextMenu, copyAction } from "@/components/context/RowContextMenu";
 import { useEffect, useMemo, useState } from "react";
 import {
   Wrench, CheckCircle2, User, Timer, ChevronLeft, Plus, Package,
@@ -320,8 +321,13 @@ export default function ITTickets() {
           {/* Ticket list */}
           <div className={cn("lg:col-span-1 space-y-2", selectedTicket && "hidden lg:block")}>
             {filtered.map((ticket: any) => (
+              <RowContextMenu key={ticket.id} actions={[
+                { label: "פתח קריאה", onSelect: () => setSelectedId(ticket.id) },
+                { label: "פתח תיק עובד", when: !!ticket.employee_id, roles: ["admin","super_admin","operations","direct_manager","payroll","hr","finance"], onSelect: () => navigate(`/employees/${ticket.employee_id}`) },
+                copyAction("העתק מס' קריאה", ticket.ticket_code, true),
+                copyAction("העתק כותרת", ticket.title),
+              ]}>
               <div
-                key={ticket.id}
                 role="button"
                 tabIndex={0}
                 onClick={() => setSelectedId(ticket.id)}
@@ -359,6 +365,7 @@ export default function ITTickets() {
                     : <SlaBadge deadline={ticket.sla_deadline} done={false} holidays={holidays} />}
                 </div>
               </div>
+              </RowContextMenu>
             ))}
             {filtered.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">אין קריאות להצגה</div>
