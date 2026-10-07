@@ -92,6 +92,7 @@ const emptyForm = {
   system_role: "employee" as AppRole,
   send_invite: true,
   exclude_from_contacts: false,
+  is_freelancer: false,
 };
 
 export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
@@ -137,12 +138,17 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
     return ALL_ROLES.filter(r => r.value === "employee");
   }, [isAdmin, isSuperAdmin, isOperations, isHR, isPayroll]);
 
-  const fullEmployeeCode = form.employee_number.trim() ? `EMP-${form.employee_number.trim()}` : "";
+  const fullEmployeeCode = form.is_freelancer
+    ? (form.id_number.trim() ? `FRL-${form.id_number.trim()}` : "")
+    : (form.employee_number.trim() ? `EMP-${form.employee_number.trim()}` : "");
 
   const validateStep = (s: number): FieldErrors => {
     const e: FieldErrors = {};
     if (s === 0) {
-      if (!form.employee_number.trim()) e.employee_number = "שדה חובה";
+      if (form.is_freelancer) {
+        if (fullEmployeeCode && existingEmployees?.some(emp => emp.employee_code === fullEmployeeCode))
+          e.id_number = "פרילנסר עם ת.ז. זו כבר קיים";
+      } else if (!form.employee_number.trim()) e.employee_number = "שדה חובה";
       else if (!/^\d{1,6}$/.test(form.employee_number.trim())) e.employee_number = "ספרות בלבד (עד 6)";
       else if (existingEmployees?.some(emp => emp.employee_code === fullEmployeeCode))
         e.employee_number = "מזהה כבר קיים במערכת";
@@ -227,6 +233,7 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
         direct_manager_id: form.direct_manager_id || null,
         sub_employer_id: form.sub_employer_id || null,
         exclude_from_contacts: form.exclude_from_contacts,
+        ...(form.is_freelancer ? { tracks_attendance: false } : {}),
       } as any);
 
       toast({ title: "עובד נוסף בהצלחה" });
