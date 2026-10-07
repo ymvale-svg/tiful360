@@ -134,6 +134,7 @@ export default function AssetsDomainPage() {
   const Icon = meta.icon;
   const catParam = searchParams.get("cat");
   const subParam = searchParams.get("sub");
+  const expiredOnly = searchParams.get("expired") === "1";
 
   const domainCats = useMemo(
     () => (categories ?? []).filter((c: any) => getDomain(c) === domain),
@@ -174,11 +175,16 @@ export default function AssetsDomainPage() {
   // Assets after category filter + search
   const visibleAssets = useMemo(() => {
     const q = search.trim().toLowerCase();
+    const todayStr = new Date().toISOString().slice(0, 10);
     return domainAssets.filter((a: any) => {
       if (catParam && a.category_id !== catParam) return false;
+      if (expiredOnly) {
+        const e = expiryOf(a, domain);
+        if (!e || e.slice(0, 10) >= todayStr) return false;
+      }
       return matchesSearch(a, q);
     });
-  }, [domainAssets, search, catParam, groupsById]);
+  }, [domainAssets, search, catParam, groupsById, expiredOnly, domain]);
 
   /** Sub-category cards per category — sourced from asset_groups (incl. empty ones). */
   const cardsByCategory = useMemo(() => {
@@ -389,6 +395,23 @@ export default function AssetsDomainPage() {
           פריט חדש
         </Button>
       </div>
+
+      {expiredOnly && (
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/10 text-destructive border border-destructive/20 text-xs font-medium">
+            <AlertTriangle className="w-3.5 h-3.5" />
+            מציג רק פריטים שפג תוקפם ({visibleAssets.length})
+            <button
+              onClick={() => updateParams({ expired: null })}
+              className="mr-1 rounded-full hover:bg-destructive/20 p-0.5"
+              aria-label="בטל סינון פגי תוקף"
+              title="בטל סינון"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </span>
+        </div>
+      )}
 
       {/* Search + category chips + sort */}
       <div className="space-y-3">
