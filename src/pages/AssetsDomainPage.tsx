@@ -134,6 +134,7 @@ export default function AssetsDomainPage() {
   const Icon = meta.icon;
   const catParam = searchParams.get("cat");
   const subParam = searchParams.get("sub");
+  const expiredOnly = searchParams.get("expired") === "1";
 
   const domainCats = useMemo(
     () => (categories ?? []).filter((c: any) => getDomain(c) === domain),
@@ -174,11 +175,16 @@ export default function AssetsDomainPage() {
   // Assets after category filter + search
   const visibleAssets = useMemo(() => {
     const q = search.trim().toLowerCase();
+    const todayStr = new Date().toISOString().slice(0, 10);
     return domainAssets.filter((a: any) => {
       if (catParam && a.category_id !== catParam) return false;
+      if (expiredOnly) {
+        const e = expiryOf(a, domain);
+        if (!e || e.slice(0, 10) >= todayStr) return false;
+      }
       return matchesSearch(a, q);
     });
-  }, [domainAssets, search, catParam, groupsById]);
+  }, [domainAssets, search, catParam, groupsById, expiredOnly, domain]);
 
   /** Sub-category cards per category — sourced from asset_groups (incl. empty ones). */
   const cardsByCategory = useMemo(() => {
