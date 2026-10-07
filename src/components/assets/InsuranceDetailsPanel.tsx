@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { ShieldCheck, Save, AlertTriangle, Sparkles } from "lucide-react";
+import { ShieldCheck, Save, AlertTriangle, Sparkles, FileUp, Loader2 } from "lucide-react";
+import { periodFromExpiry } from "@/hooks/useAssetDocuments";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -16,6 +17,9 @@ export function InsuranceDetailsPanel({ asset }: Props) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [autoFilled, setAutoFilled] = useState<null | "phone" | "email" | "both">(null);
+  const [extracting, setExtracting] = useState(false);
+  const [fromPolicy, setFromPolicy] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<Record<string, string>>({});
   const cf = asset.custom_fields ?? {};
 
   const initial = () => ({
@@ -126,22 +130,83 @@ export function InsuranceDetailsPanel({ asset }: Props) {
     qc.invalidateQueries({ queryKey: ["expiring-assets"] });
     setEditing(false);
     setAutoFilled(null);
+    setFromPolicy([]);
+    setSuggestions({});
   };
 
 
-  const F = ({ label, value, v, onChange, ltr, type = "text", onBlur, hint, suggestion }: any) => (
+  const F = ({ label, value, v, onChange, ltr, type = "text", onBlur, hint, field }: any) => (
     <div>
       <Label className="text-xs text-muted-foreground flex items-center gap-1">
         {label}
-        {hint && <span className="text-[10px] text-primary flex items-center gap-0.5"><Sparkles className="w-3 h-3" /> {hint}</span>}
+        {(fromPolicy.includes(field) && editing) ? <span className="text-[10px] text-primary flex items-center gap-0.5"><Sparkles className="w-3 h-3" /> מולא מהפוליסה</span>
+          : hint && <span className="text-[10px] text-primary flex items-center gap-0.5"><Sparkles className="w-3 h-3" /> {hint}</span>}
       </Label>
       {editing ? (
         <Input type={type} value={v} onChange={(e) => onChange(e.target.value)} onBlur={onBlur} className={cn("mt-1", ltr && "text-left")} dir={ltr ? "ltr" : undefined} />
       ) : (
         <div className={cn("font-medium mt-1 text-sm", ltr && "font-mono")}>{value || "—"}</div>
       )}
+      {editing && suggestions[field] && (
+        <button type="button" className="text-[11px] text-primary mt-1 underline text-start" onClick={() => {
+          setForm((p: any) => ({ ...p, [field]: suggestions[field] }));
+          setSuggestions((p) => { const n = { ...p }; delete n[field]; return n; });
+        }}>בפוליסה: {suggestions[field]} — החלף</button>
+      )}
     </div>
   );
+
+  const handlePolicy = async (file: File) => {
+    if (!asset.company_id) return;
+    setExtracting(true);
+    try {
+      const ext = file.name.split(".").pop() || "bin";
+      const path = `${asset.company_id}/${asset.id}/${Date.now()}.${ext}`;
+      const up = await supabase.storage.from("asset-documents").upload(path, file);
+      if (up.error) throw up.error;
+      // Archive previous current policy documents
+      const period = asset.expiry_date ? periodFromExpiry(asset.expiry_date) : null;
+      await supabase.from("asset_documents" as any).update({ is_archived: true, period } as any)
+        .eq("asset_id", asset.id).eq("document_type", "policy").eq("is_archived", false);
+      const { data: { user } } = await supabase.auth.getUser();
+      const { error: insErr } = await supabase.from("asset_documents" as any).insert({
+        asset_id: asset.id, company_id: asset.company_id, document_type: "policy", document_label: "פוליסה",
+        file_url: path, file_name: file.name, file_size_bytes: file.size, uploaded_by: user?.id ?? null,
+      } as any);
+      if (insErr) throw insErr;
+      qc.invalidateQueries({ queryKey: ["asset-documents", asset.id] });
+
+      const { data, error } = await supabase.functions.invoke("extract-insurance-policy", { body: { path } });
+      if (error) {
+        let msg = error.message;
+        try { msg = JSON.parse(await (error as any).context.text()).error ?? msg; } catch { /* */ }
+        throw new Error(msg);
+      }
+      const f = (data?.fields ?? {}) as Record<string, string | number | null>;
+      const filled: string[] = [];
+      const sugg: Record<string, string> = {};
+      setEditing(true);
+      setForm((prev: any) => {
+        const next = { ...prev };
+        Object.entries(f).forEach(([k, val]) => {
+          if (val === null || val === undefined || val === "" || !(k in prev)) return;
+          const sv = String(val);
+          if (!prev[k]) { next[k] = sv; filled.push(k); }
+          else if (String(prev[k]) !== sv) sugg[k] = sv;
+        });
+        return next;
+      });
+      setTimeout(() => {
+        setFromPolicy(filled);
+        setSuggestions(sugg);
+        toast({ title: "הפוליסה נקראה", description: `מולאו ${filled.length} שדות. בדוק ולחץ שמור.` });
+      }, 0);
+    } catch (e: any) {
+      toast({ title: "לא ניתן לקרוא את הפוליסה", description: e.message, variant: "destructive" });
+    } finally {
+      setExtracting(false);
+    }
+  };
 
   return (
     <div className="bg-card border border-border rounded-xl p-5 space-y-4">
@@ -149,26 +214,33 @@ export function InsuranceDetailsPanel({ asset }: Props) {
         <h2 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
           <ShieldCheck className="w-4 h-4" /> פרטי ביטוח / רגולציה
         </h2>
+        <div className="flex gap-2 items-center">
+        <label className={cn("inline-flex items-center gap-1 text-xs px-3 h-9 rounded-md border border-border cursor-pointer hover:bg-muted", extracting && "opacity-60 pointer-events-none")}>
+          {extracting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileUp className="w-3.5 h-3.5" />}
+          {extracting ? "קורא פוליסה..." : "מלא מפוליסה"}
+          <input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) handlePolicy(f); }} />
+        </label>
         {!editing ? (
           <Button size="sm" variant="outline" onClick={() => setEditing(true)}>ערוך</Button>
         ) : (
           <div className="flex gap-2">
-            <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setAutoFilled(null); }} disabled={saving}>ביטול</Button>
+            <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setAutoFilled(null); setFromPolicy([]); setSuggestions({}); setForm(initial()); }} disabled={saving}>ביטול</Button>
             <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1"><Save className="w-3.5 h-3.5" /> שמור</Button>
           </div>
         )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-        {F({ label: "חברת ביטוח / גוף רגולטורי", value: form.insurance_company, v: form.insurance_company, onChange: (v: string) => setForm({ ...form, insurance_company: v }) })}
-        {F({ label: "מספר פוליסה / רישום", value: form.policy_number, v: form.policy_number, onChange: (v: string) => setForm({ ...form, policy_number: v }), ltr: true })}
-        {F({ label: "סוג כיסוי", value: form.coverage_type, v: form.coverage_type, onChange: (v: string) => setForm({ ...form, coverage_type: v }) })}
-        {F({ label: "סכום כיסוי", value: form.coverage_amount ? `${Number(form.coverage_amount).toLocaleString()} ₪` : "", v: form.coverage_amount, onChange: (v: string) => setForm({ ...form, coverage_amount: v }), type: "number" })}
-        {F({ label: "פרמיה", value: form.premium ? `${Number(form.premium).toLocaleString()} ₪` : "", v: form.premium, onChange: (v: string) => setForm({ ...form, premium: v }), type: "number" })}
-        {F({ label: "תאריך תחילה", value: form.start_date, v: form.start_date, onChange: (v: string) => setForm({ ...form, start_date: v }), type: "date", ltr: true })}
-        {F({ label: "שם סוכן ביטוח", value: form.agent_name, v: form.agent_name, onChange: (v: string) => setForm({ ...form, agent_name: v }), onBlur: () => editing && form.agent_name && lookupAgent(form.agent_name), hint: editing ? "מילוי אוטומטי לפי שם" : null })}
-        {F({ label: "טלפון סוכן", value: form.agent_phone, v: form.agent_phone, onChange: (v: string) => setForm({ ...form, agent_phone: v }), hint: editing && (autoFilled === "phone" || autoFilled === "both") ? "מולא אוטומטית" : null, ltr: true })}
-        {F({ label: "אימייל סוכן", value: form.agent_email, v: form.agent_email, onChange: (v: string) => setForm({ ...form, agent_email: v }), type: "email", hint: editing && (autoFilled === "email" || autoFilled === "both") ? "מולא אוטומטית" : null, ltr: true })}
+        {F({ field: "insurance_company", label: "חברת ביטוח / גוף רגולטורי", value: form.insurance_company, v: form.insurance_company, onChange: (v: string) => setForm({ ...form, insurance_company: v }) })}
+        {F({ field: "policy_number", label: "מספר פוליסה / רישום", value: form.policy_number, v: form.policy_number, onChange: (v: string) => setForm({ ...form, policy_number: v }), ltr: true })}
+        {F({ field: "coverage_type", label: "סוג כיסוי", value: form.coverage_type, v: form.coverage_type, onChange: (v: string) => setForm({ ...form, coverage_type: v }) })}
+        {F({ field: "coverage_amount", label: "סכום כיסוי", value: form.coverage_amount ? `${Number(form.coverage_amount).toLocaleString()} ₪` : "", v: form.coverage_amount, onChange: (v: string) => setForm({ ...form, coverage_amount: v }), type: "number" })}
+        {F({ field: "premium", label: "פרמיה", value: form.premium ? `${Number(form.premium).toLocaleString()} ₪` : "", v: form.premium, onChange: (v: string) => setForm({ ...form, premium: v }), type: "number" })}
+        {F({ field: "start_date", label: "תאריך תחילה", value: form.start_date, v: form.start_date, onChange: (v: string) => setForm({ ...form, start_date: v }), type: "date", ltr: true })}
+        {F({ field: "agent_name", label: "שם סוכן ביטוח", value: form.agent_name, v: form.agent_name, onChange: (v: string) => setForm({ ...form, agent_name: v }), onBlur: () => editing && form.agent_name && lookupAgent(form.agent_name), hint: editing ? "מילוי אוטומטי לפי שם" : null })}
+        {F({ field: "agent_phone", label: "טלפון סוכן", value: form.agent_phone, v: form.agent_phone, onChange: (v: string) => setForm({ ...form, agent_phone: v }), hint: editing && (autoFilled === "phone" || autoFilled === "both") ? "מולא אוטומטית" : null, ltr: true })}
+        {F({ field: "agent_email", label: "אימייל סוכן", value: form.agent_email, v: form.agent_email, onChange: (v: string) => setForm({ ...form, agent_email: v }), type: "email", hint: editing && (autoFilled === "email" || autoFilled === "both") ? "מולא אוטומטית" : null, ltr: true })}
       </div>
 
       <div className="pt-3 border-t border-border flex items-center justify-between gap-3">
