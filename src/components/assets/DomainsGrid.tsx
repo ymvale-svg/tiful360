@@ -263,13 +263,20 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                 )}
               >
                 {badge && (
-                  <span className={cn(
-                    "absolute top-3 left-3 inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full",
-                    badge.cls
-                  )}>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/assets/${slug}?expired=1`);
+                    }}
+                    title="הצג את הפריטים שפג תוקפם"
+                    className={cn(
+                      "absolute top-3 left-3 inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full transition-shadow hover:ring-2 hover:ring-current/30 cursor-pointer",
+                      badge.cls
+                    )}
+                  >
                     <AlertTriangle className="w-3 h-3" />
                     {badge.text}
-                  </span>
+                  </button>
                 )}
 
                 {isAdmin && (
