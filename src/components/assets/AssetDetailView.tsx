@@ -102,6 +102,8 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
   }
 
   const isAssignable = category?.is_assignable !== false;
+  const domain = category ? getDomain(category) : null;
+  const isInactive = asset.status === "inactive";
   const Icon = getCategoryIcon(category?.category_name);
   const color = getCategoryColor(category?.category_name);
   const expiry = asset.expiry_date ? new Date(asset.expiry_date) : null;
@@ -142,6 +144,24 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
     toast({ title: "השיוך בוטל", description: `${asset.asset_name} הוחזר למלאי` });
     qc.invalidateQueries({ queryKey: ["assets"] });
     setUnassignConfirm(false);
+  };
+
+  const handleToggleInactive = async () => {
+    try {
+      await updateAsset.mutateAsync({ id: assetId, status: isInactive ? "in_use" : "inactive" });
+      await supabase.from("activity_log").insert({
+        action: isInactive ? "asset_reactivated" : "asset_deactivated",
+        details: isInactive ? "הפריט הופעל מחדש" : "הפריט סומן כלא פעיל",
+        entity_type: "asset",
+        entity_id: assetId,
+        company_id: asset.company_id,
+      } as any);
+      toast({ title: isInactive ? "הפריט הופעל מחדש" : "הפריט סומן כלא פעיל" });
+      qc.invalidateQueries({ queryKey: ["asset-history", assetId] });
+      setInactiveConfirm(false);
+    } catch (err: any) {
+      toast({ title: "שגיאה בעדכון סטטוס", description: err.message, variant: "destructive" });
+    }
   };
 
   const handleDelete = async () => {
