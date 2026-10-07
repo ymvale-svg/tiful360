@@ -1,9 +1,14 @@
 // ============= Full file contents =============
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { PenLine, ChevronLeft } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { PenLine, ChevronLeft, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { formatDateDMY } from "@/lib/utils";
 import { snapshotItemLabel } from "@/lib/pdf/formPdf";
 import { getDomain } from "@/lib/assetDomains";
@@ -30,7 +35,32 @@ interface PendingFormRow {
 export function PendingSignaturesCard() {
   const navigate = useNavigate();
   const { activeCompanyId } = useCompany();
+  const queryClient = useQueryClient();
   const [dialogFormId, setDialogFormId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<PendingFormRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("asset_handover_forms")
+        .delete()
+        .eq("id", deleteTarget.id)
+        .eq("status", "pending");
+      if (error) throw error;
+      toast.success("תהליך המסירה נמחק");
+      queryClient.invalidateQueries({ queryKey: ["pending-signature-forms"] });
+      queryClient.invalidateQueries({ queryKey: ["handover-forms"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-handover"] });
+    } catch (err: any) {
+      toast.error(err?.message || "המחיקה נכשלה");
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
+    }
+  };
 
   const { data: forms, isLoading } = useQuery({
     queryKey: ["pending-signature-forms", activeCompanyId],
@@ -104,9 +134,20 @@ export function PendingSignaturesCard() {
                   </p>
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">
-                  <Badge variant="warning" className="text-[10px] px-1.5 py-0.5">
-                    ממתין לחתימה
-                  </Badge>
+                  <div className="flex items-center gap-1">
+                    <Badge variant="warning" className="text-[10px] px-1.5 py-0.5">
+                      ממתין לחתימה
+                    </Badge>
+                    <button
+                      type="button"
+                      aria-label="מחיקת תהליך המסירה"
+                      title="מחיקת תהליך המסירה"
+                      className="p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                      onClick={(e) => { e.stopPropagation(); setDeleteTarget(form); }}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                   <span className="text-[10px] text-muted-foreground">
                     נשלח {formatDateDMY(form.created_at)}
                     {waitingDays >= 3 ? ` • ${waitingDays} ימים` : ""}
@@ -123,6 +164,27 @@ export function PendingSignaturesCard() {
         open={!!dialogFormId}
         onOpenChange={(o) => { if (!o) setDialogFormId(null); }}
       />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>מחיקת תהליך מסירה</AlertDialogTitle>
+            <AlertDialogDescription>
+              הטופס יימחק לצמיתות והעובד לא יוכל לחתום עליו יותר. הפעולה לא משנה את שיוך הפריט עצמו.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>ביטול</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); void handleDelete(); }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "מוחק..." : "מחק"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

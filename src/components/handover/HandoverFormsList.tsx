@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { formatDateTimeDMY } from "@/lib/utils";
-import { FileSignature, FileDown, Clock, Eye, ExternalLink, Images, Play, Send } from "lucide-react";
+import { FileSignature, FileDown, Clock, Eye, ExternalLink, Images, Play, Send, Trash2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { sendSignLink, signLinkFor, describeSignEmailReason } from "@/lib/signLink";
 import { toast } from "sonner";
 import type { HandoverFormRow } from "@/hooks/useHandoverForms";
@@ -31,6 +37,31 @@ export function HandoverFormsList({ forms, context, emptyText = "אין עדיי
   const [mediaPreview, setMediaPreview] = useState<{ items: ProtocolMedia[]; title: string } | null>(null);
   const [creatingPreview, setCreatingPreview] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<HandoverFormRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const qc = useQueryClient();
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("asset_handover_forms")
+        .delete()
+        .eq("id", deleteTarget.id)
+        .eq("status", "pending");
+      if (error) throw error;
+      toast.success("תהליך המסירה נמחק");
+      qc.invalidateQueries({ queryKey: ["handover-forms"] });
+      qc.invalidateQueries({ queryKey: ["pending-signature-forms"] });
+      qc.invalidateQueries({ queryKey: ["pending-handover"] });
+    } catch (err: any) {
+      toast.error(err?.message || "המחיקה נכשלה");
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
+    }
+  };
 
   const resend = async (f: HandoverFormRow) => {
     if (!f.sign_token && !f.short_code) return;
@@ -143,6 +174,19 @@ export function HandoverFormsList({ forms, context, emptyText = "אין עדיי
                   {resendingId === f.id ? "שולח..." : "שלח שוב"}
                 </Button>
               )}
+              {pending && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 text-xs text-muted-foreground hover:text-destructive"
+                  title="מחיקת תהליך המסירה"
+                  aria-label="מחיקת תהליך המסירה"
+                  onClick={() => setDeleteTarget(f)}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              )}
               {media.length > 0 && (
                 <Button
                   type="button"
@@ -213,6 +257,27 @@ export function HandoverFormsList({ forms, context, emptyText = "אין עדיי
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>מחיקת תהליך מסירה</AlertDialogTitle>
+            <AlertDialogDescription>
+              הטופס יימחק לצמיתות והעובד לא יוכל לחתום עליו יותר. הפעולה לא משנה את שיוך הפריט עצמו.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>ביטול</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); void handleDelete(); }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "מוחק..." : "מחק"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={!!mediaPreview} onOpenChange={(open) => !open && setMediaPreview(null)}>
         <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto" dir="rtl">
