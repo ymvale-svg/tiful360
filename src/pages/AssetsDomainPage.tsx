@@ -876,7 +876,7 @@ function InstancesTable({
         sortVal: (a) => { const e = expiryOf(a, domain); return e ? new Date(e).getTime() : Number.MAX_SAFE_INTEGER; },
       },
     ];
-    if (domain === "physical") {
+    if (domain === "physical" || isInsurance) {
       cols.push({
         key: "status", label: "סטטוס",
         render: (a) => <span className={cn("px-2 py-0.5 rounded-full", assetStatusClasses[a.status])}>{assetStatusLabels[a.status] ?? a.status}</span>,
@@ -904,13 +904,13 @@ function InstancesTable({
   }, [items, domain]);
 
   const defaultKeys = useMemo(() => {
-    if (isInsurance) return ["name", "site", "cf:חברת ביטוח", "expiry", "cf:שם סוכן ביטוח"];
+    if (isInsurance) return ["name", "site", "cf:חברת ביטוח", "expiry", "cf:שם סוכן ביטוח", "status"];
     const keys = ["code"];
     if (items.some((a) => !!secondValue(a))) keys.push("second");
     keys.push("employee");
     // Address-like custom field (e.g. real-estate "כתובת/תיאור הנכס").
     allCols.filter((c) => c.key.startsWith("cf:") && /כתובת/.test(c.label)).forEach((c) => keys.push(c.key));
-    keys.push(domain === "physical" || domain === "insurance" ? "status" : "expiry");
+    keys.push(domain === "physical" ? "status" : "expiry");
     return keys;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allCols, isInsurance, domain]);
