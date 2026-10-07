@@ -54,6 +54,13 @@ const assetStatusClasses: Record<string, string> = {
 
 type SortMode = "count" | "alpha" | "expiry";
 
+function insuranceStatus(a: any, domain: DomainKey): { label: string; cls: string } {
+  if (a.status === "inactive") return { label: "לא פעיל", cls: "status-inactive" };
+  const e = expiryOf(a, domain);
+  if (e && e < new Date().toISOString().slice(0, 10)) return { label: "פג תוקף", cls: "status-leaving" };
+  return { label: "בתוקף", cls: "status-active" };
+}
+
 function expiryOf(a: any, domain: DomainKey): string | null {
   if (domain === "digital") return a.license_expires_at || a.password_expires_at || null;
   if (domain === "licenses") return a.license_expires_at || null;
@@ -902,10 +909,14 @@ function InstancesTable({
     if (domain === "physical" || isInsurance) {
       cols.push({
         key: "status", label: "סטטוס",
-        render: (a) => isInsurance && a.status !== "inactive"
-          ? dash
-          : <span className={cn("px-2 py-0.5 rounded-full", assetStatusClasses[a.status])}>{assetStatusLabels[a.status] ?? a.status}</span>,
-        sortVal: (a) => isInsurance ? (a.status === "inactive" ? "לא פעיל" : "") : (assetStatusLabels[a.status] ?? a.status ?? ""),
+        render: (a) => {
+          if (isInsurance) {
+            const s = insuranceStatus(a, domain);
+            return <span className={cn("px-2 py-0.5 rounded-full", s.cls)}>{s.label}</span>;
+          }
+          return <span className={cn("px-2 py-0.5 rounded-full", assetStatusClasses[a.status])}>{assetStatusLabels[a.status] ?? a.status}</span>;
+        },
+        sortVal: (a) => isInsurance ? insuranceStatus(a, domain).label : (assetStatusLabels[a.status] ?? a.status ?? ""),
       });
     }
     const customKeys = new Set<string>();
