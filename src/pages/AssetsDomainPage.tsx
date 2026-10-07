@@ -879,8 +879,10 @@ function InstancesTable({
     if (domain === "physical" || isInsurance) {
       cols.push({
         key: "status", label: "סטטוס",
-        render: (a) => <span className={cn("px-2 py-0.5 rounded-full", assetStatusClasses[a.status])}>{assetStatusLabels[a.status] ?? a.status}</span>,
-        sortVal: (a) => assetStatusLabels[a.status] ?? a.status ?? "",
+        render: (a) => isInsurance && a.status !== "inactive"
+          ? dash
+          : <span className={cn("px-2 py-0.5 rounded-full", assetStatusClasses[a.status])}>{assetStatusLabels[a.status] ?? a.status}</span>,
+        sortVal: (a) => isInsurance ? (a.status === "inactive" ? "לא פעיל" : "") : (assetStatusLabels[a.status] ?? a.status ?? ""),
       });
     }
     const customKeys = new Set<string>();
