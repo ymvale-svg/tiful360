@@ -42,12 +42,14 @@ const assetStatusLabels: Record<string, string> = {
   in_stock: "במלאי",
   in_repair: "בתיקון",
   lost: "אבד",
+  inactive: "לא פעיל",
 };
 const assetStatusClasses: Record<string, string> = {
   in_use: "status-active",
   in_stock: "status-onboarding",
   in_repair: "status-leaving",
   lost: "status-inactive",
+  inactive: "status-inactive",
 };
 
 type SortMode = "count" | "alpha" | "expiry";
@@ -874,7 +876,7 @@ function InstancesTable({
         sortVal: (a) => { const e = expiryOf(a, domain); return e ? new Date(e).getTime() : Number.MAX_SAFE_INTEGER; },
       },
     ];
-    if (domain === "physical") {
+    if (domain === "physical" || isInsurance) {
       cols.push({
         key: "status", label: "סטטוס",
         render: (a) => <span className={cn("px-2 py-0.5 rounded-full", assetStatusClasses[a.status])}>{assetStatusLabels[a.status] ?? a.status}</span>,
@@ -902,7 +904,7 @@ function InstancesTable({
   }, [items, domain]);
 
   const defaultKeys = useMemo(() => {
-    if (isInsurance) return ["name", "site", "cf:חברת ביטוח", "expiry", "cf:שם סוכן ביטוח"];
+    if (isInsurance) return ["name", "site", "cf:חברת ביטוח", "expiry", "cf:שם סוכן ביטוח", "status"];
     const keys = ["code"];
     if (items.some((a) => !!secondValue(a))) keys.push("second");
     keys.push("employee");

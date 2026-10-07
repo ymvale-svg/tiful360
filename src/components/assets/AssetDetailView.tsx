@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAssets, useAssetCategories, useEmployees } from "@/hooks/useData";
 import { getCategoryIcon, getCategoryColor } from "@/lib/categoryIcons";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Pencil, FileSignature, UserMinus, Trash2, User, Building2, History, MapPin, Clock3 } from "lucide-react";
+import { ChevronLeft, Pencil, FileSignature, UserMinus, Trash2, User, Building2, History, MapPin, Clock3, Ban, PlayCircle } from "lucide-react";
 import { useSites } from "@/hooks/useSites";
 import { useSiteContainers } from "@/hooks/useSiteContainers";
 import { cn } from "@/lib/utils";
@@ -24,7 +24,7 @@ import { isBuiltinFieldVisible, isHandoverRelevant } from "@/lib/builtinFields";
 import { VehicleLinkPanel } from "@/components/assets/VehicleLinkPanel";
 import { isVehicleLinkedGroup } from "@/lib/vehicleLinkedGroups";
 import { useAssetGroups } from "@/hooks/useAssetGroups";
-import { useDeleteAsset } from "@/hooks/useMutations";
+import { useDeleteAsset, useUpdateAsset } from "@/hooks/useMutations";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -36,10 +36,10 @@ import { useAssetHandoverDrafts } from "@/hooks/useHandoverDrafts";
 import type { ProtocolDirection } from "@/lib/pdf/types";
 
 const assetStatusLabels: Record<string, string> = {
-  in_use: "בשימוש", in_stock: "במלאי", in_repair: "בתיקון", lost: "אבד",
+  in_use: "בשימוש", in_stock: "במלאי", in_repair: "בתיקון", lost: "אבד", inactive: "לא פעיל",
 };
 const assetStatusClasses: Record<string, string> = {
-  in_use: "status-active", in_stock: "status-onboarding", in_repair: "status-leaving", lost: "status-inactive",
+  in_use: "status-active", in_stock: "status-onboarding", in_repair: "status-leaving", lost: "status-inactive", inactive: "status-inactive",
 };
 
 interface Props {
@@ -59,6 +59,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
   const { data: sites } = useSites();
   const { data: assetGroups } = useAssetGroups();
   const deleteMutation = useDeleteAsset();
+  const updateAsset = useUpdateAsset();
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -66,6 +67,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
   const [assignOpen, setAssignOpen] = useState(false);
   const [unassignConfirm, setUnassignConfirm] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [inactiveConfirm, setInactiveConfirm] = useState(false);
   const [resumeDirection, setResumeDirection] = useState<ProtocolDirection>("handover");
 
   const asset = (assets ?? []).find((a: any) => a.id === assetId) as any;
@@ -102,6 +104,8 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
   }
 
   const isAssignable = category?.is_assignable !== false;
+  const domain = category ? getDomain(category) : null;
+  const isInactive = asset.status === "inactive";
   const Icon = getCategoryIcon(category?.category_name);
   const color = getCategoryColor(category?.category_name);
   const expiry = asset.expiry_date ? new Date(asset.expiry_date) : null;
@@ -142,6 +146,24 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
     toast({ title: "השיוך בוטל", description: `${asset.asset_name} הוחזר למלאי` });
     qc.invalidateQueries({ queryKey: ["assets"] });
     setUnassignConfirm(false);
+  };
+
+  const handleToggleInactive = async () => {
+    try {
+      await updateAsset.mutateAsync({ id: assetId, status: isInactive ? "in_use" : "inactive" });
+      await supabase.from("activity_log").insert({
+        action: isInactive ? "asset_reactivated" : "asset_deactivated",
+        details: isInactive ? "הפריט הופעל מחדש" : "הפריט סומן כלא פעיל",
+        entity_type: "asset",
+        entity_id: assetId,
+        company_id: asset.company_id,
+      } as any);
+      toast({ title: isInactive ? "הפריט הופעל מחדש" : "הפריט סומן כלא פעיל" });
+      qc.invalidateQueries({ queryKey: ["asset-history", assetId] });
+      setInactiveConfirm(false);
+    } catch (err: any) {
+      toast({ title: "שגיאה בעדכון סטטוס", description: err.message, variant: "destructive" });
+    }
   };
 
   const handleDelete = async () => {
@@ -220,6 +242,12 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
               </Button>
             </>
           )}
+          {domain === "insurance" && (
+            <Button variant="outline" onClick={() => setInactiveConfirm(true)} className="gap-2">
+              {isInactive ? <PlayCircle className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
+              {isInactive ? "הפעל מחדש" : "סמן כלא פעיל"}
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setEditOpen(true)} className="gap-2">
             <Pencil className="w-4 h-4" />
             ערוך
@@ -254,7 +282,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
                     <Field label="מזהה" value={asset.asset_code} mono />
                     {showSerial && asset.serial_number && <Field label="מס׳ סידורי" value={asset.serial_number} mono />}
                     {showModel && asset.manufacturer_model && <Field label="יצרן/דגם" value={asset.manufacturer_model} />}
-                    {isAssignable && (
+                    {(isAssignable || domain === "insurance") && (
                       <Field
                         label="סטטוס"
                         value={
@@ -448,6 +476,25 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
           <AlertDialogFooter>
             <AlertDialogCancel>חזרה</AlertDialogCancel>
             <AlertDialogAction onClick={handleUnassign}>בטל שיוך</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={inactiveConfirm} onOpenChange={setInactiveConfirm}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{isInactive ? "הפעלה מחדש" : "סימון כלא פעיל"}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {isInactive
+                ? <>להפעיל מחדש את <strong>{asset.asset_name}</strong>? התראות תפוגה יחודשו.</>
+                : <>לסמן את <strong>{asset.asset_name}</strong> כלא פעיל? הפוליסה תישאר בתיק לצורך תיעוד, אך לא יישלחו עליה התראות תפוגה.</>}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ביטול</AlertDialogCancel>
+            <AlertDialogAction onClick={handleToggleInactive}>
+              {isInactive ? "הפעל מחדש" : "סמן כלא פעיל"}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

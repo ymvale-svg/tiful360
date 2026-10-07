@@ -43,6 +43,13 @@
       "when": 1791209319763,
       "tag": "0005_exclude_archived_docs_from_expiring",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791364262949,
+      "tag": "0006_asset_status_inactive",
+      "breakpoints": true
     }
   ]
 }
