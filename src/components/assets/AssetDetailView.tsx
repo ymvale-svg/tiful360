@@ -242,6 +242,12 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
               </Button>
             </>
           )}
+          {domain === "insurance" && (
+            <Button variant="outline" onClick={() => setInactiveConfirm(true)} className="gap-2">
+              {isInactive ? <PlayCircle className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
+              {isInactive ? "הפעל מחדש" : "סמן כלא פעיל"}
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setEditOpen(true)} className="gap-2">
             <Pencil className="w-4 h-4" />
             ערוך
@@ -276,7 +282,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
                     <Field label="מזהה" value={asset.asset_code} mono />
                     {showSerial && asset.serial_number && <Field label="מס׳ סידורי" value={asset.serial_number} mono />}
                     {showModel && asset.manufacturer_model && <Field label="יצרן/דגם" value={asset.manufacturer_model} />}
-                    {isAssignable && (
+                    {(isAssignable || domain === "insurance") && (
                       <Field
                         label="סטטוס"
                         value={
