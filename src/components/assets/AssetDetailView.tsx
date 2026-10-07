@@ -282,7 +282,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
                     <Field label="מזהה" value={asset.asset_code} mono />
                     {showSerial && asset.serial_number && <Field label="מס׳ סידורי" value={asset.serial_number} mono />}
                     {showModel && asset.manufacturer_model && <Field label="יצרן/דגם" value={asset.manufacturer_model} />}
-                    {(isAssignable || domain === "insurance") && (
+                    {(isAssignable || (domain === "insurance" && asset.status === "inactive")) && (
                       <Field
                         label="סטטוס"
                         value={
