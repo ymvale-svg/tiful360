@@ -1,9 +1,14 @@
 // ============= Full file contents =============
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { PenLine, ChevronLeft } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { PenLine, ChevronLeft, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { formatDateDMY } from "@/lib/utils";
 import { snapshotItemLabel } from "@/lib/pdf/formPdf";
 import { getDomain } from "@/lib/assetDomains";
