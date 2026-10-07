@@ -139,7 +139,6 @@ export default function AssetsDomainPage() {
 
   const domainKey = domainSlugToKey(params.domain);
   const domain = (domainKey ?? "physical") as DomainKey;
-  const { data: nextPayments } = useNextInsurancePayments(domain === "insurance" ? (localStorage.getItem("activeCompanyId")) : null);
   const meta = DOMAIN_META[domain];
   const Icon = meta.icon;
   const catParam = searchParams.get("cat");
@@ -858,6 +857,7 @@ function InstancesTable({
   columnsKey?: string;
 }) {
   const isInsurance = domain === "insurance";
+  const { data: nextPayments } = useNextInsurancePayments(domain === "insurance" ? (localStorage.getItem("activeCompanyId")) : null);
   const siteOf = (a: any): string => {
     const cf = a.custom_fields ?? {};
     const k = Object.keys(cf).find((key) => /^שיוך לאתר/.test(key.trim()));
