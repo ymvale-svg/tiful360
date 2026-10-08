@@ -161,13 +161,14 @@ export default function ITTickets() {
   const [statusFilter, setStatusFilter] = useState<string>("open_all");
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Deep link from email: /it-tickets?ticket=<id|ticket_code>
-  const deepLink = searchParams.get("ticket");
+  // Deep link from email: /it-tickets?ticket=<id|ticket_code> — and from header search / open-tickets card: ?selected=<id>
+  const deepLink = searchParams.get("ticket") ?? searchParams.get("selected");
   useEffect(() => {
     if (!deepLink || !tickets) return;
     const clearParam = () => {
       const next = new URLSearchParams(searchParams);
       next.delete("ticket");
+      next.delete("selected");
       setSearchParams(next, { replace: true });
     };
     const match = (tickets as any[]).find(
