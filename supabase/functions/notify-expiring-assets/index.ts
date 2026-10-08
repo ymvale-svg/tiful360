@@ -108,9 +108,9 @@ Deno.serve(async (req) => {
         const target = new Date(Date.now() + 7 * 86400000).toLocaleDateString("en-CA", { timeZone: "Asia/Jerusalem" });
         const { data: pays, error: pErr } = await supabase.from("insurance_payments")
           .select("id, due_date, amount, asset_id, assets!inner(asset_name, asset_code, status)")
-        if (pErr) { console.error("insurance payments query", company.id, pErr); }
           .eq("company_id", company.id).is("paid_at", null).is("reminder_sent_at", null)
           .lte("due_date", target).gte("due_date", new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Jerusalem" }));
+        if (pErr) { console.error("insurance payments query", company.id, pErr); }
         for (const p of (pays ?? []).filter((x: any) => x.assets?.status !== "inactive")) {
           const a: any = (p as any).assets;
           const d = String(p.due_date).split("-").reverse().join("/");
@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
             <p style="margin:18px 0;"><a href="${link}" style="background:#16a34a;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;display:inline-block;font-weight:600;">שולם</a></p>`);
           let ok = 0;
           for (const to of recipients) {
-            if (await enqueueTransactionalEmail(supabase, { to, subject: `💳 תשלום פוליסה ${d} — ${a?.name ?? ""}`, html, label: "insurance-payment-reminder", idempotencyKey: `ins-pay-${p.id}-${to}` })) ok++;
+            if (await enqueueTransactionalEmail(supabase, { to, subject: `💳 תשלום פוליסה ${d} — ${a?.asset_name ?? ""}`, html, label: "insurance-payment-reminder", idempotencyKey: `ins-pay-${p.id}-${to}` })) ok++;
           }
           if (ok > 0) await supabase.from("insurance_payments").update({ reminder_sent_at: new Date().toISOString() }).eq("id", p.id);
           totalSent += ok;
