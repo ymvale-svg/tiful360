@@ -947,7 +947,7 @@ function InstancesTable({
     });
     return cols;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, domain]);
+  }, [items, domain, nextPayments]);
 
   const defaultKeys = useMemo(() => {
     if (isInsurance) return ["name", "site", "cf:חברת ביטוח", "expiry", "cf:שם סוכן ביטוח", "status"];
