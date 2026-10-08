@@ -106,8 +106,9 @@ Deno.serve(async (req) => {
       // Insurance payment reminders — 7 days before, once per payment
       try {
         const target = new Date(Date.now() + 7 * 86400000).toLocaleDateString("en-CA", { timeZone: "Asia/Jerusalem" });
-        const { data: pays } = await supabase.from("insurance_payments")
-          .select("id, due_date, amount, asset_id, assets!inner(name, asset_code, status)")
+        const { data: pays, error: pErr } = await supabase.from("insurance_payments")
+          .select("id, due_date, amount, asset_id, assets!inner(asset_name, asset_code, status)")
+        if (pErr) { console.error("insurance payments query", company.id, pErr); }
           .eq("company_id", company.id).is("paid_at", null).is("reminder_sent_at", null)
           .lte("due_date", target).gte("due_date", new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Jerusalem" }));
         for (const p of (pays ?? []).filter((x: any) => x.assets?.status !== "inactive")) {
@@ -116,7 +117,7 @@ Deno.serve(async (req) => {
           const amt = p.amount != null ? ` בסך ₪${Number(p.amount).toLocaleString()}` : "";
           const link = `${PORTAL_BASE}/assets/insurance/${p.asset_id}?pay=${p.id}`;
           const html = layout("תשלום פוליסה מתקרב", `<h2 style="margin:0 0 8px;font-size:18px;">💳 תשלום פוליסה מתקרב</h2>
-            <p style="font-size:14px;">פוליסה: <b>${escapeHtml(a?.name ?? "")}</b> (${escapeHtml(a?.asset_code ?? "")})</p>
+            <p style="font-size:14px;">פוליסה: <b>${escapeHtml(a?.asset_name ?? "")}</b> (${escapeHtml(a?.asset_code ?? "")})</p>
             <p style="font-size:14px;">תאריך תשלום: <b>${d}</b>${amt}</p>
             <p style="margin:18px 0;"><a href="${link}" style="background:#16a34a;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;display:inline-block;font-weight:600;">שולם</a></p>`);
           let ok = 0;
