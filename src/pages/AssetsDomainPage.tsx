@@ -621,6 +621,25 @@ export default function AssetsDomainPage() {
             return (
               <section key={category.id}>
                 <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+                  <RowContextMenu
+                    actions={[
+                      {
+                        label: "פתח את הקטגוריה",
+                        onSelect: () => { setSelectedIds(new Set()); updateParams({ cat: category.id, sub: null }); },
+                      },
+                      {
+                        label: "פתח בכרטיסייה חדשה",
+                        onSelect: () => openInNewTab(`/assets/${params.domain}?cat=${category.id}`),
+                      },
+                      {
+                        label: "תת-קטגוריה חדשה",
+                        roles: ["super_admin", "operations"],
+                        separator: true,
+                        onSelect: () => { setNewSubFor(category.id); setNewSubName(""); },
+                      },
+                      copyAction("העתק שם קטגוריה", category.category_name, true),
+                    ]}
+                  >
                   <button onClick={() => toggleCat(category.id)} className="flex items-center group">
                     <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-1.5 group-hover:text-foreground transition-colors">
                       <ChevronDown className={cn("w-4 h-4 transition-transform", collapsed && "-rotate-90")} />
@@ -630,6 +649,7 @@ export default function AssetsDomainPage() {
                       </span>
                     </h3>
                   </button>
+                  </RowContextMenu>
 
                   {newSubFor === category.id ? (
                     <div className="flex items-center gap-1.5">
