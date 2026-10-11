@@ -15,13 +15,29 @@ function calcHours(inTime: string, outTime: string): string {
   return (mins / 60).toFixed(1);
 }
 
+interface LeaveRange {
+  request_type: string;
+  start_date: string;
+  end_date: string | null;
+}
+
+const LEAVE_LABELS: Record<string, string> = {
+  vacation: "חופשה",
+  sick: "מחלה",
+  reserve: "מילואים",
+  personal: "יום אישי",
+  other: "היעדרות",
+};
+
 interface Props {
   punches: AttendancePunch[];
+  /** Approved leave requests — days inside them show a "חופשה/מחלה/מילואים" card instead of a hole */
+  leaves?: LeaveRange[];
   /** YYYY-MM-DD — scrolls to and highlights that day (e.g. from missing-punches email link) */
   highlightDate?: string;
 }
 
-export function MyPunchesList({ punches, highlightDate }: Props) {
+export function MyPunchesList({ punches, leaves = [], highlightDate }: Props) {
   const { data: selfEditCount = 0 } = useMySelfEditCount();
   const edit = useEditOwnPunchTime();
   const add = useAddOwnPunch();
