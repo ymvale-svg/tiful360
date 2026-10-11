@@ -57,6 +57,7 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
 
   // Approved leave days inside the displayed range that have no punches —
   // shown as a labeled card so the day isn't a "hole" in the list.
+  // Only working days are listed: a weekend or holiday inside a leave span isn't an attendance day.
   const leaveDays = new Map<string, string>(); // dayKey -> label
   if (punches.length > 0 && leaves.length > 0) {
     const times = punches.map((p) => new Date(p.punch_at).getTime());
@@ -69,6 +70,7 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
       const end = new Date(`${l.end_date ?? l.start_date}T00:00:00`);
       for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
         if (d < min || d > max) continue;
+        if (!isWorkingDay(d, holidays)) continue;
         const key = d.toLocaleDateString("en-GB");
         if (!byDay.has(key) && !leaveDays.has(key)) {
           leaveDays.set(key, LEAVE_LABELS[l.request_type] ?? "היעדרות");
@@ -77,17 +79,23 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
     }
   }
 
-  // Workdays (Sun–Thu) in the last `daysBack` days with no punches and no approved
-  // leave — shown as a "חסרה החתמה" card so the day isn't a "hole" in the list.
+  // Working days (Sun–Thu, excluding company holidays) with no punches and no
+  // approved leave — shown as a "חסרה החתמה" card so the day isn't a "hole".
   const emptyDays = new Set<string>();
   {
+    const times = punches.map((p) => new Date(p.punch_at).getTime());
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const start = new Date(today);
     start.setDate(start.getDate() - (daysBack - 1));
+    // Never claim a day is missing before the employee's first recorded punch.
+    if (times.length > 0) {
+      const first = new Date(Math.min(...times));
+      first.setHours(0, 0, 0, 0);
+      if (first > start) start.setTime(first.getTime());
+    }
     for (let d = new Date(start); d <= today; d.setDate(d.getDate() + 1)) {
-      const dow = d.getDay(); // 5 = Friday, 6 = Saturday
-      if (dow === 5 || dow === 6) continue;
+      if (!isWorkingDay(d, holidays)) continue;
       const key = d.toLocaleDateString("en-GB");
       if (!byDay.has(key) && !leaveDays.has(key)) emptyDays.add(key);
     }
