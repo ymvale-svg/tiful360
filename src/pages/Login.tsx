@@ -35,9 +35,14 @@ export default function Login() {
   const verifyActiveEmployee = async (_userId: string, _userEmail: string | null | undefined) => {
     // Links the signed-in account to its active employee card (by email) and
     // returns whether the account is authorized to use the system.
-    const { data, error } = await supabase.rpc("claim_employee_for_current_user");
-    if (error) return false;
-    return data === true;
+    // A transient RPC/network failure must not sign the user out — retry twice
+    // before treating the account as unauthorized.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const { data, error } = await supabase.rpc("claim_employee_for_current_user");
+      if (!error) return data === true;
+      if (attempt < 2) await new Promise((r) => setTimeout(r, 800));
+    }
+    return false;
   };
 
   // If a session already exists (e.g. returning from Google via redirect),
