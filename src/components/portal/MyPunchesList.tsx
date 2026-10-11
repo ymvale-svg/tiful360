@@ -35,9 +35,11 @@ interface Props {
   leaves?: LeaveRange[];
   /** YYYY-MM-DD — scrolls to and highlights that day (e.g. from missing-punches email link) */
   highlightDate?: string;
+  /** How many days back to fill with "ללא החתמה" cards (matches useMyPunches range) */
+  daysBack?: number;
 }
 
-export function MyPunchesList({ punches, leaves = [], highlightDate }: Props) {
+export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 30 }: Props) {
   const { data: selfEditCount = 0 } = useMySelfEditCount();
   const edit = useEditOwnPunchTime();
   const add = useAddOwnPunch();
@@ -74,9 +76,26 @@ export function MyPunchesList({ punches, leaves = [], highlightDate }: Props) {
     }
   }
 
+  // Workdays (Sun–Thu) in the last `daysBack` days with no punches and no approved
+  // leave — shown as a "חסרה החתמה" card so the day isn't a "hole" in the list.
+  const emptyDays = new Set<string>();
+  {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const start = new Date(today);
+    start.setDate(start.getDate() - (daysBack - 1));
+    for (let d = new Date(start); d <= today; d.setDate(d.getDate() + 1)) {
+      const dow = d.getDay(); // 5 = Friday, 6 = Saturday
+      if (dow === 5 || dow === 6) continue;
+      const key = d.toLocaleDateString("en-GB");
+      if (!byDay.has(key) && !leaveDays.has(key)) emptyDays.add(key);
+    }
+  }
+
   const dayEntries: Array<{ day: string; items: AttendancePunch[]; leaveLabel?: string }> = [
     ...Array.from(byDay.entries()).map(([day, items]) => ({ day, items })),
     ...Array.from(leaveDays.entries()).map(([day, label]) => ({ day, items: [] as AttendancePunch[], leaveLabel: label })),
+    ...Array.from(emptyDays).map((day) => ({ day, items: [] as AttendancePunch[] })),
   ].sort((a, b) => {
     const toTime = (k: string) => {
       const [dd, mm, yyyy] = k.split("/").map(Number);
@@ -188,15 +207,17 @@ export function MyPunchesList({ punches, leaves = [], highlightDate }: Props) {
               <div className="flex items-center gap-1.5">
                 {hasMissing && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-amber-500/15 text-amber-700 dark:text-amber-300">
-                    חסרה החתמה
+                    {sorted.length === 0 ? "ללא החתמה" : "חסרה החתמה"}
                   </span>
                 )}
-                <span className={cn(
-                  "text-[10px] px-2 py-0.5 rounded-full font-medium",
-                  isRemote ? "bg-accent text-accent-foreground" : "bg-primary/10 text-primary",
-                )}>
-                  {isRemote ? "מרחוק" : "שעון"}
-                </span>
+                {sorted.length > 0 && (
+                  <span className={cn(
+                    "text-[10px] px-2 py-0.5 rounded-full font-medium",
+                    isRemote ? "bg-accent text-accent-foreground" : "bg-primary/10 text-primary",
+                  )}>
+                    {isRemote ? "מרחוק" : "שעון"}
+                  </span>
+                )}
               </div>
             </div>
 
