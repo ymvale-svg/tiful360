@@ -32,6 +32,8 @@ import { BirthdayPreferenceCard } from "@/components/portal/BirthdayPreferenceCa
 import { WelcomeDateTime } from "@/components/portal/WelcomeDateTime";
 import { processBirthdaysForCurrentMonth } from "@/lib/hebrewBirthday";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { PortalLearningLibrary } from "@/components/portal/PortalLearningLibrary";
+import { useGuideLibrary, useProcedureLibrary } from "@/hooks/usePortalLearning";
 
 const portalTabs = [
   { id: "assets", label: "הציוד שלי", icon: Package },
@@ -40,6 +42,7 @@ const portalTabs = [
   { id: "tickets", label: "קריאות שירות", icon: Wrench },
   { id: "news", label: "הודעות", icon: Megaphone },
   { id: "kb", label: "נהלים", icon: BookOpen },
+  { id: "guides", label: "מדריכים", icon: FileText },
   { id: "contacts", label: "אנשי קשר", icon: Phone },
 ];
 
@@ -259,21 +262,8 @@ export default function EmployeePortal() {
     enabled: !!activeCompanyId,
   });
 
-  // Fetch knowledge base
-  const { data: knowledgeBase = [] } = useQuery({
-    queryKey: ["knowledge_base", activeCompanyId],
-    queryFn: async () => {
-      if (!activeCompanyId) return [];
-      const { data, error } = await supabase
-        .from("knowledge_base")
-        .select("*")
-        .eq("company_id", activeCompanyId)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!activeCompanyId,
-  });
+  const { data: procedureLibrary = { departments: [], items: [] } } = useProcedureLibrary(activeCompanyId);
+  const { data: guideLibrary = { topics: [], guides: [] } } = useGuideLibrary(activeCompanyId);
 
   const { data: myLeaveRequests = [] } = useMyLeaveRequests(myEmployee?.id);
   
@@ -544,7 +534,7 @@ export default function EmployeePortal() {
         )}
 
         {/* Tabs */}
-        <div role="tablist" aria-label="ניווט פורטל" className="grid grid-cols-3 md:grid-cols-7 gap-1.5">
+        <div role="tablist" aria-label="ניווט פורטל" className="grid grid-cols-3 md:grid-cols-8 gap-1.5">
           {portalTabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -839,18 +829,14 @@ export default function EmployeePortal() {
 
         {/* ===== KB TAB ===== */}
         {activeTab === "kb" && (
-          <div role="tabpanel" id="portal-tabpanel-kb" aria-labelledby="portal-tab-kb" className="space-y-2 animate-fade-in">
-            {knowledgeBase.length > 0 ? knowledgeBase.map((doc) => (
-              <div key={doc.id} className="bg-card rounded-xl border border-border/50 p-3 flex items-center gap-3 hover:bg-muted/30 cursor-pointer transition-colors active:scale-[0.98]">
-                <BookOpen className="w-5 h-5 text-primary shrink-0" />
-                <div className="min-w-0">
-                  <span className="text-sm font-medium block truncate">{doc.title}</span>
-                  {doc.category && <span className="text-[10px] text-muted-foreground">{doc.category}</span>}
-                </div>
-              </div>
-            )) : (
-              <p className="text-center text-sm text-muted-foreground py-8">אין נהלים כרגע</p>
-            )}
+          <div role="tabpanel" id="portal-tabpanel-kb" aria-labelledby="portal-tab-kb">
+            <PortalLearningLibrary mode="procedures" departments={procedureLibrary.departments} items={procedureLibrary.items} />
+          </div>
+        )}
+
+        {activeTab === "guides" && (
+          <div role="tabpanel" id="portal-tabpanel-guides" aria-labelledby="portal-tab-guides">
+            <PortalLearningLibrary mode="guides" topics={guideLibrary.topics} items={guideLibrary.guides} />
           </div>
         )}
 

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, BookOpen, Building2, Car, Download, ExternalLink, FileText, Laptop, PlayCircle, Search, ShieldCheck, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DocumentPreviewDialog } from "@/components/DocumentPreviewDialog";
@@ -25,10 +25,10 @@ export function PortalLearningLibrary(props: Props) {
       item.title.toLocaleLowerCase("he").includes(normalized) || (item.description ?? "").toLocaleLowerCase("he").includes(normalized));
   }), [groups, normalized, props]);
 
-  const currentGroup = groups.find((group) => group.id === selectedId);
+  const currentGroup = groups.find((group) => group.id === selectedId) ?? (selectedId === "general" ? { id: "general", name: "כללי" } : undefined);
   const currentItems = props.items.filter((item) => {
     const belongs = props.mode === "procedures"
-      ? (item as ProcedureItem).department_id === selectedId
+      ? (selectedId === "general" ? !(item as ProcedureItem).department_id : (item as ProcedureItem).department_id === selectedId)
       : (item as GuideItem).topic_id === selectedId;
     return belongs && (!normalized || item.title.toLocaleLowerCase("he").includes(normalized) || (item.description ?? "").toLocaleLowerCase("he").includes(normalized));
   });
@@ -79,7 +79,7 @@ export function PortalLearningLibrary(props: Props) {
           const topic = group as GuideTopic;
           const Icon = props.mode === "guides" ? (topicIcons[topic.topic_type] ?? BookOpen) : Building2;
           const count = group.id === "general" ? uncategorized.length : props.items.filter((item) => props.mode === "procedures" ? (item as ProcedureItem).department_id === group.id : (item as GuideItem).topic_id === group.id).length;
-          return <button key={group.id} onClick={() => group.id === "general" ? setSelectedId(null) : setSelectedId(group.id)} className="bg-card border border-border/50 rounded-lg p-4 min-h-28 flex flex-col items-center justify-center gap-2 hover:border-primary/40 hover:bg-muted/30 transition-colors">
+          return <button key={group.id} onClick={() => setSelectedId(group.id)} className="bg-card border border-border/50 rounded-lg p-4 min-h-28 flex flex-col items-center justify-center gap-2 hover:border-primary/40 hover:bg-muted/30 transition-colors">
             {props.mode === "guides" && topic.logo_url ? <TopicLogo path={topic.logo_url} name={topic.name} /> : <div className="w-11 h-11 rounded-lg bg-primary/10 flex items-center justify-center"><Icon className="w-6 h-6 text-primary" /></div>}
             <span className="text-sm font-semibold text-center">{group.name}</span><span className="text-[11px] text-muted-foreground">{count} פריטים</span>
           </button>;
@@ -92,7 +92,7 @@ export function PortalLearningLibrary(props: Props) {
 
 function TopicLogo({ path, name }: { path: string; name: string }) {
   const [url, setUrl] = useState<string>();
-  useMemo(() => { getLearningSignedUrl(path).then(setUrl).catch(() => undefined); }, [path]);
+  useEffect(() => { getLearningSignedUrl(path).then(setUrl).catch(() => undefined); }, [path]);
   return url ? <img src={url} alt={`לוגו ${name}`} className="w-11 h-11 object-contain rounded-lg" /> : <div className="w-11 h-11 rounded-lg bg-muted" />;
 }
 
