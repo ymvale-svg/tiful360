@@ -207,15 +207,17 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
               <div className="flex items-center gap-1.5">
                 {hasMissing && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-amber-500/15 text-amber-700 dark:text-amber-300">
-                    חסרה החתמה
+                    {sorted.length === 0 ? "ללא החתמה" : "חסרה החתמה"}
                   </span>
                 )}
-                <span className={cn(
-                  "text-[10px] px-2 py-0.5 rounded-full font-medium",
-                  isRemote ? "bg-accent text-accent-foreground" : "bg-primary/10 text-primary",
-                )}>
-                  {isRemote ? "מרחוק" : "שעון"}
-                </span>
+                {sorted.length > 0 && (
+                  <span className={cn(
+                    "text-[10px] px-2 py-0.5 rounded-full font-medium",
+                    isRemote ? "bg-accent text-accent-foreground" : "bg-primary/10 text-primary",
+                  )}>
+                    {isRemote ? "מרחוק" : "שעון"}
+                  </span>
+                )}
               </div>
             </div>
 
