@@ -35,9 +35,11 @@ interface Props {
   leaves?: LeaveRange[];
   /** YYYY-MM-DD — scrolls to and highlights that day (e.g. from missing-punches email link) */
   highlightDate?: string;
+  /** How many days back to fill with "ללא החתמה" cards (matches useMyPunches range) */
+  daysBack?: number;
 }
 
-export function MyPunchesList({ punches, leaves = [], highlightDate }: Props) {
+export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 30 }: Props) {
   const { data: selfEditCount = 0 } = useMySelfEditCount();
   const edit = useEditOwnPunchTime();
   const add = useAddOwnPunch();
