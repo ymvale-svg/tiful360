@@ -731,7 +731,7 @@ export default function AssetsDomainPage() {
                           )}
                           <ArrowRight className="w-4 h-4 text-muted-foreground rtl:rotate-180" />
                         </div>
-
+                        </RowContextMenu>
                       );
                     })}
                   </div>
