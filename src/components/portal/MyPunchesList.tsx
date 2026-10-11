@@ -4,6 +4,7 @@ import { AlertCircle, ArrowRight, ArrowLeft, Pencil, Check, X, Clock, Plus } fro
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useEditOwnPunchTime, useAddOwnPunch, useMySelfEditCount, type AttendancePunch } from "@/hooks/useAttendancePunches";
+import { useCompanyHolidaySet } from "@/hooks/useCompanyHolidays";
 
 import { useToast } from "@/hooks/use-toast";
 
