@@ -1,6 +1,6 @@
 import { formatDateDMY } from "@/lib/utils";
 import { useNextInsurancePayments } from "@/hooks/useInsurancePayments";
-import { RowContextMenu, copyAction, openInNewTab } from "@/components/context/RowContextMenu";
+import { RowContextMenu, copyAction, openInNewTab, type ContextAction } from "@/components/context/RowContextMenu";
 import { useMemo, useState } from "react";
 import { usePersistentFilter } from "@/hooks/usePersistentFilter";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -107,6 +107,28 @@ export default function AssetsDomainPage() {
       toast({ title: "שגיאה במחיקה", description: e.message, variant: "destructive" });
     }
   };
+
+  /** Right-click menu actions for a sub-category card/row. */
+  const subMenuActions = (category: any, c: any): ContextAction[] => [
+    {
+      label: "פתח את התת-קטגוריה",
+      onSelect: () => { setSelectedIds(new Set()); updateParams({ cat: category.id, sub: c.id }); },
+    },
+    {
+      label: "פתח בכרטיסייה חדשה",
+      onSelect: () => openInNewTab(`/assets/${params.domain}?cat=${category.id}&sub=${c.id}`),
+    },
+    {
+      label: "מחק תת-קטגוריה",
+      when: c.id !== NO_SUBCATEGORY_KEY,
+      danger: true,
+      separator: true,
+      roles: ["super_admin", "operations"],
+      onSelect: () => handleDeleteGroup(c.id, c.name, c.items.length),
+    },
+    copyAction("העתק שם", c.name, true),
+  ];
+
 
 
   const [search, setSearch] = usePersistentFilter<string>(`assets:${params.domain}:search`, "");
