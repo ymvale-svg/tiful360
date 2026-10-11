@@ -1751,6 +1751,116 @@ export type Database = {
           },
         ]
       }
+      guide_topics: {
+        Row: {
+          color_key: string
+          company_id: string
+          created_at: string
+          id: string
+          is_visible: boolean
+          logo_url: string | null
+          name: string
+          sort_order: number
+          topic_type: string
+          updated_at: string
+        }
+        Insert: {
+          color_key?: string
+          company_id: string
+          created_at?: string
+          id?: string
+          is_visible?: boolean
+          logo_url?: string | null
+          name: string
+          sort_order?: number
+          topic_type?: string
+          updated_at?: string
+        }
+        Update: {
+          color_key?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_visible?: boolean
+          logo_url?: string | null
+          name?: string
+          sort_order?: number
+          topic_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guide_topics_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guides: {
+        Row: {
+          company_id: string
+          content_type: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          file_name: string | null
+          id: string
+          is_visible: boolean
+          resource_url: string
+          sort_order: number
+          title: string
+          topic_id: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          content_type: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          file_name?: string | null
+          id?: string
+          is_visible?: boolean
+          resource_url: string
+          sort_order?: number
+          title: string
+          topic_id: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          content_type?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          file_name?: string | null
+          id?: string
+          is_visible?: boolean
+          resource_url?: string
+          sort_order?: number
+          title?: string
+          topic_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guides_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guides_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "guide_topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       handover_drafts: {
         Row: {
           company_id: string | null
@@ -1968,8 +2078,12 @@ export type Database = {
           content: string | null
           created_at: string
           created_by: string | null
+          department_id: string | null
+          description: string | null
           file_url: string | null
           id: string
+          is_visible: boolean
+          sort_order: number
           title: string
           updated_at: string
         }
@@ -1979,8 +2093,12 @@ export type Database = {
           content?: string | null
           created_at?: string
           created_by?: string | null
+          department_id?: string | null
+          description?: string | null
           file_url?: string | null
           id?: string
+          is_visible?: boolean
+          sort_order?: number
           title: string
           updated_at?: string
         }
@@ -1990,8 +2108,12 @@ export type Database = {
           content?: string | null
           created_at?: string
           created_by?: string | null
+          department_id?: string | null
+          description?: string | null
           file_url?: string | null
           id?: string
+          is_visible?: boolean
+          sort_order?: number
           title?: string
           updated_at?: string
         }
@@ -2001,6 +2123,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_base_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "procedure_departments"
             referencedColumns: ["id"]
           },
         ]
@@ -2652,6 +2781,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "portal_links_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      procedure_departments: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          is_visible: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          is_visible?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_visible?: boolean
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procedure_departments_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
