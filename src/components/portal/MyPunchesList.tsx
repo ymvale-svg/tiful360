@@ -133,7 +133,28 @@ export function MyPunchesList({ punches, leaves = [], highlightDate }: Props) {
       </div>
 
 
-      {Array.from(byDay.entries()).map(([day, items]) => {
+      {dayEntries.map(({ day, items, leaveLabel }) => {
+        if (leaveLabel) {
+          const isHighlighted = day === highlightKey;
+          return (
+            <div
+              key={day}
+              ref={isHighlighted ? highlightRef : undefined}
+              className={cn(
+                "bg-card rounded-xl border p-3 transition-all",
+                isHighlighted ? "border-primary ring-2 ring-primary/30 shadow-sm" : "border-border/50",
+              )}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">{day}</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-sky-500/15 text-sky-700 dark:text-sky-300">
+                  {leaveLabel}
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-2">היעדרות מאושרת — לא נדרשת החתמה</p>
+            </div>
+          );
+        }
         const sorted = [...items].sort((a, b) => a.punch_at.localeCompare(b.punch_at));
         const ins = sorted.filter((p) => p.direction === "in");
         const outs = sorted.filter((p) => p.direction === "out");
