@@ -115,7 +115,8 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
     () => (assetGroups ?? []).filter(g => g.category_id === form.category_id),
     [assetGroups, form.category_id]
   );
-  const { isAdmin } = useAuth();
+  const { isAdmin, isOperations } = useAuth();
+  const canManage = isAdmin || isOperations;
   const domain = getDomain(selectedCategory as any);
   const isDigital = domain === "digital";
   const isLicense = domain === "licenses";
@@ -857,7 +858,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                           {cf.is_required && <span className="text-destructive mr-1">*</span>}
                         </label>
                         <div className="flex items-center gap-2">
-                          {isAdmin && (cf.field_type === "list" || cf.field_type === "list_multi") && (
+                          {canManage && (cf.field_type === "list" || cf.field_type === "list_multi") && (
                             <button
                               type="button"
                               onClick={async () => {

@@ -78,7 +78,8 @@ export function DomainsGrid({ onQuickAssign }: Props) {
   const { data: assetGroups } = useAssetGroups();
 
   const { activeCompany, activeCompanyId, refetchCompanies } = useCompany();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isOperations } = useAuth();
+  const canManage = isAdmin || isOperations;
 
   const [editingKey, setEditingKey] = useState<DomainKey | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -287,7 +288,7 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                   </button>
                 )}
 
-                {isAdmin && (
+                {canManage && (
                   <div
                     className={cn(
                       "absolute left-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity",
