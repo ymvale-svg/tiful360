@@ -377,8 +377,27 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                   ) : (
                     <>
                       {cats.slice(0, 6).map((c) => (
-                        <button
+                        <RowContextMenu
                           key={c.id}
+                          actions={[
+                            {
+                              label: "פתח את הקטגוריה",
+                              onSelect: () => navigate(`/assets/${slug}?cat=${c.id}`),
+                            },
+                            {
+                              label: "פתח בכרטיסייה חדשה",
+                              onSelect: () => openInNewTab(`/assets/${slug}?cat=${c.id}`),
+                            },
+                            {
+                              label: "ערוך קטגוריה",
+                              roles: ["super_admin", "operations"],
+                              separator: true,
+                              onSelect: () => navigate(`/assets?tab=categories&domain=${meta.key}`),
+                            },
+                            copyAction("העתק שם קטגוריה", c.category_name, true),
+                          ]}
+                        >
+                        <button
                           onClick={(e) => {
                             e.stopPropagation();
                             navigate(`/assets/${slug}?cat=${c.id}`);
@@ -392,6 +411,7 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                           <span>{c.category_name}</span>
                           <span className="text-muted-foreground">{c._count ?? 0}</span>
                         </button>
+                        </RowContextMenu>
                       ))}
                       {cats.length > 6 && (
                         <span className="inline-flex items-center text-[11px] px-2 py-1 rounded-md border border-border text-muted-foreground">
