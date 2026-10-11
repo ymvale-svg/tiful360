@@ -15,13 +15,29 @@ function calcHours(inTime: string, outTime: string): string {
   return (mins / 60).toFixed(1);
 }
 
+interface LeaveRange {
+  request_type: string;
+  start_date: string;
+  end_date: string | null;
+}
+
+const LEAVE_LABELS: Record<string, string> = {
+  vacation: "חופשה",
+  sick: "מחלה",
+  reserve: "מילואים",
+  personal: "יום אישי",
+  other: "היעדרות",
+};
+
 interface Props {
   punches: AttendancePunch[];
+  /** Approved leave requests — days inside them show a "חופשה/מחלה/מילואים" card instead of a hole */
+  leaves?: LeaveRange[];
   /** YYYY-MM-DD — scrolls to and highlights that day (e.g. from missing-punches email link) */
   highlightDate?: string;
 }
 
-export function MyPunchesList({ punches, highlightDate }: Props) {
+export function MyPunchesList({ punches, leaves = [], highlightDate }: Props) {
   const { data: selfEditCount = 0 } = useMySelfEditCount();
   const edit = useEditOwnPunchTime();
   const add = useAddOwnPunch();
@@ -35,6 +51,39 @@ export function MyPunchesList({ punches, highlightDate }: Props) {
     if (!byDay.has(day)) byDay.set(day, []);
     byDay.get(day)!.push(p);
   }
+
+  // Approved leave days inside the displayed range that have no punches —
+  // shown as a labeled card so the day isn't a "hole" in the list.
+  const leaveDays = new Map<string, string>(); // dayKey -> label
+  if (punches.length > 0 && leaves.length > 0) {
+    const times = punches.map((p) => new Date(p.punch_at).getTime());
+    const min = new Date(Math.min(...times));
+    const max = new Date(Math.max(...times));
+    min.setHours(0, 0, 0, 0);
+    max.setHours(23, 59, 59, 999);
+    for (const l of leaves) {
+      const start = new Date(`${l.start_date}T00:00:00`);
+      const end = new Date(`${l.end_date ?? l.start_date}T00:00:00`);
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        if (d < min || d > max) continue;
+        const key = d.toLocaleDateString("en-GB");
+        if (!byDay.has(key) && !leaveDays.has(key)) {
+          leaveDays.set(key, LEAVE_LABELS[l.request_type] ?? "היעדרות");
+        }
+      }
+    }
+  }
+
+  const dayEntries: Array<{ day: string; items: AttendancePunch[]; leaveLabel?: string }> = [
+    ...Array.from(byDay.entries()).map(([day, items]) => ({ day, items })),
+    ...Array.from(leaveDays.entries()).map(([day, label]) => ({ day, items: [] as AttendancePunch[], leaveLabel: label })),
+  ].sort((a, b) => {
+    const toTime = (k: string) => {
+      const [dd, mm, yyyy] = k.split("/").map(Number);
+      return new Date(yyyy, mm - 1, dd).getTime();
+    };
+    return toTime(b.day) - toTime(a.day);
+  });
 
   const highlightKey = highlightDate
     ? (() => { const [y, m, d] = highlightDate.split("-"); return `${d}/${m}/${y}`; })()
@@ -84,7 +133,28 @@ export function MyPunchesList({ punches, highlightDate }: Props) {
       </div>
 
 
-      {Array.from(byDay.entries()).map(([day, items]) => {
+      {dayEntries.map(({ day, items, leaveLabel }) => {
+        if (leaveLabel) {
+          const isHighlighted = day === highlightKey;
+          return (
+            <div
+              key={day}
+              ref={isHighlighted ? highlightRef : undefined}
+              className={cn(
+                "bg-card rounded-xl border p-3 transition-all",
+                isHighlighted ? "border-primary ring-2 ring-primary/30 shadow-sm" : "border-border/50",
+              )}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">{day}</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-sky-500/15 text-sky-700 dark:text-sky-300">
+                  {leaveLabel}
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-2">היעדרות מאושרת — לא נדרשת החתמה</p>
+            </div>
+          );
+        }
         const sorted = [...items].sort((a, b) => a.punch_at.localeCompare(b.punch_at));
         const ins = sorted.filter((p) => p.direction === "in");
         const outs = sorted.filter((p) => p.direction === "out");
