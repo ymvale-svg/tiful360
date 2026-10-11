@@ -6,6 +6,7 @@ import { useCompany } from "@/hooks/useCompany";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { PortalLearningManager } from "@/components/settings/PortalLearningManager";
 
 export function PortalSettingsTab() {
   const { activeCompanyId } = useCompany();
@@ -16,6 +17,7 @@ export function PortalSettingsTab() {
 
   return (
     <div className="space-y-6">
+      <PortalLearningManager companyId={activeCompanyId} />
       <LinksManager companyId={activeCompanyId} />
       <ContactsManager companyId={activeCompanyId} />
     </div>
