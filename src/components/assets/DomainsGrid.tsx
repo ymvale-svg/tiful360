@@ -254,9 +254,31 @@ export function DomainsGrid({ onQuickAssign }: Props) {
               );
             }
 
+            const domainMenuActions: ContextAction[] = [
+              { label: "פתח את הדומיין", onSelect: openDomain },
+              { label: "פתח בכרטיסייה חדשה", onSelect: () => openInNewTab(`/assets/${slug}`) },
+              {
+                label: "הצג פריטים פגי תוקף",
+                when: expired > 0,
+                onSelect: () => navigate(`/assets/${slug}?expired=1`),
+              },
+              {
+                label: "ערוך תווית דומיין",
+                roles: ["super_admin", "operations"],
+                separator: true,
+                onSelect: () => startEdit(meta.key),
+              },
+              {
+                label: "עריכה מהירה — קטגוריות ותתי-קטגוריות",
+                roles: ["super_admin", "operations"],
+                onSelect: () => navigate(`/assets?tab=categories&domain=${meta.key}`),
+              },
+              copyAction("העתק שם דומיין", label.title, true),
+            ];
+
             return (
+              <RowContextMenu key={meta.key} actions={domainMenuActions}>
               <div
-                key={meta.key}
                 role="button"
                 tabIndex={0}
                 onClick={openDomain}
