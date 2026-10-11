@@ -288,7 +288,7 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                   </button>
                 )}
 
-                {isAdmin && (
+                {canManage && (
                   <div
                     className={cn(
                       "absolute left-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity",

@@ -858,7 +858,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                           {cf.is_required && <span className="text-destructive mr-1">*</span>}
                         </label>
                         <div className="flex items-center gap-2">
-                          {isAdmin && (cf.field_type === "list" || cf.field_type === "list_multi") && (
+                          {canManage && (cf.field_type === "list" || cf.field_type === "list_multi") && (
                             <button
                               type="button"
                               onClick={async () => {
