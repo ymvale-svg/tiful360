@@ -670,14 +670,15 @@ export default function AssetsDomainPage() {
                 ) : viewMode === "grid" ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                     {cards.map((c) => (
+                      <RowContextMenu key={c.id} actions={subMenuActions(category, c)}>
                       <SubCategoryCard
-                        key={c.id}
                         card={c}
                         domain={domain}
                         isAssignable={isAssignable}
                         onClick={() => { setSelectedIds(new Set()); updateParams({ cat: category.id, sub: c.id }); }}
                         onDelete={c.id === NO_SUBCATEGORY_KEY ? undefined : () => handleDeleteGroup(c.id, c.name, c.items.length)}
                       />
+                      </RowContextMenu>
                     ))}
 
                   </div>
@@ -699,8 +700,8 @@ export default function AssetsDomainPage() {
                         return e && new Date(e) < new Date();
                       });
                       return (
+                        <RowContextMenu key={c.id} actions={subMenuActions(category, c)}>
                         <div
-                          key={c.id}
                           role="button"
                           tabIndex={0}
                           onClick={() => { setSelectedIds(new Set()); updateParams({ cat: category.id, sub: c.id }); }}
