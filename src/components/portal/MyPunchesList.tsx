@@ -4,6 +4,7 @@ import { AlertCircle, ArrowRight, ArrowLeft, Pencil, Check, X, Clock, Plus } fro
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useEditOwnPunchTime, useAddOwnPunch, useMySelfEditCount, type AttendancePunch } from "@/hooks/useAttendancePunches";
+import { useCompanyHolidaySet } from "@/hooks/useCompanyHolidays";
 
 import { useToast } from "@/hooks/use-toast";
 
@@ -29,6 +30,18 @@ const LEAVE_LABELS: Record<string, string> = {
   other: "היעדרות",
 };
 
+/** YYYY-MM-DD in the browser's local time */
+function ymd(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** Working day = Sunday–Thursday that is not a company holiday. */
+function isWorkingDay(d: Date, holidays: Set<string>): boolean {
+  const dow = d.getDay(); // 5 = Friday, 6 = Saturday
+  if (dow === 5 || dow === 6) return false;
+  return !holidays.has(ymd(d));
+}
+
 interface Props {
   punches: AttendancePunch[];
   /** Approved leave requests — days inside them show a "חופשה/מחלה/מילואים" card instead of a hole */
@@ -44,6 +57,7 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
   const edit = useEditOwnPunchTime();
   const add = useAddOwnPunch();
   const { toast } = useToast();
+  const holidays = useCompanyHolidaySet();
 
   const highlightRef = useRef<HTMLDivElement | null>(null);
 
@@ -56,6 +70,7 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
 
   // Approved leave days inside the displayed range that have no punches —
   // shown as a labeled card so the day isn't a "hole" in the list.
+  // Only working days are listed: a weekend or holiday inside a leave span isn't an attendance day.
   const leaveDays = new Map<string, string>(); // dayKey -> label
   if (punches.length > 0 && leaves.length > 0) {
     const times = punches.map((p) => new Date(p.punch_at).getTime());
@@ -68,6 +83,7 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
       const end = new Date(`${l.end_date ?? l.start_date}T00:00:00`);
       for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
         if (d < min || d > max) continue;
+        if (!isWorkingDay(d, holidays)) continue;
         const key = d.toLocaleDateString("en-GB");
         if (!byDay.has(key) && !leaveDays.has(key)) {
           leaveDays.set(key, LEAVE_LABELS[l.request_type] ?? "היעדרות");
@@ -76,17 +92,23 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
     }
   }
 
-  // Workdays (Sun–Thu) in the last `daysBack` days with no punches and no approved
-  // leave — shown as a "חסרה החתמה" card so the day isn't a "hole" in the list.
+  // Working days (Sun–Thu, excluding company holidays) with no punches and no
+  // approved leave — shown as a "חסרה החתמה" card so the day isn't a "hole".
   const emptyDays = new Set<string>();
   {
+    const times = punches.map((p) => new Date(p.punch_at).getTime());
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const start = new Date(today);
     start.setDate(start.getDate() - (daysBack - 1));
+    // Never claim a day is missing before the employee's first recorded punch.
+    if (times.length > 0) {
+      const first = new Date(Math.min(...times));
+      first.setHours(0, 0, 0, 0);
+      if (first > start) start.setTime(first.getTime());
+    }
     for (let d = new Date(start); d <= today; d.setDate(d.getDate() + 1)) {
-      const dow = d.getDay(); // 5 = Friday, 6 = Saturday
-      if (dow === 5 || dow === 6) continue;
+      if (!isWorkingDay(d, holidays)) continue;
       const key = d.toLocaleDateString("en-GB");
       if (!byDay.has(key) && !leaveDays.has(key)) emptyDays.add(key);
     }
