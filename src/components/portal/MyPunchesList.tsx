@@ -30,6 +30,18 @@ const LEAVE_LABELS: Record<string, string> = {
   other: "היעדרות",
 };
 
+/** YYYY-MM-DD in the browser's local time */
+function ymd(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** Working day = Sunday–Thursday that is not a company holiday. */
+function isWorkingDay(d: Date, holidays: Set<string>): boolean {
+  const dow = d.getDay(); // 5 = Friday, 6 = Saturday
+  if (dow === 5 || dow === 6) return false;
+  return !holidays.has(ymd(d));
+}
+
 interface Props {
   punches: AttendancePunch[];
   /** Approved leave requests — days inside them show a "חופשה/מחלה/מילואים" card instead of a hole */
@@ -45,6 +57,7 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
   const edit = useEditOwnPunchTime();
   const add = useAddOwnPunch();
   const { toast } = useToast();
+  const holidays = useCompanyHolidaySet();
 
   const highlightRef = useRef<HTMLDivElement | null>(null);
 
