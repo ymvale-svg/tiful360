@@ -78,7 +78,8 @@ export function DomainsGrid({ onQuickAssign }: Props) {
   const { data: assetGroups } = useAssetGroups();
 
   const { activeCompany, activeCompanyId, refetchCompanies } = useCompany();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isOperations } = useAuth();
+  const canManage = isAdmin || isOperations;
 
   const [editingKey, setEditingKey] = useState<DomainKey | null>(null);
   const [editTitle, setEditTitle] = useState("");
