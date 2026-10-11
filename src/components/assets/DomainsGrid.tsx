@@ -402,6 +402,7 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                   )}
                 </div>
               </div>
+              </RowContextMenu>
             );
           })}
         </div>
