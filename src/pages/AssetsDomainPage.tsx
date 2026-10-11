@@ -1,6 +1,6 @@
 import { formatDateDMY } from "@/lib/utils";
 import { useNextInsurancePayments } from "@/hooks/useInsurancePayments";
-import { RowContextMenu, copyAction, openInNewTab } from "@/components/context/RowContextMenu";
+import { RowContextMenu, copyAction, openInNewTab, type ContextAction } from "@/components/context/RowContextMenu";
 import { useMemo, useState } from "react";
 import { usePersistentFilter } from "@/hooks/usePersistentFilter";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -107,6 +107,28 @@ export default function AssetsDomainPage() {
       toast({ title: "שגיאה במחיקה", description: e.message, variant: "destructive" });
     }
   };
+
+  /** Right-click menu actions for a sub-category card/row. */
+  const subMenuActions = (category: any, c: any): ContextAction[] => [
+    {
+      label: "פתח את התת-קטגוריה",
+      onSelect: () => { setSelectedIds(new Set()); updateParams({ cat: category.id, sub: c.id }); },
+    },
+    {
+      label: "פתח בכרטיסייה חדשה",
+      onSelect: () => openInNewTab(`/assets/${params.domain}?cat=${category.id}&sub=${c.id}`),
+    },
+    {
+      label: "מחק תת-קטגוריה",
+      when: c.id !== NO_SUBCATEGORY_KEY,
+      danger: true,
+      separator: true,
+      roles: ["super_admin", "operations"],
+      onSelect: () => handleDeleteGroup(c.id, c.name, c.items.length),
+    },
+    copyAction("העתק שם", c.name, true),
+  ];
+
 
 
   const [search, setSearch] = usePersistentFilter<string>(`assets:${params.domain}:search`, "");
@@ -648,14 +670,15 @@ export default function AssetsDomainPage() {
                 ) : viewMode === "grid" ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                     {cards.map((c) => (
+                      <RowContextMenu key={c.id} actions={subMenuActions(category, c)}>
                       <SubCategoryCard
-                        key={c.id}
                         card={c}
                         domain={domain}
                         isAssignable={isAssignable}
                         onClick={() => { setSelectedIds(new Set()); updateParams({ cat: category.id, sub: c.id }); }}
                         onDelete={c.id === NO_SUBCATEGORY_KEY ? undefined : () => handleDeleteGroup(c.id, c.name, c.items.length)}
                       />
+                      </RowContextMenu>
                     ))}
 
                   </div>
@@ -677,8 +700,8 @@ export default function AssetsDomainPage() {
                         return e && new Date(e) < new Date();
                       });
                       return (
+                        <RowContextMenu key={c.id} actions={subMenuActions(category, c)}>
                         <div
-                          key={c.id}
                           role="button"
                           tabIndex={0}
                           onClick={() => { setSelectedIds(new Set()); updateParams({ cat: category.id, sub: c.id }); }}
@@ -708,7 +731,7 @@ export default function AssetsDomainPage() {
                           )}
                           <ArrowRight className="w-4 h-4 text-muted-foreground rtl:rotate-180" />
                         </div>
-
+                        </RowContextMenu>
                       );
                     })}
                   </div>

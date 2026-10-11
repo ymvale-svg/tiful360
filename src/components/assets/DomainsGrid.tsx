@@ -28,6 +28,7 @@ import {
   X,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { RowContextMenu, copyAction, openInNewTab, type ContextAction } from "@/components/context/RowContextMenu";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 
@@ -253,9 +254,31 @@ export function DomainsGrid({ onQuickAssign }: Props) {
               );
             }
 
+            const domainMenuActions: ContextAction[] = [
+              { label: "פתח את הדומיין", onSelect: openDomain },
+              { label: "פתח בכרטיסייה חדשה", onSelect: () => openInNewTab(`/assets/${slug}`) },
+              {
+                label: "הצג פריטים פגי תוקף",
+                when: expired > 0,
+                onSelect: () => navigate(`/assets/${slug}?expired=1`),
+              },
+              {
+                label: "ערוך תווית דומיין",
+                roles: ["super_admin", "operations"],
+                separator: true,
+                onSelect: () => startEdit(meta.key),
+              },
+              {
+                label: "עריכה מהירה — קטגוריות ותתי-קטגוריות",
+                roles: ["super_admin", "operations"],
+                onSelect: () => navigate(`/assets?tab=categories&domain=${meta.key}`),
+              },
+              copyAction("העתק שם דומיין", label.title, true),
+            ];
+
             return (
+              <RowContextMenu key={meta.key} actions={domainMenuActions}>
               <div
-                key={meta.key}
                 role="button"
                 tabIndex={0}
                 onClick={openDomain}
@@ -354,8 +377,27 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                   ) : (
                     <>
                       {cats.slice(0, 6).map((c) => (
-                        <button
+                        <RowContextMenu
                           key={c.id}
+                          actions={[
+                            {
+                              label: "פתח את הקטגוריה",
+                              onSelect: () => navigate(`/assets/${slug}?cat=${c.id}`),
+                            },
+                            {
+                              label: "פתח בכרטיסייה חדשה",
+                              onSelect: () => openInNewTab(`/assets/${slug}?cat=${c.id}`),
+                            },
+                            {
+                              label: "ערוך קטגוריה",
+                              roles: ["super_admin", "operations"],
+                              separator: true,
+                              onSelect: () => navigate(`/assets?tab=categories&domain=${meta.key}`),
+                            },
+                            copyAction("העתק שם קטגוריה", c.category_name, true),
+                          ]}
+                        >
+                        <button
                           onClick={(e) => {
                             e.stopPropagation();
                             navigate(`/assets/${slug}?cat=${c.id}`);
@@ -369,6 +411,7 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                           <span>{c.category_name}</span>
                           <span className="text-muted-foreground">{c._count ?? 0}</span>
                         </button>
+                        </RowContextMenu>
                       ))}
                       {cats.length > 6 && (
                         <span className="inline-flex items-center text-[11px] px-2 py-1 rounded-md border border-border text-muted-foreground">
@@ -379,6 +422,7 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                   )}
                 </div>
               </div>
+              </RowContextMenu>
             );
           })}
         </div>
