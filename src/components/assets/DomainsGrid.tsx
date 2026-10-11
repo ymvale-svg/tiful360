@@ -28,6 +28,7 @@ import {
   X,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { RowContextMenu, copyAction, openInNewTab, type ContextAction } from "@/components/context/RowContextMenu";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 
