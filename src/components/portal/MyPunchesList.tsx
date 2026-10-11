@@ -52,6 +52,39 @@ export function MyPunchesList({ punches, leaves = [], highlightDate }: Props) {
     byDay.get(day)!.push(p);
   }
 
+  // Approved leave days inside the displayed range that have no punches —
+  // shown as a labeled card so the day isn't a "hole" in the list.
+  const leaveDays = new Map<string, string>(); // dayKey -> label
+  if (punches.length > 0 && leaves.length > 0) {
+    const times = punches.map((p) => new Date(p.punch_at).getTime());
+    const min = new Date(Math.min(...times));
+    const max = new Date(Math.max(...times));
+    min.setHours(0, 0, 0, 0);
+    max.setHours(23, 59, 59, 999);
+    for (const l of leaves) {
+      const start = new Date(`${l.start_date}T00:00:00`);
+      const end = new Date(`${l.end_date ?? l.start_date}T00:00:00`);
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        if (d < min || d > max) continue;
+        const key = d.toLocaleDateString("en-GB");
+        if (!byDay.has(key) && !leaveDays.has(key)) {
+          leaveDays.set(key, LEAVE_LABELS[l.request_type] ?? "היעדרות");
+        }
+      }
+    }
+  }
+
+  const dayEntries: Array<{ day: string; items: AttendancePunch[]; leaveLabel?: string }> = [
+    ...Array.from(byDay.entries()).map(([day, items]) => ({ day, items })),
+    ...Array.from(leaveDays.entries()).map(([day, label]) => ({ day, items: [] as AttendancePunch[], leaveLabel: label })),
+  ].sort((a, b) => {
+    const toTime = (k: string) => {
+      const [dd, mm, yyyy] = k.split("/").map(Number);
+      return new Date(yyyy, mm - 1, dd).getTime();
+    };
+    return toTime(b.day) - toTime(a.day);
+  });
+
   const highlightKey = highlightDate
     ? (() => { const [y, m, d] = highlightDate.split("-"); return `${d}/${m}/${y}`; })()
     : undefined;
