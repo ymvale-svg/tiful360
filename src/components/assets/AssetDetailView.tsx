@@ -197,7 +197,6 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
           <ChevronRight className="w-4 h-4" />
           {category?.category_name}
         </button>
-        <span className="text-muted-foreground">/</span>
         <span className="font-medium">{asset.asset_name}</span>
       </div>
 
