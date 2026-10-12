@@ -18,6 +18,7 @@ export interface Payslip {
   gross_salary: number | null;
   net_salary: number | null;
   work_days: number | null;
+  work_days_num?: number | null;
   work_hours: number | null;
   extraction_status: string;
   batch_id: string | null;

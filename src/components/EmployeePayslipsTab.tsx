@@ -330,7 +330,7 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary, hideBa
                     {canSeeSalary && <td className="font-mono">{p.net_salary?.toLocaleString("he-IL") ?? "—"}</td>}
                     <td className="font-mono">{p.vacation_balance ?? "—"}</td>
                     <td className="font-mono">{p.sick_balance ?? "—"}</td>
-                    <td className="font-mono">{p.work_days ?? "—"}</td>
+                    <td className="font-mono">{p.work_days_num ?? p.work_days ?? "—"}</td>
                     <td>
                       <div className="flex gap-1">
                         <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="סיכום" onClick={() => setSummaryPayslip(p)}>

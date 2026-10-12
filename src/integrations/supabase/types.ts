@@ -2630,6 +2630,7 @@ export type Database = {
           source_pdf_url: string | null
           vacation_balance: number | null
           work_days: number | null
+          work_days_num: number | null
           work_hours: number | null
         }
         Insert: {
@@ -2653,6 +2654,7 @@ export type Database = {
           source_pdf_url?: string | null
           vacation_balance?: number | null
           work_days?: number | null
+          work_days_num?: number | null
           work_hours?: number | null
         }
         Update: {
@@ -2676,6 +2678,7 @@ export type Database = {
           source_pdf_url?: string | null
           vacation_balance?: number | null
           work_days?: number | null
+          work_days_num?: number | null
           work_hours?: number | null
         }
         Relationships: [
