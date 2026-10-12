@@ -1,7 +1,7 @@
 import { formatDateDMY } from "@/lib/utils";
 import { useNextInsurancePayments } from "@/hooks/useInsurancePayments";
 import { RowContextMenu, copyAction, openInNewTab, type ContextAction } from "@/components/context/RowContextMenu";
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { usePersistentFilter } from "@/hooks/usePersistentFilter";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
@@ -788,15 +788,15 @@ export default function AssetsDomainPage() {
   );
 }
 
-function SubCategoryCard({
-  card, domain, isAssignable, onClick, onDelete,
-}: {
+const SubCategoryCard = React.forwardRef<HTMLDivElement, {
   card: SubCard;
   domain: DomainKey;
   isAssignable: boolean;
   onClick: () => void;
   onDelete?: () => void;
-}) {
+} & Omit<React.HTMLAttributes<HTMLDivElement>, "onClick">>(function SubCategoryCard({
+  card, domain, isAssignable, onClick, onDelete, className: extraClass, ...rest
+}, ref) {
   const Icon = getCategoryIcon(card.name);
   const color = getCategoryColor(card.name);
   const total = card.items.length;
@@ -809,6 +809,8 @@ function SubCategoryCard({
 
   return (
     <div
+      ref={ref}
+      {...rest}
       role="button"
       tabIndex={0}
       onClick={onClick}
@@ -818,6 +820,7 @@ function SubCategoryCard({
         "hover:shadow-xl hover:-translate-y-1 hover:ring-2 active:scale-[0.98] transition-all duration-200",
         isUnassigned ? "border-dashed border-warning/50 hover:ring-warning/30" : cn("border-border", color.ring),
         "flex flex-col items-center gap-3 aspect-square justify-center",
+        extraClass,
       )}
     >
       <span className="absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
@@ -867,7 +870,7 @@ function SubCategoryCard({
     </div>
 
   );
-}
+});
 
 interface ColDef {
   key: string;
