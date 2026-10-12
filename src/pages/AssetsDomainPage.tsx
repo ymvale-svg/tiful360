@@ -21,6 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SubCategorySelect } from "@/components/assets/SubCategorySelect";
+import { SubCategoryFieldsChecklist } from "@/components/SubCategoryFieldsInline";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { useAssets, useAssetCategories } from "@/hooks/useData";
@@ -143,6 +144,12 @@ export default function AssetsDomainPage() {
       onSelect: () => { setRenameTarget(c); setRenameName(c.name); },
     },
     {
+      label: "שדות בחלון",
+      when: c.id !== NO_SUBCATEGORY_KEY,
+      roles: ["super_admin", "operations"],
+      onSelect: () => setFieldsTargetId(c.id),
+    },
+    {
       label: "מחק תת-קטגוריה",
       when: c.id !== NO_SUBCATEGORY_KEY,
       danger: true,
@@ -166,6 +173,9 @@ export default function AssetsDomainPage() {
   const [addCategoryId, setAddCategoryId] = useState<string | undefined>(undefined);
   const [addGroupId, setAddGroupId] = useState<string | undefined>(undefined);
   const [newSubFor, setNewSubFor] = useState<string | null>(null);
+  const [fieldsTargetId, setFieldsTargetId] = useState<string | null>(null);
+  const { data: allGroupsForFields } = useAssetGroups();
+  const fieldsGroup = (allGroupsForFields ?? []).find((g: any) => g.id === fieldsTargetId) ?? null;
   const [newSubName, setNewSubName] = useState("");
   const [renameTarget, setRenameTarget] = useState<SubCard | null>(null);
   const [renameName, setRenameName] = useState("");
@@ -835,6 +845,15 @@ export default function AssetsDomainPage() {
               ביטול
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!fieldsTargetId} onOpenChange={(o) => { if (!o) setFieldsTargetId(null); }}>
+        <DialogContent className="sm:max-w-lg" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-right">שדות בחלון — {fieldsGroup?.name}</DialogTitle>
+          </DialogHeader>
+          {fieldsGroup && <SubCategoryFieldsChecklist group={fieldsGroup} domain={domain as any} />}
         </DialogContent>
       </Dialog>
     </div>
