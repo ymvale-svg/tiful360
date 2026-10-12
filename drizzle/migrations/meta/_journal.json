@@ -71,6 +71,13 @@
       "when": 1791793572761,
       "tag": "0009_payslips_work_days_num",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791796265162,
+      "tag": "0010_category_fields_company_sync",
+      "breakpoints": true
     }
   ]
 }
