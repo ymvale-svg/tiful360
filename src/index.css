@@ -42,6 +42,16 @@
     --info: 199 89% 48%;
     --info-foreground: 0 0% 100%;
 
+    /* Breadcrumb / hierarchy links — each level has its own frame color */
+    --link-back: 265 55% 48%;
+    --link-back-bg: 268 60% 96%;
+    --link-domain: 215 90% 42%;
+    --link-domain-bg: 215 90% 96%;
+    --link-category: 160 65% 32%;
+    --link-category-bg: 160 60% 95%;
+    --link-subcategory: 28 90% 42%;
+    --link-subcategory-bg: 32 90% 95%;
+
     --border: 214 20% 90%;
     --input: 214 20% 90%;
     --ring: 215 90% 42%;
@@ -101,6 +111,15 @@
     --warning-foreground: 38 60% 10%;
     --info: 199 80% 55%;
     --info-foreground: 199 60% 10%;
+
+    --link-back: 265 65% 72%;
+    --link-back-bg: 265 35% 18%;
+    --link-domain: 215 85% 64%;
+    --link-domain-bg: 215 45% 16%;
+    --link-category: 160 55% 55%;
+    --link-category-bg: 160 35% 14%;
+    --link-subcategory: 32 85% 60%;
+    --link-subcategory-bg: 30 40% 15%;
 
     /* The light shadows are near-black at 5-8% alpha, which is invisible on a
        dark ground and costs every card its elevation. Deeper and stronger. */

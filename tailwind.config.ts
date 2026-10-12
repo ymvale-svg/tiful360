@@ -46,6 +46,22 @@ export default {
           DEFAULT: "hsl(var(--info))",
           foreground: "hsl(var(--info-foreground))",
         },
+        "link-back": {
+          DEFAULT: "hsl(var(--link-back))",
+          bg: "hsl(var(--link-back-bg))",
+        },
+        "link-domain": {
+          DEFAULT: "hsl(var(--link-domain))",
+          bg: "hsl(var(--link-domain-bg))",
+        },
+        "link-category": {
+          DEFAULT: "hsl(var(--link-category))",
+          bg: "hsl(var(--link-category-bg))",
+        },
+        "link-subcategory": {
+          DEFAULT: "hsl(var(--link-subcategory))",
+          bg: "hsl(var(--link-subcategory-bg))",
+        },
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
