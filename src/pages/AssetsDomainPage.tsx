@@ -1199,7 +1199,7 @@ function InstancesTable({
       </div>
       <div className="max-h-[65vh] overflow-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring" role="region" aria-label="טבלת פריטים" tabIndex={0}>
         <table className="w-full border-separate border-spacing-0 text-start text-base">
-          <caption className="sr-only">פריטים — {DOMAIN_META[domain].label}</caption>
+          <caption className="sr-only">פריטים — {DOMAIN_META[domain].title}</caption>
           <thead className="sticky top-0 z-10 bg-secondary text-secondary-foreground">
             <tr>
               {selectable && <th scope="col" className="w-14 border-b border-border px-4 py-3">
