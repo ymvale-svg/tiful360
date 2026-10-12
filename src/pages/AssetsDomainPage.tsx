@@ -161,6 +161,8 @@ export default function AssetsDomainPage() {
   const [addGroupId, setAddGroupId] = useState<string | undefined>(undefined);
   const [newSubFor, setNewSubFor] = useState<string | null>(null);
   const [newSubName, setNewSubName] = useState("");
+  const [renameTarget, setRenameTarget] = useState<SubCard | null>(null);
+  const [renameName, setRenameName] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [assignTarget, setAssignTarget] = useState("");
 
