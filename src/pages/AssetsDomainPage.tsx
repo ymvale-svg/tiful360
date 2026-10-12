@@ -870,7 +870,7 @@ const SubCategoryCard = React.forwardRef<HTMLDivElement, {
     </div>
 
   );
-}
+});
 
 interface ColDef {
   key: string;
