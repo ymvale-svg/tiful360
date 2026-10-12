@@ -64,6 +64,13 @@ Deno.serve(async (req) => {
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
+    // Service-role writes skip the DB audit trigger, so every permission change
+    // made here is recorded explicitly with the real caller as actor.
+    const audit = async (row: { target_user_id?: string | null; company_id?: string | null; action: string; details: string }) => {
+      const { error } = await adminClient.from("permission_audit_log").insert({ actor_user_id: caller.id, ...row });
+      if (error) console.error("permission audit insert failed", error);
+    };
+
     // Roles a non-super-admin may hand out, whichever action they use.
     // adminClient is a service-role client and bypasses RLS, so this list is
     // the only thing standing between a caller and any role in app_role —
@@ -195,8 +202,10 @@ Deno.serve(async (req) => {
 
       if (remove) {
         await adminClient.from("user_roles").delete().eq("user_id", user_id).eq("role", role);
+        await audit({ target_user_id: user_id, action: "user_roles_delete", details: `תפקיד: ${role}` });
       } else {
         await adminClient.from("user_roles").upsert({ user_id, role }, { onConflict: "user_id,role" });
+        await audit({ target_user_id: user_id, action: "user_roles_insert", details: `תפקיד: ${role}` });
       }
 
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
