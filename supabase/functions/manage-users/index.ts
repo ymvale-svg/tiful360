@@ -317,6 +317,7 @@ Deno.serve(async (req) => {
               { user_id: userId, role: default_role as any },
               { onConflict: "user_id,role" },
             );
+            await audit({ target_user_id: userId, company_id, action: "user_invited", details: `הזמנת עובד · תפקיד: ${default_role}` });
             // Link employee record if provided
             if (emp.employee_id) {
               await adminClient
@@ -412,6 +413,7 @@ Deno.serve(async (req) => {
           { user_id: userId!, company_id: cid, role: role as any },
           { onConflict: "user_id,company_id" },
         );
+        await audit({ target_user_id: userId!, company_id: cid, action: "user_invited", details: `הזמנת משתמש חיצוני · תפקיד: ${role}` });
       }
 
       return new Response(JSON.stringify({ success: true, status, user_id: userId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -492,6 +494,7 @@ Deno.serve(async (req) => {
       } else {
         await adminClient.auth.admin.updateUserById(user_id, { ban_duration: "none" });
       }
+      await audit({ target_user_id: user_id, action: ban ? "user_banned" : "user_unbanned", details: ban ? "חסימת משתמש" : "ביטול חסימה" });
 
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
