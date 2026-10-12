@@ -6,6 +6,7 @@ import {
   Type, Hash, Calendar, List, ListChecks, Settings2, Check, X, ChevronLeft, ChevronDown, Users,
 } from "lucide-react";
 import { ManageGroupsDialog } from "@/components/ManageGroupsDialog";
+import { SubCategoryFieldsInline } from "@/components/SubCategoryFieldsInline";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAssetCategories, useAssets } from "@/hooks/useData";
@@ -912,6 +913,9 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
               ערוך
             </Button>
           </div>
+        </div>
+        <div className="mt-3">
+          <SubCategoryFieldsInline categoryId={category.id} domain={getDomain(category as any)} />
         </div>
         <ManageGroupsDialog
           open={groupsOpen}
