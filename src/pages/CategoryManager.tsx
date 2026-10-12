@@ -635,6 +635,7 @@ function FieldsEditor({ categoryId, categoryName, scopeGroupId, scopeLabel, onDi
     try {
       await saveMutation.mutateAsync({
         categoryId,
+        scopeGroupId,
         fields: fields.map((f, i) => ({
           id: f.id,
           field_name: f.field_name,

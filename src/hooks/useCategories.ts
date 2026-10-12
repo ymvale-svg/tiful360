@@ -94,11 +94,29 @@ export function useReorderCategories() {
   });
 }
 
+/**
+ * Which existing fields a scoped save removes: only those in the edited scope
+ * (same group_id) that the editor no longer holds. Fields of other
+ * sub-categories or of the category level are never touched.
+ */
+export function fieldIdsToDelete(
+  current: Array<{ id: string; group_id?: string | null }>,
+  kept: Array<{ id?: string }>,
+  scopeGroupId: string | null,
+): string[] {
+  const keptIds = new Set(kept.filter((f) => f.id).map((f) => f.id!));
+  return current
+    .filter((c) => (c.group_id ?? null) === scopeGroupId && !keptIds.has(c.id))
+    .map((c) => c.id);
+}
+
 export function useSaveCategoryFields() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ categoryId, fields }: {
+    mutationFn: async ({ categoryId, fields, scopeGroupId }: {
       categoryId: string;
+      /** Only fields of this scope are replaced (null = category-wide fields). */
+      scopeGroupId: string | null;
       fields: Array<{
         id?: string;
         field_name: string;
@@ -109,16 +127,16 @@ export function useSaveCategoryFields() {
         group_id?: string | null;
       }>;
     }) => {
-      const existingIds = fields.filter(f => f.id).map(f => f.id!);
       const { data: current } = await supabase
         .from("category_fields")
-        .select("id")
+        .select("id, group_id")
         .eq("category_id", categoryId);
-      
-      const toDelete = (current ?? []).filter(c => !existingIds.includes(c.id)).map(c => c.id);
+
+      const toDelete = fieldIdsToDelete(current ?? [], fields, scopeGroupId);
       if (toDelete.length > 0) {
         await supabase.from("category_fields").delete().in("id", toDelete);
       }
+
 
       for (const field of fields) {
         if (field.id) {
