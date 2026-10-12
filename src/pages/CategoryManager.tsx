@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  Plus, GripVertical, Trash2, Save, Pencil, Search,
+  Plus, GripVertical, Trash2, Save, Pencil, Search, ArrowRight,
   Type, Hash, Calendar, List, ListChecks, Settings2, Check, X, ChevronLeft, ChevronDown, Users,
 } from "lucide-react";
 import { ManageGroupsDialog } from "@/components/ManageGroupsDialog";
