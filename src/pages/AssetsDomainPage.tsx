@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { SubCategorySelect } from "@/components/assets/SubCategorySelect";
 import { SubCategoryFieldsChecklist } from "@/components/SubCategoryFieldsInline";
 import { cn } from "@/lib/utils";
@@ -488,14 +489,14 @@ export default function AssetsDomainPage() {
 
       {/* Search + category chips + sort */}
       <div className="space-y-3">
-        <div className="flex items-center gap-2 bg-card border border-border rounded-xl px-3 py-2">
+        <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
           <Search className="w-4 h-4 text-muted-foreground" />
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="חיפוש (שם / קוד / מס׳ סידורי / עובד / תת-קטגוריה)..."
-            className="bg-transparent text-sm outline-none w-full"
+            className="min-h-10 bg-transparent text-base outline-none w-full placeholder:text-muted-foreground"
             aria-label="חיפוש"
           />
         </div>
@@ -645,6 +646,11 @@ export default function AssetsDomainPage() {
               onToggleSelect={(id) => setSelectedIds((prev) => {
                 const next = new Set(prev);
                 if (next.has(id)) next.delete(id); else next.add(id);
+                return next;
+              })}
+              onSelectAll={(ids, checked) => setSelectedIds((prev) => {
+                const next = new Set(prev);
+                ids.forEach((id) => checked ? next.add(id) : next.delete(id));
                 return next;
               })}
               onSelect={(id) => navigate(`/assets/${params.domain}/${id}`)}
@@ -986,7 +992,7 @@ function fmtCustom(v: unknown): string {
 }
 
 function InstancesTable({
-  items, domain, onSelect, selectable, selectedIds, onToggleSelect, columnsKey,
+  items, domain, onSelect, selectable, selectedIds, onToggleSelect, onSelectAll, columnsKey,
 }: {
   items: any[];
   domain: DomainKey;
@@ -994,6 +1000,7 @@ function InstancesTable({
   selectable?: boolean;
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
+  onSelectAll?: (ids: string[], checked: boolean) => void;
   columnsKey?: string;
 }) {
   const isInsurance = domain === "insurance";
@@ -1013,8 +1020,8 @@ function InstancesTable({
   const expiryInfo = (a: any) => {
     const exp = expiryOf(a, domain);
     const days = exp ? Math.ceil((new Date(exp).getTime() - Date.now()) / 86400000) : null;
-    const cls = days === null ? "text-muted-foreground" : days < 0 ? "text-destructive" : days <= 30 ? "text-amber-600 dark:text-amber-400" : "text-foreground";
-    const txt = days === null ? "—" : days < 0 ? `פג לפני ${Math.abs(days)}י׳` : days === 0 ? "פג היום" : days <= 30 ? `בעוד ${days}י׳` : new Date(exp!).toLocaleDateString("en-GB");
+    const cls = days !== null && days < 0 ? "text-destructive" : "text-foreground";
+    const txt = days === null || days > 30 ? null : days < 0 ? `פג לפני ${Math.abs(days)} ימים` : days === 0 ? "פג היום" : `בעוד ${days} ימים`;
     return { exp, cls, txt };
   };
   const dash = <span className="text-muted-foreground">—</span>;
@@ -1045,7 +1052,15 @@ function InstancesTable({
       { key: "site", label: "אתר", render: (a) => siteOf(a) || dash, sortVal: siteOf },
       {
         key: "expiry", label: isInsurance ? "תוקף פוליסה" : "תפוגה",
-        render: (a) => { const e = expiryInfo(a); return <span className={cn(e.cls)}>{e.txt}</span>; },
+        render: (a) => {
+          const e = expiryInfo(a);
+          return e.exp ? <span className={cn("inline-flex flex-col gap-1 tabular-nums", e.cls)}>
+            <span dir="ltr">{formatDateDMY(e.exp)}</span>
+            {e.txt && <span className={cn("inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium", e.cls === "text-destructive" ? "border-destructive/30 bg-destructive/10" : "border-warning/40 bg-warning/10")}>
+              <AlertTriangle aria-hidden="true" className="h-3.5 w-3.5" />{e.txt}
+            </span>}
+          </span> : dash;
+        },
         sortVal: (a) => { const e = expiryOf(a, domain); return e ? new Date(e).getTime() : Number.MAX_SAFE_INTEGER; },
       },
     ];
@@ -1135,7 +1150,7 @@ function InstancesTable({
         const cmp = typeof va === "number" && typeof vb === "number"
           ? va - vb
           : String(va).localeCompare(String(vb), "he", { numeric: true });
-        return colSort!.dir === "asc" ? cmp : -cmp;
+        return colSort?.dir === "asc" ? cmp : -cmp;
       })
     : items;
   const toggleSort = (key: string) =>
@@ -1145,42 +1160,31 @@ function InstancesTable({
         : { key, dir: "asc" },
     );
 
-  const gridStyle = { gridTemplateColumns: `repeat(${Math.max(visibleCols.length, 1)}, minmax(0, 1fr)) 2rem` };
+  const selectedCount = items.filter((a) => selectedIds?.has(a.id)).length;
+  const allSelected = items.length > 0 && selectedCount === items.length;
 
   return (
-    <div className="bg-card border border-border rounded-xl overflow-hidden">
-      <div className="grid gap-2 px-4 py-2 bg-muted/40 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide items-center" style={gridStyle}>
-        {visibleCols.map((c) => {
-          const active = colSort?.key === c.key;
-          return (
-            <button
-              key={c.key}
-              type="button"
-              onClick={() => toggleSort(c.key)}
-              className={cn("text-right flex items-center gap-1 hover:text-foreground transition-colors min-w-0", active && "text-foreground")}
-              title="מיין לפי עמודה זו"
-            >
-              <span className="truncate">{c.label}</span>
-              {active ? (
-                colSort!.dir === "asc" ? <ChevronUp className="w-3 h-3 shrink-0" /> : <ChevronDown className="w-3 h-3 shrink-0" />
-              ) : (
-                <ChevronsUpDown className="w-3 h-3 opacity-40 shrink-0" />
-              )}
-            </button>
-          );
-        })}
-        <DropdownMenu>
+    <div className="overflow-hidden rounded-lg border border-border bg-card">
+      <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
+        <div className="flex items-center gap-3">
+          <span className="text-base font-semibold tabular-nums">{items.length} פריטים</span>
+          <span aria-live="polite" className="text-sm font-medium text-primary">
+            {selectedCount > 0 ? `${selectedCount} נבחרו` : ""}
+          </span>
+        </div>
+        <DropdownMenu dir="rtl">
           <DropdownMenuTrigger asChild>
-            <button type="button" className="justify-self-end p-1 rounded hover:bg-muted hover:text-foreground" title="בחירת עמודות" aria-label="בחירת עמודות">
-              <Columns3 className="w-4 h-4" />
-            </button>
+            <Button variant="outline" className="min-h-11">
+              <Columns3 aria-hidden="true" />עמודות
+            </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="max-h-[60vh] overflow-y-auto w-60 text-right">
+          <DropdownMenuContent align="end" className="max-h-[60vh] w-64 overflow-y-auto text-right">
             <DropdownMenuLabel>עמודות להצגה</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {allCols.map((c) => (
               <DropdownMenuCheckboxItem
                 key={c.key}
+                className="min-h-11"
                 checked={activeKeys.includes(c.key)}
                 onCheckedChange={() => toggleCol(c.key)}
                 onSelect={(e) => e.preventDefault()}
@@ -1189,49 +1193,70 @@ function InstancesTable({
               </DropdownMenuCheckboxItem>
             ))}
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setChosen(null)}>איפוס לברירת מחדל</DropdownMenuItem>
+            <DropdownMenuItem className="min-h-11" onClick={() => setChosen(null)}>איפוס לברירת מחדל</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      {sorted.map((a: any) => (
-        <RowContextMenu key={a.id} actions={[
-          { label: "פתח כרטיס פריט", onSelect: () => onSelect(a.id) },
-          { label: "פתח בלשונית חדשה", onSelect: () => openInNewTab(`/assets/${domain}/${a.id}`) },
-          ...(onToggleSelect ? [{ label: selectedIds?.has(a.id) ? "בטל בחירה" : "בחר לפעולה מרובה", onSelect: () => onToggleSelect(a.id) }] : []),
-          copyAction("העתק קוד", a.asset_code, true),
-          copyAction("העתק מס' סידורי", a.serial_number),
-          copyAction("העתק מס' רישוי", a.license_plate),
-          copyAction("העתק שם", a.name),
-        ]}>
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={() => onSelect(a.id)}
-          onKeyDown={(e) => { if (e.key === "Enter") onSelect(a.id); }}
-          className="w-full grid gap-2 px-4 py-3 text-sm border-t border-border hover:bg-muted/40 text-right items-center transition-colors cursor-pointer"
-          style={gridStyle}
-        >
-          {visibleCols.map((c, i) => (
-            <div key={c.key} className="truncate min-w-0 flex items-center">
-              {i === 0 && selectable && (
-                <input
-                  type="checkbox"
-                  checked={selectedIds?.has(a.id) ?? false}
-                  onClick={(e) => e.stopPropagation()}
-                  onChange={() => onToggleSelect?.(a.id)}
-                  className="ml-2 accent-primary shrink-0"
-                  aria-label="בחר פריט"
+      <div className="max-h-[65vh] overflow-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring" role="region" aria-label="טבלת פריטים" tabIndex={0}>
+        <table className="w-full border-separate border-spacing-0 text-start text-base">
+          <caption className="sr-only">פריטים — {DOMAIN_META[domain].title}</caption>
+          <thead className="sticky top-0 z-10 bg-secondary text-secondary-foreground">
+            <tr>
+              {selectable && <th scope="col" className="w-14 border-b border-border px-4 py-3">
+                <Checkbox
+                  className="h-6 w-6"
+                  aria-label="בחר את כל הפריטים המוצגים"
+                  checked={allSelected ? true : selectedCount > 0 ? "indeterminate" : false}
+                  onCheckedChange={(checked) => onSelectAll?.(items.map((a) => a.id), checked === true)}
                 />
-              )}
-              <span className="truncate">{c.render(a)}</span>
-            </div>
-          ))}
-          <div className="text-left text-muted-foreground">
-            <ArrowRight className="w-4 h-4 mr-auto rtl:rotate-180" />
-          </div>
-        </div>
-        </RowContextMenu>
-      ))}
+              </th>}
+              {visibleCols.map((c) => {
+                const active = colSort?.key === c.key;
+                return <th key={c.key} scope="col" aria-sort={active ? (colSort?.dir === "asc" ? "ascending" : "descending") : "none"} className="min-w-40 border-b border-border px-4 py-2 text-start">
+                  <Button variant="ghost" onClick={() => toggleSort(c.key)} aria-label={`מיון לפי ${c.label}`} className={cn("min-h-11 justify-start px-2 text-sm font-semibold", active && "bg-accent text-accent-foreground")}>
+                    {c.label}
+                    {active ? (colSort?.dir === "asc" ? <ChevronUp aria-hidden="true" /> : <ChevronDown aria-hidden="true" />) : <ChevronsUpDown aria-hidden="true" className="text-muted-foreground" />}
+                  </Button>
+                </th>;
+              })}
+              <th scope="col" className="w-16 border-b border-border px-3"><span className="sr-only">פתיחת פריט</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((a: any, index) => {
+              const label = a.asset_name || a.asset_code || "פריט";
+              const selected = selectedIds?.has(a.id) ?? false;
+              return <RowContextMenu key={a.id} actions={[
+                { label: "פתח כרטיס פריט", onSelect: () => onSelect(a.id) },
+                { label: "פתח בלשונית חדשה", onSelect: () => openInNewTab(`/assets/${domain}/${a.id}`) },
+                ...(onToggleSelect ? [{ label: selected ? "בטל בחירה" : "בחר לפעולה מרובה", onSelect: () => onToggleSelect(a.id) }] : []),
+                copyAction("העתק קוד", a.asset_code, true),
+                copyAction("העתק מס' סידורי", a.serial_number),
+                copyAction("העתק מס' רישוי", a.license_plate),
+                copyAction("העתק שם", a.asset_name),
+              ]}>
+                <tr onClick={() => onSelect(a.id)} className={cn("group cursor-pointer transition-colors hover:bg-accent/60 focus-within:bg-accent/60", selected ? "bg-primary/10" : index % 2 ? "bg-muted/30" : "bg-card")}>
+                  {selectable && <td className="border-b border-border px-4 py-4" onClick={(e) => e.stopPropagation()}>
+                    <Checkbox className="h-6 w-6" aria-label={`בחר ${label}`} checked={selected} onCheckedChange={() => onToggleSelect?.(a.id)} />
+                  </td>}
+                  {visibleCols.map((c, i) => (
+                    <td key={c.key} className={cn("min-w-40 max-w-96 border-b border-border px-6 py-4 align-middle leading-7", i === 0 && "font-medium", c.key === "code" && "tabular-nums")}>
+                      <div className="whitespace-normal break-words" onClick={(e) => { if ((e.target as HTMLElement).closest("a, button")) e.stopPropagation(); }}>
+                        {c.render(a)}
+                      </div>
+                    </td>
+                  ))}
+                  <td className="border-b border-border px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                    <Button variant="ghost" size="icon" className="h-11 w-11 text-primary" aria-label={`פתח כרטיס ${label}`} title={`פתח כרטיס ${label}`} onClick={() => onSelect(a.id)}>
+                      <ArrowRight aria-hidden="true" className="rtl:rotate-180" />
+                    </Button>
+                  </td>
+                </tr>
+              </RowContextMenu>;
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
