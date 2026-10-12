@@ -6,7 +6,7 @@ import {
   Type, Hash, Calendar, List, ListChecks, Settings2, Check, X, ChevronLeft, ChevronDown, Users,
 } from "lucide-react";
 import { ManageGroupsDialog } from "@/components/ManageGroupsDialog";
-import { SubCategoryFieldsInline } from "@/components/SubCategoryFieldsInline";
+import { SubCategoryFieldsChecklist } from "@/components/SubCategoryFieldsInline";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAssetCategories, useAssets } from "@/hooks/useData";
@@ -76,6 +76,7 @@ export default function CategoryManager() {
     focusDomain && DOMAIN_ORDER.includes(focusDomain) ? focusDomain : "physical"
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [newCatOpen, setNewCatOpen] = useState(false);
   const [newCatDomain, setNewCatDomain] = useState<DomainKey | null>(null);
@@ -104,6 +105,10 @@ export default function CategoryManager() {
   const selectedCategory = useMemo(
     () => (categories ?? []).find((category: any) => category.id === selectedId) ?? null,
     [categories, selectedId],
+  );
+  const selectedGroup = useMemo(
+    () => (groups ?? []).find((group) => group.id === selectedGroupId && group.category_id === selectedId) ?? null,
+    [groups, selectedGroupId, selectedId],
   );
   const normalizedSearch = search.trim().toLocaleLowerCase("he");
   const visibleCategories = useMemo(() => {
