@@ -410,26 +410,33 @@ export default function AssetsDomainPage() {
       {/* Breadcrumb + header */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/assets")} className="gap-1">
+          <button
+            type="button"
+            onClick={() => navigate("/assets")}
+            className="inline-flex items-center gap-1 rounded-md border border-link-back bg-link-back-bg px-2 py-1 text-xs font-semibold text-link-back no-underline transition-[filter] hover:brightness-95"
+          >
             <ChevronRight className="w-4 h-4" />
             דומיינים
-          </Button>
+          </button>
           {catParam && (
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
+              type="button"
               onClick={() => updateParams({ cat: null, sub: null })}
-              className="gap-1"
+              className="inline-flex items-center gap-1 rounded-md border border-link-domain bg-link-domain-bg px-2 py-1 text-xs font-semibold text-link-domain no-underline transition-[filter] hover:brightness-95"
             >
               <ChevronRight className="w-4 h-4" />
               {meta.title}
-            </Button>
+            </button>
           )}
           {isDrilled && (
-            <Button variant="ghost" size="sm" onClick={() => updateParams({ sub: null })} className="gap-1">
+            <button
+              type="button"
+              onClick={() => updateParams({ sub: null })}
+              className="inline-flex items-center gap-1 rounded-md border border-link-category bg-link-category-bg px-2 py-1 text-xs font-semibold text-link-category no-underline transition-[filter] hover:brightness-95"
+            >
               <ChevronRight className="w-4 h-4" />
               {drilledCategory?.category_name}
-            </Button>
+            </button>
           )}
           <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center", meta.color.bg, meta.color.text)}>
             <Icon className="w-6 h-6" strokeWidth={1.75} />
