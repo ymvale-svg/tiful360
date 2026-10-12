@@ -77,6 +77,7 @@ export default function CategoryManager() {
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [fieldsDirty, setFieldsDirty] = useState(false);
   const [search, setSearch] = useState("");
   const [newCatOpen, setNewCatOpen] = useState(false);
   const [newCatDomain, setNewCatDomain] = useState<DomainKey | null>(null);
@@ -111,6 +112,24 @@ export default function CategoryManager() {
     [groups, selectedGroupId, selectedId],
   );
   const normalizedSearch = search.trim().toLocaleLowerCase("he");
+  const canChangeSelection = () => !fieldsDirty || window.confirm("יש שינויים לא שמורים בשדות. לעבור בלי לשמור?");
+  const changeDomain = (domain: DomainKey) => {
+    if (!canChangeSelection()) return;
+    setFieldsDirty(false);
+    setSelectedDomain(domain);
+    setSelectedGroupId(null);
+  };
+  const changeCategory = (id: string) => {
+    if (!canChangeSelection()) return;
+    setFieldsDirty(false);
+    setSelectedId(id);
+    setSelectedGroupId(null);
+  };
+  const changeGroup = (id: string | null) => {
+    if (!canChangeSelection()) return;
+    setFieldsDirty(false);
+    setSelectedGroupId(id);
+  };
   const visibleCategories = useMemo(() => {
     const domainCategories = byDomain[selectedDomain] ?? [];
     if (!normalizedSearch) return domainCategories;
@@ -192,7 +211,7 @@ export default function CategoryManager() {
                   const categoryCount = byDomain[key]?.length ?? 0;
                   const groupCount = (groups ?? []).filter((group) => byDomain[key]?.some((category: any) => category.id === group.category_id)).length;
                   return (
-                      <Button key={key} variant="ghost" onClick={() => { setSelectedDomain(key); setSelectedGroupId(null); }} className={cn("w-full h-auto min-h-14 justify-start gap-3 px-3 py-2.5 border", selectedDomain === key ? "border-link-domain bg-link-domain-bg text-link-domain ring-1 ring-link-domain/30" : "border-border bg-background")}>
+                      <Button key={key} variant="ghost" onClick={() => changeDomain(key)} className={cn("w-full h-auto min-h-14 justify-start gap-3 px-3 py-2.5 border", selectedDomain === key ? "border-link-domain bg-link-domain-bg text-link-domain ring-1 ring-link-domain/30" : "border-border bg-background")}>
                       <span className={cn("w-9 h-9 rounded-md flex items-center justify-center shrink-0", meta.color.bg, meta.color.text)}><Icon className="w-4.5 h-4.5" /></span>
                       <span className="min-w-0 flex-1 text-right"><span className="block text-sm font-semibold truncate">{labels[key].title}</span><span className="block text-[11px] font-normal text-muted-foreground">{categoryCount} קטגוריות · {groupCount} תתי-קטגוריות</span></span>
                       <ChevronLeft className="w-4 h-4 text-muted-foreground" />
@@ -206,14 +225,14 @@ export default function CategoryManager() {
                   const groupCount = (groups ?? []).filter((group) => group.category_id === category.id).length;
                   return (
                     <div key={category.id} className={cn("flex items-center gap-1 rounded-md border p-1", active ? "border-link-category bg-link-category-bg text-link-category ring-1 ring-link-category/30" : "border-border bg-background")}>
-                      <Button variant="ghost" onClick={() => { setSelectedId(category.id); setSelectedGroupId(null); }} className="h-auto min-h-12 flex-1 justify-start px-2 text-right"><span className="min-w-0 flex-1"><span className="block text-sm font-semibold truncate">{category.category_name}</span><span className="block text-[11px] font-normal text-muted-foreground"><span className="font-mono">{category.prefix}</span> · {groupCount} תתי-קטגוריות · {category.assets?.[0]?.count ?? 0} פריטים</span></span><ChevronLeft className="w-4 h-4 text-muted-foreground" /></Button>
+                      <Button variant="ghost" onClick={() => changeCategory(category.id)} className="h-auto min-h-12 flex-1 justify-start px-2 text-right"><span className="min-w-0 flex-1"><span className="block text-sm font-semibold truncate">{category.category_name}</span><span className="block text-[11px] font-normal text-muted-foreground"><span className="font-mono">{category.prefix}</span> · {groupCount} תתי-קטגוריות · {category.assets?.[0]?.count ?? 0} פריטים</span></span><ChevronLeft className="w-4 h-4 text-muted-foreground" /></Button>
                       <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" title="מחק קטגוריה" onClick={(event) => handleDeleteClick(event, category)}><Trash2 className="w-3.5 h-3.5" /></Button>
                     </div>
                   );
                 })}
               </HierarchyColumn>
               <HierarchyColumn title={selectedCategory ? `תתי-קטגוריות ב${selectedCategory.category_name}` : "תתי-קטגוריות"}>
-                {selectedCategory ? <SubCategoryColumn category={selectedCategory} categories={categories ?? []} groups={groups ?? []} assets={assets ?? []} search={normalizedSearch} selectedGroupId={selectedGroupId} onSelect={setSelectedGroupId} /> : <EmptyHierarchy text="בחר קטגוריה כדי להציג תתי-קטגוריות" />}
+                {selectedCategory ? <SubCategoryColumn category={selectedCategory} categories={categories ?? []} groups={groups ?? []} assets={assets ?? []} search={normalizedSearch} selectedGroupId={selectedGroupId} onSelect={changeGroup} /> : <EmptyHierarchy text="בחר קטגוריה כדי להציג תתי-קטגוריות" />}
               </HierarchyColumn>
             </div>
           </section>
@@ -223,16 +242,16 @@ export default function CategoryManager() {
                 <span className="font-semibold">עורך כעת:</span>
                 <span className="rounded-md border border-link-domain bg-link-domain-bg px-2 py-1 font-semibold text-link-domain">{labels[selectedDomain].title}</span>
                 <ChevronLeft className="h-4 w-4 text-muted-foreground" />
-                <button type="button" onClick={() => setSelectedGroupId(null)} className="rounded-md border border-link-category bg-link-category-bg px-2 py-1 font-semibold text-link-category">{selectedCategory.category_name}</button>
+                <button type="button" onClick={() => changeGroup(null)} className="rounded-md border border-link-category bg-link-category-bg px-2 py-1 font-semibold text-link-category">{selectedCategory.category_name}</button>
                 {selectedGroup && <><ChevronLeft className="h-4 w-4 text-muted-foreground" /><span className="rounded-md border border-link-subcategory bg-link-subcategory-bg px-2 py-1 font-semibold text-link-subcategory">{selectedGroup.name}</span></>}
               </div>
               <p className="mt-1 text-xs text-muted-foreground">{selectedGroup ? "עריכת תת־קטגוריה — השינויים יחולו רק עליה" : "עריכת קטגוריה — השינויים יחולו על כל תתי־הקטגוריות"}</p>
             </div>
             <div className="flex gap-1 border-b border-border" role="tablist" aria-label="רמת העריכה">
-              <Button type="button" variant="ghost" role="tab" aria-selected={!selectedGroup} onClick={() => setSelectedGroupId(null)} className={cn("rounded-b-none border-b-2", !selectedGroup ? "border-link-category text-link-category" : "border-transparent text-muted-foreground")}>הגדרות קטגוריה</Button>
+              <Button type="button" variant="ghost" role="tab" aria-selected={!selectedGroup} onClick={() => changeGroup(null)} className={cn("rounded-b-none border-b-2", !selectedGroup ? "border-link-category text-link-category" : "border-transparent text-muted-foreground")}>הגדרות קטגוריה</Button>
               <Button type="button" variant="ghost" role="tab" aria-selected={!!selectedGroup} disabled={!selectedGroup} className={cn("rounded-b-none border-b-2", selectedGroup ? "border-link-subcategory text-link-subcategory" : "border-transparent text-muted-foreground")}>הגדרות תת־קטגוריה</Button>
             </div>
-            {selectedGroup ? <><SubCategoryEditor group={selectedGroup} domain={selectedDomain} /><FieldsEditor key={`${selectedCategory.id}-${selectedGroup.id}`} categoryId={selectedCategory.id} categoryName={selectedCategory.category_name} scopeGroupId={selectedGroup.id} scopeLabel={selectedGroup.name} /></> : <><CategoryEditor category={selectedCategory} /><FieldsEditor key={`${selectedCategory.id}-category`} categoryId={selectedCategory.id} categoryName={selectedCategory.category_name} scopeGroupId={null} scopeLabel="כל תתי־הקטגוריות" /></>}
+            {selectedGroup ? <><SubCategoryEditor group={selectedGroup} domain={selectedDomain} /><FieldsEditor key={`${selectedCategory.id}-${selectedGroup.id}`} categoryId={selectedCategory.id} categoryName={selectedCategory.category_name} scopeGroupId={selectedGroup.id} scopeLabel={selectedGroup.name} onDirtyChange={setFieldsDirty} /></> : <><CategoryEditor category={selectedCategory} /><FieldsEditor key={`${selectedCategory.id}-category`} categoryId={selectedCategory.id} categoryName={selectedCategory.category_name} scopeGroupId={null} scopeLabel="כל תתי־הקטגוריות" onDirtyChange={setFieldsDirty} /></>}
           </section>}
         </>
 
@@ -523,7 +542,7 @@ function QuickCategoryEdit({
 // ============================
 // Fields Editor with Drag & Drop
 // ============================
-function FieldsEditor({ categoryId, categoryName, scopeGroupId, scopeLabel }: { categoryId: string; categoryName: string; scopeGroupId: string | null; scopeLabel: string }) {
+function FieldsEditor({ categoryId, categoryName, scopeGroupId, scopeLabel, onDirtyChange }: { categoryId: string; categoryName: string; scopeGroupId: string | null; scopeLabel: string; onDirtyChange: (dirty: boolean) => void }) {
   const { data: dbFields, isLoading } = useCategoryFields(categoryId);
   const { data: allGroups } = useAssetGroups();
   const groups = useMemo(
@@ -554,8 +573,9 @@ function FieldsEditor({ categoryId, categoryName, scopeGroupId, scopeLabel }: { 
         }))
       );
       setDirty(false);
+      onDirtyChange(false);
     }
-  }, [dbFields, scopeGroupId]);
+  }, [dbFields, scopeGroupId, onDirtyChange]);
 
   const addField = () => {
     const newField: LocalField = {
@@ -569,16 +589,19 @@ function FieldsEditor({ categoryId, categoryName, scopeGroupId, scopeLabel }: { 
     };
     setFields([...fields, newField]);
     setDirty(true);
+    onDirtyChange(true);
   };
 
   const updateField = (tempId: string, updates: Partial<LocalField>) => {
     setFields(fields.map(f => f.tempId === tempId ? { ...f, ...updates } : f));
     setDirty(true);
+    onDirtyChange(true);
   };
 
   const removeField = (tempId: string) => {
     setFields(fields.filter(f => f.tempId !== tempId));
     setDirty(true);
+    onDirtyChange(true);
   };
 
   const handleDragStart = (index: number) => {
@@ -598,6 +621,7 @@ function FieldsEditor({ categoryId, categoryName, scopeGroupId, scopeLabel }: { 
     dragItem.current = null;
     dragOverItem.current = null;
     setDirty(true);
+    onDirtyChange(true);
   };
 
   const handleSave = async () => {
@@ -622,6 +646,7 @@ function FieldsEditor({ categoryId, categoryName, scopeGroupId, scopeLabel }: { 
         })),
       });
       setDirty(false);
+      onDirtyChange(false);
       toast({ title: "נשמר בהצלחה" });
     } catch (err: any) {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
