@@ -523,7 +523,7 @@ function QuickCategoryEdit({
 // ============================
 // Fields Editor with Drag & Drop
 // ============================
-function FieldsEditor({ categoryId, categoryName }: { categoryId: string; categoryName: string }) {
+function FieldsEditor({ categoryId, categoryName, scopeGroupId, scopeLabel }: { categoryId: string; categoryName: string; scopeGroupId: string | null; scopeLabel: string }) {
   const { data: dbFields, isLoading } = useCategoryFields(categoryId);
   const { data: allGroups } = useAssetGroups();
   const groups = useMemo(
@@ -542,7 +542,7 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
   useEffect(() => {
     if (dbFields) {
       setFields(
-        dbFields.map((f) => ({
+        dbFields.filter((f) => ((f as any).group_id ?? null) === scopeGroupId).map((f) => ({
           id: f.id,
           tempId: f.id,
           field_name: f.field_name,
@@ -555,7 +555,7 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
       );
       setDirty(false);
     }
-  }, [dbFields]);
+  }, [dbFields, scopeGroupId]);
 
   const addField = () => {
     const newField: LocalField = {
@@ -565,7 +565,7 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
       is_required: false,
       field_options: null,
       sort_order: fields.length,
-      group_id: null,
+      group_id: scopeGroupId,
     };
     setFields([...fields, newField]);
     setDirty(true);
@@ -636,10 +636,10 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
     <div className="bg-card rounded-xl border border-border/50 shadow-card animate-fade-in">
       <div className="p-5 border-b border-border/50 flex items-center justify-between">
         <div>
-          <h2 className="font-semibold">{categoryName}</h2>
+          <h2 className="font-semibold">שדות מותאמים · {scopeLabel}</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
             {fields.length} שדות מותאמים • גרור לסידור מחדש
-            {groups.length > 0 && " • ניתן להגביל שדה לתת-קטגוריה"}
+            {scopeGroupId ? ` • עבור ${scopeLabel} בלבד` : ` • עבור כל תתי־הקטגוריות של ${categoryName}`}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -716,7 +716,7 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
             </div>
 
             {/* Sub-category scope */}
-            {groups.length > 0 && (
+            {!scopeGroupId && groups.length > 0 && (
               <select
                 value={field.group_id ?? ""}
                 onChange={(e) => updateField(field.tempId, { group_id: e.target.value || null })}
@@ -830,7 +830,7 @@ function FieldsEditor({ categoryId, categoryName }: { categoryId: string; catego
       {/* Preview */}
       {fields.length > 0 && (
         <div className="p-5 border-t border-border/50">
-          <p className="text-xs font-medium text-muted-foreground mb-3">תצוגה מקדימה של הטופס:</p>
+          <p className="text-xs font-medium text-muted-foreground mb-3">תצוגה מקדימה — {scopeLabel}:</p>
           <div className="grid grid-cols-2 gap-3">
             {fields.map((field) => (
               <div key={`preview-${field.tempId}`} className="space-y-1">
@@ -975,9 +975,6 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
               ערוך
             </Button>
           </div>
-        </div>
-        <div className="mt-3">
-          <SubCategoryFieldsInline categoryId={category.id} domain={getDomain(category as any)} />
         </div>
         <ManageGroupsDialog
           open={groupsOpen}
