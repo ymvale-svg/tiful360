@@ -7,3 +7,5 @@
 - CategoryManager keeps category-level and sub-category-level editing in separate selected contexts. Why: mixing both scopes made it unclear which records a change affected.
 - Permission changes are recorded in the append-only permission_audit_log: DB triggers log signed-in users' direct writes; service-role code (manage-users) must insert its own audit row with the real caller. Why: information-systems audits require an unalterable record of who changed which access.
 - Saving custom fields in CategoryManager deletes only fields of the edited scope (same group_id). Why: a scoped save previously erased other sub-categories' field definitions.
+
+- Asset instance lists use semantic tables with explicit checkbox, sorting and open-item controls. Why: keyboard and assistive-technology users need identifiable actions and column relationships.
