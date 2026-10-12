@@ -165,7 +165,7 @@ export default function CategoryManager() {
             <Link to={`/assets/${selectedDomain}`} className="rounded-md border border-link-category bg-link-category-bg px-2 py-0.5 text-xs font-semibold text-link-category no-underline transition-[filter] hover:brightness-95">קטגוריה</Link>
             <span className="mx-0.5 text-muted-foreground">←</span>
             <Link to={`/assets/${selectedDomain}`} className="rounded-md border border-link-subcategory bg-link-subcategory-bg px-2 py-0.5 text-xs font-semibold text-link-subcategory no-underline transition-[filter] hover:brightness-95">תת-קטגוריה</Link>
-            <span className="text-muted-foreground">, במקום אחד</span>
+            <span className="text-muted-foreground">{"\n"}</span>
           </p>
         </div>
         <div className="relative w-full sm:w-72">
