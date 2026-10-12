@@ -810,6 +810,33 @@ export default function AssetsDomainPage() {
         defaultCategoryId={addCategoryId}
         defaultGroupId={addGroupId}
       />
+
+      <Dialog open={!!renameTarget} onOpenChange={(o) => { if (!o) setRenameTarget(null); }}>
+        <DialogContent className="sm:max-w-sm" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-right">עריכת תת-קטגוריה</DialogTitle>
+          </DialogHeader>
+          <Input
+            value={renameName}
+            onChange={(e) => setRenameName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleRenameGroup(); }}
+            placeholder="שם תת-הקטגוריה"
+            dir="rtl"
+            className="text-right"
+            autoFocus
+          />
+          <DialogFooter className="gap-2 sm:justify-start">
+            <Button onClick={handleRenameGroup} disabled={!renameName.trim() || updateGroup.isPending}>
+              <Check className="w-4 h-4 ml-1" />
+              שמירה
+            </Button>
+            <Button variant="ghost" onClick={() => setRenameTarget(null)}>
+              <X className="w-4 h-4 ml-1" />
+              ביטול
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
