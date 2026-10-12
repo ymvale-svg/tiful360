@@ -36,7 +36,7 @@ async function downloadPdf(title: string, headers: string[], rows: string[][], f
   }
   drawFooterOnAllPages(pdf, regular);
   const bytes = await pdf.save();
-  const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+  const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/pdf" }));
   const a = document.createElement("a"); a.href = url; a.download = `${fileName}.pdf`; a.click();
   URL.revokeObjectURL(url);
 }
