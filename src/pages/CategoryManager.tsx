@@ -159,7 +159,14 @@ export default function CategoryManager() {
             חזרה למשאבים
           </Link>
           <h1 className="page-title">ניהול דומיינים וקטגוריות</h1>
-          <p className="page-subtitle">דומיין ← קטגוריה ← תת-קטגוריה, במקום אחד</p>
+          <p className="page-subtitle">
+            <Link to="/assets" className="hover:text-primary hover:underline transition-colors">דומיין</Link>
+            <span className="mx-1">←</span>
+            <Link to={`/assets/${selectedDomain}`} className="hover:text-primary hover:underline transition-colors">קטגוריה</Link>
+            <span className="mx-1">←</span>
+            <Link to={`/assets/${selectedDomain}`} className="hover:text-primary hover:underline transition-colors">תת-קטגוריה</Link>
+            <span className="mx-1">, במקום אחד</span>
+          </p>
         </div>
         <div className="relative w-full sm:w-72">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
