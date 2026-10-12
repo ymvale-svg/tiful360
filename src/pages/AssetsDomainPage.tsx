@@ -858,6 +858,20 @@ const SubCategoryCard = React.forwardRef<HTMLDivElement, {
           <AlertTriangle className="w-3 h-3" />
         </span>
       )}
+      {onEdit && (
+        <button
+          type="button"
+          title="ערוך תת-קטגוריה"
+          onClick={(e) => { e.stopPropagation(); onEdit(); }}
+          className={cn(
+            "absolute bottom-2 left-9 p-1.5 rounded-lg text-muted-foreground/70",
+            "hover:bg-muted hover:text-foreground transition-colors",
+            "opacity-0 group-hover:opacity-100 focus:opacity-100 md:opacity-0 max-md:opacity-100",
+          )}
+        >
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
+      )}
       {onDelete && (
         <button
           type="button"
