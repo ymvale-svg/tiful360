@@ -7,9 +7,12 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ChevronRight, ChevronDown, Search, Plus, ArrowRight, Users, AlertTriangle,
   ArrowUpDown, LayoutGrid, List, FolderPlus, Check, X, Link2, Trash2, FileSignature,
-  ChevronUp, ChevronsUpDown, Building2, Columns3,
+  ChevronUp, ChevronsUpDown, Building2, Columns3, Pencil,
 
 } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
 
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel,
