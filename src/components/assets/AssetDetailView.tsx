@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAssets, useAssetCategories, useEmployees } from "@/hooks/useData";
 import { getCategoryIcon, getCategoryColor } from "@/lib/categoryIcons";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Pencil, FileSignature, UserMinus, Trash2, User, Building2, History, MapPin, Clock3, Ban, PlayCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil, FileSignature, UserMinus, Trash2, User, Building2, History, MapPin, Clock3, Ban, PlayCircle } from "lucide-react";
 import { useSites } from "@/hooks/useSites";
 import { useSiteContainers } from "@/hooks/useSiteContainers";
 import { cn } from "@/lib/utils";
@@ -181,11 +181,20 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
     <div className="space-y-4 animate-fade-in">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm flex-wrap">
-        <button onClick={onBackToCategories} className="text-muted-foreground hover:text-foreground transition-colors">
+        <button
+          type="button"
+          onClick={onBackToCategories}
+          className="inline-flex items-center gap-1 rounded-md border border-link-back bg-link-back-bg px-2 py-1 text-xs font-semibold text-link-back no-underline transition-[filter] hover:brightness-95"
+        >
+          <ChevronRight className="w-4 h-4" />
           נכסים
         </button>
-        <span className="text-muted-foreground">/</span>
-        <button onClick={onBack} className="text-muted-foreground hover:text-foreground transition-colors">
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex items-center gap-1 rounded-md border border-link-category bg-link-category-bg px-2 py-1 text-xs font-semibold text-link-category no-underline transition-[filter] hover:brightness-95"
+        >
+          <ChevronRight className="w-4 h-4" />
           {category?.category_name}
         </button>
         <span className="text-muted-foreground">/</span>
