@@ -2712,6 +2712,45 @@ export type Database = {
           },
         ]
       }
+      permission_audit_log: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          after_value: Json | null
+          before_value: Json | null
+          company_id: string | null
+          created_at: string
+          details: string | null
+          id: string
+          target_employee_id: string | null
+          target_user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          after_value?: Json | null
+          before_value?: Json | null
+          company_id?: string | null
+          created_at?: string
+          details?: string | null
+          id?: string
+          target_employee_id?: string | null
+          target_user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          after_value?: Json | null
+          before_value?: Json | null
+          company_id?: string | null
+          created_at?: string
+          details?: string | null
+          id?: string
+          target_employee_id?: string | null
+          target_user_id?: string | null
+        }
+        Relationships: []
+      }
       portal_contacts: {
         Row: {
           company_id: string | null
@@ -3565,6 +3604,10 @@ export type Database = {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
       }
+      can_view_permission_audit: {
+        Args: { _company_id: string }
+        Returns: boolean
+      }
       cancel_offboarding: {
         Args: { _employee_id: string }
         Returns: {
@@ -3903,6 +3946,31 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      get_permission_audit: {
+        Args: { _company_id: string; _from: string; _to: string }
+        Returns: {
+          action: string
+          actor_email: string
+          actor_name: string
+          company_id: string
+          created_at: string
+          details: string
+          id: string
+          target_email: string
+          target_name: string
+        }[]
+      }
+      get_permissions_snapshot: {
+        Args: { _company_id: string }
+        Returns: {
+          banned: boolean
+          company_role: string
+          email: string
+          full_name: string
+          roles: string
+          user_id: string
+        }[]
       }
       get_subordinate_employee_ids: {
         Args: { _manager_user_id: string }
