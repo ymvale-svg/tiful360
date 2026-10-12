@@ -111,6 +111,19 @@ export default function AssetsDomainPage() {
     }
   };
 
+  const handleRenameGroup = async () => {
+    if (!renameTarget) return;
+    const name = renameName.trim();
+    if (!name || name === renameTarget.name) { setRenameTarget(null); return; }
+    try {
+      await updateGroup.mutateAsync({ id: renameTarget.id, name });
+      toast({ title: "שם תת-הקטגוריה עודכן" });
+      setRenameTarget(null);
+    } catch (e: any) {
+      toast({ title: "שגיאה בשמירה", description: e.message, variant: "destructive" });
+    }
+  };
+
   /** Right-click menu actions for a sub-category card/row. */
   const subMenuActions = (category: any, c: any): ContextAction[] => [
     {
