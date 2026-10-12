@@ -97,6 +97,7 @@ export default function AssetsDomainPage() {
   const createGroup = useCreateAssetGroup();
   const assignToGroup = useAssignAssetsToGroup();
   const deleteGroup = useDeleteAssetGroup();
+  const updateGroup = useUpdateAssetGroup();
 
   const handleDeleteGroup = async (groupId: string, groupName: string, itemCount: number) => {
     const msg = itemCount > 0
