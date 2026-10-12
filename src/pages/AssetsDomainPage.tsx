@@ -722,6 +722,7 @@ export default function AssetsDomainPage() {
                         isAssignable={isAssignable}
                         onClick={() => { setSelectedIds(new Set()); updateParams({ cat: category.id, sub: c.id }); }}
                         onDelete={c.id === NO_SUBCATEGORY_KEY ? undefined : () => handleDeleteGroup(c.id, c.name, c.items.length)}
+                        onEdit={c.id === NO_SUBCATEGORY_KEY ? undefined : () => { setRenameTarget(c); setRenameName(c.name); }}
                       />
                       </RowContextMenu>
                     ))}
