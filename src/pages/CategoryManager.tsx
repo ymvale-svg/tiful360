@@ -154,18 +154,18 @@ export default function CategoryManager() {
     <div className="space-y-5 animate-fade-in" dir="rtl">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="page-header">
-          <Link to="/assets" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-1">
+          <Link to="/assets" className="inline-flex items-center gap-1 mb-2 rounded-md border border-link-back bg-link-back-bg px-2 py-1 text-xs font-semibold text-link-back no-underline transition-[filter] hover:brightness-95">
             <ArrowRight className="w-4 h-4" />
             חזרה למשאבים
           </Link>
           <h1 className="page-title">ניהול דומיינים וקטגוריות</h1>
-          <p className="page-subtitle">
-            <Link to="/assets" className="hover:text-primary hover:underline transition-colors">דומיין</Link>
-            <span className="mx-1">←</span>
-            <Link to={`/assets/${selectedDomain}`} className="hover:text-primary hover:underline transition-colors">קטגוריה</Link>
-            <span className="mx-1">←</span>
-            <Link to={`/assets/${selectedDomain}`} className="hover:text-primary hover:underline transition-colors">תת-קטגוריה</Link>
-            <span className="mx-1">, במקום אחד</span>
+          <p className="page-subtitle flex flex-wrap items-center gap-1.5">
+            <Link to="/assets" className="rounded-md border border-link-domain bg-link-domain-bg px-2 py-0.5 text-xs font-semibold text-link-domain no-underline transition-[filter] hover:brightness-95">דומיין</Link>
+            <span className="mx-0.5 text-muted-foreground">←</span>
+            <Link to={`/assets/${selectedDomain}`} className="rounded-md border border-link-category bg-link-category-bg px-2 py-0.5 text-xs font-semibold text-link-category no-underline transition-[filter] hover:brightness-95">קטגוריה</Link>
+            <span className="mx-0.5 text-muted-foreground">←</span>
+            <Link to={`/assets/${selectedDomain}`} className="rounded-md border border-link-subcategory bg-link-subcategory-bg px-2 py-0.5 text-xs font-semibold text-link-subcategory no-underline transition-[filter] hover:brightness-95">תת-קטגוריה</Link>
+            <span className="text-muted-foreground">, במקום אחד</span>
           </p>
         </div>
         <div className="relative w-full sm:w-72">
