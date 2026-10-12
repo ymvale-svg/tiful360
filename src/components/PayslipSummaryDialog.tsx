@@ -35,7 +35,7 @@ export function PayslipSummaryDialog({ open, onClose, payslip, employeeName, can
     canSeeSalary && { icon: TrendingUp, label: "שכר נטו", value: fmt(payslip.net_salary), suffix: "₪", color: "text-success" },
     { icon: Calendar, label: "יתרת חופשה", value: fmt(payslip.vacation_balance), suffix: "ימים", color: "text-info" },
     { icon: Stethoscope, label: "יתרת מחלה", value: fmt(payslip.sick_balance), suffix: "ימים", color: "text-warning" },
-    { icon: Calendar, label: "ימי עבודה", value: fmt(payslip.work_days), suffix: "ימים", color: "text-foreground" },
+    { icon: Calendar, label: "ימי עבודה", value: fmt(payslip.work_days_num ?? payslip.work_days), suffix: "ימים", color: "text-foreground" },
     { icon: Clock, label: "שעות עבודה", value: fmt(payslip.work_hours), suffix: "שעות", color: "text-foreground" },
   ].filter(Boolean) as any[];
 
