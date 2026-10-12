@@ -71,18 +71,33 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
   // Approved leave days inside the displayed range that have no punches —
   // shown as a labeled card so the day isn't a "hole" in the list.
   // Only working days are listed: a weekend or holiday inside a leave span isn't an attendance day.
+  // Same display window as the empty-days loop below: daysBack days ending today,
+  // never before the employee's first recorded punch.
+  const windowStart = (() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const s = new Date(today);
+    s.setDate(s.getDate() - (daysBack - 1));
+    if (punches.length > 0) {
+      const first = new Date(Math.min(...punches.map((p) => new Date(p.punch_at).getTime())));
+      first.setHours(0, 0, 0, 0);
+      if (first > s) s.setTime(first.getTime());
+    }
+    return s;
+  })();
+  const windowEnd = (() => {
+    const t = new Date();
+    t.setHours(23, 59, 59, 999);
+    return t;
+  })();
+
   const leaveDays = new Map<string, string>(); // dayKey -> label
-  if (punches.length > 0 && leaves.length > 0) {
-    const times = punches.map((p) => new Date(p.punch_at).getTime());
-    const min = new Date(Math.min(...times));
-    const max = new Date(Math.max(...times));
-    min.setHours(0, 0, 0, 0);
-    max.setHours(23, 59, 59, 999);
+  if (leaves.length > 0) {
     for (const l of leaves) {
       const start = new Date(`${l.start_date}T00:00:00`);
       const end = new Date(`${l.end_date ?? l.start_date}T00:00:00`);
       for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        if (d < min || d > max) continue;
+        if (d < windowStart || d > windowEnd) continue;
         if (!isWorkingDay(d, holidays)) continue;
         const key = d.toLocaleDateString("en-GB");
         if (!byDay.has(key) && !leaveDays.has(key)) {
