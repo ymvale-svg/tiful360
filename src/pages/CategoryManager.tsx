@@ -154,6 +154,10 @@ export default function CategoryManager() {
     <div className="space-y-5 animate-fade-in" dir="rtl">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="page-header">
+          <Link to="/assets" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-1">
+            <ArrowRight className="w-4 h-4" />
+            חזרה למשאבים
+          </Link>
           <h1 className="page-title">ניהול דומיינים וקטגוריות</h1>
           <p className="page-subtitle">דומיין ← קטגוריה ← תת-קטגוריה, במקום אחד</p>
         </div>
