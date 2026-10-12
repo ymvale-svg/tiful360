@@ -7,9 +7,12 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ChevronRight, ChevronDown, Search, Plus, ArrowRight, Users, AlertTriangle,
   ArrowUpDown, LayoutGrid, List, FolderPlus, Check, X, Link2, Trash2, FileSignature,
-  ChevronUp, ChevronsUpDown, Building2, Columns3,
+  ChevronUp, ChevronsUpDown, Building2, Columns3, Pencil,
 
 } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
 
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel,
@@ -21,7 +24,7 @@ import { SubCategorySelect } from "@/components/assets/SubCategorySelect";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { useAssets, useAssetCategories } from "@/hooks/useData";
-import { useAssetGroups, useCreateAssetGroup, useAssignAssetsToGroup, useDeleteAssetGroup } from "@/hooks/useAssetGroups";
+import { useAssetGroups, useCreateAssetGroup, useAssignAssetsToGroup, useDeleteAssetGroup, useUpdateAssetGroup } from "@/hooks/useAssetGroups";
 import { useExpiringAssets } from "@/hooks/useExpiringAssets";
 import { AssetDetailView } from "@/components/assets/AssetDetailView";
 import { AddAssetDialog } from "@/components/AddAssetDialog";
@@ -94,6 +97,7 @@ export default function AssetsDomainPage() {
   const createGroup = useCreateAssetGroup();
   const assignToGroup = useAssignAssetsToGroup();
   const deleteGroup = useDeleteAssetGroup();
+  const updateGroup = useUpdateAssetGroup();
 
   const handleDeleteGroup = async (groupId: string, groupName: string, itemCount: number) => {
     const msg = itemCount > 0
@@ -108,6 +112,19 @@ export default function AssetsDomainPage() {
     }
   };
 
+  const handleRenameGroup = async () => {
+    if (!renameTarget) return;
+    const name = renameName.trim();
+    if (!name || name === renameTarget.name) { setRenameTarget(null); return; }
+    try {
+      await updateGroup.mutateAsync({ id: renameTarget.id, name });
+      toast({ title: "שם תת-הקטגוריה עודכן" });
+      setRenameTarget(null);
+    } catch (e: any) {
+      toast({ title: "שגיאה בשמירה", description: e.message, variant: "destructive" });
+    }
+  };
+
   /** Right-click menu actions for a sub-category card/row. */
   const subMenuActions = (category: any, c: any): ContextAction[] => [
     {
@@ -119,10 +136,16 @@ export default function AssetsDomainPage() {
       onSelect: () => openInNewTab(`/assets/${params.domain}?cat=${category.id}&sub=${c.id}`),
     },
     {
+      label: "ערוך תת-קטגוריה",
+      when: c.id !== NO_SUBCATEGORY_KEY,
+      roles: ["super_admin", "operations"],
+      separator: true,
+      onSelect: () => { setRenameTarget(c); setRenameName(c.name); },
+    },
+    {
       label: "מחק תת-קטגוריה",
       when: c.id !== NO_SUBCATEGORY_KEY,
       danger: true,
-      separator: true,
       roles: ["super_admin", "operations"],
       onSelect: () => handleDeleteGroup(c.id, c.name, c.items.length),
     },
@@ -144,6 +167,8 @@ export default function AssetsDomainPage() {
   const [addGroupId, setAddGroupId] = useState<string | undefined>(undefined);
   const [newSubFor, setNewSubFor] = useState<string | null>(null);
   const [newSubName, setNewSubName] = useState("");
+  const [renameTarget, setRenameTarget] = useState<SubCard | null>(null);
+  const [renameName, setRenameName] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [assignTarget, setAssignTarget] = useState("");
 
@@ -697,6 +722,7 @@ export default function AssetsDomainPage() {
                         isAssignable={isAssignable}
                         onClick={() => { setSelectedIds(new Set()); updateParams({ cat: category.id, sub: c.id }); }}
                         onDelete={c.id === NO_SUBCATEGORY_KEY ? undefined : () => handleDeleteGroup(c.id, c.name, c.items.length)}
+                        onEdit={c.id === NO_SUBCATEGORY_KEY ? undefined : () => { setRenameTarget(c); setRenameName(c.name); }}
                       />
                       </RowContextMenu>
                     ))}
@@ -784,6 +810,33 @@ export default function AssetsDomainPage() {
         defaultCategoryId={addCategoryId}
         defaultGroupId={addGroupId}
       />
+
+      <Dialog open={!!renameTarget} onOpenChange={(o) => { if (!o) setRenameTarget(null); }}>
+        <DialogContent className="sm:max-w-sm" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-right">עריכת תת-קטגוריה</DialogTitle>
+          </DialogHeader>
+          <Input
+            value={renameName}
+            onChange={(e) => setRenameName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleRenameGroup(); }}
+            placeholder="שם תת-הקטגוריה"
+            dir="rtl"
+            className="text-right"
+            autoFocus
+          />
+          <DialogFooter className="gap-2 sm:justify-start">
+            <Button onClick={handleRenameGroup} disabled={!renameName.trim() || updateGroup.isPending}>
+              <Check className="w-4 h-4 ml-1" />
+              שמירה
+            </Button>
+            <Button variant="ghost" onClick={() => setRenameTarget(null)}>
+              <X className="w-4 h-4 ml-1" />
+              ביטול
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -794,8 +847,9 @@ const SubCategoryCard = React.forwardRef<HTMLDivElement, {
   isAssignable: boolean;
   onClick: () => void;
   onDelete?: () => void;
+  onEdit?: () => void;
 } & Omit<React.HTMLAttributes<HTMLDivElement>, "onClick">>(function SubCategoryCard({
-  card, domain, isAssignable, onClick, onDelete, className: extraClass, ...rest
+  card, domain, isAssignable, onClick, onDelete, onEdit, className: extraClass, ...rest
 }, ref) {
   const Icon = getCategoryIcon(card.name);
   const color = getCategoryColor(card.name);
@@ -830,6 +884,20 @@ const SubCategoryCard = React.forwardRef<HTMLDivElement, {
         <span className="absolute top-2 left-2 inline-flex items-center justify-center w-5 h-5 rounded-full bg-destructive/15 text-destructive" title="יש פריטים פגי תוקף">
           <AlertTriangle className="w-3 h-3" />
         </span>
+      )}
+      {onEdit && (
+        <button
+          type="button"
+          title="ערוך תת-קטגוריה"
+          onClick={(e) => { e.stopPropagation(); onEdit(); }}
+          className={cn(
+            "absolute bottom-2 left-9 p-1.5 rounded-lg text-muted-foreground/70",
+            "hover:bg-muted hover:text-foreground transition-colors",
+            "opacity-0 group-hover:opacity-100 focus:opacity-100 md:opacity-0 max-md:opacity-100",
+          )}
+        >
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
       )}
       {onDelete && (
         <button
