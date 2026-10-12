@@ -820,8 +820,9 @@ const SubCategoryCard = React.forwardRef<HTMLDivElement, {
   isAssignable: boolean;
   onClick: () => void;
   onDelete?: () => void;
+  onEdit?: () => void;
 } & Omit<React.HTMLAttributes<HTMLDivElement>, "onClick">>(function SubCategoryCard({
-  card, domain, isAssignable, onClick, onDelete, className: extraClass, ...rest
+  card, domain, isAssignable, onClick, onDelete, onEdit, className: extraClass, ...rest
 }, ref) {
   const Icon = getCategoryIcon(card.name);
   const color = getCategoryColor(card.name);
