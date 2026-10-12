@@ -136,10 +136,16 @@ export default function AssetsDomainPage() {
       onSelect: () => openInNewTab(`/assets/${params.domain}?cat=${category.id}&sub=${c.id}`),
     },
     {
+      label: "ערוך תת-קטגוריה",
+      when: c.id !== NO_SUBCATEGORY_KEY,
+      roles: ["super_admin", "operations"],
+      separator: true,
+      onSelect: () => { setRenameTarget(c); setRenameName(c.name); },
+    },
+    {
       label: "מחק תת-קטגוריה",
       when: c.id !== NO_SUBCATEGORY_KEY,
       danger: true,
-      separator: true,
       roles: ["super_admin", "operations"],
       onSelect: () => handleDeleteGroup(c.id, c.name, c.items.length),
     },
