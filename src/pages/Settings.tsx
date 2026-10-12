@@ -18,6 +18,7 @@ import { GoogleCalendarSyncCard } from "@/components/settings/GoogleCalendarSync
 import { SlaSettingsCard } from "@/components/settings/SlaSettingsCard";
 import { Mail } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { PermissionAuditTab } from "@/components/settings/PermissionAuditTab";
 
 // ============================
 // Generic Emails Settings (per column)
@@ -140,7 +141,19 @@ export default function Settings() {
             <Bell className="w-4 h-4" />
             חוקי התראות
           </TabsTrigger>
+          {(isAdmin || isSuperAdmin) && (
+            <TabsTrigger value="permission_audit" className="gap-1.5">
+              <Shield className="w-4 h-4" />
+              לוג הרשאות
+            </TabsTrigger>
+          )}
         </TabsList>
+
+        {(isAdmin || isSuperAdmin) && (
+          <TabsContent value="permission_audit">
+            <PermissionAuditTab />
+          </TabsContent>
+        )}
 
         <TabsContent value="general">
           <div className="space-y-6">

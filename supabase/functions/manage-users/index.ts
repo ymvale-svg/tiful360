@@ -64,6 +64,13 @@ Deno.serve(async (req) => {
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
+    // Service-role writes skip the DB audit trigger, so every permission change
+    // made here is recorded explicitly with the real caller as actor.
+    const audit = async (row: { target_user_id?: string | null; company_id?: string | null; action: string; details: string }) => {
+      const { error } = await adminClient.from("permission_audit_log").insert({ actor_user_id: caller.id, ...row });
+      if (error) console.error("permission audit insert failed", error);
+    };
+
     // Roles a non-super-admin may hand out, whichever action they use.
     // adminClient is a service-role client and bypasses RLS, so this list is
     // the only thing standing between a caller and any role in app_role —
@@ -195,8 +202,10 @@ Deno.serve(async (req) => {
 
       if (remove) {
         await adminClient.from("user_roles").delete().eq("user_id", user_id).eq("role", role);
+        await audit({ target_user_id: user_id, action: "user_roles_delete", details: `תפקיד: ${role}` });
       } else {
         await adminClient.from("user_roles").upsert({ user_id, role }, { onConflict: "user_id,role" });
+        await audit({ target_user_id: user_id, action: "user_roles_insert", details: `תפקיד: ${role}` });
       }
 
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -308,6 +317,7 @@ Deno.serve(async (req) => {
               { user_id: userId, role: default_role as any },
               { onConflict: "user_id,role" },
             );
+            await audit({ target_user_id: userId, company_id, action: "user_invited", details: `הזמנת עובד · תפקיד: ${default_role}` });
             // Link employee record if provided
             if (emp.employee_id) {
               await adminClient
@@ -403,6 +413,7 @@ Deno.serve(async (req) => {
           { user_id: userId!, company_id: cid, role: role as any },
           { onConflict: "user_id,company_id" },
         );
+        await audit({ target_user_id: userId!, company_id: cid, action: "user_invited", details: `הזמנת משתמש חיצוני · תפקיד: ${role}` });
       }
 
       return new Response(JSON.stringify({ success: true, status, user_id: userId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -483,6 +494,7 @@ Deno.serve(async (req) => {
       } else {
         await adminClient.auth.admin.updateUserById(user_id, { ban_duration: "none" });
       }
+      await audit({ target_user_id: user_id, action: ban ? "user_banned" : "user_unbanned", details: ban ? "חסימת משתמש" : "ביטול חסימה" });
 
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
