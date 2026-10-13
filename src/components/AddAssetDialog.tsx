@@ -100,6 +100,56 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
     password_expires_at: "",
   });
   const [customFields, setCustomFields] = useState<Record<string, string>>({});
+  const [policyReading, setPolicyReading] = useState(false);
+  const fillFromPolicy = async (file: File) => {
+    if (file.size > 10 * 1024 * 1024) { toast({ title: "הקובץ גדול מדי (עד 10MB)", variant: "destructive" }); return; }
+    setPolicyReading(true);
+    try {
+      const buf = new Uint8Array(await file.arrayBuffer());
+      let bin = "";
+      for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+      const mime = file.type || (file.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg");
+      const { data, error } = await supabase.functions.invoke("extract-insurance-policy", { body: { file_base64: btoa(bin), mime } });
+      if (error) {
+        let msg = error.message;
+        try { msg = JSON.parse(await (error as any).context.text()).error ?? msg; } catch { /* */ }
+        throw new Error(msg);
+      }
+      const f = (data?.fields ?? {}) as Record<string, string | number | null>;
+      const ALIASES: Record<string, string[]> = {
+        insurance_company: ["חברת ביטוח"],
+        policy_number: ["מספר פוליסה"],
+        coverage_type: ["סוג כיסוי", "סוג ביטוח"],
+        coverage_amount: ["סכום כיסוי"],
+        premium: ["פרמיה שנתית", "פרמיה"],
+        start_date: ["תאריך תחילה"],
+        end_date: ["תאריך סיום"],
+        agent_name: ["שם סוכן ביטוח", "שם סוכן", "סוכן ביטוח", "סוכן"],
+        agent_phone: ["טלפון סוכן", "טלפון סוכן ביטוח"],
+        agent_email: ["אימייל סוכן", "אימייל סוכן ביטוח", "מייל סוכן"],
+      };
+      const names = new Set(((catFieldsRaw ?? []) as any[]).map((c: any) => (c.field_name ?? "").trim()));
+      let count = 0;
+      setCustomFields(prev => {
+        const next = { ...prev };
+        for (const [k, aliases] of Object.entries(ALIASES)) {
+          const v = f[k];
+          if (v === null || v === undefined || v === "") continue;
+          for (const a of aliases) {
+            if (names.has(a) && !next[a]) { next[a] = String(v); count++; }
+          }
+        }
+        return next;
+      });
+      if (f.end_date) setForm(prev => (prev.expiry_date ? prev : { ...prev, expiry_date: String(f.end_date) }));
+      setPendingDocs(prev => [...prev, file]);
+      setTimeout(() => toast({ title: "הפוליסה נקראה", description: `מולאו ${count} שדות. בדוק לפני שמירה. הקובץ צורף למסמכים.` }), 0);
+    } catch (e: any) {
+      toast({ title: "לא ניתן לקרוא את הקובץ", description: e.message, variant: "destructive" });
+    } finally {
+      setPolicyReading(false);
+    }
+  };
 
   // Bulk mode state
   const [bulkMode, setBulkMode] = useState(false);
@@ -856,13 +906,23 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
           {/* Universal custom fields */}
           {universalCustomFields.length > 0 && (
             <div className="border-t border-border/50 pt-3 mt-3">
-              <p className="text-xs font-medium text-muted-foreground mb-2">
+              <div className="flex items-center justify-between mb-2 gap-2">
+              <p className="text-xs font-medium text-muted-foreground">
                 {bulkMode
                   ? "שדות אוניברסליים (זהים לכולם)"
                   : selectedCategory?.prefix === "CINS"
                     ? "פרטי הפוליסה"
                     : "שדות מותאמים לקטגוריה"}
               </p>
+              {!bulkMode && domain === "insurance" && (
+                <label className={cn("text-xs px-3 py-1.5 rounded-lg border border-primary/40 bg-primary/5 text-primary cursor-pointer flex items-center gap-1 hover:bg-primary/10", policyReading && "opacity-60 pointer-events-none")}>
+                  <Upload className="w-3.5 h-3.5" />
+                  {policyReading ? "קורא את הקובץ..." : "מלא פרטים מקובץ פוליסה"}
+                  <input type="file" accept="application/pdf,image/*" className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) fillFromPolicy(f); }} />
+                </label>
+              )}
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 {universalCustomFields.map(cf => {
                   const key = `cf:${cf.field_name}`;
