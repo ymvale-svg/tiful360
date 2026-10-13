@@ -128,7 +128,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
         agent_phone: ["טלפון סוכן", "טלפון סוכן ביטוח"],
         agent_email: ["אימייל סוכן", "אימייל סוכן ביטוח", "מייל סוכן"],
       };
-      const names = new Set((catFieldsRaw as any[]).map((c: any) => (c.field_name ?? "").trim()));
+      const names = new Set(((catFieldsRaw ?? []) as any[]).map((c: any) => (c.field_name ?? "").trim()));
       let count = 0;
       setCustomFields(prev => {
         const next = { ...prev };
