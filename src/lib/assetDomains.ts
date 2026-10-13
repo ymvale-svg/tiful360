@@ -214,7 +214,7 @@ export function getPanelOwnedCustomFieldKeys(
       add(
         "insurance_company", "policy_number", "coverage_type", "coverage_amount",
         "premium", "annual_premium", "start_date", "end_date",
-        "agent_name", "agent_phone", "agent_email",
+        "agent_name", "agent_phone", "agent_email", "linked_employee_id", "linked_vehicle_plate",
         "חברת ביטוח", "מספר פוליסה", "סוג כיסוי", "סכום כיסוי",
         "פרמיה", "פרמיה שנתית", "תאריך תחילה", "תאריך סיום",
         "סוכן", "שם סוכן ביטוח", "סוכן ביטוח", "טלפון סוכן", "אימייל סוכן", "מייל סוכן",
