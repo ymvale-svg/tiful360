@@ -100,6 +100,33 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
     password_expires_at: "",
   });
   const [customFields, setCustomFields] = useState<Record<string, string>>({});
+  const AGENT_NAME_KEYS = ["שם סוכן ביטוח", "שם סוכן", "סוכן ביטוח", "סוכן"];
+  const AGENT_PHONE_KEYS = ["טלפון סוכן", "טלפון סוכן ביטוח"];
+  const AGENT_EMAIL_KEYS = ["אימייל סוכן", "אימייל סוכן ביטוח", "מייל סוכן"];
+  const lookupAgentFill = async (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed || !activeCompanyId) return;
+    const { data } = await supabase.from("assets").select("custom_fields, updated_at")
+      .eq("company_id", activeCompanyId).order("updated_at", { ascending: false }).limit(300);
+    if (!data) return;
+    const norm = (s: any) => String(s ?? "").trim().toLowerCase();
+    for (const row of data as any[]) {
+      const c = row.custom_fields ?? {};
+      const candidate = AGENT_NAME_KEYS.map((k) => c[k]).find((v) => v);
+      if (norm(candidate) !== norm(trimmed)) continue;
+      const phone = AGENT_PHONE_KEYS.map((k) => c[k]).find((v) => v) ?? "";
+      const email = AGENT_EMAIL_KEYS.map((k) => c[k]).find((v) => v) ?? "";
+      if (!phone && !email) return;
+      setCustomFields((prev) => {
+        const next = { ...prev };
+        if (phone && !AGENT_PHONE_KEYS.some((k) => next[k])) next[AGENT_PHONE_KEYS[0]] = phone;
+        if (email && !AGENT_EMAIL_KEYS.some((k) => next[k])) next[AGENT_EMAIL_KEYS[0]] = email;
+        return next;
+      });
+      toast({ title: "פרטי הסוכן מולאו אוטומטית", description: "מצאתי את הסוכן בביטוח אחר במערכת" });
+      return;
+    }
+  };
   const [policyReading, setPolicyReading] = useState(false);
   const fillFromPolicy = async (file: File) => {
     if (file.size > 10 * 1024 * 1024) { toast({ title: "הקובץ גדול מדי (עד 10MB)", variant: "destructive" }); return; }
@@ -1028,6 +1055,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                           type={cf.field_type === "number" ? "number" : cf.field_type === "date" ? "date" : "text"}
                           value={customFields[cf.field_name] ?? ""}
                           onChange={(e) => setCustomFields(prev => ({ ...prev, [cf.field_name]: e.target.value }))}
+                          onBlur={AGENT_NAME_KEYS.includes(cf.field_name) ? () => lookupAgentFill(customFields[cf.field_name] ?? "") : undefined}
                           className={cn(
                             "w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2",
                             errors[errKey] ? "ring-2 ring-destructive/50" : "focus:ring-primary/30",
