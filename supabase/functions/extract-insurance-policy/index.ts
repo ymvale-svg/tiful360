@@ -20,17 +20,26 @@ Deno.serve(async (req) => {
     if (!u?.user) return json({ error: "לא מחובר" }, 401);
 
     const body = await req.json().catch(() => ({}));
-    const path = typeof body.path === "string" ? body.path : "";
-    if (!path || path.length > 500) return json({ error: "נתיב קובץ לא תקין" }, 400);
-
-    // RLS on storage enforces company access
-    const { data: file, error: dErr } = await supabase.storage.from("asset-documents").download(path);
-    if (dErr || !file) return json({ error: "אין גישה לקובץ" }, 403);
-    const mime = file.type || (path.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg");
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    let bin = "";
-    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-    const dataUrl = `data:${mime};base64,${btoa(bin)}`;
+    let mime: string;
+    let dataUrl: string;
+    if (typeof body.file_base64 === "string" && body.file_base64) {
+      // Direct upload from the "add item" dialog (item not saved yet)
+      if (body.file_base64.length > 14_000_000) return json({ error: "הקובץ גדול מדי" }, 400);
+      mime = typeof body.mime === "string" && /^(application\/pdf|image\/[a-z+.-]+)$/.test(body.mime) ? body.mime : "";
+      if (!mime) return json({ error: "סוג קובץ לא נתמך" }, 400);
+      dataUrl = `data:${mime};base64,${body.file_base64}`;
+    } else {
+      const path = typeof body.path === "string" ? body.path : "";
+      if (!path || path.length > 500) return json({ error: "נתיב קובץ לא תקין" }, 400);
+      // RLS on storage enforces company access
+      const { data: file, error: dErr } = await supabase.storage.from("asset-documents").download(path);
+      if (dErr || !file) return json({ error: "אין גישה לקובץ" }, 403);
+      mime = file.type || (path.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg");
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      let bin = "";
+      for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+      dataUrl = `data:${mime};base64,${btoa(bin)}`;
+    }
     const part = mime === "application/pdf"
       ? { type: "input_file", filename: "policy.pdf", file_data: dataUrl }
       : { type: "input_image", image_url: dataUrl };

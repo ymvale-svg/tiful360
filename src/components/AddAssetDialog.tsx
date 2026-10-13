@@ -856,13 +856,23 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
           {/* Universal custom fields */}
           {universalCustomFields.length > 0 && (
             <div className="border-t border-border/50 pt-3 mt-3">
-              <p className="text-xs font-medium text-muted-foreground mb-2">
+              <div className="flex items-center justify-between mb-2 gap-2">
+              <p className="text-xs font-medium text-muted-foreground">
                 {bulkMode
                   ? "שדות אוניברסליים (זהים לכולם)"
                   : selectedCategory?.prefix === "CINS"
                     ? "פרטי הפוליסה"
                     : "שדות מותאמים לקטגוריה"}
               </p>
+              {!bulkMode && domain === "insurance" && (
+                <label className={cn("text-xs px-3 py-1.5 rounded-lg border border-primary/40 bg-primary/5 text-primary cursor-pointer flex items-center gap-1 hover:bg-primary/10", policyReading && "opacity-60 pointer-events-none")}>
+                  <Upload className="w-3.5 h-3.5" />
+                  {policyReading ? "קורא את הקובץ..." : "מלא פרטים מקובץ פוליסה"}
+                  <input type="file" accept="application/pdf,image/*" className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) fillFromPolicy(f); }} />
+                </label>
+              )}
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 {universalCustomFields.map(cf => {
                   const key = `cf:${cf.field_name}`;
