@@ -23,6 +23,7 @@ import { RealEstateDetailsPanel } from "@/components/assets/RealEstateDetailsPan
 import { getDomain, getPanelOwnedCustomFieldKeys } from "@/lib/assetDomains";
 import { isBuiltinFieldVisible, isHandoverRelevant } from "@/lib/builtinFields";
 import { VehicleLinkPanel } from "@/components/assets/VehicleLinkPanel";
+import { InsuranceVehicleLinkPanel, isCarInsuranceGroup } from "@/components/assets/InsuranceVehicleLink";
 import { isVehicleLinkedGroup } from "@/lib/vehicleLinkedGroups";
 import { useAssetGroups } from "@/hooks/useAssetGroups";
 import { useDeleteAsset, useUpdateAsset } from "@/hooks/useMutations";
@@ -359,7 +360,9 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
             if (domain === "digital") return <DigitalAccessPanel asset={asset} />;
             if (domain === "licenses") return <LicenseDetailsPanel asset={asset} />;
             if (domain === "training") return <TrainingDetailsPanel asset={asset} />;
-            if (domain === "insurance") return <><InsuranceDetailsPanel asset={asset} /><InsurancePaymentsSection asset={asset} /></>;
+            if (domain === "insurance") return <>
+              {isCarInsuranceGroup((assetGroups ?? []).find((g: any) => g.id === asset.group_id) as any) && <InsuranceVehicleLinkPanel asset={asset} />}
+              <InsuranceDetailsPanel asset={asset} /><InsurancePaymentsSection asset={asset} /></>;
             if (domain === "real_estate") return <RealEstateDetailsPanel asset={asset} />;
             return null;
           })()}
