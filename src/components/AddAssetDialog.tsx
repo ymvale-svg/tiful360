@@ -1055,6 +1055,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                           type={cf.field_type === "number" ? "number" : cf.field_type === "date" ? "date" : "text"}
                           value={customFields[cf.field_name] ?? ""}
                           onChange={(e) => setCustomFields(prev => ({ ...prev, [cf.field_name]: e.target.value }))}
+                          onBlur={AGENT_NAME_KEYS.includes(cf.field_name) ? () => lookupAgentFill(customFields[cf.field_name] ?? "") : undefined}
                           className={cn(
                             "w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2",
                             errors[errKey] ? "ring-2 ring-destructive/50" : "focus:ring-primary/30",
