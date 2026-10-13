@@ -85,6 +85,13 @@
       "when": 1791808501694,
       "tag": "0011_permission_audit_log",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791883321713,
+      "tag": "0012_migration",
+      "breakpoints": true
     }
   ]
 }

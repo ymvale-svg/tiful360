@@ -1970,6 +1970,7 @@ export type Database = {
           location: string | null
           priority: Database["public"]["Enums"]["ticket_priority"]
           related_asset_id: string | null
+          replies: Json
           resolved_at: string | null
           resolved_by: string | null
           sla_deadline: string | null
@@ -2000,6 +2001,7 @@ export type Database = {
           location?: string | null
           priority?: Database["public"]["Enums"]["ticket_priority"]
           related_asset_id?: string | null
+          replies?: Json
           resolved_at?: string | null
           resolved_by?: string | null
           sla_deadline?: string | null
@@ -2030,6 +2032,7 @@ export type Database = {
           location?: string | null
           priority?: Database["public"]["Enums"]["ticket_priority"]
           related_asset_id?: string | null
+          replies?: Json
           resolved_at?: string | null
           resolved_by?: string | null
           sla_deadline?: string | null
