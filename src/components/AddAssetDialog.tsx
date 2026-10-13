@@ -119,8 +119,8 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
       if (!phone && !email) return;
       setCustomFields((prev) => {
         const next = { ...prev };
-        if (phone) for (const k of AGENT_PHONE_KEYS) if (k in next || true) { if (!next[k]) { next[k] = phone; break; } }
-        if (email) for (const k of AGENT_EMAIL_KEYS) { if (!next[k]) { next[k] = email; break; } }
+        if (phone && !AGENT_PHONE_KEYS.some((k) => next[k])) next[AGENT_PHONE_KEYS[0]] = phone;
+        if (email && !AGENT_EMAIL_KEYS.some((k) => next[k])) next[AGENT_EMAIL_KEYS[0]] = email;
         return next;
       });
       toast({ title: "פרטי הסוכן מולאו אוטומטית", description: "מצאתי את הסוכן בביטוח אחר במערכת" });
