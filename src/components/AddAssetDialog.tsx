@@ -100,6 +100,33 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
     password_expires_at: "",
   });
   const [customFields, setCustomFields] = useState<Record<string, string>>({});
+  const AGENT_NAME_KEYS = ["שם סוכן ביטוח", "שם סוכן", "סוכן ביטוח", "סוכן"];
+  const AGENT_PHONE_KEYS = ["טלפון סוכן", "טלפון סוכן ביטוח"];
+  const AGENT_EMAIL_KEYS = ["אימייל סוכן", "אימייל סוכן ביטוח", "מייל סוכן"];
+  const lookupAgentFill = async (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed || !activeCompanyId) return;
+    const { data } = await supabase.from("assets").select("custom_fields, updated_at")
+      .eq("company_id", activeCompanyId).order("updated_at", { ascending: false }).limit(300);
+    if (!data) return;
+    const norm = (s: any) => String(s ?? "").trim().toLowerCase();
+    for (const row of data as any[]) {
+      const c = row.custom_fields ?? {};
+      const candidate = AGENT_NAME_KEYS.map((k) => c[k]).find((v) => v);
+      if (norm(candidate) !== norm(trimmed)) continue;
+      const phone = AGENT_PHONE_KEYS.map((k) => c[k]).find((v) => v) ?? "";
+      const email = AGENT_EMAIL_KEYS.map((k) => c[k]).find((v) => v) ?? "";
+      if (!phone && !email) return;
+      setCustomFields((prev) => {
+        const next = { ...prev };
+        if (phone) for (const k of AGENT_PHONE_KEYS) if (k in next || true) { if (!next[k]) { next[k] = phone; break; } }
+        if (email) for (const k of AGENT_EMAIL_KEYS) { if (!next[k]) { next[k] = email; break; } }
+        return next;
+      });
+      toast({ title: "פרטי הסוכן מולאו אוטומטית", description: "מצאתי את הסוכן בביטוח אחר במערכת" });
+      return;
+    }
+  };
   const [policyReading, setPolicyReading] = useState(false);
   const fillFromPolicy = async (file: File) => {
     if (file.size > 10 * 1024 * 1024) { toast({ title: "הקובץ גדול מדי (עד 10MB)", variant: "destructive" }); return; }
