@@ -253,11 +253,38 @@ export default function ITTickets() {
     }
   };
 
+  const [replyText, setReplyText] = useState("");
+  const [sendingReply, setSendingReply] = useState(false);
+  const replies: any[] = Array.isArray(selectedTicket?.replies) ? selectedTicket.replies : [];
+  const sendReply = async (kind: "reply" | "done", message: string) => {
+    if (!selectedTicket) return;
+    setSendingReply(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("reply-it-ticket", {
+        body: { ticket_id: selectedTicket.id, kind, message },
+      });
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ["it-tickets"] });
+      if (!data?.has_email) toast.warning("לעובד אין כתובת מייל — התגובה נשמרה בקריאה בלבד");
+      else if (data?.emailed) toast.success(kind === "done" ? "נשלח לעובד מייל שהקריאה טופלה" : "התגובה נשלחה לעובד במייל");
+      else toast.error("שליחת המייל לעובד נכשלה");
+      if (kind === "reply") setReplyText("");
+    } catch (e: any) {
+      toast.error("שליחת התגובה נכשלה", { description: e?.message } as any);
+    } finally {
+      setSendingReply(false);
+    }
+  };
+
   const changeStatus = async (status: string) => {
     if (!selectedTicket) return;
     try {
       await updateStatus.mutateAsync({ id: selectedTicket.id, status });
       toast.success("סטטוס הקריאה עודכן");
+      if (status === "done" && selectedTicket.status !== "done") {
+        const note = window.prompt("הודעה לעובד שהקריאה טופלה (לא חובה):", "");
+        if (note !== null) await sendReply("done", note);
+      }
     } catch (err: any) {
       toast.error(err?.message ?? "שגיאה בעדכון הסטטוס");
     }
@@ -501,6 +528,33 @@ export default function ITTickets() {
                       </ul>
                     </div>
                   )}
+
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold">תגובות לעובד</h3>
+                    {replies.length > 0 && (
+                      <ul className="space-y-2">
+                        {replies.map((r: any) => (
+                          <li key={r.id} className="rounded-lg border border-border/50 bg-muted/30 p-3 text-sm">
+                            <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                              <span>{r.author}{r.kind === "done" ? " • הודעת טיפול" : ""}</span>
+                              <span>{formatDateTimeDMY(r.created_at)} • {r.emailed ? "נשלח במייל" : "לא נשלח במייל"}</span>
+                            </div>
+                            {r.message && <p className="whitespace-pre-wrap">{r.message}</p>}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <Textarea
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      placeholder="כתוב תגובה לעובד..."
+                      aria-label="תגובה לעובד"
+                      rows={3}
+                    />
+                    <Button size="sm" disabled={sendingReply || !replyText.trim()} onClick={() => sendReply("reply", replyText)}>
+                      {sendingReply ? "שולח..." : "שלח תגובה לעובד במייל"}
+                    </Button>
+                  </div>
 
                   {attachments.length > 0 && (
                     <div>
