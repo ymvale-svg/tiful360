@@ -17,6 +17,7 @@ import { isBuiltinFieldVisible } from "@/lib/builtinFields";
 import { useCategoryFields, useAddCategoryFieldOption, filterFieldsForGroup } from "@/hooks/useCategories";
 import { getDomain } from "@/lib/assetDomains";
 import { isVehicleLinkedGroup } from "@/lib/vehicleLinkedGroups";
+import { InsuranceVehiclePicker, isCarInsuranceGroup, INS_EMP_KEY, INS_PLATE_KEY } from "@/components/assets/InsuranceVehicleLink";
 import { useAuth } from "@/hooks/useAuth";
 import { useUploadAssetDocument } from "@/hooks/useAssetDocuments";
 import { FileText, Upload, Trash2 } from "lucide-react";
@@ -719,6 +720,22 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                 </label>
                 )}
               </div>
+            </div>
+          )}
+
+          {!bulkMode && domain === "insurance" && isCarInsuranceGroup(selectedGroup as any) && (
+            <div className="space-y-1">
+              <p className="text-sm font-medium">שיוך לרכב של עובד</p>
+              <InsuranceVehiclePicker
+                employeeId={customFields[INS_EMP_KEY] ?? ""}
+                plate={customFields[INS_PLATE_KEY] ?? ""}
+                onChange={(e, p) => setCustomFields(prev => {
+                  const n = { ...prev, [INS_EMP_KEY]: e, [INS_PLATE_KEY]: p };
+                  if (!e) delete n[INS_EMP_KEY];
+                  if (!p) delete n[INS_PLATE_KEY];
+                  return n;
+                })}
+              />
             </div>
           )}
 
