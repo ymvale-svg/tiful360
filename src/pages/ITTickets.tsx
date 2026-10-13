@@ -529,6 +529,33 @@ export default function ITTickets() {
                     </div>
                   )}
 
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold">תגובות לעובד</h3>
+                    {replies.length > 0 && (
+                      <ul className="space-y-2">
+                        {replies.map((r: any) => (
+                          <li key={r.id} className="rounded-lg border border-border/50 bg-muted/30 p-3 text-sm">
+                            <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                              <span>{r.author}{r.kind === "done" ? " • הודעת טיפול" : ""}</span>
+                              <span>{formatDateTimeDMY(r.created_at)} • {r.emailed ? "נשלח במייל" : "לא נשלח במייל"}</span>
+                            </div>
+                            {r.message && <p className="whitespace-pre-wrap">{r.message}</p>}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <Textarea
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      placeholder="כתוב תגובה לעובד..."
+                      aria-label="תגובה לעובד"
+                      rows={3}
+                    />
+                    <Button size="sm" disabled={sendingReply || !replyText.trim()} onClick={() => sendReply("reply", replyText)}>
+                      {sendingReply ? "שולח..." : "שלח תגובה לעובד במייל"}
+                    </Button>
+                  </div>
+
                   {attachments.length > 0 && (
                     <div>
                       <h3 className="text-sm font-semibold mb-1">קבצים מצורפים</h3>
