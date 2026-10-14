@@ -1,0 +1,2 @@
+ALTER TABLE public.it_tickets ADD COLUMN IF NOT EXISTS it_forwards jsonb NOT NULL DEFAULT '[]'::jsonb;
+COMMENT ON COLUMN public.it_tickets.it_forwards IS 'היסטוריית העברות לאיש IT: [{at, by_id, by_name, by_email, note, recipients, sent}]';

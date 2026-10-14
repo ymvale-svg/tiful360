@@ -2000,6 +2000,7 @@ export type Database = {
           git_sync_status: string
           git_synced_at: string | null
           id: string
+          it_forwards: Json
           location: string | null
           priority: Database["public"]["Enums"]["ticket_priority"]
           related_asset_id: string | null
@@ -2031,6 +2032,7 @@ export type Database = {
           git_sync_status?: string
           git_synced_at?: string | null
           id?: string
+          it_forwards?: Json
           location?: string | null
           priority?: Database["public"]["Enums"]["ticket_priority"]
           related_asset_id?: string | null
@@ -2062,6 +2064,7 @@ export type Database = {
           git_sync_status?: string
           git_synced_at?: string | null
           id?: string
+          it_forwards?: Json
           location?: string | null
           priority?: Database["public"]["Enums"]["ticket_priority"]
           related_asset_id?: string | null
