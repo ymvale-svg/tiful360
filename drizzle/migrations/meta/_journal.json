@@ -92,6 +92,13 @@
       "when": 1791883321713,
       "tag": "0012_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791989452918,
+      "tag": "0013_create_api_keys_table",
+      "breakpoints": true
     }
   ]
 }
