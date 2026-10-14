@@ -43,3 +43,5 @@ project_id = "rhzmhiknbcipucfvgkok"
 
   [functions.notify-form-signed]
     verify_jwt = true
+  [functions.it-api]
+    verify_jwt = false
