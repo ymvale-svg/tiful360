@@ -493,6 +493,33 @@ export default function ITTickets() {
                     )}
                   </div>
 
+                  {itForwards.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                        <Send className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                        העברה לאיש IT
+                      </h3>
+                      <ul className="space-y-2">
+                        {itForwards.map((f: any, i: number) => (
+                          <li key={i} className="rounded-lg border border-border/50 bg-muted/30 p-3 text-sm">
+                            <p className="flex flex-wrap items-center gap-1">
+                              <span className="font-medium">
+                                נשלח לאיש IT ב-{formatDateTimeDMY(f.at)} על ידי {f.by_name || "—"}
+                              </span>
+                              {f.sent > 0 && <span className="text-xs text-muted-foreground">({f.sent} נמענים)</span>}
+                            </p>
+                            {Array.isArray(f.recipients) && f.recipients.length > 0 && (
+                              <p className="text-xs text-muted-foreground mt-1" dir="ltr">
+                                {f.recipients.join(", ")}
+                              </p>
+                            )}
+                            {f.note && <p className="text-sm mt-1">הערה: {f.note}</p>}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
                   {selectedTicket.related_asset_id && (
                     <div>
                       <h3 className="text-sm font-semibold mb-1">פריט קשור</h3>
