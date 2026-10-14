@@ -383,6 +383,11 @@ export default function ITTickets() {
                       <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full border", STATUS_CLASSES[ticket.status])}>
                         {STATUS_LABELS[ticket.status] ?? ticket.status}
                       </span>
+                      {Array.isArray(ticket.it_forwards) && ticket.it_forwards.length > 0 && ticket.status !== "done" && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-info/10 text-info border border-info/30" title="הקריאה הועברה לאיש IT לטיפול">
+                          אצל IT
+                        </span>
+                      )}
                     </div>
                     <p className="text-sm font-medium truncate">{ticket.title}</p>
                     <p className="text-xs text-muted-foreground mt-1">
