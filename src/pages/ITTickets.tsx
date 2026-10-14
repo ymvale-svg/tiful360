@@ -256,6 +256,7 @@ export default function ITTickets() {
   const [replyText, setReplyText] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
   const replies: any[] = Array.isArray(selectedTicket?.replies) ? selectedTicket.replies : [];
+  const itForwards: any[] = Array.isArray(selectedTicket?.it_forwards) ? selectedTicket.it_forwards : [];
   const sendReply = async (kind: "reply" | "done", message: string) => {
     if (!selectedTicket) return;
     setSendingReply(true);
