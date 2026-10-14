@@ -256,6 +256,7 @@ export default function ITTickets() {
   const [replyText, setReplyText] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
   const replies: any[] = Array.isArray(selectedTicket?.replies) ? selectedTicket.replies : [];
+  const itForwards: any[] = Array.isArray(selectedTicket?.it_forwards) ? selectedTicket.it_forwards : [];
   const sendReply = async (kind: "reply" | "done", message: string) => {
     if (!selectedTicket) return;
     setSendingReply(true);
@@ -382,6 +383,11 @@ export default function ITTickets() {
                       <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full border", STATUS_CLASSES[ticket.status])}>
                         {STATUS_LABELS[ticket.status] ?? ticket.status}
                       </span>
+                      {Array.isArray(ticket.it_forwards) && ticket.it_forwards.length > 0 && ticket.status !== "done" && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-info/10 text-info border border-info/30" title="הקריאה הועברה לאיש IT לטיפול">
+                          אצל IT
+                        </span>
+                      )}
                     </div>
                     <p className="text-sm font-medium truncate">{ticket.title}</p>
                     <p className="text-xs text-muted-foreground mt-1">
@@ -486,6 +492,33 @@ export default function ITTickets() {
                       </p>
                     )}
                   </div>
+
+                  {itForwards.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                        <Send className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                        העברה לאיש IT
+                      </h3>
+                      <ul className="space-y-2">
+                        {itForwards.map((f: any, i: number) => (
+                          <li key={i} className="rounded-lg border border-border/50 bg-muted/30 p-3 text-sm">
+                            <p className="flex flex-wrap items-center gap-1">
+                              <span className="font-medium">
+                                נשלח לאיש IT ב-{formatDateTimeDMY(f.at)} על ידי {f.by_name || "—"}
+                              </span>
+                              {f.sent > 0 && <span className="text-xs text-muted-foreground">({f.sent} נמענים)</span>}
+                            </p>
+                            {Array.isArray(f.recipients) && f.recipients.length > 0 && (
+                              <p className="text-xs text-muted-foreground mt-1" dir="ltr">
+                                {f.recipients.join(", ")}
+                              </p>
+                            )}
+                            {f.note && <p className="text-sm mt-1">הערה: {f.note}</p>}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
 
                   {selectedTicket.related_asset_id && (
                     <div>

@@ -220,6 +220,34 @@ Deno.serve(async (req) => {
       if (ok) sent++;
     }
 
+    // Record the IT forward on the ticket (who sent it, when, to whom)
+    if (toIT && sent > 0) {
+      try {
+        const senderId = (claims.claims as any)?.sub ?? null;
+        let senderName = "";
+        let senderEmail = (claims.claims as any)?.email ?? "";
+        if (senderId) {
+          const { data: prof } = await supabase.from("profiles").select("full_name").eq("id", senderId).maybeSingle();
+          senderName = prof?.full_name ?? "";
+        }
+        if (!senderName && senderEmail) senderName = senderEmail;
+        const { data: cur } = await supabase.from("it_tickets").select("it_forwards").eq("id", ticket_id).maybeSingle();
+        const forwards = Array.isArray(cur?.it_forwards) ? [...(cur!.it_forwards as any[])] : [];
+        forwards.push({
+          at: new Date().toISOString(),
+          by_id: senderId,
+          by_name: senderName || "—",
+          by_email: senderEmail || null,
+          note: note ?? null,
+          recipients,
+          sent,
+        });
+        await supabase.from("it_tickets").update({ it_forwards: forwards }).eq("id", ticket_id);
+      } catch (logErr) {
+        console.error("failed to record it_forward", logErr);
+      }
+    }
+
     return new Response(JSON.stringify({ ok: true, sent }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
