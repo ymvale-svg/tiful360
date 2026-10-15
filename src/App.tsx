@@ -69,6 +69,7 @@ const App = () => (
         <AuthProvider>
           <CompanyProvider>
             <OAuthReturnRedirect />
+            <IpGate>
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 <Route path="/login" element={<Login />} />
