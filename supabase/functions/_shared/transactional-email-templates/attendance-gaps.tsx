@@ -1,3 +1,5 @@
+import { EmailLayout } from '../email-layout.tsx'
+import { emailStyles, emailTheme, type EmailBrand } from '../email-theme.ts'
 /// <reference types="npm:@types/react@18.3.1" />
 import * as React from 'npm:react@18.3.1'
 import {
@@ -16,7 +18,7 @@ interface Gap {
   punches: string    // formatted existing punches
 }
 
-interface Props {
+interface Props extends EmailBrand {
   employeeName?: string
   companyName?: string
   fromDate?: string
@@ -31,6 +33,8 @@ const TYPE_LABEL: Record<string, string> = {
 }
 
 const Email = ({
+  companyLogoUrl,
+
   employeeName = 'עובד/ת',
   companyName,
   fromDate = '',
@@ -38,19 +42,9 @@ const Email = ({
   gaps = [],
   correctionUrl = 'https://tiful360.com/portal',
 }: Props) => (
-  <Html lang="he" dir="rtl">
-    <Head><meta charSet="utf-8" /></Head>
-    <Preview>נמצאו {gaps.length} פערי החתמה בנוכחות שלך — נדרשת התייחסות</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Section style={card}>
-          <Section style={logoSection}>
-            <Link href="https://tiful360.com" style={logoLink}>
-              <Img src={LOGO_URL} width="48" height="48" alt={SYSTEM_NAME} style={logo} />
-              <Text style={brandName}>{SYSTEM_NAME}</Text>
-            </Link>
-          </Section>
-          <Hr style={divider} />
+  <EmailLayout companyName={companyName} companyLogoUrl={companyLogoUrl} preview={<>נמצאו {gaps.length} פערי החתמה בנוכחות שלך — נדרשת התייחסות</>}>
+        <>
+          
           <Heading style={h1}>נמצאו פערי החתמה בנוכחות שלך</Heading>
           <Text style={text}>שלום {employeeName},</Text>
           <Text style={text}>
@@ -71,7 +65,7 @@ const Email = ({
               </thead>
               <tbody>
                 {gaps.map((g, i) => (
-                  <tr key={i} style={{ backgroundColor: i % 2 ? '#fafbfc' : '#ffffff' }}>
+                  <tr key={i} style={{ backgroundColor: i % 2 ? emailTheme.alternate : emailTheme.surface }}>
                     <td style={td as any}>{g.date}</td>
                     <td style={td as any}>{g.weekday}</td>
                     <td style={td as any}>{TYPE_LABEL[g.type] ?? g.type}</td>
@@ -92,13 +86,11 @@ const Email = ({
           <Text style={footer}>
             אם כל ההחתמות נכונות מבחינתך, ניתן להתעלם מהודעה זו.
           </Text>
-        </Section>
+        </>
         <Text style={bottomFooter}>
           © {new Date().getFullYear()} {SYSTEM_NAME}. כל הזכויות שמורות.
         </Text>
-      </Container>
-    </Body>
-  </Html>
+      </EmailLayout>
 )
 
 export const template = {
@@ -118,21 +110,21 @@ export const template = {
   },
 } satisfies TemplateEntry
 
-const main = { backgroundColor: '#ffffff', fontFamily: "'Heebo', Arial, sans-serif", padding: '20px 0' }
-const container = { maxWidth: '640px', margin: '0 auto' }
-const card = { backgroundColor: '#ffffff', borderRadius: '16px', padding: '40px 32px 32px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '1px solid #e8ecf1' }
+const main = emailStyles.main
+const container = emailStyles.container
+const card = emailStyles.card
 const logoSection = { textAlign: 'center' as const, marginBottom: '8px' }
 const logoLink = { textDecoration: 'none', display: 'inline-block' }
 const logo = { margin: '0 auto', borderRadius: '12px' }
 const brandName = { fontSize: '18px', fontWeight: '700' as const, color: 'hsl(220, 25%, 10%)', margin: '12px 0 0', textAlign: 'center' as const }
-const divider = { borderColor: '#e8ecf1', margin: '24px 0' }
-const h1 = { fontSize: '22px', fontWeight: 'bold' as const, color: 'hsl(220, 25%, 10%)', margin: '0 0 16px', textAlign: 'center' as const }
-const text = { fontSize: '15px', color: 'hsl(215, 15%, 30%)', lineHeight: '1.7', margin: '0 0 12px' }
+const divider = emailStyles.divider
+const h1 = emailStyles.heading
+const text = emailStyles.text
 const tableWrap = { margin: '16px 0' }
-const tableStyle = { width: '100%', borderCollapse: 'collapse' as const, fontSize: '14px', border: '1px solid #e8ecf1', borderRadius: '8px', overflow: 'hidden' }
-const th = { textAlign: 'right' as const, padding: '10px 12px', backgroundColor: '#f4f6f9', color: 'hsl(220, 25%, 10%)', fontWeight: '600' as const, borderBottom: '1px solid #e8ecf1' }
-const td = { textAlign: 'right' as const, padding: '10px 12px', color: 'hsl(215, 15%, 30%)', borderBottom: '1px solid #f0f2f5' }
-const buttonSection = { textAlign: 'center' as const, margin: '24px 0 8px' }
-const button = { backgroundColor: 'hsl(215, 90%, 42%)', color: '#ffffff', fontSize: '15px', fontWeight: '600' as const, borderRadius: '12px', padding: '14px 32px', textDecoration: 'none', display: 'inline-block' }
-const footer = { fontSize: '13px', color: '#888', margin: '0', textAlign: 'center' as const }
-const bottomFooter = { fontSize: '12px', color: '#b0b0b0', textAlign: 'center' as const, margin: '16px 0 0' }
+const tableStyle = emailStyles.table
+const th = emailStyles.th
+const td = emailStyles.td
+const buttonSection = { textAlign: 'right' as const, margin: '24px 0 8px' }
+const button = emailStyles.button
+const footer = emailStyles.footer
+const bottomFooter = emailStyles.footer

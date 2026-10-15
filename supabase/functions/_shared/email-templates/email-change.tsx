@@ -1,3 +1,5 @@
+import { EmailLayout } from '../email-layout.tsx'
+import { emailStyles, emailTheme, type EmailBrand } from '../email-theme.ts'
 /// <reference types="npm:@types/react@18.3.1" />
 
 import * as React from 'npm:react@18.3.1'
@@ -14,7 +16,7 @@ import {
   Text,
 } from 'npm:@react-email/components@0.0.22'
 
-interface EmailChangeEmailProps {
+interface EmailChangeEmailProps extends EmailBrand {
   siteName: string
   // oldEmail is the user's current address (HookData.OldEmail). For the
   // NEW-recipient half of a secure email_change fanout, `email` equals the
@@ -27,16 +29,15 @@ interface EmailChangeEmailProps {
 }
 
 export const EmailChangeEmail = ({
+  companyLogoUrl,
+  companyName,
+
   siteName,
   oldEmail,
   newEmail,
   confirmationUrl,
 }: EmailChangeEmailProps) => (
-  <Html lang="he" dir="rtl">
-    <Head />
-    <Preview>אישור שינוי כתובת האימייל ב{siteName}</Preview>
-    <Body style={main}>
-      <Container style={container}>
+  <EmailLayout companyName={companyName} companyLogoUrl={companyLogoUrl} preview={<>אישור שינוי כתובת האימייל ב{siteName}</>}>
         <Heading style={h1}>אישור שינוי כתובת אימייל</Heading>
         <Text style={text}>
           ביקשתם לשנות את כתובת האימייל שלכם במערכת {siteName} מהכתובת{' '}
@@ -56,38 +57,15 @@ export const EmailChangeEmail = ({
         <Text style={footer}>
           אם לא ביקשתם את השינוי, יש לאבטח את החשבון שלכם באופן מיידי.
         </Text>
-      </Container>
-    </Body>
-  </Html>
+      </EmailLayout>
 )
 
 export default EmailChangeEmail
 
-const main = {
-  backgroundColor: '#ffffff',
-  fontFamily: 'Arial, sans-serif',
-  direction: 'rtl' as const,
-}
-const container = { padding: '20px 25px', textAlign: 'right' as const }
-const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
-}
-const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
-}
+const main = emailStyles.main
+const container = emailStyles.container
+const h1 = emailStyles.heading
+const text = emailStyles.text
 const link = { color: 'inherit', textDecoration: 'underline' }
-const button = {
-  backgroundColor: '#000000',
-  color: '#ffffff',
-  fontSize: '14px',
-  borderRadius: '8px',
-  padding: '12px 20px',
-  textDecoration: 'none',
-}
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+const button = emailStyles.button
+const footer = emailStyles.footer
