@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
             <p style="margin:18px 0;"><a href="${link}" style="background:#16a34a;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;display:inline-block;font-weight:600;">שולם</a></p>`);
           let ok = 0;
           for (const to of recipients) {
-            if (await enqueueTransactionalEmail(supabase, { to, subject: `💳 תשלום פוליסה ${d} — ${a?.asset_name ?? ""}`, html, label: "insurance-payment-reminder", idempotencyKey: `ins-pay-${p.id}-${to}` })) ok++;
+            if (await enqueueTransactionalEmail(supabase, { to, subject: `💳 תשלום פוליסה ${d} — ${a?.asset_name ?? ""}`, html, label: "insurance-payment-reminder", companyId: company.id, idempotencyKey: `ins-pay-${p.id}-${to}` })) ok++;
           }
           if (ok > 0) await supabase.from("insurance_payments").update({ reminder_sent_at: new Date().toISOString() }).eq("id", p.id);
           totalSent += ok;
@@ -200,6 +200,7 @@ Deno.serve(async (req) => {
           subject,
           html,
           label: "expiring-assets-summary",
+          companyId: company.id,
         });
         if (ok) sent++;
       }

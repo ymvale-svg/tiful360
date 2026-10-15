@@ -773,6 +773,7 @@ Deno.serve(async (req) => {
           label: 'payslip-available',
           idempotencyKey: `payslip-${batchId}-${n.employee_id}`,
           metadata: { employee_id: n.employee_id, period_year: n.period_year, period_month: n.period_month, batch_id: batchId },
+          companyId: company_id,
         });
       } catch (e) {
         console.error('payslip email failed for', n.to, e);

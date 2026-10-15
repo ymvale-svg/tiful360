@@ -9,3 +9,4 @@
 - Saving custom fields in CategoryManager deletes only fields of the edited scope (same group_id). Why: a scoped save previously erased other sub-categories' field definitions.
 
 - Asset instance lists use semantic tables with explicit checkbox, sorting and open-item controls. Why: keyboard and assistive-technology users need identifiable actions and column relationships.
+- All outgoing emails share email-theme tokens and a company-scoped header: React templates use EmailLayout and legacy HTML send paths use formatEmailHtml; resolve branding from the triggering company, never a global default company. Why: consistent mail-client-safe presentation must not change content, delivery behavior or tenant boundaries.

@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { formatEmailHtml } from "../_shared/email-html.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -70,7 +71,7 @@ Deno.serve(async (req) => {
       .single();
     const { data: company } = await supabase
       .from("companies")
-      .select("name")
+      .select("name, logo_url")
       .eq("id", form.company_id)
       .single();
 
@@ -110,7 +111,7 @@ Deno.serve(async (req) => {
         from: "Tiful 360 <onboarding@resend.dev>",
         to: [employee.email],
         subject: `טופס 101 לשנת ${form.tax_year} ממתין לחתימה`,
-        html,
+        html: formatEmailHtml(html, { companyName: company?.name, companyLogoUrl: company?.logo_url }),
       }),
     });
 

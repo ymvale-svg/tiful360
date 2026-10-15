@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { fmtDateIL } from "../_shared/formatDate.ts";
+import { formatEmailHtml } from "../_shared/email-html.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -59,7 +60,7 @@ Deno.serve(async (req) => {
       .single();
     const { data: company } = await supabase
       .from("companies")
-      .select("name, payroll_emails")
+      .select("name, logo_url, payroll_emails")
       .eq("id", form.company_id)
       .single();
 
@@ -112,7 +113,7 @@ Deno.serve(async (req) => {
         to: payrollList.length > 0 ? payrollList : [employee!.email],
         cc: payrollList.length > 0 && employee?.email ? [employee.email] : undefined,
         subject: `טופס 101 חתום - ${empName} - שנת ${form.tax_year}`,
-        html,
+        html: formatEmailHtml(html, { companyName: company?.name, companyLogoUrl: company?.logo_url }),
         attachments: [{ filename: fileName, content: pdfBase64 }],
       }),
     });
