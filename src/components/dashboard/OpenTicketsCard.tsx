@@ -106,6 +106,19 @@ export function OpenTicketsCard() {
                   />
                   {PRIORITY_LABELS[ticket.priority] ?? ticket.priority}
                 </span>
+                <button
+                  type="button"
+                  className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-medium text-primary border border-primary/40 bg-primary/10 rounded-md px-2 py-1 hover:bg-primary/15 transition-colors disabled:opacity-50"
+                  disabled={sendingId === ticket.id}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    sendToIT(ticket.id);
+                  }}
+                >
+                  <Send className="w-3 h-3" aria-hidden="true" />
+                  {sendingId === ticket.id ? "שולח..." : "שלח לאיש IT"}
+                </button>
               </div>
             </div>
             {ticket.sla_deadline && (
