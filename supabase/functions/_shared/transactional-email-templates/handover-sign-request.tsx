@@ -7,7 +7,6 @@ import {
 } from 'npm:@react-email/components@0.0.22'
 import type { TemplateEntry } from './registry.ts'
 
-const LOGO_URL = 'https://rhzmhiknbcipucfvgkok.supabase.co/storage/v1/object/public/email-assets/logo.png'
 const SYSTEM_NAME = 'Tiful360'
 
 interface Item { name: string; code?: string }
@@ -87,8 +86,6 @@ export const template = {
   },
 } satisfies TemplateEntry
 
-const main = emailStyles.main
-const container = emailStyles.container
 const h1 = emailStyles.heading
 const text = emailStyles.text
 const itemText = emailStyles.text

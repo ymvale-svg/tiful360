@@ -62,8 +62,6 @@ export const EmailChangeEmail = ({
 
 export default EmailChangeEmail
 
-const main = emailStyles.main
-const container = emailStyles.container
 const h1 = emailStyles.heading
 const text = emailStyles.text
 const link = { color: 'inherit', textDecoration: 'underline' }

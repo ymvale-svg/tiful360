@@ -7,7 +7,6 @@ import {
 } from 'npm:@react-email/components@0.0.22'
 import type { TemplateEntry } from './registry.ts'
 
-const LOGO_URL = 'https://rhzmhiknbcipucfvgkok.supabase.co/storage/v1/object/public/email-assets/logo.png'
 const SYSTEM_NAME = 'Tiful360'
 
 interface Field { label: string; value: string }
@@ -112,13 +111,6 @@ export const template = {
   },
 } satisfies TemplateEntry
 
-const main = emailStyles.main
-const container = emailStyles.container
-const card = emailStyles.card
-const logoSection = { textAlign: 'center' as const }
-const logoLink = { textDecoration: 'none' }
-const logo = { display: 'inline-block', borderRadius: '10px' }
-const brandName = { fontSize: '14px', color: '#111827', fontWeight: 700, margin: '6px 0 0' }
 const divider = emailStyles.divider
 const h1 = emailStyles.heading
 const text = emailStyles.text

@@ -31,8 +31,6 @@ export const ReauthenticationEmail = ({ token, companyName, companyLogoUrl }: Re
 
 export default ReauthenticationEmail
 
-const main = emailStyles.main
-const container = emailStyles.container
 const h1 = emailStyles.heading
 const text = emailStyles.text
 const codeStyle = {

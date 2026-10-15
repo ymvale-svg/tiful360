@@ -51,8 +51,6 @@ export const InviteEmail = ({
 
 export default InviteEmail
 
-const main = emailStyles.main
-const container = emailStyles.container
 const h1 = emailStyles.heading
 const text = emailStyles.text
 const link = { color: 'inherit', textDecoration: 'underline' }
