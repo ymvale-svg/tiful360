@@ -9,7 +9,6 @@ import { CompanyProvider } from "@/hooks/useCompany";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PwaUpdatePrompt } from "@/components/PwaUpdatePrompt";
 import { OAuthReturnRedirect } from "@/components/OAuthReturnRedirect";
-import { IpGate } from "@/components/IpGate";
 
 // Eager: critical entry pages and frequently-used screens (avoids Suspense flash on navigation)
 import Login from "@/pages/Login";
@@ -69,7 +68,6 @@ const App = () => (
         <AuthProvider>
           <CompanyProvider>
             <OAuthReturnRedirect />
-            <IpGate>
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 <Route path="/login" element={<Login />} />
@@ -112,7 +110,6 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
-            </IpGate>
           </CompanyProvider>
         </AuthProvider>
       </BrowserRouter>
