@@ -1,5 +1,9 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Wrench, Clock, AlertTriangle, ChevronLeft } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Wrench, Clock, AlertTriangle, ChevronLeft, Send } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { useITTickets } from "@/hooks/useData";
 import { PRIORITY_LABELS, STATUS_LABELS, subjectLabel } from "@/lib/serviceTickets";
 import { cn } from "@/lib/utils";
@@ -13,6 +17,28 @@ const priorityDot = {
 
 export function OpenTicketsCard() {
   const { data: tickets, isLoading } = useITTickets();
+  const queryClient = useQueryClient();
+  const [sendingId, setSendingId] = useState<string | null>(null);
+
+  const sendToIT = async (ticketId: string) => {
+    const note = window.prompt("הערה לאיש ה-IT (לא חובה):");
+    if (note === null) return;
+    setSendingId(ticketId);
+    try {
+      const { data, error } = await supabase.functions.invoke("notify-it-ticket", {
+        body: { ticket_id: ticketId, target: "it", note },
+      });
+      if (error) throw error;
+      if (!data?.sent) toast.error("לא הוגדרו כתובות IT לחברה — יש להגדיר בהגדרות החברה");
+      else toast.success(`הקריאה נשלחה ל-IT (${data.sent} נמענים)`);
+      queryClient.invalidateQueries({ queryKey: ["it-tickets"] });
+    } catch (e: any) {
+      toast.error("שליחה ל-IT נכשלה", { description: e?.message } as any);
+    } finally {
+      setSendingId(null);
+    }
+  };
+
   const open = (tickets ?? [])
     .filter((t: any) => t.status !== "done")
     .sort((a: any, b: any) => {
