@@ -9,6 +9,7 @@ import { CompanyProvider } from "@/hooks/useCompany";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PwaUpdatePrompt } from "@/components/PwaUpdatePrompt";
 import { OAuthReturnRedirect } from "@/components/OAuthReturnRedirect";
+import { IpGate } from "@/components/IpGate";
 
 // Eager: critical entry pages and frequently-used screens (avoids Suspense flash on navigation)
 import Login from "@/pages/Login";
