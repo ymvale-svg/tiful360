@@ -88,6 +88,7 @@ Deno.serve(async (req) => {
       formUrl: `${APP_ORIGIN}/employees/${form.employee_id}`,
     },
     idempotencyKey: `handover-signed-${form.id}`,
+    metadata: { employee_id: form.employee_id },
   })
 
   if (!result.sent && result.error) return json({ error: 'Failed to send email' }, 500)

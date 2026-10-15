@@ -84,6 +84,7 @@ Deno.serve(async (req) => {
   const idempotencyKey = body?.resend ? `${baseKey}-r${Date.now()}` : baseKey
 
   const result = await sendTemplateEmailLogged(admin, 'handover-sign-request', employee.email, {
+    metadata: { employee_id: employeeId },
     templateData: {
       employeeName: employee.full_name ?? snap.employee_name ?? '',
       companyName: snap.company_name ?? '',

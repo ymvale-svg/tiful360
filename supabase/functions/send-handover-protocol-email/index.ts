@@ -79,6 +79,7 @@ Deno.serve(async (req) => {
       employeeName: templateData.employeeName || employee.full_name || '',
     },
     idempotencyKey,
+    metadata: { employee_id: employeeId },
   })
 
   if (!result.sent && result.error) return json({ error: 'Failed to send email' }, 500)
