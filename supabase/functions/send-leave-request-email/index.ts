@@ -86,8 +86,9 @@ async function enqueueEmail(
   html: string,
   label: string,
   idempotencyKey: string,
+  companyId: string,
 ) {
-  return await sendHtmlEmailLogged(supabase, { to, subject, html, label, idempotencyKey });
+  return await sendHtmlEmailLogged(supabase, { to, subject, html, label, idempotencyKey, companyId });
 }
 
 Deno.serve(async (req) => {
@@ -269,6 +270,7 @@ Deno.serve(async (req) => {
           inviteHtml,
           "leave-calendar-invite",
           `leave-calendar-invite-${keySuffix}-${request.id}-${to}`,
+          request.company_id,
         );
       }
       return true;
@@ -309,7 +311,7 @@ Deno.serve(async (req) => {
         for (const e of payrollEmails) recipients.add(e);
 
         for (const to of recipients) {
-          await enqueueEmail(supabase, to, subj, html, "leave-sick-submitted", `leave-sick-submitted-${request.id}-${to}`);
+          await enqueueEmail(supabase, to, subj, html, "leave-sick-submitted", `leave-sick-submitted-${request.id}-${to}`, request.company_id);
         }
         // Sick reports auto-approve, so the invite goes out at submission time.
         await sendCalendarInvite("start", "submitted");
@@ -334,6 +336,7 @@ Deno.serve(async (req) => {
           html,
           "leave-request-submitted",
           `leave-request-submitted-${request.id}`,
+          request.company_id,
         );
       }
       await supabase
@@ -361,7 +364,7 @@ Deno.serve(async (req) => {
       for (const e of hrList) recipients.add(e);
       const subj = `📋 סגירת מחלה — ${employee?.full_name}`;
       for (const to of recipients) {
-        await enqueueEmail(supabase, to, subj, html, "leave-sick-closed", `leave-sick-closed-${request.id}-${to}`);
+        await enqueueEmail(supabase, to, subj, html, "leave-sick-closed", `leave-sick-closed-${request.id}-${to}`, request.company_id);
       }
       // Updated invite (same ICS UID, higher SEQUENCE) unless closed retroactively.
       await sendCalendarInvite("end", "closed");
@@ -397,6 +400,7 @@ Deno.serve(async (req) => {
           html,
           "leave-attachment-payroll",
           `leave-attachment-payroll-${request.id}-${to}-${request.attachment_url.slice(-24)}`,
+          request.company_id,
         );
       }
       if (attachRecipients.size > 0) {
@@ -421,7 +425,7 @@ Deno.serve(async (req) => {
            <p>דיווח ה${escapeHtml(typeLabel)} שלך נקלט במערכת ונשלח לידיעת המנהל הישיר וחשבות השכר.</p>
            ${detailsTable(baseDetails)}`,
         );
-        await enqueueEmail(supabase, employee.email, `✅ דיווח ${typeLabel} נקלט`, html, "leave-approved-employee", `leave-approved-emp-${request.id}`);
+        await enqueueEmail(supabase, employee.email, `✅ דיווח ${typeLabel} נקלט`, html, "leave-approved-employee", `leave-approved-emp-${request.id}`, request.company_id);
       }
 
       // Informational notice (manager + HR) with calendar CTA
@@ -439,7 +443,7 @@ Deno.serve(async (req) => {
         );
         const subj = `📋 ${employee?.full_name} — דיווח ${typeLabel}`;
         for (const to of infoRecipients) {
-          await enqueueEmail(supabase, to, subj, html, "leave-approved-info", `leave-approved-info-${request.id}-${to}`);
+          await enqueueEmail(supabase, to, subj, html, "leave-approved-info", `leave-approved-info-${request.id}-${to}`, request.company_id);
         }
       }
 
@@ -483,7 +487,7 @@ Deno.serve(async (req) => {
         );
 
         for (const to of payrollList) {
-          await enqueueEmail(supabase, to, `📑 אישור ${typeLabel} — ${employee?.full_name}`, html, "leave-approved-payroll", `leave-approved-payroll-${request.id}-${to}`);
+          await enqueueEmail(supabase, to, `📑 אישור ${typeLabel} — ${employee?.full_name}`, html, "leave-approved-payroll", `leave-approved-payroll-${request.id}-${to}`, request.company_id);
         }
         await supabase
           .from("leave_requests")
