@@ -13,11 +13,12 @@ export interface EnqueueArgs {
   label: string;
   idempotencyKey?: string;
   metadata?: Record<string, unknown>;
+  companyId?: string;
 }
 
 export async function enqueueTransactionalEmail(
   supabase: any,
-  { to, subject, html, label, idempotencyKey, metadata }: EnqueueArgs,
+  { to, subject, html, label, idempotencyKey, metadata, companyId }: EnqueueArgs,
 ): Promise<boolean> {
   return await sendHtmlEmailLogged(supabase, {
     to,
@@ -26,5 +27,6 @@ export async function enqueueTransactionalEmail(
     label,
     idempotencyKey,
     metadata,
+    companyId,
   });
 }

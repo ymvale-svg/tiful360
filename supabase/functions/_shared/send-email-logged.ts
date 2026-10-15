@@ -6,6 +6,8 @@
 
 import { EmailAPIError, sendLovableEmail } from 'npm:@lovable.dev/email-js@0.1.0'
 import { sendTemplateEmail } from './transactional-email-templates/send-email.ts'
+import { resolveEmailBrand } from './email-brand.ts'
+import { formatEmailHtml } from './email-html.ts'
 
 export const SITE_NAME = 'תפעול 360'
 export const SENDER_DOMAIN = 'notify.tiful360.com'
@@ -62,8 +64,15 @@ export async function sendTemplateEmailLogged(
   } = {},
 ): Promise<{ sent: boolean; reason?: string; error?: string }> {
   try {
+    const data = options.templateData ?? {}
+    const metadata = options.metadata ?? {}
+    const brand = await resolveEmailBrand(supabase, {
+      companyId: metadata.company_id ?? data.companyId,
+      companyName: data.companyName,
+      employeeId: metadata.employee_id,
+    })
     const result = await sendTemplateEmail(templateName, to, {
-      templateData: options.templateData ?? {},
+      templateData: { ...data, ...brand },
       idempotencyKey: options.idempotencyKey,
     })
     if (!result.sent) {
@@ -107,12 +116,13 @@ export interface SendHtmlArgs {
   idempotencyKey?: string
   metadata?: Record<string, unknown>
   replyTo?: string
+  companyId?: string
 }
 
 /** Send a hand-composed HTML email and record the outcome. */
 export async function sendHtmlEmailLogged(
   supabase: any,
-  { to, subject, html, label, idempotencyKey, metadata, replyTo }: SendHtmlArgs,
+  { to, subject, html, label, idempotencyKey, metadata, replyTo, companyId }: SendHtmlArgs,
 ): Promise<boolean> {
   const apiKey = Deno.env.get('LOVABLE_API_KEY')
   if (!apiKey) {
@@ -129,13 +139,18 @@ export async function sendHtmlEmailLogged(
   }
 
   try {
+    const brand = await resolveEmailBrand(supabase, {
+      companyId: companyId ?? metadata?.company_id,
+      employeeId: metadata?.employee_id,
+    })
+    const formattedHtml = formatEmailHtml(html, brand)
     await sendLovableEmail(
       {
         to,
         from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
         sender_domain: SENDER_DOMAIN,
         subject,
-        html,
+        html: formattedHtml,
         text: htmlToText(html) || subject,
         purpose: 'transactional',
         label,
