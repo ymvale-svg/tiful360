@@ -87,12 +87,14 @@ async function enqueueEmail(
   to: string,
   subject: string,
   html: string,
+  companyId: string,
 ) {
   return await enqueueTransactionalEmail(supabase, {
     to,
     subject,
     html,
     label: "service-ticket-new",
+    companyId,
   });
 }
 
@@ -216,6 +218,7 @@ Deno.serve(async (req) => {
         to,
         `${toIT ? "🛠️ הועברה לטיפול IT" : "🛠️ קריאת שירות חדשה"} — ${ticket.ticket_code} — ${ticket.title}`,
         html,
+        ticket.company_id,
       );
       if (ok) sent++;
     }

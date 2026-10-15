@@ -79,6 +79,7 @@ Deno.serve(async (req) => {
         subject: `הקריאה שלך טופלה — ${t.ticket_code}`,
         html,
         label: "service-ticket-done-api",
+        companyId: apiKey.company_id,
         idempotencyKey: `ticket-api-done-${entry.id}`,
       });
       entry.emailed = !!sent;

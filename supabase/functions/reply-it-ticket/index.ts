@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
     const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const { data: t } = await admin
       .from("it_tickets")
-      .select("id, ticket_code, title, replies, employees(full_name, email)")
+      .select("id, company_id, ticket_code, title, replies, employees(full_name, email)")
       .eq("id", ticket_id)
       .single();
     if (!t) return json({ error: "not found" }, 404);
@@ -69,6 +69,7 @@ Deno.serve(async (req) => {
         label: kind === "done" ? "service-ticket-done" : "service-ticket-reply",
         idempotencyKey: `ticket-${kind}-${entry.id}`,
         metadata: { ticket_id },
+        companyId: t.company_id,
       });
     }
 

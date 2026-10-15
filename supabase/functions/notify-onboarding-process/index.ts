@@ -284,6 +284,7 @@ Deno.serve(async (req) => {
           label: isFinal ? "onboarding-process-completed" : "onboarding-process-sent",
           idempotencyKey: `onboarding-${isFinal ? "final-" : ""}${process_id}-${aud.key}-${to}`,
           metadata: { process_id, final: isFinal, audience: aud.key },
+          companyId: proc.company_id,
         });
         if (ok) sent++;
       }
