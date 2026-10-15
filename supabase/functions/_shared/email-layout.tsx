@@ -6,10 +6,16 @@ export function EmailLayout({ children, preview, companyName, companyLogoUrl }: 
   children: React.ReactNode
   preview?: React.ReactNode
 }) {
+  const previewText = (node: React.ReactNode): string => {
+    if (typeof node === 'string' || typeof node === 'number') return String(node)
+    if (Array.isArray(node)) return node.map(previewText).join('')
+    if (React.isValidElement<{ children?: React.ReactNode }>(node)) return previewText(node.props.children)
+    return ''
+  }
   return (
     <Html lang="he" dir="rtl">
       <Head><meta charSet="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /></Head>
-      {preview ? <Preview>{preview}</Preview> : null}
+      {preview ? <Preview>{previewText(preview)}</Preview> : null}
       <Body style={emailStyles.main}>
         <Container style={emailStyles.container}>
           <Section style={emailStyles.card}>
