@@ -155,16 +155,18 @@ const handler = createAuthEmailHandler({
     },
     invite: {
       subject: `הזמנה להצטרף - ${SITE_NAME}`,
-      render: async (data) =>
-        React.createElement(InviteEmail, {
-          ...await brandForRecipient(data.email),
+      render: async (data) => {
+        const brand = await brandForRecipient(data.email)
+        return React.createElement(InviteEmail, {
+          ...brand,
           siteName: SITE_NAME,
           siteUrl: SITE_URL,
           confirmationUrl: data.url,
-          companyName:
+          companyName: brand.companyName ??
             ((data as any)?.user_metadata?.company_name as string | undefined) ??
             undefined,
-        }),
+        })
+      },
     },
     magiclink: {
       subject: `קישור כניסה - ${SITE_NAME}`,

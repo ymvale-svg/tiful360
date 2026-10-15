@@ -38,7 +38,7 @@ export function formatEmailHtml(html: string, brand: EmailBrand = {}): string {
   // Existing company-logo blocks are replaced by exactly one shared header.
   for (const image of Array.from(body.querySelectorAll('img'))) {
     const src = image.getAttribute('src') || ''
-    if (src.includes('/company-logos/') || src.includes('/email-assets/logo.') || src === brand.companyLogoUrl) {
+    if ((brand.companyLogoUrl && (src.includes('/company-logos/') || src === brand.companyLogoUrl)) || src.includes('/email-assets/logo.')) {
       image.remove()
     }
   }
