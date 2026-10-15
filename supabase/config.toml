@@ -45,3 +45,6 @@ project_id = "rhzmhiknbcipucfvgkok"
     verify_jwt = true
   [functions.it-api]
     verify_jwt = false
+
+  [functions.check-access-ip]
+    verify_jwt = false
