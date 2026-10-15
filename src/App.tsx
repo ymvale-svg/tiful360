@@ -112,6 +112,7 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
+            </IpGate>
           </CompanyProvider>
         </AuthProvider>
       </BrowserRouter>
