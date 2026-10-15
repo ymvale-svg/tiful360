@@ -7,6 +7,20 @@ import { MagicLinkEmail } from '../_shared/email-templates/magic-link.tsx'
 import { RecoveryEmail } from '../_shared/email-templates/recovery.tsx'
 import { EmailChangeEmail } from '../_shared/email-templates/email-change.tsx'
 import { ReauthenticationEmail } from '../_shared/email-templates/reauthentication.tsx'
+import { createClient } from 'npm:@supabase/supabase-js@2'
+import { resolveEmailBrand } from '../_shared/email-brand.ts'
+
+async function brandForRecipient(email: string | undefined) {
+  const url = Deno.env.get('SUPABASE_URL')
+  const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  if (!url || !key || !email) return {}
+  const admin = createClient(url, key)
+  const { data } = await admin.from('employees').select('company_id').eq('email', email).limit(2)
+  const ids = [...new Set((data ?? []).map((employee) => employee.company_id))]
+  // Ambiguous recipients get no company branding rather than another company's logo.
+  if (ids.length !== 1) return {}
+  return resolveEmailBrand(admin, { companyId: ids[0] })
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -130,8 +144,9 @@ const handler = createAuthEmailHandler({
   emails: {
     signup: {
       subject: `אימות כתובת אימייל - ${SITE_NAME}`,
-      render: (data) =>
+      render: async (data) =>
         React.createElement(SignupEmail, {
+          ...await brandForRecipient(data.email),
           siteName: SITE_NAME,
           siteUrl: SITE_URL,
           recipient: data.email,
@@ -140,8 +155,9 @@ const handler = createAuthEmailHandler({
     },
     invite: {
       subject: `הזמנה להצטרף - ${SITE_NAME}`,
-      render: (data) =>
+      render: async (data) =>
         React.createElement(InviteEmail, {
+          ...await brandForRecipient(data.email),
           siteName: SITE_NAME,
           siteUrl: SITE_URL,
           confirmationUrl: data.url,
@@ -152,24 +168,27 @@ const handler = createAuthEmailHandler({
     },
     magiclink: {
       subject: `קישור כניסה - ${SITE_NAME}`,
-      render: (data) =>
+      render: async (data) =>
         React.createElement(MagicLinkEmail, {
+          ...await brandForRecipient(data.email),
           siteName: SITE_NAME,
           confirmationUrl: data.url,
         }),
     },
     recovery: {
       subject: `איפוס סיסמה - ${SITE_NAME}`,
-      render: (data) =>
+      render: async (data) =>
         React.createElement(RecoveryEmail, {
+          ...await brandForRecipient(data.email),
           siteName: SITE_NAME,
           confirmationUrl: data.url,
         }),
     },
     email_change: {
       subject: `אישור כתובת אימייל חדשה - ${SITE_NAME}`,
-      render: (data) =>
+      render: async (data) =>
         React.createElement(EmailChangeEmail, {
+          ...await brandForRecipient(data.old_email || data.email),
           siteName: SITE_NAME,
           oldEmail: data.old_email ?? '',
           email: data.email,
@@ -179,8 +198,8 @@ const handler = createAuthEmailHandler({
     },
     reauthentication: {
       subject: `קוד אימות - ${SITE_NAME}`,
-      render: (data) =>
-        React.createElement(ReauthenticationEmail, { token: data.token ?? '' }),
+      render: async (data) =>
+        React.createElement(ReauthenticationEmail, { ...await brandForRecipient(data.email), token: data.token ?? '' }),
     },
   },
 
