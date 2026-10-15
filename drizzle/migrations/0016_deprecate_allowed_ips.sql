@@ -1,0 +1,1 @@
+COMMENT ON TABLE public.allowed_ips IS 'DEPRECATED: IP access gating was cancelled on 15/10/2026; the app no longer reads this table. Kept for audit only.';
