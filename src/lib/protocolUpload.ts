@@ -49,6 +49,20 @@ export async function compressImage(file: File): Promise<Blob> {
   }
 }
 
+/** Storage keys must be ASCII; Hebrew file names (e.g. "חתימה.jpeg") are rejected with "Invalid key". */
+export function sanitizeStoragePath(path: string): string {
+  return path
+    .split("/")
+    .map((seg) => {
+      const dot = seg.lastIndexOf(".");
+      const base = dot > 0 ? seg.slice(0, dot) : seg;
+      const ext = dot > 0 ? seg.slice(dot + 1).toLowerCase().replace(/[^a-z0-9]/g, "") : "";
+      const safeBase = base.replace(/[^a-zA-Z0-9_-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "") || "file";
+      return ext ? `${safeBase}.${ext}` : safeBase;
+    })
+    .join("/");
+}
+
 /** Upload a protocol asset (photo/video/pdf) with size validation and friendly errors. */
 export async function uploadProtocolFile(
   bucket: string,
@@ -57,6 +71,7 @@ export async function uploadProtocolFile(
   contentType?: string,
   fileName?: string
 ): Promise<string> {
+  path = sanitizeStoragePath(path);
   if (file.size > MAX_UPLOAD_BYTES) {
     throw new Error(
       `הקובץ${fileName ? ` "${fileName}"` : ""} במשקל ${formatBytes(file.size)} חורג מהמותר (${formatBytes(
