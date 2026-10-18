@@ -6,7 +6,7 @@ describe("sanitizeStoragePath", () => {
     expect(sanitizeStoragePath("comp/emp/asset-123.pdf")).toBe("comp/emp/asset-123.pdf");
   });
   it("replaces hebrew file names but keeps the extension", () => {
-    expect(sanitizeStoragePath("comp/emp/123-חתימה.jpeg")).toBe("comp/emp/123-.jpeg");
+    expect(sanitizeStoragePath("comp/emp/123-חתימה.jpeg")).toBe("comp/emp/123.jpeg");
   });
   it("strips non-ascii from extension too", () => {
     const out = sanitizeStoragePath("a/b/c.טיפ");
