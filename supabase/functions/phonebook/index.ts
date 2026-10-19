@@ -1,0 +1,174 @@
+// Corporate directory for the Yealink desk phones.
+//
+// The phone fetches this URL by itself, on a schedule it manages, and has no
+// way to authenticate: no browser, no cookies, no JWT. The random token in the
+// query string is therefore the whole credential — anyone holding it reads the
+// full directory, which is why it is per-company and rotatable
+// (public.rotate_phonebook_token).
+//
+// Nothing here is cached at the edge and nothing is written to disk: the
+// directory is employee names and numbers, and it should live exactly as long
+// as the request.
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.103.0";
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+type Row = {
+  full_name: string | null;
+  department: string | null;
+  extension: string | null;
+  phone: string | null;
+};
+
+/** XML attribute values: the five predefined entities, plus control characters
+ *  that would make the document unparsable on the handset. */
+function attr(value: string): string {
+  return (value ?? "")
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+/** The phone dials the string as given, so separators have to go. A leading +
+ *  is kept — it is meaningful, a dash is not. */
+function dialable(value: string | null): string {
+  if (!value) return "";
+  const trimmed = value.trim();
+  const plus = trimmed.startsWith("+") ? "+" : "";
+  return plus + trimmed.replace(/[^0-9]/g, "");
+}
+
+/** Yealink's own remote-phonebook format. <Menu> nests, so departments become
+ *  the folders the user scrolls through instead of one flat list of 200 names. */
+function yealinkXml(rows: Row[], title: string): string {
+  const byDept = new Map<string, Row[]>();
+  for (const r of rows) {
+    const dept = (r.department ?? "").trim() || "אחר";
+    if (!byDept.has(dept)) byDept.set(dept, []);
+    byDept.get(dept)!.push(r);
+  }
+
+  const collator = new Intl.Collator("he");
+  const parts = [`<?xml version="1.0" encoding="UTF-8"?>`, `<YealinkIPPhoneBook>`, `  <Title>${attr(title)}</Title>`];
+
+  for (const dept of [...byDept.keys()].sort(collator.compare)) {
+    parts.push(`  <Menu Name="${attr(dept)}">`);
+    const people = byDept.get(dept)!.sort((a, b) => collator.compare(a.full_name ?? "", b.full_name ?? ""));
+    for (const p of people) {
+      // Extension first: inside the building it is what people actually dial.
+      const numbers = [dialable(p.extension), dialable(p.phone)].filter(Boolean);
+      parts.push(
+        `    <Unit Name="${attr(p.full_name ?? "")}" Phone1="${attr(numbers[0] ?? "")}" Phone2="${attr(numbers[1] ?? "")}" Phone3="" default_photo="" />`,
+      );
+    }
+    parts.push(`  </Menu>`);
+  }
+
+  parts.push(`</YealinkIPPhoneBook>`);
+  return parts.join("\n");
+}
+
+/** The older, flat format. Kept because which one a handset accepts depends on
+ *  its firmware generation, and this fleet spans four of them — switching is a
+ *  query parameter rather than a redeploy. */
+function directoryXml(rows: Row[], title: string): string {
+  const collator = new Intl.Collator("he");
+  const parts = [`<?xml version="1.0" encoding="UTF-8"?>`, `<IPPhoneDirectory>`, `  <Title>${attr(title)}</Title>`];
+
+  for (const p of [...rows].sort((a, b) => collator.compare(a.full_name ?? "", b.full_name ?? ""))) {
+    for (const number of [dialable(p.extension), dialable(p.phone)].filter(Boolean)) {
+      parts.push(`  <DirectoryEntry>`);
+      parts.push(`    <Name>${attr(p.full_name ?? "")}</Name>`);
+      parts.push(`    <Telephone>${attr(number)}</Telephone>`);
+      parts.push(`  </DirectoryEntry>`);
+    }
+  }
+
+  parts.push(`</IPPhoneDirectory>`);
+  return parts.join("\n");
+}
+
+/** A wrong or revoked token is indistinguishable from a URL that never existed,
+ *  so probing cannot confirm that a company is on the system. */
+function notFound(): Response {
+  return new Response("not found", { status: 404, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+}
+
+Deno.serve(async (req) => {
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    return new Response("method not allowed", { status: 405 });
+  }
+
+  const url = new URL(req.url);
+  const token = url.searchParams.get("t") ?? "";
+  if (!UUID_RE.test(token)) return notFound();
+
+  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
+
+  const { data: feed } = await supabase
+    .from("phonebook_feeds")
+    .select("company_id, is_active, fetch_count")
+    .eq("token", token)
+    .maybeSingle();
+
+  if (!feed || !feed.is_active) return notFound();
+
+  const { data: company } = await supabase
+    .from("companies")
+    .select("name")
+    .eq("id", feed.company_id)
+    .maybeSingle();
+
+  const { data: employees, error } = await supabase
+    .from("employees")
+    .select("full_name, department, extension, phone")
+    .eq("company_id", feed.company_id)
+    .eq("status", "active")
+    // The same opt-out the portal contacts list honours. Someone who asked to
+    // be left out of the directory means the one on the desk phones too.
+    .eq("exclude_from_contacts", false)
+    .order("full_name");
+
+  if (error) {
+    console.error("phonebook query failed", error.message);
+    return new Response("temporarily unavailable", { status: 503 });
+  }
+
+  // Someone with neither an extension nor a mobile is a row the caller cannot
+  // act on; it would only pad the list the user scrolls through.
+  const rows = (employees ?? []).filter(
+    (e: Row) => Boolean(dialable(e.extension) || dialable(e.phone)) && Boolean((e.full_name ?? "").trim()),
+  );
+
+  const title = company?.name ?? "ספר טלפונים";
+  const body = url.searchParams.get("format") === "directory"
+    ? directoryXml(rows, title)
+    : yealinkXml(rows, title);
+
+  // Best effort, and deliberately not awaited into the response path: this
+  // number exists to answer "are the phones actually pulling?", and a handset
+  // should never fail to load the directory because a counter could not be
+  // written. Concurrent fetches may undercount, which does not matter here.
+  supabase
+    .from("phonebook_feeds")
+    .update({ last_fetched_at: new Date().toISOString(), fetch_count: (feed.fetch_count ?? 0) + 1 })
+    .eq("company_id", feed.company_id)
+    .then(({ error: e }) => { if (e) console.error("phonebook stamp failed", e.message); });
+
+  return new Response(req.method === "HEAD" ? null : body, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/xml; charset=utf-8",
+      // A directory is only useful if it is current; a stale copy held by a
+      // proxy would outlive the person who left.
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+});

@@ -66,6 +66,7 @@ export function AddEmployeeDialog({ open, onOpenChange, onCreated }: Props) {
     direct_manager_id: "",
     sub_employer_id: "",
     phone: "",
+    extension: "",
     email: "",
     birth_date: "",
     start_date: new Date().toISOString().split("T")[0],
@@ -156,6 +157,7 @@ export function AddEmployeeDialog({ open, onOpenChange, onCreated }: Props) {
         role: form.role,
         department: form.department,
         phone: form.phone || undefined,
+        extension: form.extension?.trim() || undefined,
         email: form.email,
         birth_date: form.birth_date || undefined,
         start_date: form.start_date,
@@ -199,7 +201,7 @@ export function AddEmployeeDialog({ open, onOpenChange, onCreated }: Props) {
       onOpenChange(false);
       setForm({
         employee_number: "", full_name: "", id_number: "", role: "",
-        department: "", direct_manager_id: "", sub_employer_id: "", phone: "", email: "", birth_date: "",
+        department: "", direct_manager_id: "", sub_employer_id: "", phone: "", extension: "", email: "", birth_date: "",
         start_date: new Date().toISOString().split("T")[0], status: "active",
         system_role: "employee", send_invite: true, exclude_from_contacts: false,
       });
@@ -323,6 +325,12 @@ export function AddEmployeeDialog({ open, onOpenChange, onCreated }: Props) {
             <label className="text-sm font-medium mb-1 block">טלפון</label>
             <input value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="050-1234567" dir="ltr" className={inputCls("phone")} />
             {errMsg("phone")}
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-1 block">שלוחה</label>
+            <input value={form.extension} onChange={(e) => set("extension", e.target.value)} placeholder="204" dir="ltr" inputMode="numeric" className={inputCls("extension")} />
+            <p className="mt-1 text-xs text-muted-foreground">מופיעה בספר הטלפונים שבמכשירים</p>
           </div>
 
           <div>
