@@ -46,7 +46,7 @@ const normProvider = (p: string) => (p ?? "").trim().replace(/^מנוי\s+/, "")
 /** Fuel-card number: dedicated field first, then the "מספר כרטיס- ..." note. */
 function extractCardNumber(asset: any): string | null {
   if (asset?.serial_number) return String(asset.serial_number).trim();
-  const m = String(asset?.notes ?? "").match(/מספר\s*כרטיס[-:\s]*([0-9]{4,})/);
+  const m = String(asset?.notes ?? "").match(/מספר\s*כרטיס(?:-|:|\s)*([0-9]{4,})/);
   return m ? m[1] : null;
 }
 
