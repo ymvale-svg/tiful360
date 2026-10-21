@@ -3,9 +3,8 @@ import SignatureCanvas from "react-signature-canvas";
 
 // react-signature-canvas ships class-component types that clash with
 // @types/react 18.3's JSX check (TS2786). Runtime is fine — cast only.
-const SignatureCanvasView = SignatureCanvas as unknown as React.ComponentType<
-  React.ComponentProps<typeof SignatureCanvas> & { ref?: React.Ref<SignatureCanvas> }
->;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const SignatureCanvasView = SignatureCanvas as any;
 import { Button } from "@/components/ui/button";
 import { Eraser } from "lucide-react";
 
