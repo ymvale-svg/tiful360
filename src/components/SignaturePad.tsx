@@ -1,5 +1,10 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import SignatureCanvas from "react-signature-canvas";
+
+// react-signature-canvas ships class-component types that clash with
+// @types/react 18.3's JSX check (TS2786). Runtime is fine — cast only.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const SignatureCanvasView = SignatureCanvas as any;
 import { Button } from "@/components/ui/button";
 import { Eraser } from "lucide-react";
 
@@ -68,7 +73,7 @@ export const SignaturePad = forwardRef<SignaturePadHandle, Props>(
           style={{ height, backgroundColor: "hsl(var(--signature-surface))" }}
         >
           {size && (
-            <SignatureCanvas
+            <SignatureCanvasView
               ref={sigRef}
               penColor="#111827"
               backgroundColor="rgba(255,255,255,0)"
