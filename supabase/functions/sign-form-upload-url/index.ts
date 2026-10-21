@@ -44,18 +44,19 @@ Deno.serve(async (req) => {
     if (form.status !== "pending") return json({ error: "form_already_processed" }, 409);
 
     // Build a constrained path the client cannot influence
+    const f = form as unknown as { id: string; company_id: string; employee_id: string; asset_id?: string };
     const safeExt = (body.filename ?? "").split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || (body.kind === "pdf" ? "pdf" : "bin");
     const ts = Date.now();
     let path: string;
     if (body.form_type === "handover") {
-      const assetId = (form as any).asset_id;
+      const assetId = f.asset_id;
       path = body.kind === "pdf"
-        ? `${form.company_id}/${form.employee_id}/${assetId}-${ts}.pdf`
-        : `${form.company_id}/${form.employee_id}/${assetId}-attached-${ts}.${safeExt}`;
+        ? `${f.company_id}/${f.employee_id}/${assetId}-${ts}.pdf`
+        : `${f.company_id}/${f.employee_id}/${assetId}-attached-${ts}.${safeExt}`;
     } else {
       path = body.kind === "pdf"
-        ? `offboarding/${form.company_id}/${form.employee_id}/${form.id}-${ts}.pdf`
-        : `offboarding/${form.company_id}/${form.employee_id}/${form.id}-attached-${ts}.${safeExt}`;
+        ? `offboarding/${f.company_id}/${f.employee_id}/${f.id}-${ts}.pdf`
+        : `offboarding/${f.company_id}/${f.employee_id}/${f.id}-attached-${ts}.${safeExt}`;
     }
 
     const { data: signed, error: signErr } = await admin.storage
