@@ -269,12 +269,22 @@ export default function ITTickets() {
       const { data, error } = await supabase.functions.invoke("send-to-mesimon", {
         body: { ticket_id: selectedTicket.id, note },
       });
-      if (error) throw error;
+      if (error) {
+        let body: any = null;
+        try { body = await (error as any).context?.json?.(); } catch { /* ignore */ }
+        const status = body?.status;
+        const reason =
+          status === 404 ? "כתובת קבלת הקריאות אצל משימון אינה קיימת — יש לבקש ממשימון כתובת תקינה"
+          : status === 401 || status === 403 ? "משימון דחה את מפתח החיבור"
+          : body?.error === "mesimon not configured" ? "החיבור למשימון לא הוגדר"
+          : body?.error || (error as any)?.message || "שגיאה לא ידועה";
+        throw new Error(reason);
+      }
       if (data?.error) throw new Error(data.error);
       toast.success("הקריאה נשלחה למשימון");
       await queryClient.invalidateQueries({ queryKey: ["it-tickets"] });
     } catch (e: any) {
-      toast.error("שליחה למשימון נכשלה", { description: e?.message } as any);
+      toast.error("שליחה למשימון נכשלה", { description: String(e?.message ?? "") });
     } finally {
       setSendingMesimon(false);
     }
