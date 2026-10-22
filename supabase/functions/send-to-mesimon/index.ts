@@ -85,6 +85,12 @@ Deno.serve(async (req) => {
 
     const payload = {
       source: "tiful360",
+      // Mesimon reads camelCase keys (ticketCode is required); snake_case kept for compatibility.
+      ticketCode: ticket.ticket_code,
+      priorityLabel: PRIORITY_LABELS[ticket.priority] ?? ticket.priority,
+      contactPhone: ticket.contact_phone ?? employee?.phone ?? "",
+      slaDeadline: ticket.sla_deadline ?? null,
+      createdAt: ticket.created_at,
       ticket_code: ticket.ticket_code,
       title: ticket.title,
       description: ticket.description ?? "",
