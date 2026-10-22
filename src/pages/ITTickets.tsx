@@ -223,6 +223,40 @@ export default function ITTickets() {
       setSendingIT(false);
     }
   };
+
+  // Mesimon (משימון) integration — button shown only when the company is allowed
+  const { data: mesimonEnabled } = useQuery({
+    queryKey: ["mesimon-status", activeCompanyId],
+    enabled: !!activeCompanyId,
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("mesimon-status", {
+        body: { company_id: activeCompanyId },
+      });
+      if (error) return false;
+      return !!data?.enabled;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const [sendingMesimon, setSendingMesimon] = useState(false);
+  const sendToMesimon = async () => {
+    if (!selectedTicket) return;
+    const note = window.prompt("הערה למשימון (לא חובה):");
+    if (note === null) return;
+    setSendingMesimon(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-to-mesimon", {
+        body: { ticket_id: selectedTicket.id, note },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("הקריאה נשלחה למשימון");
+      await queryClient.invalidateQueries({ queryKey: ["it-tickets"] });
+    } catch (e: any) {
+      toast.error("שליחה למשימון נכשלה", { description: e?.message } as any);
+    } finally {
+      setSendingMesimon(false);
+    }
+  };
   useEffect(() => {
     if (selectedId) document.getElementById("ticket-details")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [selectedId]);
