@@ -6,10 +6,11 @@
 import { auth, defineMcp } from "npm:@lovable.dev/mcp-js@3.2.2";
 
 // src/lib/mcp/tools/list-companies.ts
-import { defineTool, ToolError } from "npm:@lovable.dev/mcp-js@3.2.2";
+import { defineTool, ToolError as ToolError2 } from "npm:@lovable.dev/mcp-js@3.2.2";
 
 // src/lib/mcp/supabase.ts
 import { createClient } from "npm:@supabase/supabase-js@^2.118.0";
+import { ToolError } from "npm:@lovable.dev/mcp-js@3.2.2";
 function runtimeEnv(name) {
   const runtime = globalThis;
   return runtime.Deno?.env?.get?.(name) ?? runtime.process?.env?.[name];
@@ -46,13 +47,13 @@ function supabasePublishableKey() {
 }
 async function supabaseForUser(ctx) {
   const token = ctx.getToken();
-  if (!ctx.isAuthenticated() || !token) throw new Error("\u05E0\u05D3\u05E8\u05E9\u05EA \u05DB\u05E0\u05D9\u05E1\u05D4 \u05DE\u05D0\u05D5\u05D1\u05D8\u05D7\u05EA");
+  if (!ctx.isAuthenticated() || !token) throw new ToolError("\u05E0\u05D3\u05E8\u05E9\u05EA \u05DB\u05E0\u05D9\u05E1\u05D4 \u05DE\u05D0\u05D5\u05D1\u05D8\u05D7\u05EA");
   const client = createClient(supabaseProjectUrl(), supabasePublishableKey(), {
     global: { headers: { Authorization: `Bearer ${token}` } },
     auth: { persistSession: false, autoRefreshToken: false }
   });
-  const { data, error } = await client.rpc("my_access_blocked");
-  if (error || data !== false) throw new Error("\u05D0\u05D9\u05DF \u05D4\u05E8\u05E9\u05D0\u05EA \u05D2\u05D9\u05E9\u05D4 \u05DC\u05DE\u05E2\u05E8\u05DB\u05EA");
+  const { data, error } = await client.rpc("my_access_blocked").abortSignal(ctx.signal);
+  if (error || data !== false) throw new ToolError("\u05D0\u05D9\u05DF \u05D4\u05E8\u05E9\u05D0\u05EA \u05D2\u05D9\u05E9\u05D4 \u05DC\u05DE\u05E2\u05E8\u05DB\u05EA");
   return client;
 }
 
@@ -66,13 +67,13 @@ var list_companies_default = defineTool({
   handler: async (_args, ctx) => {
     const client = await supabaseForUser(ctx);
     const { data, error } = await client.from("companies").select("id, name").order("name").limit(100).abortSignal(ctx.signal);
-    if (error) throw new ToolError("\u05DC\u05D0 \u05E0\u05D9\u05EA\u05DF \u05DC\u05E7\u05E8\u05D5\u05D0 \u05D0\u05EA \u05D4\u05D7\u05D1\u05E8\u05D5\u05EA");
+    if (error) throw new ToolError2("\u05DC\u05D0 \u05E0\u05D9\u05EA\u05DF \u05DC\u05E7\u05E8\u05D5\u05D0 \u05D0\u05EA \u05D4\u05D7\u05D1\u05E8\u05D5\u05EA");
     return { content: [{ type: "text", text: JSON.stringify(data ?? []) }], structuredContent: { companies: (data ?? []).map((row) => ({ id: row.id, name: row.name })) } };
   }
 });
 
 // src/lib/mcp/tools/list-tickets.ts
-import { defineTool as defineTool2, ToolError as ToolError2 } from "npm:@lovable.dev/mcp-js@3.2.2";
+import { defineTool as defineTool2, ToolError as ToolError3 } from "npm:@lovable.dev/mcp-js@3.2.2";
 import { z } from "npm:zod@^3.25.76";
 var list_tickets_default = defineTool2({
   name: "list_service_tickets",
@@ -91,14 +92,14 @@ var list_tickets_default = defineTool2({
     if (status === "open_all") query = query.neq("status", "done");
     else if (status !== "all") query = query.eq("status", status);
     const { data, error } = await query.abortSignal(ctx.signal);
-    if (error) throw new ToolError2("\u05DC\u05D0 \u05E0\u05D9\u05EA\u05DF \u05DC\u05E7\u05E8\u05D5\u05D0 \u05D0\u05EA \u05D4\u05E7\u05E8\u05D9\u05D0\u05D5\u05EA");
+    if (error) throw new ToolError3("\u05DC\u05D0 \u05E0\u05D9\u05EA\u05DF \u05DC\u05E7\u05E8\u05D5\u05D0 \u05D0\u05EA \u05D4\u05E7\u05E8\u05D9\u05D0\u05D5\u05EA");
     const tickets = (data ?? []).map((row) => ({ id: row.id, ticket_code: row.ticket_code, title: row.title, status: row.status, priority: row.priority, company_id: row.company_id, created_at: row.created_at }));
     return { content: [{ type: "text", text: JSON.stringify(tickets) }], structuredContent: { tickets } };
   }
 });
 
 // src/lib/mcp/tools/get-ticket.ts
-import { defineTool as defineTool3, ToolError as ToolError3 } from "npm:@lovable.dev/mcp-js@3.2.2";
+import { defineTool as defineTool3, ToolError as ToolError4 } from "npm:@lovable.dev/mcp-js@3.2.2";
 import { z as z2 } from "npm:zod@^3.25.76";
 var get_ticket_default = defineTool3({
   name: "get_service_ticket",
@@ -109,7 +110,7 @@ var get_ticket_default = defineTool3({
   handler: async ({ ticket_id }, ctx) => {
     const client = await supabaseForUser(ctx);
     const { data, error } = await client.from("it_tickets").select("id, ticket_code, title, description, status, priority, company_id, created_at, it_forwards").eq("id", ticket_id).abortSignal(ctx.signal).maybeSingle();
-    if (error || !data) throw new ToolError3("\u05D4\u05E7\u05E8\u05D9\u05D0\u05D4 \u05DC\u05D0 \u05E0\u05DE\u05E6\u05D0\u05D4 \u05D0\u05D5 \u05E9\u05D0\u05D9\u05DF \u05D4\u05E8\u05E9\u05D0\u05D4 \u05DC\u05E6\u05E4\u05D5\u05EA \u05D1\u05D4");
+    if (error || !data) throw new ToolError4("\u05D4\u05E7\u05E8\u05D9\u05D0\u05D4 \u05DC\u05D0 \u05E0\u05DE\u05E6\u05D0\u05D4 \u05D0\u05D5 \u05E9\u05D0\u05D9\u05DF \u05D4\u05E8\u05E9\u05D0\u05D4 \u05DC\u05E6\u05E4\u05D5\u05EA \u05D1\u05D4");
     const ticket = { id: data.id, ticket_code: data.ticket_code, title: data.title, description: data.description, status: data.status, priority: data.priority, company_id: data.company_id, created_at: data.created_at, forwarded_to_it: Array.isArray(data.it_forwards) && data.it_forwards.length > 0 };
     return { content: [{ type: "text", text: JSON.stringify(ticket) }], structuredContent: { ticket } };
   }

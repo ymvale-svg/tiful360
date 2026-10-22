@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import type { ToolContext } from "@lovable.dev/mcp-js";
+import { ToolError } from "@lovable.dev/mcp-js";
 type RuntimeGlobals = typeof globalThis & { Deno?: { env?: { get?: (name: string) => string | undefined } }; process?: { env?: Record<string, string | undefined> } };
 function runtimeEnv(name: string) {
   const runtime = globalThis as RuntimeGlobals;
@@ -33,12 +34,12 @@ function supabasePublishableKey() {
 }
 export async function supabaseForUser(ctx: ToolContext) {
   const token = ctx.getToken();
-  if (!ctx.isAuthenticated() || !token) throw new Error("נדרשת כניסה מאובטחת");
+  if (!ctx.isAuthenticated() || !token) throw new ToolError("נדרשת כניסה מאובטחת");
   const client = createClient(supabaseProjectUrl(), supabasePublishableKey(), {
     global: { headers: { Authorization: `Bearer ${token}` } },
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  const { data, error } = await client.rpc("my_access_blocked");
-  if (error || data !== false) throw new Error("אין הרשאת גישה למערכת");
+  const { data, error } = await client.rpc("my_access_blocked").abortSignal(ctx.signal);
+  if (error || data !== false) throw new ToolError("אין הרשאת גישה למערכת");
   return client;
 }
