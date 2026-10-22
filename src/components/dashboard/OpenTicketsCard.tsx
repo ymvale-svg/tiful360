@@ -97,6 +97,12 @@ export function OpenTicketsCard() {
                 >
                   {STATUS_LABELS[ticket.status] ?? ticket.status}
                 </span>
+                {Array.isArray(ticket.it_forwards) && ticket.it_forwards.length > 0 && (
+                  <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-info/10 text-info border border-info/30">
+                    <Send className="w-3 h-3" aria-hidden="true" />
+                    נשלח לאיש IT
+                  </span>
+                )}
                 <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                   <span
                     className={cn(
