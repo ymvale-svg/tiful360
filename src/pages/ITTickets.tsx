@@ -383,9 +383,10 @@ export default function ITTickets() {
                       <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full border", STATUS_CLASSES[ticket.status])}>
                         {STATUS_LABELS[ticket.status] ?? ticket.status}
                       </span>
-                      {Array.isArray(ticket.it_forwards) && ticket.it_forwards.length > 0 && ticket.status !== "done" && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-info/10 text-info border border-info/30" title="הקריאה הועברה לאיש IT לטיפול">
-                          אצל IT
+                      {Array.isArray(ticket.it_forwards) && ticket.it_forwards.length > 0 && (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-info/10 text-info border border-info/30" title="הקריאה נשלחה לאיש IT לטיפול">
+                          <Send className="w-3 h-3" aria-hidden="true" />
+                          נשלח לאיש IT
                         </span>
                       )}
                     </div>
@@ -426,6 +427,12 @@ export default function ITTickets() {
                         <span className="text-xs px-2 py-0.5 rounded-full bg-muted">
                           {subjectLabel(selectedTicket.subject_category ?? selectedTicket.ticket_type)}
                         </span>
+                        {itForwards.length > 0 && (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-info/10 text-info border border-info/30">
+                            <Send className="w-3 h-3" aria-hidden="true" />
+                            נשלח לאיש IT
+                          </span>
+                        )}
                       </div>
                       <h2 className="text-lg font-bold">{selectedTicket.title}</h2>
                       <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
