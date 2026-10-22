@@ -7,6 +7,7 @@ import logoImg from "@/assets/logo.png";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { translateAuthError } from "@/lib/authErrors";
+import { oauthReturnPath } from "@/lib/oauth-return-path";
 
 const UNAUTHORIZED_MESSAGE =
   "אין הרשאת גישה — האימייל שלך אינו רשום כמשתמש פעיל במערכת. פנה למנהל המערכת.";
@@ -26,11 +27,8 @@ export default function Login() {
   const { toast } = useToast();
 
   /** Same-origin path to open after a successful sign-in (e.g. a signing link). */
-  const redirectParam = searchParams.get("redirect");
-  const afterLogin =
-    redirectParam && redirectParam.startsWith("/") && !redirectParam.startsWith("//")
-      ? redirectParam
-      : "/select-company";
+  const redirectParam = searchParams.get("next") ?? searchParams.get("redirect");
+  const afterLogin = redirectParam === null ? "/select-company" : oauthReturnPath(redirectParam);
 
   const verifyActiveEmployee = async (_userId: string, _userEmail: string | null | undefined) => {
     // Links the signed-in account to its active employee card (by email) and
@@ -71,7 +69,7 @@ export default function Login() {
     if (afterLogin !== "/select-company") sessionStorage.setItem("oauth_return_path", afterLogin);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+        redirect_uri: new URL(`/login?next=${encodeURIComponent(afterLogin)}`, window.location.origin).href,
       });
 
       if (result.redirected) return;

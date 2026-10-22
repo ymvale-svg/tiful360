@@ -23,6 +23,9 @@ import { EmployeeLink } from "@/components/EmployeeLink";
 import { ExportExcelButton } from "@/components/ExcelActionButtons";
 import { exportToExcel } from "@/lib/exportExcel";
 import { toast } from "sonner";
+import { useWebMCP } from "use-webmcp-tool";
+import { runWebMCPTool } from "@/lib/webmcp-telemetry";
+import { validateTicketFilter, visibleTicketId } from "@/lib/ticket-view-actions";
 import {
   PRIORITY_LABELS, STATUS_CLASSES, STATUS_LABELS, slaRemaining, subjectLabel, addBusinessHours,
 } from "@/lib/serviceTickets";
@@ -203,6 +206,25 @@ export default function ITTickets() {
   const filtered = (tickets ?? []).filter((t: any) =>
     statusFilter === "all" ? true : statusFilter === "open_all" ? t.status !== "done" : t.status === statusFilter,
   );
+  const changeStatusFilter = (value: unknown) => setStatusFilter(validateTicketFilter(value));
+  const openVisibleTicket = (value: unknown) => setSelectedId(visibleTicketId(value, filtered));
+  useWebMCP({
+    name: "read_visible_service_tickets",
+    description: "קרא את הקריאות המוצגות במסך בהתאם לחברה ולסינון הנוכחי.",
+    annotations: { readOnlyHint: true, untrustedContentHint: true },
+    execute: () => runWebMCPTool("read_visible_service_tickets", () => isLoading ? "הקריאות נטענות" : filtered.length ? filtered.slice(0, 50).map((ticket) => `${ticket.id}: ${ticket.ticket_code} — ${ticket.title} — ${STATUS_LABELS[ticket.status] ?? ticket.status}`).join("\n") : "אין קריאות מוצגות"),
+  });
+  useWebMCP({
+    name: "filter_service_tickets", description: "שנה את סינון הסטטוס של הקריאות המוצגות.",
+    inputSchema: { type: "object", properties: { status: { type: "string", enum: ["open_all", "open", "in_progress", "done", "all"], description: "סטטוס הקריאות להצגה" } }, required: ["status"], additionalProperties: false },
+    execute: ({ status }: { status: string }) => runWebMCPTool("filter_service_tickets", () => { changeStatusFilter(status); return "הסינון עודכן"; }),
+  });
+  useWebMCP({
+    name: "open_service_ticket", description: "פתח פרטי קריאה מתוך הרשימה המוצגת בלבד.",
+    enabled: !isLoading,
+    inputSchema: { type: "object", properties: { ticket_id: { type: "string", description: "מזהה קריאה מתוך הרשימה הנוכחית" } }, required: ["ticket_id"], additionalProperties: false },
+    execute: ({ ticket_id }: { ticket_id: string }) => runWebMCPTool("open_service_ticket", () => { openVisibleTicket(ticket_id); return "פרטי הקריאה נפתחו"; }),
+  });
   const selectedTicket: any = tickets?.find((t: any) => t.id === selectedId);
   const [sendingIT, setSendingIT] = useState(false);
   const sendToIT = async () => {
@@ -333,7 +355,7 @@ export default function ITTickets() {
           <p className="page-subtitle">קריאות עובדים בטיפול מחלקת התפעול</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={changeStatusFilter}>
             <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="open_all">פתוחות ובטיפול</SelectItem>
@@ -386,7 +408,7 @@ export default function ITTickets() {
           <div className={cn("lg:col-span-1 space-y-2", selectedTicket && "hidden lg:block")}>
             {filtered.map((ticket: any) => (
               <RowContextMenu key={ticket.id} actions={[
-                { label: "פתח קריאה", onSelect: () => setSelectedId(ticket.id) },
+                { label: "פתח קריאה", onSelect: () => openVisibleTicket(ticket.id) },
                 { label: "פתח תיק עובד", when: !!ticket.employee_id, roles: ["admin","super_admin","operations","direct_manager","payroll","hr","finance"], onSelect: () => navigate(`/employees/${ticket.employee_id}`) },
                 copyAction("העתק מס' קריאה", ticket.ticket_code, true),
                 copyAction("העתק כותרת", ticket.title),
@@ -394,11 +416,11 @@ export default function ITTickets() {
               <div
                 role="button"
                 tabIndex={0}
-                onClick={() => setSelectedId(ticket.id)}
+                onClick={() => openVisibleTicket(ticket.id)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    setSelectedId(ticket.id);
+                    openVisibleTicket(ticket.id);
                   }
                 }}
                 className={cn(
