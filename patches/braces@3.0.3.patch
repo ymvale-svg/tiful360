@@ -79,7 +79,7 @@ diff --git a/lib/stringify.js b/lib/stringify.js
      if (node.nodes) {
        for (const child of node.nodes) {
 -        output += stringify(child);
-+        output += stringify(child, node, depth + 1);
++        output += stringify(child, undefined, depth + 1);
        }
      }
      return output;

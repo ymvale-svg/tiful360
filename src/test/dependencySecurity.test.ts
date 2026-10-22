@@ -19,9 +19,12 @@ describe("braces security patch", () => {
     expect(braces.expand("asset-{1..3}")).toEqual(["asset-1", "asset-2", "asset-3"]);
     expect(braces.expand("\\{literal\\}")).toEqual(["{literal}"]);
   });
-  it("accepts 100 nested blocks but rejects 101, including mixed blocks", () => {
-    expect(() => braces.compile("(".repeat(100) + "x" + ")".repeat(100))).not.toThrow();
-    expect(() => braces.parse("{(".repeat(51) + "x" + ")}".repeat(51))).toThrow("security limit");
+  it.each(["compile", "expand", "parse", "stringify"])("enforces the exact 100-block boundary in %s", (method) => {
+    for (const [open, close] of [["(", ")"], ["{", "}"]]) {
+      expect(() => braces[method](open.repeat(100) + "x" + close.repeat(100))).not.toThrow();
+      expect(() => braces[method](open.repeat(101) + "x" + close.repeat(101))).toThrow("Nesting depth exceeds security limit (100)");
+    }
+    expect(() => braces[method]("{(".repeat(51) + "x" + ")}".repeat(51))).toThrow("security limit");
   });
   it.each(["compile", "expand", "stringify"])("bounds caller-supplied recursive ASTs in %s", (method) => {
     const ast: { type: string; nodes: unknown[] } = { type: "root", nodes: [] };
