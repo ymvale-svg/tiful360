@@ -1,0 +1,138 @@
+// Turns a service ticket into a task in Mesimon (the task-management system).
+// Mesimon files it under the operations department — project "משרד שוטף", or
+// "פריוריטי" for Priority tickets — and closes the ticket back through it-api
+// (which emails the opener) when the task is completed.
+//
+// Actions: "status" (is the connection available for this ticket's company),
+// "options" (operations-department members to pick an assignee from), "create".
+// Only operations staff may call it. Secrets: MESIMON_URL, MESIMON_API_KEY, and
+// MESIMON_COMPANY_IDS — the companies whose tickets may reach Mesimon, so another
+// tenant's tickets never land in this organisation's task system.
+import { createClient } from "npm:@supabase/supabase-js@2";
+import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+
+const APP_BASE = "https://tiful360.com";
+const json = (b: unknown, status = 200) =>
+  new Response(JSON.stringify(b), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+const SUBJECT_LABELS: Record<string, string> = {
+  computing: "מיחשוב",
+  peripherals: "ציוד היקפי",
+  furniture: "ריהוט משרדי",
+  software: "תוכנות",
+  priority: "פריוריטי",
+  other: "אחר",
+  offboarding: "ניתוקים / סיום העסקה",
+  onboarding: "קליטת עובד",
+};
+
+// SLA deadline → the calendar day in Israel (Mesimon due dates are dates, not times)
+const israelDate = (iso: string | null) =>
+  iso ? new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem" }).format(new Date(iso)) : null;
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  try {
+    const auth = req.headers.get("Authorization");
+    if (!auth?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
+    const url = Deno.env.get("SUPABASE_URL")!;
+    const authClient = createClient(url, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: auth } } });
+    const { data: claims } = await authClient.auth.getClaims(auth.replace("Bearer ", ""));
+    const uid = claims?.claims?.sub;
+    if (!uid) return json({ error: "Unauthorized" }, 401);
+
+    const body = await req.json().catch(() => ({}));
+    const action = typeof body.action === "string" ? body.action : "create";
+    const ticket_id = typeof body.ticket_id === "string" ? body.ticket_id : "";
+    if (!ticket_id) return json({ error: "ticket_id required" }, 400);
+
+    // RLS decides visibility; the role check limits the action to operations staff
+    const { data: visible } = await authClient.from("it_tickets").select("id").eq("id", ticket_id).maybeSingle();
+    if (!visible) return json({ error: "Forbidden" }, 403);
+    const [{ data: ops }, { data: sa }] = await Promise.all([
+      authClient.rpc("is_ops_staff", { _user_id: uid }),
+      authClient.rpc("is_super_admin", { _user_id: uid }),
+    ]);
+    if (!ops && !sa) return json({ error: "Forbidden" }, 403);
+
+    const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const { data: t } = await admin
+      .from("it_tickets")
+      .select("id, company_id, ticket_code, title, description, subject_category, ticket_type, priority, sla_deadline, location, contact_phone, mesimon_task_id, mesimon_task_url, employees(full_name)")
+      .eq("id", ticket_id)
+      .single();
+    if (!t) return json({ error: "not found" }, 404);
+
+    const base = (Deno.env.get("MESIMON_URL") ?? "").trim().replace(/\/+$/, "");
+    const key = (Deno.env.get("MESIMON_API_KEY") ?? "").trim();
+    const companies = (Deno.env.get("MESIMON_COMPANY_IDS") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+    const available = !!base && !!key && companies.includes(t.company_id);
+
+    if (action === "status") {
+      return json({ available, task_id: t.mesimon_task_id, task_url: t.mesimon_task_url });
+    }
+    if (!available) return json({ error: "החיבור למשימון אינו מוגדר עבור החברה" }, 400);
+
+    const mesimon = async (path: string, init: RequestInit = {}) => {
+      const res = await fetch(`${base}/api/integrations/tiful360${path}`, {
+        ...init,
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+        signal: AbortSignal.timeout(20000),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error ?? `Mesimon HTTP ${res.status}`);
+      return data;
+    };
+
+    if (action === "options") {
+      return json(await mesimon("/options"));
+    }
+    if (action !== "create") return json({ error: "unknown action" }, 400);
+
+    if (t.mesimon_task_id) {
+      return json({ ok: true, existing: true, task_id: t.mesimon_task_id, task_url: t.mesimon_task_url });
+    }
+
+    const { data: prof } = await admin.from("profiles").select("full_name").eq("id", uid).maybeSingle();
+    const subject = t.subject_category ?? t.ticket_type;
+    const created = await mesimon("/tasks", {
+      method: "POST",
+      body: JSON.stringify({
+        ticketCode: t.ticket_code,
+        title: t.title,
+        description: t.description ?? "",
+        subject,
+        subjectLabel: SUBJECT_LABELS[subject] ?? subject,
+        priority: t.priority,
+        dueDate: israelDate(t.sla_deadline),
+        employeeName: (t as any).employees?.full_name ?? "",
+        location: t.location ?? "",
+        contactPhone: t.contact_phone ?? "",
+        openedBy: prof?.full_name ?? "",
+        note: String(body.note ?? "").slice(0, 2000),
+        assigneeId: body.assignee_id ? Number(body.assignee_id) : null,
+        ticketUrl: `${APP_BASE}/it-tickets?ticket=${encodeURIComponent(t.ticket_code)}`,
+      }),
+    });
+
+    const task_id = String(created.taskId);
+    const task_url = created.url ?? null;
+    const now = new Date().toISOString();
+    await admin
+      .from("it_tickets")
+      .update({ mesimon_task_id: task_id, mesimon_task_url: task_url, mesimon_sent_at: now, mesimon_sent_by: uid, updated_at: now })
+      .eq("id", t.id);
+    await admin.from("activity_log").insert({
+      company_id: t.company_id,
+      performed_by: uid,
+      action: "העברת קריאה למשימון",
+      entity_type: "it_tickets",
+      entity_id: t.id,
+      details: `קריאה ${t.ticket_code} הועברה למשימון כמשימה ${task_id}`,
+    });
+
+    return json({ ok: true, existing: !!created.existing, task_id, task_url });
+  } catch (e) {
+    return json({ error: (e as Error).message ?? "server error" }, 500);
+  }
+});

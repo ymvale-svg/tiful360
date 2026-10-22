@@ -2023,6 +2023,10 @@ export type Database = {
           id: string
           it_forwards: Json
           location: string | null
+          mesimon_sent_at: string | null
+          mesimon_sent_by: string | null
+          mesimon_task_id: string | null
+          mesimon_task_url: string | null
           priority: Database["public"]["Enums"]["ticket_priority"]
           related_asset_id: string | null
           replies: Json
@@ -2055,6 +2059,10 @@ export type Database = {
           id?: string
           it_forwards?: Json
           location?: string | null
+          mesimon_sent_at?: string | null
+          mesimon_sent_by?: string | null
+          mesimon_task_id?: string | null
+          mesimon_task_url?: string | null
           priority?: Database["public"]["Enums"]["ticket_priority"]
           related_asset_id?: string | null
           replies?: Json
@@ -2087,6 +2095,10 @@ export type Database = {
           id?: string
           it_forwards?: Json
           location?: string | null
+          mesimon_sent_at?: string | null
+          mesimon_sent_by?: string | null
+          mesimon_task_id?: string | null
+          mesimon_task_url?: string | null
           priority?: Database["public"]["Enums"]["ticket_priority"]
           related_asset_id?: string | null
           replies?: Json

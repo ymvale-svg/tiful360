@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useUpdateTicketStatus } from "@/hooks/useServiceTickets";
 import { NewITTicketDialog } from "@/components/NewITTicketDialog";
+import { SendToMesimonButton } from "@/components/SendToMesimonButton";
 import { EmployeeLink } from "@/components/EmployeeLink";
 import { ExportExcelButton } from "@/components/ExcelActionButtons";
 import { exportToExcel } from "@/lib/exportExcel";
@@ -454,6 +455,7 @@ export default function ITTickets() {
                         <Send className="w-3.5 h-3.5" aria-hidden="true" />
                         {sendingIT ? "שולח..." : "שלח לאיש IT"}
                       </button>
+                      <SendToMesimonButton ticket={selectedTicket} />
                       <Select value={selectedTicket.status} onValueChange={changeStatus}>
                         <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
                         <SelectContent>

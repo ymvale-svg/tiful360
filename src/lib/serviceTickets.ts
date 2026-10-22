@@ -5,6 +5,8 @@ export const TICKET_SUBJECTS = [
   { value: "peripherals", label: "ציוד היקפי", ticketType: "hardware" },
   { value: "furniture", label: "ריהוט משרדי", ticketType: "hardware" },
   { value: "software", label: "תוכנות", ticketType: "software" },
+  // Priority ERP — tickets of this subject go to the "פריוריטי" project when sent to Mesimon
+  { value: "priority", label: "פריוריטי", ticketType: "software" },
   { value: "other", label: "אחר", ticketType: "access" },
 ] as const;
 
@@ -53,6 +55,7 @@ export const DEFAULT_SLA_HOURS: Record<string, { medium: number; critical: numbe
   peripherals: { medium: 48, critical: 8 },
   furniture: { medium: 72, critical: 24 },
   software: { medium: 24, critical: 4 },
+  priority: { medium: 24, critical: 4 },
   other: { medium: 48, critical: 8 },
   [OFFBOARDING_SUBJECT]: { medium: 24, critical: 4 },
   [ONBOARDING_SUBJECT]: { medium: 48, critical: 8 },

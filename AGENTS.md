@@ -13,3 +13,4 @@
 
 - Use Bun and bun.lock as the single dependency installation source; dependency security patches must be committed through Bun patchedDependencies. Why: duplicate npm locks can silently deploy different versions and omit local security patches.
 - Keep spreadsheet parsing behind the lazy-loaded shared adapter and verify actual advisory version ranges before replacing it. Why: legacy XLS/CSV support and all report exports must remain compatible without unnecessary migrations.
+- Service tickets reach Mesimon only through the create-mesimon-task function, and only for companies listed in MESIMON_COMPANY_IDS; Mesimon closes them back through it-api, which emails the opener. Why: Mesimon belongs to a single organisation, so another tenant's tickets must never land in it.
