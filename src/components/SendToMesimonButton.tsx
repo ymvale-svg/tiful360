@@ -3,6 +3,7 @@ import { ExternalLink, ListTodo } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { subjectLabel } from "@/lib/serviceTickets";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -15,6 +16,7 @@ interface Props {
     company_id: string | null;
     status?: string | null;
     subject_category?: string | null;
+    ticket_type?: string | null;
     mesimon_task_id?: string | null;
     mesimon_task_url?: string | null;
   };
@@ -69,7 +71,8 @@ export function SendToMesimonButton({ ticket }: Props) {
   // A closed ticket has nothing left to hand over
   if (!status?.available || ticket.status === "done") return null;
 
-  const project = ticket.subject_category === "priority" ? "פריוריטי" : "משרד שוטף";
+  // Mesimon keeps one project per ticket subject, named by its label
+  const project = subjectLabel(ticket.subject_category ?? ticket.ticket_type);
 
   const send = async () => {
     setSending(true);

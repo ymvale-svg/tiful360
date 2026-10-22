@@ -1,7 +1,7 @@
 // Turns a service ticket into a task in Mesimon (the task-management system).
-// Mesimon files it under the operations department — project "משרד שוטף", or
-// "פריוריטי" for Priority tickets — and closes the ticket back through it-api
-// (which emails the opener) when the task is completed.
+// Mesimon files it under the operations department, in a project named after the
+// ticket subject (created with the subject's first ticket), and closes the ticket
+// back through it-api (which emails the opener) when the task is completed.
 //
 // Actions: "status" (is the connection available for this ticket's company), "create".
 // The task is assigned to the sender (by email) and due two business days after sending.
@@ -135,7 +135,8 @@ Deno.serve(async (req) => {
         title: t.title,
         description: t.description ?? "",
         subject,
-        subjectLabel: SUBJECT_LABELS[subject] ?? subject,
+        // Mesimon files each subject under its own project, named by this label
+        subjectLabel: SUBJECT_LABELS[subject] ?? "אחר",
         priority: t.priority,
         dueDate,
         employeeName: (t as { employees?: { full_name?: string } | null }).employees?.full_name ?? "",
