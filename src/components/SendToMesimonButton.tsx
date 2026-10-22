@@ -7,9 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const NO_ASSIGNEE = "none";
 
 interface Props {
   ticket: {
@@ -23,14 +21,14 @@ interface Props {
 }
 
 /**
- * Turns a service ticket into a Mesimon task. Hidden when the connection isn't configured
- * for the ticket's company; once sent, shows a link to the task instead.
+ * Turns a service ticket into a Mesimon task, assigned to the sender and due in two business days.
+ * Hidden when the connection isn't configured for the ticket's company; once sent, shows a link
+ * to the task instead.
  */
 export function SendToMesimonButton({ ticket }: Props) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState("");
-  const [assignee, setAssignee] = useState(NO_ASSIGNEE);
   const [sending, setSending] = useState(false);
 
   // Availability is per company — one check per company, not per ticket
@@ -44,19 +42,6 @@ export function SendToMesimonButton({ ticket }: Props) {
       });
       if (error) return { available: false };
       return data as { available: boolean };
-    },
-  });
-
-  const { data: options, isLoading: optionsLoading } = useQuery({
-    queryKey: ["mesimon-options", ticket.company_id],
-    enabled: open,
-    staleTime: 5 * 60 * 1000,
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("create-mesimon-task", {
-        body: { action: "options", ticket_id: ticket.id },
-      });
-      if (error) throw error;
-      return data as { department: string; users: { id: number; name: string }[] };
     },
   });
 
@@ -94,7 +79,6 @@ export function SendToMesimonButton({ ticket }: Props) {
           action: "create",
           ticket_id: ticket.id,
           note: note.trim(),
-          assignee_id: assignee === NO_ASSIGNEE ? null : Number(assignee),
         },
       });
       if (error) {
@@ -103,11 +87,15 @@ export function SendToMesimonButton({ ticket }: Props) {
         const detail = await context?.json?.().catch(() => null);
         throw new Error(detail?.error ?? error.message);
       }
-      toast.success(data?.existing ? "הקריאה כבר קיימת כמשימה במשימון" : "נוצרה משימה במשימון");
+      if (data?.existing) toast.success("הקריאה כבר קיימת כמשימה במשימון");
+      else if (data?.assigned === false) {
+        toast.warning("המשימה נוצרה במשימון ללא אחראי", {
+          description: `לא נמצא במשימון משתמש פעיל עם הדואר ${data.assignee_email || "שלך"}`,
+        });
+      } else toast.success("נוצרה משימה במשימון ושויכה אליך");
       await queryClient.invalidateQueries({ queryKey: ["it-tickets"] });
       setOpen(false);
       setNote("");
-      setAssignee(NO_ASSIGNEE);
     } catch (e) {
       toast.error("יצירת המשימה במשימון נכשלה", { description: e instanceof Error ? e.message : undefined });
     } finally {
@@ -131,25 +119,11 @@ export function SendToMesimonButton({ ticket }: Props) {
           <DialogHeader>
             <DialogTitle>הפיכת הקריאה למשימה במשימון</DialogTitle>
             <DialogDescription>
-              המשימה תיכנס למחלקת {options?.department ?? "תפעול"}, לפרויקט "{project}". כשהמשימה תסומן כהושלמה במשימון,
-              הקריאה תיסגר כאן ויישלח מייל למי שפתח אותה.
+              המשימה תיפתח במשימון בפרויקט "{project}", תשויך אליך ותקבל תאריך יעד בעוד שני ימי עבודה.
+              כשהמשימה תסומן כהושלמה במשימון, הקריאה תיסגר כאן ויישלח מייל למי שפתח אותה.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-1">
-              <Label htmlFor="mesimon-assignee">אחראי (לא חובה)</Label>
-              <Select value={assignee} onValueChange={setAssignee} disabled={optionsLoading}>
-                <SelectTrigger id="mesimon-assignee">
-                  <SelectValue placeholder={optionsLoading ? "טוען..." : "ללא אחראי"} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NO_ASSIGNEE}>ללא אחראי</SelectItem>
-                  {options?.users.map((u) => (
-                    <SelectItem key={u.id} value={String(u.id)}>{u.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
             <div className="space-y-1">
               <Label htmlFor="mesimon-note">הערה (לא חובה)</Label>
               <Textarea id="mesimon-note" value={note} onChange={(e) => setNote(e.target.value)} rows={3} maxLength={2000} />

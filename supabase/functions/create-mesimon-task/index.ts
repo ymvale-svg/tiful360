@@ -3,8 +3,8 @@
 // "פריוריטי" for Priority tickets — and closes the ticket back through it-api
 // (which emails the opener) when the task is completed.
 //
-// Actions: "status" (is the connection available for this ticket's company),
-// "options" (operations-department members to pick an assignee from), "create".
+// Actions: "status" (is the connection available for this ticket's company), "create".
+// The task is assigned to the sender (by email) and due two business days after sending.
 // Only operations staff may call it. Secrets: MESIMON_URL, MESIMON_API_KEY, and
 // MESIMON_COMPANY_IDS — the companies whose tickets may reach Mesimon, so another
 // tenant's tickets never land in this organisation's task system.
@@ -26,9 +26,22 @@ const SUBJECT_LABELS: Record<string, string> = {
   onboarding: "קליטת עובד",
 };
 
-// SLA deadline → the calendar day in Israel (Mesimon due dates are dates, not times)
-const israelDate = (iso: string | null) =>
-  iso ? new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem" }).format(new Date(iso)) : null;
+const DUE_BUSINESS_DAYS = 2;
+
+// Today's calendar day in Israel (Mesimon due dates are dates, not times)
+const israelToday = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem" }).format(new Date());
+
+/** `days` business days after `from` (YYYY-MM-DD): Sunday–Thursday, skipping company holidays. */
+function addBusinessDays(from: string, days: number, holidays: Set<string>) {
+  const d = new Date(`${from}T00:00:00Z`);
+  let left = days;
+  while (left > 0) {
+    d.setUTCDate(d.getUTCDate() + 1);
+    const ymd = d.toISOString().slice(0, 10);
+    if (d.getUTCDay() !== 5 && d.getUTCDay() !== 6 && !holidays.has(ymd)) left--;
+  }
+  return d.toISOString().slice(0, 10);
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -97,9 +110,6 @@ Deno.serve(async (req) => {
       throw new Error(data?.error ?? `משימון החזיר שגיאה ${res.status}`);
     };
 
-    if (action === "options") {
-      return json(await mesimon("/options"));
-    }
     if (action !== "create") return json({ error: "unknown action" }, 400);
 
     if (t.mesimon_task_id) {
@@ -107,6 +117,16 @@ Deno.serve(async (req) => {
     }
 
     const { data: prof } = await admin.from("profiles").select("full_name").eq("id", uid).maybeSingle();
+    // The task is assigned in Mesimon to whoever sent it — matched there by email
+    const senderEmail = String(claims?.claims?.email ?? "").trim();
+    const today = israelToday();
+    const { data: holidayRows } = await admin
+      .from("company_holidays")
+      .select("holiday_date")
+      .eq("company_id", t.company_id)
+      .gte("holiday_date", today);
+    const holidays = new Set((holidayRows ?? []).map((h: { holiday_date: string }) => String(h.holiday_date).slice(0, 10)));
+    const dueDate = addBusinessDays(today, DUE_BUSINESS_DAYS, holidays);
     const subject = t.subject_category ?? t.ticket_type;
     const created = await mesimon("/tasks", {
       method: "POST",
@@ -117,13 +137,13 @@ Deno.serve(async (req) => {
         subject,
         subjectLabel: SUBJECT_LABELS[subject] ?? subject,
         priority: t.priority,
-        dueDate: israelDate(t.sla_deadline),
+        dueDate,
         employeeName: (t as { employees?: { full_name?: string } | null }).employees?.full_name ?? "",
         location: t.location ?? "",
         contactPhone: t.contact_phone ?? "",
         openedBy: prof?.full_name ?? "",
         note: String(body.note ?? "").slice(0, 2000),
-        assigneeId: body.assignee_id ? Number(body.assignee_id) : null,
+        assigneeEmail: senderEmail,
         ticketUrl: `${APP_BASE}/it-tickets?ticket=${encodeURIComponent(t.ticket_code)}`,
       }),
     });
@@ -144,7 +164,7 @@ Deno.serve(async (req) => {
       details: `קריאה ${t.ticket_code} הועברה למשימון כמשימה ${task_id}`,
     });
 
-    return json({ ok: true, existing: !!created.existing, task_id, task_url });
+    return json({ ok: true, existing: !!created.existing, task_id, task_url, due_date: dueDate, assigned: created.assigned !== false, assignee_email: senderEmail });
   } catch (e) {
     return json({ error: (e as Error).message ?? "server error" }, 500);
   }
