@@ -29,6 +29,7 @@ const SUBJECT_LABELS: Record<string, string> = {
   peripherals: "ציוד היקפי",
   furniture: "ריהוט משרדי",
   software: "תוכנות",
+  priority: "פריוריטי",
   other: "אחר",
   offboarding: "ניתוקים / סיום העסקה",
   hardware: "תמיכה טכנית",

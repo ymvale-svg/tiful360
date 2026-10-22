@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useUpdateTicketStatus } from "@/hooks/useServiceTickets";
 import { NewITTicketDialog } from "@/components/NewITTicketDialog";
+import { SendToMesimonButton } from "@/components/SendToMesimonButton";
 import { EmployeeLink } from "@/components/EmployeeLink";
 import { ExportExcelButton } from "@/components/ExcelActionButtons";
 import { exportToExcel } from "@/lib/exportExcel";
@@ -246,49 +247,6 @@ export default function ITTickets() {
     }
   };
 
-  // Mesimon (משימון) integration — button shown only when the company is allowed
-  const { data: mesimonEnabled } = useQuery({
-    queryKey: ["mesimon-status", activeCompanyId],
-    enabled: !!activeCompanyId,
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("mesimon-status", {
-        body: { company_id: activeCompanyId },
-      });
-      if (error) return false;
-      return !!data?.enabled;
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-  const [sendingMesimon, setSendingMesimon] = useState(false);
-  const sendToMesimon = async () => {
-    if (!selectedTicket) return;
-    const note = window.prompt("הערה למשימון (לא חובה):");
-    if (note === null) return;
-    setSendingMesimon(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("send-to-mesimon", {
-        body: { ticket_id: selectedTicket.id, note },
-      });
-      if (error) {
-        let body: any = null;
-        try { body = await (error as any).context?.json?.(); } catch { /* ignore */ }
-        const status = body?.status;
-        const reason =
-          status === 404 ? "כתובת קבלת הקריאות אצל משימון אינה קיימת — יש לבקש ממשימון כתובת תקינה"
-          : status === 401 || status === 403 ? "משימון דחה את מפתח החיבור"
-          : body?.error === "mesimon not configured" ? "החיבור למשימון לא הוגדר"
-          : body?.error || (error as any)?.message || "שגיאה לא ידועה";
-        throw new Error(reason);
-      }
-      if (data?.error) throw new Error(data.error);
-      toast.success("הקריאה נשלחה למשימון");
-      await queryClient.invalidateQueries({ queryKey: ["it-tickets"] });
-    } catch (e: any) {
-      toast.error("שליחה למשימון נכשלה", { description: String(e?.message ?? "") });
-    } finally {
-      setSendingMesimon(false);
-    }
-  };
   useEffect(() => {
     if (selectedId) document.getElementById("ticket-details")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [selectedId]);
@@ -527,18 +485,7 @@ export default function ITTickets() {
                         <Send className="w-3.5 h-3.5" aria-hidden="true" />
                         {sendingIT ? "שולח..." : "שלח לאיש IT"}
                       </button>
-                      {mesimonEnabled && selectedTicket.status !== "done" && (
-                        <button
-                          type="button"
-                          onClick={sendToMesimon}
-                          disabled={sendingMesimon}
-                          className="text-xs px-3 py-1.5 rounded-md border border-border hover:bg-muted flex items-center gap-1 disabled:opacity-50"
-                          title="שליחת הקריאה למערכת משימון"
-                        >
-                          <Send className="w-3.5 h-3.5" aria-hidden="true" />
-                          {sendingMesimon ? "שולח..." : "שלח למשימון"}
-                        </button>
-                      )}
+                      <SendToMesimonButton ticket={selectedTicket} />
                       <Select value={selectedTicket.status} onValueChange={changeStatus}>
                         <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
                         <SelectContent>
