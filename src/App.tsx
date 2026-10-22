@@ -44,6 +44,7 @@ const Onboarding = lazy(() => import("@/pages/Onboarding"));
 const Tax101TokenPage = lazy(() => import("@/pages/Tax101TokenPage"));
 const Announcements = lazy(() => import("@/pages/Announcements"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const OAuthConsent = lazy(() => import("@/pages/OAuthConsent"));
 
 import { ThemeProvider } from "next-themes";
 
@@ -71,6 +72,7 @@ const App = () => (
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 <Route path="/login" element={<Login />} />
+                <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/welcome" element={<Welcome />} />
                 <Route path="/handover/:token" element={<SignHandover />} />

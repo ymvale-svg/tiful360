@@ -63,7 +63,8 @@ Deno.serve(async (req) => {
       .single();
     if (!t) return json({ error: "not found" }, 404);
 
-    const base = (Deno.env.get("MESIMON_URL") ?? "").trim().replace(/\/+$/, "");
+    // Accept either the site address or the full endpoint address — keep only the origin
+    const base = (Deno.env.get("MESIMON_URL") ?? "").trim().replace(/\/api(\/.*)?$/, "").replace(/\/+$/, "");
     const key = (Deno.env.get("MESIMON_API_KEY") ?? "").trim();
     const companies = (Deno.env.get("MESIMON_COMPANY_IDS") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
     const available = !!base && !!key && companies.includes(t.company_id);
@@ -73,15 +74,27 @@ Deno.serve(async (req) => {
     }
     if (!available) return json({ error: "החיבור למשימון אינו מוגדר עבור החברה" }, 400);
 
+    // Errors are worded for the person who clicked: what failed and who can fix it
     const mesimon = async (path: string, init: RequestInit = {}) => {
-      const res = await fetch(`${base}/api/integrations/tiful360${path}`, {
-        ...init,
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-        signal: AbortSignal.timeout(20000),
-      });
+      let res: Response;
+      try {
+        res = await fetch(`${base}/api/integrations/tiful360${path}`, {
+          ...init,
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+          signal: AbortSignal.timeout(20000),
+        });
+      } catch {
+        throw new Error("משימון אינו זמין כרגע — נסו שוב בעוד כמה דקות");
+      }
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error ?? `Mesimon HTTP ${res.status}`);
-      return data;
+      if (res.ok) return data;
+      console.error("mesimon responded", res.status, data?.error);
+      if (res.status === 401) {
+        throw new Error(`משימון דחה את מפתח החיבור (${data?.error ?? "401"}) — MESIMON_API_KEY חייב להיות זהה ל-TIFUL360_INBOUND_KEY במשימון`);
+      }
+      if (res.status === 404) throw new Error("כתובת משימון שגויה — יש לבדוק את MESIMON_URL");
+      if (res.status >= 500) throw new Error("משימון החזיר שגיאה — נסו שוב בעוד כמה דקות");
+      throw new Error(data?.error ?? `משימון החזיר שגיאה ${res.status}`);
     };
 
     if (action === "options") {
@@ -105,7 +118,7 @@ Deno.serve(async (req) => {
         subjectLabel: SUBJECT_LABELS[subject] ?? subject,
         priority: t.priority,
         dueDate: israelDate(t.sla_deadline),
-        employeeName: (t as any).employees?.full_name ?? "",
+        employeeName: (t as { employees?: { full_name?: string } | null }).employees?.full_name ?? "",
         location: t.location ?? "",
         contactPhone: t.contact_phone ?? "",
         openedBy: prof?.full_name ?? "",

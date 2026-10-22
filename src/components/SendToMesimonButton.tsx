@@ -15,6 +15,7 @@ interface Props {
   ticket: {
     id: string;
     company_id: string | null;
+    status?: string | null;
     subject_category?: string | null;
     mesimon_task_id?: string | null;
     mesimon_task_url?: string | null;
@@ -80,7 +81,8 @@ export function SendToMesimonButton({ ticket }: Props) {
     );
   }
 
-  if (!status?.available) return null;
+  // A closed ticket has nothing left to hand over
+  if (!status?.available || ticket.status === "done") return null;
 
   const project = ticket.subject_category === "priority" ? "פריוריטי" : "משרד שוטף";
 

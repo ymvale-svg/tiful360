@@ -24,6 +24,9 @@ import { EmployeeLink } from "@/components/EmployeeLink";
 import { ExportExcelButton } from "@/components/ExcelActionButtons";
 import { exportToExcel } from "@/lib/exportExcel";
 import { toast } from "sonner";
+import { useWebMCP } from "use-webmcp-tool";
+import { runWebMCPTool } from "@/lib/webmcp-telemetry";
+import { validateTicketFilter, visibleTicketId } from "@/lib/ticket-view-actions";
 import {
   PRIORITY_LABELS, STATUS_CLASSES, STATUS_LABELS, slaRemaining, subjectLabel, addBusinessHours,
 } from "@/lib/serviceTickets";
@@ -204,6 +207,25 @@ export default function ITTickets() {
   const filtered = (tickets ?? []).filter((t: any) =>
     statusFilter === "all" ? true : statusFilter === "open_all" ? t.status !== "done" : t.status === statusFilter,
   );
+  const changeStatusFilter = (value: unknown) => setStatusFilter(validateTicketFilter(value));
+  const openVisibleTicket = (value: unknown) => setSelectedId(visibleTicketId(value, filtered));
+  useWebMCP({
+    name: "read_visible_service_tickets",
+    description: "קרא את הקריאות המוצגות במסך בהתאם לחברה ולסינון הנוכחי.",
+    annotations: { readOnlyHint: true, untrustedContentHint: true },
+    execute: () => runWebMCPTool("read_visible_service_tickets", () => isLoading ? "הקריאות נטענות" : filtered.length ? filtered.slice(0, 50).map((ticket) => `${ticket.id}: ${ticket.ticket_code} — ${ticket.title} — ${STATUS_LABELS[ticket.status] ?? ticket.status}`).join("\n") : "אין קריאות מוצגות"),
+  });
+  useWebMCP({
+    name: "filter_service_tickets", description: "שנה את סינון הסטטוס של הקריאות המוצגות.",
+    inputSchema: { type: "object", properties: { status: { type: "string", enum: ["open_all", "open", "in_progress", "done", "all"], description: "סטטוס הקריאות להצגה" } }, required: ["status"], additionalProperties: false },
+    execute: ({ status }: { status: string }) => runWebMCPTool("filter_service_tickets", () => { changeStatusFilter(status); return "הסינון עודכן"; }),
+  });
+  useWebMCP({
+    name: "open_service_ticket", description: "פתח פרטי קריאה מתוך הרשימה המוצגת בלבד.",
+    enabled: !isLoading,
+    inputSchema: { type: "object", properties: { ticket_id: { type: "string", description: "מזהה קריאה מתוך הרשימה הנוכחית" } }, required: ["ticket_id"], additionalProperties: false },
+    execute: ({ ticket_id }: { ticket_id: string }) => runWebMCPTool("open_service_ticket", () => { openVisibleTicket(ticket_id); return "פרטי הקריאה נפתחו"; }),
+  });
   const selectedTicket: any = tickets?.find((t: any) => t.id === selectedId);
   const [sendingIT, setSendingIT] = useState(false);
   const sendToIT = async () => {
@@ -224,6 +246,7 @@ export default function ITTickets() {
       setSendingIT(false);
     }
   };
+
   useEffect(() => {
     if (selectedId) document.getElementById("ticket-details")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [selectedId]);
@@ -300,7 +323,7 @@ export default function ITTickets() {
           <p className="page-subtitle">קריאות עובדים בטיפול מחלקת התפעול</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={changeStatusFilter}>
             <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="open_all">פתוחות ובטיפול</SelectItem>
@@ -353,7 +376,7 @@ export default function ITTickets() {
           <div className={cn("lg:col-span-1 space-y-2", selectedTicket && "hidden lg:block")}>
             {filtered.map((ticket: any) => (
               <RowContextMenu key={ticket.id} actions={[
-                { label: "פתח קריאה", onSelect: () => setSelectedId(ticket.id) },
+                { label: "פתח קריאה", onSelect: () => openVisibleTicket(ticket.id) },
                 { label: "פתח תיק עובד", when: !!ticket.employee_id, roles: ["admin","super_admin","operations","direct_manager","payroll","hr","finance"], onSelect: () => navigate(`/employees/${ticket.employee_id}`) },
                 copyAction("העתק מס' קריאה", ticket.ticket_code, true),
                 copyAction("העתק כותרת", ticket.title),
@@ -361,11 +384,11 @@ export default function ITTickets() {
               <div
                 role="button"
                 tabIndex={0}
-                onClick={() => setSelectedId(ticket.id)}
+                onClick={() => openVisibleTicket(ticket.id)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    setSelectedId(ticket.id);
+                    openVisibleTicket(ticket.id);
                   }
                 }}
                 className={cn(
@@ -384,9 +407,10 @@ export default function ITTickets() {
                       <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full border", STATUS_CLASSES[ticket.status])}>
                         {STATUS_LABELS[ticket.status] ?? ticket.status}
                       </span>
-                      {Array.isArray(ticket.it_forwards) && ticket.it_forwards.length > 0 && ticket.status !== "done" && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-info/10 text-info border border-info/30" title="הקריאה הועברה לאיש IT לטיפול">
-                          אצל IT
+                      {Array.isArray(ticket.it_forwards) && ticket.it_forwards.length > 0 && (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-info/10 text-info border border-info/30" title="הקריאה נשלחה לאיש IT לטיפול">
+                          <Send className="w-3 h-3" aria-hidden="true" />
+                          נשלח לאיש IT
                         </span>
                       )}
                     </div>
@@ -427,6 +451,12 @@ export default function ITTickets() {
                         <span className="text-xs px-2 py-0.5 rounded-full bg-muted">
                           {subjectLabel(selectedTicket.subject_category ?? selectedTicket.ticket_type)}
                         </span>
+                        {itForwards.length > 0 && (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-info/10 text-info border border-info/30">
+                            <Send className="w-3 h-3" aria-hidden="true" />
+                            נשלח לאיש IT
+                          </span>
+                        )}
                       </div>
                       <h2 className="text-lg font-bold">{selectedTicket.title}</h2>
                       <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
@@ -499,16 +529,16 @@ export default function ITTickets() {
                     <div>
                       <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
                         <Send className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-                        העברה לאיש IT
+                        העברות לטיפול חיצוני
                       </h3>
                       <ul className="space-y-2">
                         {itForwards.map((f: any, i: number) => (
                           <li key={i} className="rounded-lg border border-border/50 bg-muted/30 p-3 text-sm">
                             <p className="flex flex-wrap items-center gap-1">
                               <span className="font-medium">
-                                נשלח לאיש IT ב-{formatDateTimeDMY(f.at)} על ידי {f.by_name || "—"}
+                                {f.target === "mesimon" ? "נשלח למשימון" : "נשלח לאיש IT"} ב-{formatDateTimeDMY(f.at)} על ידי {f.by_name || "—"}
                               </span>
-                              {f.sent > 0 && <span className="text-xs text-muted-foreground">({f.sent} נמענים)</span>}
+                              {f.sent > 0 && f.target !== "mesimon" && <span className="text-xs text-muted-foreground">({f.sent} נמענים)</span>}
                             </p>
                             {Array.isArray(f.recipients) && f.recipients.length > 0 && (
                               <p className="text-xs text-muted-foreground mt-1" dir="ltr">

@@ -1,0 +1,116 @@
+{
+  "version": 1,
+  "sdk_version": "3.2.2",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://rhzmhiknbcipucfvgkok.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "360",
+      "version": "0.1.0",
+      "title": "תפעול 360"
+    },
+    "tools": [
+      {
+        "name": "list_companies",
+        "title": "החברות הזמינות לי",
+        "description": "List up to 100 companies the signed-in user may access, with IDs for subsequent ticket queries.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_service_tickets",
+        "title": "רשימת קריאות שירות",
+        "description": "List a bounded page of service tickets for an accessible company, respecting the caller's existing permissions.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "company_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Company ID returned by list_companies."
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "open_all",
+                "open",
+                "in_progress",
+                "done",
+                "all"
+              ],
+              "default": "open_all",
+              "description": "Ticket status filter; open_all excludes closed tickets."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 25,
+              "description": "Maximum number of tickets."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000,
+              "default": 0,
+              "description": "Pagination offset."
+            }
+          },
+          "required": [
+            "company_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_service_ticket",
+        "title": "פרטי קריאת שירות",
+        "description": "Read an accessible service ticket and its IT-forwarded flag; does not expose attachments, payroll or recipient addresses.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "ticket_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Ticket ID returned by list_service_tickets."
+            }
+          },
+          "required": [
+            "ticket_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
