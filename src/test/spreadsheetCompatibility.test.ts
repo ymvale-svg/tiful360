@@ -3,6 +3,11 @@ import { describe, expect, it, vi } from "vitest";
 import { loadXlsx } from "@/lib/xlsx";
 import { exportToExcel } from "@/lib/exportExcel";
 
+vi.mock("xlsx", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("xlsx")>();
+  return { ...actual, writeFile: vi.fn() };
+});
+
 describe("spreadsheet compatibility across all import and report screens", () => {
   it("uses patched SheetJS and caches its lazy load", async () => {
     const first = loadXlsx();
@@ -25,7 +30,8 @@ describe("spreadsheet compatibility across all import and report screens", () =>
   });
   it.each(["עובדים", "משתמשים", "ציוד", "קריאות שירות", "חברות", "מנויי רכב", "תיקוני נוכחות", "חופשות", "התראות", "לוג הרשאות", "תמונת מצב הרשאות", "חוסרי נוכחות", "דוח נוכחות יומי", "דוח נוכחות חודשי"])("exports %s with ordered columns and RTL", async (report) => {
     const xlsx = await loadXlsx();
-    const write = vi.spyOn(xlsx, "writeFile").mockImplementation(() => {});
+    const write = vi.mocked(xlsx.writeFile);
+    write.mockClear();
     await exportToExcel([{ name: "נתון בדיקה", code: "000123", notes: null, ignored: "not exported" }], [
       { key: "code", label: "מזהה" }, { key: "name", label: "שם" }, { key: "notes", label: "הערות" },
     ], report);
@@ -37,15 +43,14 @@ describe("spreadsheet compatibility across all import and report screens", () =>
     expect(xlsx.utils.sheet_to_json(roundTrip.Sheets[roundTrip.SheetNames[0]], { header: 1 })).toEqual([
       ["מזהה", "שם", "הערות"], ["000123", "נתון בדיקה", ""],
     ]);
-    write.mockRestore();
   });
   it("exports empty data and caps widths for long values", async () => {
     const xlsx = await loadXlsx();
-    const write = vi.spyOn(xlsx, "writeFile").mockImplementation(() => {});
+    const write = vi.mocked(xlsx.writeFile);
+    write.mockClear();
     await exportToExcel([], [{ key: "name", label: "שם" }], "ריק");
     expect(write.mock.calls[0][0].SheetNames).toEqual(["גיליון1"]);
     await exportToExcel([{ name: "א".repeat(500) }], [{ key: "name", label: "שם" }], "ארוך");
     expect(write.mock.calls[1][0].Sheets["גיליון1"]["!cols"]?.[0].wch).toBe(40);
-    write.mockRestore();
   });
 });
