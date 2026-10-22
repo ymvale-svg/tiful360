@@ -31,6 +31,8 @@ import { Input } from "@/components/ui/input";
 import { RowContextMenu, copyAction, openInNewTab, type ContextAction } from "@/components/context/RowContextMenu";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { ExpiringResourcesDialog } from "@/components/assets/ExpiringResourcesDialog";
+import { expiryClickAction, getExpiringResourceTargets } from "@/lib/expiringResourceTargets";
 
 interface Props {
   /** Deprecated — domain cards now navigate via /assets/:domain. Kept optional for back-compat. */
@@ -86,6 +88,7 @@ export function DomainsGrid({ onQuickAssign }: Props) {
   const [editTitle, setEditTitle] = useState("");
   const [editHint, setEditHint] = useState("");
   const [saving, setSaving] = useState(false);
+  const [expiryListOpen, setExpiryListOpen] = useState(false);
 
   const domainLabels = (activeCompany?.domain_labels ?? null) as DomainLabels | null;
   const labels = useMemo(() => getAllDomainLabels(domainLabels), [domainLabels]);
@@ -115,7 +118,16 @@ export function DomainsGrid({ onQuickAssign }: Props) {
 
 
   const totalExpired = (expiring ?? []).filter((e) => e.days_left <= 0).length;
-  const totalSoon30 = (expiring ?? []).filter((e) => e.days_left > 0).length;
+  const soonTargets = useMemo(() => getExpiringResourceTargets(
+    (expiring ?? []).filter((e) => e.days_left > 0 && e.days_left <= 30),
+    categories ?? [],
+  ), [expiring, categories]);
+  const totalSoon30 = soonTargets.length;
+  const openSoonResources = () => {
+    const action = expiryClickAction(soonTargets);
+    if (action.type === "navigate") navigate(action.href);
+    else setExpiryListOpen(true);
+  };
   const openOffboardings = (tickets ?? []).filter((t: any) => t.ticket_type === "offboarding" && t.status !== "done").length;
 
   const startEdit = (key: DomainKey) => {
@@ -166,10 +178,12 @@ export function DomainsGrid({ onQuickAssign }: Props) {
           </span>
         )}
         {totalSoon30 > 0 && (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-warning/10 text-warning border border-warning/20 text-xs font-medium">
+          <Button variant="outline" size="sm" onClick={openSoonResources}
+            title="פתח את המשאבים שתוקפם פג תוך 30 יום"
+            className="h-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-warning/10 text-warning border border-warning/20 text-xs font-medium hover:bg-warning/20 hover:text-warning">
             <Clock className="w-3.5 h-3.5" />
             {totalSoon30} פגים תוך 30 יום
-          </span>
+          </Button>
         )}
         {totalExpired > 0 && (() => {
           const first = grouped.find((g) => g.expired > 0);
@@ -186,6 +200,8 @@ export function DomainsGrid({ onQuickAssign }: Props) {
           );
         })()}
       </div>
+
+      <ExpiringResourcesDialog open={expiryListOpen} onOpenChange={setExpiryListOpen} targets={soonTargets} />
 
       {/* Domain cards */}
       <div>

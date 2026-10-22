@@ -13,3 +13,4 @@
 
 - Use Bun and bun.lock as the single dependency installation source; dependency security patches must be committed through Bun patchedDependencies. Why: duplicate npm locks can silently deploy different versions and omit local security patches.
 - Keep spreadsheet parsing behind the lazy-loaded shared adapter and verify actual advisory version ranges before replacing it. Why: legacy XLS/CSV support and all report exports must remain compatible without unnecessary migrations.
+- Expiry-chip navigation resolves parent resource routes through expiringResourceTargets and groups expiry rows by resource identity. Why: document IDs are not asset IDs, protocol names differ from URL domains, and one resource may have multiple expiry dates.
