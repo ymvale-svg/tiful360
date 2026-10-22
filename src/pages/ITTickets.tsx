@@ -495,6 +495,18 @@ export default function ITTickets() {
                         <Send className="w-3.5 h-3.5" aria-hidden="true" />
                         {sendingIT ? "שולח..." : "שלח לאיש IT"}
                       </button>
+                      {mesimonEnabled && selectedTicket.status !== "done" && (
+                        <button
+                          type="button"
+                          onClick={sendToMesimon}
+                          disabled={sendingMesimon}
+                          className="text-xs px-3 py-1.5 rounded-md border border-border hover:bg-muted flex items-center gap-1 disabled:opacity-50"
+                          title="שליחת הקריאה למערכת משימון"
+                        >
+                          <Send className="w-3.5 h-3.5" aria-hidden="true" />
+                          {sendingMesimon ? "שולח..." : "שלח למשימון"}
+                        </button>
+                      )}
                       <Select value={selectedTicket.status} onValueChange={changeStatus}>
                         <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
                         <SelectContent>
@@ -538,16 +550,16 @@ export default function ITTickets() {
                     <div>
                       <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
                         <Send className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-                        העברה לאיש IT
+                        העברות לטיפול חיצוני
                       </h3>
                       <ul className="space-y-2">
                         {itForwards.map((f: any, i: number) => (
                           <li key={i} className="rounded-lg border border-border/50 bg-muted/30 p-3 text-sm">
                             <p className="flex flex-wrap items-center gap-1">
                               <span className="font-medium">
-                                נשלח לאיש IT ב-{formatDateTimeDMY(f.at)} על ידי {f.by_name || "—"}
+                                {f.target === "mesimon" ? "נשלח למשימון" : "נשלח לאיש IT"} ב-{formatDateTimeDMY(f.at)} על ידי {f.by_name || "—"}
                               </span>
-                              {f.sent > 0 && <span className="text-xs text-muted-foreground">({f.sent} נמענים)</span>}
+                              {f.sent > 0 && f.target !== "mesimon" && <span className="text-xs text-muted-foreground">({f.sent} נמענים)</span>}
                             </p>
                             {Array.isArray(f.recipients) && f.recipients.length > 0 && (
                               <p className="text-xs text-muted-foreground mt-1" dir="ltr">
