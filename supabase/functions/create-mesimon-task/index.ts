@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
       return json({ ok: true, existing: true, task_id: t.mesimon_task_id, task_url: t.mesimon_task_url });
     }
 
-    const { data: prof } = await admin.from("profiles").select("full_name").eq("id", uid).maybeSingle();
+    const { data: prof } = await admin.from("profiles").select("display_name").eq("id", uid).maybeSingle();
     // The task is assigned in Mesimon to whoever sent it — matched there by email
     const senderEmail = String(claims?.claims?.email ?? "").trim();
     const today = israelToday();
