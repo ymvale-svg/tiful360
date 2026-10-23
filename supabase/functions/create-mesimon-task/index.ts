@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
       return json({ ok: true, existing: true, task_id: t.mesimon_task_id, task_url: t.mesimon_task_url });
     }
 
-    const { data: prof } = await admin.from("profiles").select("full_name").eq("id", uid).maybeSingle();
+    const { data: prof } = await admin.from("profiles").select("display_name").eq("id", uid).maybeSingle();
     // The task is assigned in Mesimon to whoever sent it — matched there by email
     const senderEmail = String(claims?.claims?.email ?? "").trim();
     const today = israelToday();
@@ -132,6 +132,8 @@ Deno.serve(async (req) => {
       method: "POST",
       body: JSON.stringify({
         ticketCode: t.ticket_code,
+        // Mesimon also accepts the call number under this name
+        callNumber: t.ticket_code,
         title: t.title,
         description: t.description ?? "",
         subject,
@@ -142,7 +144,7 @@ Deno.serve(async (req) => {
         employeeName: (t as { employees?: { full_name?: string } | null }).employees?.full_name ?? "",
         location: t.location ?? "",
         contactPhone: t.contact_phone ?? "",
-        openedBy: prof?.full_name ?? "",
+        openedBy: prof?.display_name ?? "",
         note: String(body.note ?? "").slice(0, 2000),
         assigneeEmail: senderEmail,
         ticketUrl: `${APP_BASE}/it-tickets?ticket=${encodeURIComponent(t.ticket_code)}`,
