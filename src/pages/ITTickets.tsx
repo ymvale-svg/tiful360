@@ -206,13 +206,21 @@ export default function ITTickets() {
   }, [deepLink, tickets, activeCompanyId]);
 
   const hasItForward = (t: any) => Array.isArray(t.it_forwards) && t.it_forwards.length > 0;
-  const filtered = (tickets ?? []).filter((t: any) => {
-    if (statusFilter !== "all" && (statusFilter === "open_all" ? t.status === "done" : t.status !== statusFilter)) return false;
-    if (forwardFilter === "it" && !hasItForward(t)) return false;
-    if (forwardFilter === "mesimon" && !t.mesimon_task_id) return false;
-    if (forwardFilter === "none" && (hasItForward(t) || t.mesimon_task_id)) return false;
+  const byStatus = (tickets ?? []).filter((t: any) =>
+    statusFilter === "all" ? true : statusFilter === "open_all" ? t.status !== "done" : t.status === statusFilter,
+  );
+  const filtered = byStatus.filter((t: any) => {
+    if (forwardFilter === "it") return hasItForward(t);
+    if (forwardFilter === "mesimon") return !!t.mesimon_task_id;
+    if (forwardFilter === "none") return !hasItForward(t) && !t.mesimon_task_id;
     return true;
   });
+  const forwardCount = (value: string) => {
+    if (value === "it") return byStatus.filter(hasItForward).length;
+    if (value === "mesimon") return byStatus.filter((t: any) => !!t.mesimon_task_id).length;
+    if (value === "none") return byStatus.filter((t: any) => !hasItForward(t) && !t.mesimon_task_id).length;
+    return byStatus.length;
+  };
   const changeStatusFilter = (value: unknown) => setStatusFilter(validateTicketFilter(value));
   const openVisibleTicket = (value: unknown) => setSelectedId(visibleTicketId(value, filtered));
   useWebMCP({
@@ -342,15 +350,6 @@ export default function ITTickets() {
               <SelectItem value="all">הכל</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={forwardFilter} onValueChange={setForwardFilter}>
-            <SelectTrigger className="w-44" title="סינון לפי העברות לטיפול חיצוני"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="any">העברות: הכל</SelectItem>
-              <SelectItem value="it">נשלח לאיש IT</SelectItem>
-              <SelectItem value="mesimon">נשלח למשימון</SelectItem>
-              <SelectItem value="none">ללא העברה</SelectItem>
-            </SelectContent>
-          </Select>
           <ExportExcelButton
             disabled={!filtered.length}
             onClick={() => {
@@ -392,6 +391,31 @@ export default function ITTickets() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Ticket list */}
           <div className={cn("lg:col-span-1 space-y-2", selectedTicket && "hidden lg:block")}>
+            <div className="flex flex-wrap gap-2 pb-1" role="group" aria-label="סינון לפי העברה לטיפול חיצוני">
+              {([
+                { value: "any", label: "הכל", classes: "border-border/60 text-muted-foreground", activeClasses: "bg-foreground text-background border-foreground" },
+                { value: "it", label: "נשלח לאיש IT", classes: "border-info/40 text-info", activeClasses: "bg-info text-info-foreground border-info" },
+                { value: "mesimon", label: "נשלח למשימון", classes: "border-success/40 text-success", activeClasses: "bg-success text-success-foreground border-success" },
+                { value: "none", label: "ללא העברה", classes: "border-border/60 text-muted-foreground", activeClasses: "bg-muted-foreground text-background border-muted-foreground" },
+              ] as const).map((chip) => {
+                const active = forwardFilter === chip.value;
+                return (
+                  <button
+                    key={chip.value}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setForwardFilter(active && chip.value !== "any" ? "any" : chip.value)}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors hover:opacity-85",
+                      active ? chip.activeClasses : cn("bg-background", chip.classes),
+                    )}
+                  >
+                    {chip.label}
+                    <span className="tabular-nums opacity-75">{forwardCount(chip.value)}</span>
+                  </button>
+                );
+              })}
+            </div>
             {filtered.map((ticket: any) => (
               <RowContextMenu key={ticket.id} actions={[
                 { label: "פתח קריאה", onSelect: () => openVisibleTicket(ticket.id) },
