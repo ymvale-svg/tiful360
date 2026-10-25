@@ -43,14 +43,18 @@
           "openWorldHint": false
         },
         "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "object",
           "properties": {
             "company_id": {
               "type": "string",
               "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
               "description": "Company ID returned by list_companies."
             },
             "status": {
+              "default": "open_all",
+              "description": "Ticket status filter; open_all excludes closed tickets.",
               "type": "string",
               "enum": [
                 "open_all",
@@ -58,30 +62,27 @@
                 "in_progress",
                 "done",
                 "all"
-              ],
-              "default": "open_all",
-              "description": "Ticket status filter; open_all excludes closed tickets."
+              ]
             },
             "limit": {
+              "default": 25,
+              "description": "Maximum number of tickets.",
               "type": "integer",
               "minimum": 1,
-              "maximum": 50,
-              "default": 25,
-              "description": "Maximum number of tickets."
+              "maximum": 50
             },
             "offset": {
+              "default": 0,
+              "description": "Pagination offset.",
               "type": "integer",
               "minimum": 0,
-              "maximum": 10000,
-              "default": 0,
-              "description": "Pagination offset."
+              "maximum": 10000
             }
           },
           "required": [
             "company_id"
           ],
-          "additionalProperties": false,
-          "$schema": "http://json-schema.org/draft-07/schema#"
+          "additionalProperties": false
         },
         "outputSchema": null
       },
@@ -95,19 +96,20 @@
           "openWorldHint": false
         },
         "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "object",
           "properties": {
             "ticket_id": {
               "type": "string",
               "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
               "description": "Ticket ID returned by list_service_tickets."
             }
           },
           "required": [
             "ticket_id"
           ],
-          "additionalProperties": false,
-          "$schema": "http://json-schema.org/draft-07/schema#"
+          "additionalProperties": false
         },
         "outputSchema": null
       }
