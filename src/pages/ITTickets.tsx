@@ -332,7 +332,7 @@ export default function ITTickets() {
           <p className="page-subtitle">קריאות עובדים בטיפול מחלקת התפעול</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Select value={statusFilter} onValueChange={changeStatusFilter}>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="open_all">פתוחות ובטיפול</SelectItem>
@@ -340,6 +340,15 @@ export default function ITTickets() {
               <SelectItem value="in_progress">בטיפול</SelectItem>
               <SelectItem value="done">טופלו</SelectItem>
               <SelectItem value="all">הכל</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={forwardFilter} onValueChange={setForwardFilter}>
+            <SelectTrigger className="w-44" title="סינון לפי העברות לטיפול חיצוני"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="any">העברות: הכל</SelectItem>
+              <SelectItem value="it">נשלח לאיש IT</SelectItem>
+              <SelectItem value="mesimon">נשלח למשימון</SelectItem>
+              <SelectItem value="none">ללא העברה</SelectItem>
             </SelectContent>
           </Select>
           <ExportExcelButton
