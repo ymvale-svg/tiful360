@@ -132,6 +132,7 @@ export function OpenTicketsCard() {
                   <Send className="w-3 h-3" aria-hidden="true" />
                   {sendingId === ticket.id ? "שולח..." : "שלח לאיש IT"}
                 </button>
+                )}
               </div>
             </div>
             {ticket.sla_deadline && (
