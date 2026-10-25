@@ -431,6 +431,12 @@ export default function ITTickets() {
                           נשלח לאיש IT
                         </span>
                       )}
+                      {ticket.mesimon_task_id && (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-success/10 text-success border border-success/30" title="הקריאה הפכה למשימה במשימון">
+                          <ListTodo className="w-3 h-3" aria-hidden="true" />
+                          נשלח למשימון
+                        </span>
+                      )}
                     </div>
                     <p className="text-sm font-medium truncate">{ticket.title}</p>
                     <p className="text-xs text-muted-foreground mt-1">
