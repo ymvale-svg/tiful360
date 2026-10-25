@@ -2,7 +2,7 @@ import { RowContextMenu, copyAction } from "@/components/context/RowContextMenu"
 import { useEffect, useMemo, useState } from "react";
 import {
   Wrench, CheckCircle2, User, Timer, ChevronLeft, Plus, Package,
-  MapPin, Phone, Paperclip, CalendarClock, AlertTriangle, ListChecks, Send,
+  MapPin, Phone, Paperclip, CalendarClock, AlertTriangle, ListChecks, Send, ListTodo,
 } from "lucide-react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -204,9 +204,14 @@ export default function ITTickets() {
     return () => { cancelled = true; };
   }, [deepLink, tickets, activeCompanyId]);
 
-  const filtered = (tickets ?? []).filter((t: any) =>
-    statusFilter === "all" ? true : statusFilter === "open_all" ? t.status !== "done" : t.status === statusFilter,
-  );
+  const hasItForward = (t: any) => Array.isArray(t.it_forwards) && t.it_forwards.length > 0;
+  const filtered = (tickets ?? []).filter((t: any) => {
+    if (statusFilter !== "all" && (statusFilter === "open_all" ? t.status === "done" : t.status !== statusFilter)) return false;
+    if (forwardFilter === "it" && !hasItForward(t)) return false;
+    if (forwardFilter === "mesimon" && !t.mesimon_task_id) return false;
+    if (forwardFilter === "none" && (hasItForward(t) || t.mesimon_task_id)) return false;
+    return true;
+  });
   const changeStatusFilter = (value: unknown) => setStatusFilter(validateTicketFilter(value));
   const openVisibleTicket = (value: unknown) => setSelectedId(visibleTicketId(value, filtered));
   useWebMCP({
