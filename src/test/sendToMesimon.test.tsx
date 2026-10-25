@@ -45,13 +45,15 @@ describe("SendToMesimonButton", () => {
     renderButton();
     fireEvent.click(await screen.findByText("הפוך למשימה במשימון"));
 
-    expect(await screen.findByText("מיחשוב (פרויקט חדש)")).toBeInTheDocument();
-    expect(screen.getByText("ישראל וייל · תפעול")).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByLabelText("תאריך יעד")).toHaveValue("2026-10-27"));
+    await screen.findByText("מיחשוב (פרויקט חדש)");
+    screen.getByText("ישראל וייל · תפעול");
+    await waitFor(() => expect((screen.getByLabelText("תאריך יעד") as HTMLInputElement).value).toBe("2026-10-27"));
 
     fireEvent.click(screen.getByText("צור משימה"));
     await waitFor(() => expect(invoke).toHaveBeenCalledWith("create-mesimon-task", expect.anything()));
-    const create = invoke.mock.calls.find(([, a]) => a.body.action === "create")![1].body;
+    const createCall = invoke.mock.calls.find(([, a]) => a.body.action === "create");
+    if (!createCall) throw new Error("No task creation request");
+    const create = createCall[1].body;
     expect(create).toMatchObject({
       ticket_id: "t1",
       project_id: null, // the subject's project — Mesimon creates it
@@ -68,7 +70,7 @@ describe("SendToMesimonButton", () => {
     await screen.findByText("הוספת קובץ");
     const input = container.ownerDocument.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(input, { target: { files: [new File(["x"], "virus.exe"), new File(["%PDF"], "quote.pdf")] } });
-    expect(await screen.findByText("quote.pdf")).toBeInTheDocument();
-    expect(screen.queryByText("virus.exe")).not.toBeInTheDocument();
+    await screen.findByText("quote.pdf");
+    expect(screen.queryByText("virus.exe")).toBeNull();
   });
 });
