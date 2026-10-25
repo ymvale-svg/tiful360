@@ -74,7 +74,7 @@ var list_companies_default = defineTool({
 
 // src/lib/mcp/tools/list-tickets.ts
 import { defineTool as defineTool2, ToolError as ToolError3 } from "npm:@lovable.dev/mcp-js@3.2.2";
-import { z } from "npm:zod@^3.25.76";
+import { z } from "npm:zod@^4.6.6";
 var list_tickets_default = defineTool2({
   name: "list_service_tickets",
   title: "\u05E8\u05E9\u05D9\u05DE\u05EA \u05E7\u05E8\u05D9\u05D0\u05D5\u05EA \u05E9\u05D9\u05E8\u05D5\u05EA",
@@ -100,7 +100,7 @@ var list_tickets_default = defineTool2({
 
 // src/lib/mcp/tools/get-ticket.ts
 import { defineTool as defineTool3, ToolError as ToolError4 } from "npm:@lovable.dev/mcp-js@3.2.2";
-import { z as z2 } from "npm:zod@^3.25.76";
+import { z as z2 } from "npm:zod@^4.6.6";
 var get_ticket_default = defineTool3({
   name: "get_service_ticket",
   title: "\u05E4\u05E8\u05D8\u05D9 \u05E7\u05E8\u05D9\u05D0\u05EA \u05E9\u05D9\u05E8\u05D5\u05EA",
