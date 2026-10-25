@@ -163,6 +163,7 @@ export default function ITTickets() {
   const [slaEditOpen, setSlaEditOpen] = useState(false);
   const holidays = useCompanyHolidaySet();
   const [statusFilter, setStatusFilter] = useState<string>("open_all");
+  const [forwardFilter, setForwardFilter] = useState<string>("any");
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Deep link from email: /it-tickets?ticket=<id|ticket_code> — and from header search / open-tickets card: ?selected=<id>
