@@ -3,6 +3,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { enqueueTransactionalEmail } from "../_shared/enqueueEmail.ts";
+import { markTicketInProgress } from "../_shared/ticket-handling-status.ts";
 
 const APP_BASE = "https://tiful360.com";
 const json = (b: unknown, status = 200) =>
@@ -44,8 +45,8 @@ Deno.serve(async (req) => {
       .eq("id", ticket_id)
       .single();
     if (!t) return json({ error: "not found" }, 404);
-    const { data: prof } = await admin.from("profiles").select("full_name").eq("id", uid).maybeSingle();
-    const author = prof?.full_name ?? "צוות התפעול";
+    const { data: prof } = await admin.from("profiles").select("display_name").eq("id", uid).maybeSingle();
+    const author = prof?.display_name ?? "צוות התפעול";
     const emp: any = (t as any).employees;
     const to = emp?.email && /^\S+@\S+\.\S+$/.test(emp.email) ? emp.email : null;
 
@@ -75,7 +76,9 @@ Deno.serve(async (req) => {
 
     if (kind === "reply" || message) {
       const replies = Array.isArray(t.replies) ? t.replies : [];
-      await admin.from("it_tickets").update({ replies: [...replies, entry] }).eq("id", ticket_id);
+      const { error: replyError } = await admin.from("it_tickets").update({ replies: [...replies, entry] }).eq("id", ticket_id);
+      if (replyError) throw new Error(replyError.message);
+      await markTicketInProgress(admin, ticket_id, kind);
     }
     return json({ ok: true, emailed: entry.emailed, has_email: !!to });
   } catch (e) {

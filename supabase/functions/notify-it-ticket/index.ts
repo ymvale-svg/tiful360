@@ -3,6 +3,7 @@
 // when a new IT ticket is opened.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.103.0";
 import { fmtDateTimeIL } from "../_shared/formatDate.ts";
+import { markTicketInProgress } from "../_shared/ticket-handling-status.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -231,12 +232,12 @@ Deno.serve(async (req) => {
         let senderName = "";
         let senderEmail = (claims.claims as any)?.email ?? "";
         if (senderId) {
-          const { data: prof } = await supabase.from("profiles").select("full_name").eq("id", senderId).maybeSingle();
-          senderName = prof?.full_name ?? "";
+          const { data: prof } = await supabase.from("profiles").select("display_name").eq("id", senderId).maybeSingle();
+          senderName = prof?.display_name ?? "";
         }
         if (!senderName && senderEmail) senderName = senderEmail;
         const { data: cur } = await supabase.from("it_tickets").select("it_forwards").eq("id", ticket_id).maybeSingle();
-        const forwards = Array.isArray(cur?.it_forwards) ? [...(cur!.it_forwards as any[])] : [];
+        const forwards = Array.isArray(cur?.it_forwards) ? [...cur.it_forwards] : [];
         forwards.push({
           at: new Date().toISOString(),
           by_id: senderId,
@@ -246,10 +247,12 @@ Deno.serve(async (req) => {
           recipients,
           sent,
         });
-        await supabase.from("it_tickets").update({ it_forwards: forwards }).eq("id", ticket_id);
+        const { error: forwardError } = await supabase.from("it_tickets").update({ it_forwards: forwards }).eq("id", ticket_id);
+        if (forwardError) throw new Error(forwardError.message);
       } catch (logErr) {
         console.error("failed to record it_forward", logErr);
       }
+      await markTicketInProgress(supabase, ticket_id, "it");
     }
 
     return new Response(JSON.stringify({ ok: true, sent }), {

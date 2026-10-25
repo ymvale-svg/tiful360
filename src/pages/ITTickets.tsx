@@ -239,7 +239,10 @@ export default function ITTickets() {
       });
       if (error) throw error;
       if (!data?.sent) toast.error("לא הוגדרו כתובות IT לחברה — יש להגדיר בהגדרות החברה");
-      else toast.success(`הקריאה נשלחה ל-IT (${data.sent} נמענים)`);
+      else {
+        await queryClient.invalidateQueries({ queryKey: ["it-tickets"] });
+        toast.success(`הקריאה נשלחה ל-IT (${data.sent} נמענים)`);
+      }
     } catch (e: any) {
       toast.error("שליחה ל-IT נכשלה", { description: e?.message } as any);
     } finally {
