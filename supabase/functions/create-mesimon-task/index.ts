@@ -3,8 +3,10 @@
 // ticket subject (created with the subject's first ticket), and closes the ticket
 // back through it-api (which emails the opener) when the task is completed.
 //
-// Actions: "status" (is the connection available for this ticket's company), "create".
-// The task is assigned to the sender (by email) and due two business days after sending.
+// Actions: "status" (is the connection available for this ticket's company), "options"
+// (projects, users and file limits for the dialog, with its defaults), "create".
+// Defaults: the subject's project, the sender as assignee (by email), due two business
+// days after sending — each can be overridden in the dialog, and files can be attached.
 // Only operations staff may call it. Secrets: MESIMON_URL, MESIMON_API_KEY, and
 // MESIMON_COMPANY_IDS — the companies whose tickets may reach Mesimon, so another
 // tenant's tickets never land in this organisation's task system.
@@ -27,6 +29,9 @@ const SUBJECT_LABELS: Record<string, string> = {
 };
 
 const DUE_BUSINESS_DAYS = 2;
+const MAX_FILES = 5;
+// Files travel base64-encoded inside the JSON body; keep the whole request reasonable
+const MAX_FILES_BASE64 = 28 * 1024 * 1024;
 
 // Today's calendar day in Israel (Mesimon due dates are dates, not times)
 const israelToday = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem" }).format(new Date());
@@ -88,13 +93,13 @@ Deno.serve(async (req) => {
     if (!available) return json({ error: "החיבור למשימון אינו מוגדר עבור החברה" }, 400);
 
     // Errors are worded for the person who clicked: what failed and who can fix it
-    const mesimon = async (path: string, init: RequestInit = {}) => {
+    const mesimon = async (path: string, init: RequestInit = {}, timeoutMs = 20000) => {
       let res: Response;
       try {
         res = await fetch(`${base}/api/integrations/tiful360${path}`, {
           ...init,
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-          signal: AbortSignal.timeout(20000),
+          signal: AbortSignal.timeout(timeoutMs),
         });
       } catch {
         throw new Error("משימון אינו זמין כרגע — נסו שוב בעוד כמה דקות");
@@ -110,14 +115,10 @@ Deno.serve(async (req) => {
       throw new Error(data?.error ?? `משימון החזיר שגיאה ${res.status}`);
     };
 
-    if (action !== "create") return json({ error: "unknown action" }, 400);
-
-    if (t.mesimon_task_id) {
-      return json({ ok: true, existing: true, task_id: t.mesimon_task_id, task_url: t.mesimon_task_url });
-    }
-
-    const { data: prof } = await admin.from("profiles").select("display_name").eq("id", uid).maybeSingle();
-    // The task is assigned in Mesimon to whoever sent it — matched there by email
+    const subject = t.subject_category ?? t.ticket_type;
+    // Mesimon files each subject under its own project, named by this label
+    const subjectLabel = SUBJECT_LABELS[subject] ?? "אחר";
+    // The sender is the default assignee — matched in Mesimon by email
     const senderEmail = String(claims?.claims?.email ?? "").trim();
     const today = israelToday();
     const { data: holidayRows } = await admin
@@ -126,8 +127,36 @@ Deno.serve(async (req) => {
       .eq("company_id", t.company_id)
       .gte("holiday_date", today);
     const holidays = new Set((holidayRows ?? []).map((h: { holiday_date: string }) => String(h.holiday_date).slice(0, 10)));
-    const dueDate = addBusinessDays(today, DUE_BUSINESS_DAYS, holidays);
-    const subject = t.subject_category ?? t.ticket_type;
+    const defaultDueDate = addBusinessDays(today, DUE_BUSINESS_DAYS, holidays);
+
+    if (action === "options") {
+      const options = await mesimon(`/options?subjectLabel=${encodeURIComponent(subjectLabel)}`);
+      return json({ ...options, defaultDueDate, defaultAssigneeEmail: senderEmail });
+    }
+    if (action !== "create") return json({ error: "unknown action" }, 400);
+
+    if (t.mesimon_task_id) {
+      return json({ ok: true, existing: true, task_id: t.mesimon_task_id, task_url: t.mesimon_task_url });
+    }
+
+    const { data: prof } = await admin.from("profiles").select("display_name").eq("id", uid).maybeSingle();
+    const dueDate = /^\d{4}-\d{2}-\d{2}$/.test(String(body.due_date ?? "")) ? String(body.due_date) : defaultDueDate;
+    const assigneeId = Number(body.assignee_id) > 0 ? Number(body.assignee_id) : null;
+    const projectId = Number(body.project_id) > 0 ? Number(body.project_id) : null;
+
+    // Type and size rules are Mesimon's (same as a regular upload); here only the shape and total
+    const files = Array.isArray(body.files) ? body.files : [];
+    if (files.length > MAX_FILES) return json({ error: `ניתן לצרף עד ${MAX_FILES} קבצים` }, 400);
+    const cleanFiles = files.map((f: { name?: unknown; mime?: unknown; data?: unknown }) => ({
+      name: String(f?.name ?? "").slice(0, 200),
+      mime: String(f?.mime ?? "").slice(0, 100),
+      data: String(f?.data ?? ""),
+    }));
+    if (cleanFiles.some((f: { name: string; data: string }) => !f.name || !f.data)) return json({ error: "אחד הקבצים ריק" }, 400);
+    if (cleanFiles.reduce((n: number, f: { data: string }) => n + f.data.length, 0) > MAX_FILES_BASE64) {
+      return json({ error: "הקבצים גדולים מדי — עד 20MB בסך הכול" }, 400);
+    }
+
     const created = await mesimon("/tasks", {
       method: "POST",
       body: JSON.stringify({
@@ -137,8 +166,8 @@ Deno.serve(async (req) => {
         title: t.title,
         description: t.description ?? "",
         subject,
-        // Mesimon files each subject under its own project, named by this label
-        subjectLabel: SUBJECT_LABELS[subject] ?? "אחר",
+        subjectLabel,
+        projectId,
         priority: t.priority,
         dueDate,
         employeeName: (t as { employees?: { full_name?: string } | null }).employees?.full_name ?? "",
@@ -146,10 +175,13 @@ Deno.serve(async (req) => {
         contactPhone: t.contact_phone ?? "",
         openedBy: prof?.display_name ?? "",
         note: String(body.note ?? "").slice(0, 2000),
-        assigneeEmail: senderEmail,
+        assigneeId,
+        // "ללא אחראי" in the dialog — don't fall back to the sender
+        assigneeEmail: body.unassigned ? "" : senderEmail,
+        files: cleanFiles,
         ticketUrl: `${APP_BASE}/it-tickets?ticket=${encodeURIComponent(t.ticket_code)}`,
       }),
-    });
+    }, 60000);
 
     const task_id = String(created.taskId);
     const task_url = created.url ?? null;
@@ -164,7 +196,7 @@ Deno.serve(async (req) => {
       action: "העברת קריאה למשימון",
       entity_type: "it_tickets",
       entity_id: t.id,
-      details: `קריאה ${t.ticket_code} הועברה למשימון כמשימה ${task_id}`,
+      details: `קריאה ${t.ticket_code} הועברה למשימון כמשימה ${task_id}${cleanFiles.length ? ` עם ${cleanFiles.length} קבצים` : ""}`,
     });
 
     return json({ ok: true, existing: !!created.existing, task_id, task_url, due_date: dueDate, assigned: created.assigned !== false, assignee_email: senderEmail });
