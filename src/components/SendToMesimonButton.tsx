@@ -1,36 +1,76 @@
-import { useState } from "react";
-import { ExternalLink, ListTodo } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ExternalLink, ListTodo, Paperclip, X } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { subjectLabel } from "@/lib/serviceTickets";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
+// Select values that aren't Mesimon ids
+const SUBJECT_PROJECT = "subject";
+const NO_ASSIGNEE = "none";
+// Files travel base64-encoded through the edge function — keep the total modest
+const MAX_TOTAL_MB = 20;
 
 interface Props {
   ticket: {
     id: string;
     company_id: string | null;
     status?: string | null;
-    subject_category?: string | null;
-    ticket_type?: string | null;
     mesimon_task_id?: string | null;
     mesimon_task_url?: string | null;
   };
 }
 
+interface MesimonOptions {
+  users: { id: number; name: string; email: string; department: string }[];
+  projects: { id: number; name: string }[];
+  defaultProject: string;
+  defaultDueDate: string;
+  defaultAssigneeEmail: string;
+  maxFiles: number;
+  maxUploadMb: number;
+  allowedExtensions: string[];
+}
+
+async function invokeMesimon<T>(body: Record<string, unknown>): Promise<T> {
+  const { data, error } = await supabase.functions.invoke("create-mesimon-task", { body });
+  if (error) {
+    // The function's own message (e.g. "file type not allowed") beats the generic non-2xx one
+    const context = (error as { context?: Response }).context;
+    const detail = await context?.json?.().catch(() => null);
+    throw new Error(detail?.error ?? error.message);
+  }
+  return data as T;
+}
+
+const readAsDataUrl = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+
 /**
- * Turns a service ticket into a Mesimon task, assigned to the sender and due in two business days.
+ * Turns a service ticket into a Mesimon task. The dialog offers project, assignee, due date and
+ * files, prefilled with the defaults: the subject's project, the sender, two business days.
  * Hidden when the connection isn't configured for the ticket's company; once sent, shows a link
  * to the task instead.
  */
 export function SendToMesimonButton({ ticket }: Props) {
   const queryClient = useQueryClient();
+  const fileInput = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState("");
+  const [project, setProject] = useState(SUBJECT_PROJECT);
+  const [assignee, setAssignee] = useState(NO_ASSIGNEE);
+  const [dueDate, setDueDate] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
   const [sending, setSending] = useState(false);
 
   // Availability is per company — one check per company, not per ticket
@@ -38,14 +78,28 @@ export function SendToMesimonButton({ ticket }: Props) {
     queryKey: ["mesimon-status", ticket.company_id],
     enabled: !!ticket.company_id && !ticket.mesimon_task_id,
     staleTime: Infinity,
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("create-mesimon-task", {
-        body: { action: "status", ticket_id: ticket.id },
-      });
-      if (error) return { available: false };
-      return data as { available: boolean };
-    },
+    queryFn: () =>
+      invokeMesimon<{ available: boolean }>({ action: "status", ticket_id: ticket.id }).catch(() => ({ available: false })),
   });
+
+  const { data: options, isLoading: optionsLoading, error: optionsError } = useQuery({
+    queryKey: ["mesimon-options", ticket.id],
+    enabled: open,
+    staleTime: 60 * 1000,
+    queryFn: () => invokeMesimon<MesimonOptions>({ action: "options", ticket_id: ticket.id }),
+  });
+
+  // Prefill the defaults each time the dialog opens with fresh options
+  useEffect(() => {
+    if (!open || !options) return;
+    const subjectProject = options.projects.find((p) => p.name === options.defaultProject);
+    setProject(subjectProject ? String(subjectProject.id) : SUBJECT_PROJECT);
+    const sender = options.users.find(
+      (u) => u.email.toLowerCase() === options.defaultAssigneeEmail.toLowerCase(),
+    );
+    setAssignee(sender ? String(sender.id) : NO_ASSIGNEE);
+    setDueDate(options.defaultDueDate);
+  }, [open, options]);
 
   if (ticket.mesimon_task_id) {
     const label = `משימה ${ticket.mesimon_task_id} במשימון`;
@@ -71,34 +125,73 @@ export function SendToMesimonButton({ ticket }: Props) {
   // A closed ticket has nothing left to hand over
   if (!status?.available || ticket.status === "done") return null;
 
-  // Mesimon keeps one project per ticket subject, named by its label
-  const project = subjectLabel(ticket.subject_category ?? ticket.ticket_type);
+  const projectOptions = [
+    // The subject's project doesn't exist yet — Mesimon creates it with this task
+    ...(options && !options.projects.some((p) => p.name === options.defaultProject)
+      ? [{ value: SUBJECT_PROJECT, label: `${options.defaultProject} (פרויקט חדש)` }]
+      : []),
+    ...(options?.projects ?? []).map((p) => ({ value: String(p.id), label: p.name })),
+  ];
+  const assigneeOptions = [
+    { value: NO_ASSIGNEE, label: "ללא אחראי" },
+    ...(options?.users ?? []).map((u) => ({
+      value: String(u.id),
+      label: u.department ? `${u.name} · ${u.department}` : u.name,
+    })),
+  ];
+
+  const addFiles = (list: FileList | null) => {
+    if (!list || !options) return;
+    const next = [...files];
+    for (const file of Array.from(list)) {
+      const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+      if (options.allowedExtensions.length && !options.allowedExtensions.includes(ext)) {
+        toast.error(`סוג הקובץ .${ext} אינו מורשה במשימון`, { description: `מותרים: ${options.allowedExtensions.join(", ")}` });
+        continue;
+      }
+      if (file.size > options.maxUploadMb * 1024 * 1024) {
+        toast.error(`הקובץ "${file.name}" גדול מ-${options.maxUploadMb}MB`);
+        continue;
+      }
+      if (next.length >= options.maxFiles) {
+        toast.error(`ניתן לצרף עד ${options.maxFiles} קבצים`);
+        break;
+      }
+      next.push(file);
+    }
+    if (next.reduce((n, f) => n + f.size, 0) > MAX_TOTAL_MB * 1024 * 1024) {
+      toast.error(`סך הקבצים גדול מ-${MAX_TOTAL_MB}MB`);
+      return;
+    }
+    setFiles(next);
+  };
+
+  const reset = () => {
+    setNote("");
+    setFiles([]);
+  };
 
   const send = async () => {
     setSending(true);
     try {
-      const { data, error } = await supabase.functions.invoke("create-mesimon-task", {
-        body: {
-          action: "create",
-          ticket_id: ticket.id,
-          note: note.trim(),
-        },
+      const encoded = await Promise.all(
+        files.map(async (f) => ({ name: f.name, mime: f.type, data: await readAsDataUrl(f) })),
+      );
+      const data = await invokeMesimon<{ existing?: boolean; assigned?: boolean; assignee_email?: string }>({
+        action: "create",
+        ticket_id: ticket.id,
+        note: note.trim(),
+        project_id: project === SUBJECT_PROJECT ? null : Number(project),
+        assignee_id: assignee === NO_ASSIGNEE ? null : Number(assignee),
+        unassigned: assignee === NO_ASSIGNEE,
+        due_date: dueDate || null,
+        files: encoded,
       });
-      if (error) {
-        // The function's own message (e.g. "no such department in Mesimon") beats the generic non-2xx one
-        const context = (error as { context?: Response }).context;
-        const detail = await context?.json?.().catch(() => null);
-        throw new Error(detail?.error ?? error.message);
-      }
       if (data?.existing) toast.success("הקריאה כבר קיימת כמשימה במשימון");
-      else if (data?.assigned === false) {
-        toast.warning("המשימה נוצרה במשימון ללא אחראי", {
-          description: `לא נמצא במשימון משתמש פעיל עם הדואר ${data.assignee_email || "שלך"}`,
-        });
-      } else toast.success("נוצרה משימה במשימון ושויכה אליך");
+      else toast.success("נוצרה משימה במשימון");
       await queryClient.invalidateQueries({ queryKey: ["it-tickets"] });
       setOpen(false);
-      setNote("");
+      reset();
     } catch (e) {
       toast.error("יצירת המשימה במשימון נכשלה", { description: e instanceof Error ? e.message : undefined });
     } finally {
@@ -117,24 +210,75 @@ export function SendToMesimonButton({ ticket }: Props) {
         <ListTodo className="w-3.5 h-3.5" aria-hidden="true" />
         הפוך למשימה במשימון
       </button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent dir="rtl">
+      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
+        <DialogContent dir="rtl" className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>הפיכת הקריאה למשימה במשימון</DialogTitle>
             <DialogDescription>
-              המשימה תיפתח במשימון בפרויקט "{project}", תשויך אליך ותקבל תאריך יעד בעוד שני ימי עבודה.
               כשהמשימה תסומן כהושלמה במשימון, הקריאה תיסגר כאן ויישלח מייל למי שפתח אותה.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <Label htmlFor="mesimon-note">הערה (לא חובה)</Label>
-              <Textarea id="mesimon-note" value={note} onChange={(e) => setNote(e.target.value)} rows={3} maxLength={2000} />
+          {optionsLoading ? (
+            <p className="text-sm text-muted-foreground py-6 text-center">טוען נתונים ממשימון...</p>
+          ) : optionsError ? (
+            <p className="text-sm text-destructive py-6 text-center">
+              {optionsError instanceof Error ? optionsError.message : "טעינת הנתונים ממשימון נכשלה"}
+            </p>
+          ) : (
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label>פרויקט</Label>
+                <SearchableSelect value={project} onChange={setProject} options={projectOptions} searchPlaceholder="חיפוש פרויקט..." />
+              </div>
+              <div className="space-y-1">
+                <Label>אחראי</Label>
+                <SearchableSelect value={assignee} onChange={setAssignee} options={assigneeOptions} searchPlaceholder="חיפוש משתמש..." />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="mesimon-due">תאריך יעד</Label>
+                <Input id="mesimon-due" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} dir="ltr" className="text-right" />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="mesimon-note">הערה (לא חובה)</Label>
+                <Textarea id="mesimon-note" value={note} onChange={(e) => setNote(e.target.value)} rows={3} maxLength={2000} />
+              </div>
+              <div className="space-y-1">
+                <Label>קבצים (לא חובה)</Label>
+                <input
+                  ref={fileInput}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  accept={options?.allowedExtensions.map((e) => `.${e}`).join(",")}
+                  onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }}
+                />
+                <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => fileInput.current?.click()}>
+                  <Paperclip className="w-3.5 h-3.5" aria-hidden="true" />
+                  הוספת קובץ
+                </Button>
+                {files.length > 0 && (
+                  <ul className="space-y-1 pt-1">
+                    {files.map((f, i) => (
+                      <li key={`${f.name}-${i}`} className="flex items-center justify-between gap-2 text-sm rounded-md border border-border px-2 py-1">
+                        <span className="truncate">{f.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => setFiles(files.filter((_, j) => j !== i))}
+                          className="text-muted-foreground hover:text-foreground"
+                          aria-label={`הסרת ${f.name}`}
+                        >
+                          <X className="w-3.5 h-3.5" aria-hidden="true" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
-          </div>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)} disabled={sending}>ביטול</Button>
-            <Button onClick={send} disabled={sending}>{sending ? "יוצר..." : "צור משימה"}</Button>
+            <Button onClick={send} disabled={sending || !options}>{sending ? "יוצר..." : "צור משימה"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
