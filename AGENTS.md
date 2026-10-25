@@ -10,6 +10,7 @@
 
 - Asset instance lists use semantic tables with explicit checkbox, sorting and open-item controls. Why: keyboard and assistive-technology users need identifiable actions and column relationships.
 - All outgoing emails share email-theme tokens and a company-scoped header: React templates use EmailLayout and legacy HTML send paths use formatEmailHtml; resolve branding from the triggering company, never a global default company. Why: consistent mail-client-safe presentation must not change content, delivery behavior or tenant boundaries.
+- Edge functions inherit shared Deno DOM/React compiler settings and automatic npm resolution unless they define a local configuration. Why: shared HTML and React email helpers must type-check in every importing function.
 
 - Use Bun and bun.lock as the single dependency installation source; dependency security patches must be committed through Bun patchedDependencies. Why: duplicate npm locks can silently deploy different versions and omit local security patches.
 - Keep spreadsheet parsing behind the lazy-loaded shared adapter and verify actual advisory version ranges before replacing it. Why: legacy XLS/CSV support and all report exports must remain compatible without unnecessary migrations.
