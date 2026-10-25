@@ -1,3 +1,4 @@
+/// <reference lib="dom" />
 import { parseHTML } from 'npm:linkedom@0.18.12'
 import { emailTheme, type EmailBrand } from './email-theme.ts'
 
@@ -5,7 +6,7 @@ function escapeAttribute(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
-function mergeStyle(element: any, styles: Record<string, string>) {
+function mergeStyle(element: Element, styles: Record<string, string>) {
   // Appending overrides keeps functional properties (including hidden previews).
   const extra = Object.entries(styles).map(([key, value]) => `${key}:${value}`).join(';')
   element.setAttribute('style', `${element.getAttribute('style') || ''};${extra}`)
