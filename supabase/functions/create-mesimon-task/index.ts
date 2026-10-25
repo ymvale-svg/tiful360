@@ -12,6 +12,7 @@
 // tenant's tickets never land in this organisation's task system.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { markTicketInProgress } from "../_shared/ticket-handling-status.ts";
 
 const APP_BASE = "https://tiful360.com";
 const json = (b: unknown, status = 200) =>
@@ -136,6 +137,7 @@ Deno.serve(async (req) => {
     if (action !== "create") return json({ error: "unknown action" }, 400);
 
     if (t.mesimon_task_id) {
+      await markTicketInProgress(admin, t.id, "mesimon");
       return json({ ok: true, existing: true, task_id: t.mesimon_task_id, task_url: t.mesimon_task_url });
     }
 
@@ -186,10 +188,12 @@ Deno.serve(async (req) => {
     const task_id = String(created.taskId);
     const task_url = created.url ?? null;
     const now = new Date().toISOString();
-    await admin
+    const { error: linkError } = await admin
       .from("it_tickets")
       .update({ mesimon_task_id: task_id, mesimon_task_url: task_url, mesimon_sent_at: now, mesimon_sent_by: uid, updated_at: now })
       .eq("id", t.id);
+    if (linkError) throw new Error(linkError.message);
+    await markTicketInProgress(admin, t.id, "mesimon");
     await admin.from("activity_log").insert({
       company_id: t.company_id,
       performed_by: uid,
