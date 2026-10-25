@@ -193,9 +193,22 @@ Deno.serve(async (req) => {
     const task_id = String(created.taskId);
     const task_url = created.url ?? null;
     const now = new Date().toISOString();
+    // The ticket's SLA follows the due date set in Mesimon (end of that day, Israel time)
+    const mesimonDue = String(created.dueDate ?? created.due_date ?? dueDate ?? "").slice(0, 10);
+    let slaDeadline: string | null = null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(mesimonDue)) {
+      const probe = new Date(`${mesimonDue}T12:00:00Z`);
+      const tzName = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Jerusalem", timeZoneName: "shortOffset" })
+        .formatToParts(probe).find((p) => p.type === "timeZoneName")?.value ?? "GMT+2";
+      const hours = Number(tzName.replace("GMT", "")) || 2;
+      slaDeadline = new Date(Date.parse(`${mesimonDue}T23:59:00Z`) - hours * 3600_000).toISOString();
+    }
     const { error: linkError } = await admin
       .from("it_tickets")
-      .update({ mesimon_task_id: task_id, mesimon_task_url: task_url, mesimon_sent_at: now, mesimon_sent_by: uid, updated_at: now })
+      .update({
+        mesimon_task_id: task_id, mesimon_task_url: task_url, mesimon_sent_at: now, mesimon_sent_by: uid, updated_at: now,
+        ...(slaDeadline ? { sla_deadline: slaDeadline } : {}),
+      })
       .eq("id", t.id);
     if (linkError) throw new Error(linkError.message);
     await markTicketInProgress(admin, t.id, "mesimon");
