@@ -2,7 +2,7 @@ import { RowContextMenu, copyAction } from "@/components/context/RowContextMenu"
 import { useEffect, useMemo, useState } from "react";
 import {
   Wrench, CheckCircle2, User, Timer, ChevronLeft, Plus, Package,
-  MapPin, Phone, Paperclip, CalendarClock, AlertTriangle, ListChecks, Send,
+  MapPin, Phone, Paperclip, CalendarClock, AlertTriangle, ListChecks, Send, ListTodo,
 } from "lucide-react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -163,6 +163,7 @@ export default function ITTickets() {
   const [slaEditOpen, setSlaEditOpen] = useState(false);
   const holidays = useCompanyHolidaySet();
   const [statusFilter, setStatusFilter] = useState<string>("open_all");
+  const [forwardFilter, setForwardFilter] = useState<string>("any");
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Deep link from email: /it-tickets?ticket=<id|ticket_code> — and from header search / open-tickets card: ?selected=<id>
@@ -204,9 +205,14 @@ export default function ITTickets() {
     return () => { cancelled = true; };
   }, [deepLink, tickets, activeCompanyId]);
 
-  const filtered = (tickets ?? []).filter((t: any) =>
-    statusFilter === "all" ? true : statusFilter === "open_all" ? t.status !== "done" : t.status === statusFilter,
-  );
+  const hasItForward = (t: any) => Array.isArray(t.it_forwards) && t.it_forwards.length > 0;
+  const filtered = (tickets ?? []).filter((t: any) => {
+    if (statusFilter !== "all" && (statusFilter === "open_all" ? t.status === "done" : t.status !== statusFilter)) return false;
+    if (forwardFilter === "it" && !hasItForward(t)) return false;
+    if (forwardFilter === "mesimon" && !t.mesimon_task_id) return false;
+    if (forwardFilter === "none" && (hasItForward(t) || t.mesimon_task_id)) return false;
+    return true;
+  });
   const changeStatusFilter = (value: unknown) => setStatusFilter(validateTicketFilter(value));
   const openVisibleTicket = (value: unknown) => setSelectedId(visibleTicketId(value, filtered));
   useWebMCP({
@@ -326,7 +332,7 @@ export default function ITTickets() {
           <p className="page-subtitle">קריאות עובדים בטיפול מחלקת התפעול</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Select value={statusFilter} onValueChange={changeStatusFilter}>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="open_all">פתוחות ובטיפול</SelectItem>
@@ -334,6 +340,15 @@ export default function ITTickets() {
               <SelectItem value="in_progress">בטיפול</SelectItem>
               <SelectItem value="done">טופלו</SelectItem>
               <SelectItem value="all">הכל</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={forwardFilter} onValueChange={setForwardFilter}>
+            <SelectTrigger className="w-44" title="סינון לפי העברות לטיפול חיצוני"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="any">העברות: הכל</SelectItem>
+              <SelectItem value="it">נשלח לאיש IT</SelectItem>
+              <SelectItem value="mesimon">נשלח למשימון</SelectItem>
+              <SelectItem value="none">ללא העברה</SelectItem>
             </SelectContent>
           </Select>
           <ExportExcelButton
@@ -416,6 +431,12 @@ export default function ITTickets() {
                           נשלח לאיש IT
                         </span>
                       )}
+                      {ticket.mesimon_task_id && (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-success/10 text-success border border-success/30" title="הקריאה הפכה למשימה במשימון">
+                          <ListTodo className="w-3 h-3" aria-hidden="true" />
+                          נשלח למשימון
+                        </span>
+                      )}
                     </div>
                     <p className="text-sm font-medium truncate">{ticket.title}</p>
                     <p className="text-xs text-muted-foreground mt-1">
@@ -458,6 +479,12 @@ export default function ITTickets() {
                           <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-info/10 text-info border border-info/30">
                             <Send className="w-3 h-3" aria-hidden="true" />
                             נשלח לאיש IT
+                          </span>
+                        )}
+                        {selectedTicket.mesimon_task_id && (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-success/10 text-success border border-success/30">
+                            <ListTodo className="w-3 h-3" aria-hidden="true" />
+                            נשלח למשימון
                           </span>
                         )}
                       </div>
