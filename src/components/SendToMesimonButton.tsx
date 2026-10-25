@@ -78,6 +78,7 @@ export function SendToMesimonButton({ ticket }: Props) {
     queryKey: ["mesimon-status", ticket.company_id],
     enabled: !!ticket.company_id && !ticket.mesimon_task_id,
     staleTime: Infinity,
+    gcTime: Infinity,
     queryFn: () =>
       invokeMesimon<{ available: boolean }>({ action: "status", ticket_id: ticket.id }).catch(() => ({ available: false })),
   });
@@ -88,6 +89,18 @@ export function SendToMesimonButton({ ticket }: Props) {
     staleTime: 60 * 1000,
     queryFn: () => invokeMesimon<MesimonOptions>({ action: "options", ticket_id: ticket.id }),
   });
+
+  // Start loading Mesimon's lists as soon as the button is shown, so the dialog opens ready
+  const prefetchOptions = () =>
+    queryClient.prefetchQuery({
+      queryKey: ["mesimon-options", ticket.id],
+      staleTime: 60 * 1000,
+      queryFn: () => invokeMesimon<MesimonOptions>({ action: "options", ticket_id: ticket.id }),
+    });
+  useEffect(() => {
+    if (status?.available && !ticket.mesimon_task_id && ticket.status !== "done") prefetchOptions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status?.available, ticket.id]);
 
   // Prefill the defaults each time the dialog opens with fresh options
   useEffect(() => {

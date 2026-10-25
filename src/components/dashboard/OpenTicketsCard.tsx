@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { Wrench, Clock, AlertTriangle, ChevronLeft, Send } from "lucide-react";
+import { Wrench, Clock, AlertTriangle, ChevronLeft, Send, ListTodo } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useITTickets } from "@/hooks/useData";
@@ -103,6 +103,12 @@ export function OpenTicketsCard() {
                     נשלח לאיש IT
                   </span>
                 )}
+                {ticket.mesimon_task_id && (
+                  <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-success/10 text-success border border-success/30">
+                    <ListTodo className="w-3 h-3" aria-hidden="true" />
+                    נשלח למשימון
+                  </span>
+                )}
                 <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                   <span
                     className={cn(
@@ -112,6 +118,7 @@ export function OpenTicketsCard() {
                   />
                   {PRIORITY_LABELS[ticket.priority] ?? ticket.priority}
                 </span>
+                {!(Array.isArray(ticket.it_forwards) && ticket.it_forwards.length > 0) && !ticket.mesimon_task_id && (
                 <button
                   type="button"
                   className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-medium text-primary border border-primary/40 bg-primary/10 rounded-md px-2 py-1 hover:bg-primary/15 transition-colors disabled:opacity-50"
@@ -125,6 +132,7 @@ export function OpenTicketsCard() {
                   <Send className="w-3 h-3" aria-hidden="true" />
                   {sendingId === ticket.id ? "שולח..." : "שלח לאיש IT"}
                 </button>
+                )}
               </div>
             </div>
             {ticket.sla_deadline && (

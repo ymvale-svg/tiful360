@@ -122,6 +122,11 @@ Deno.serve(async (req) => {
     // The sender is the default assignee — matched in Mesimon by email
     const senderEmail = String(claims?.claims?.email ?? "").trim();
     const today = israelToday();
+    // Start Mesimon's options call right away so it runs alongside the holiday lookup
+    const optionsPromise = action === "options"
+      ? mesimon(`/options?subjectLabel=${encodeURIComponent(subjectLabel)}`)
+      : null;
+    optionsPromise?.catch(() => {});
     const { data: holidayRows } = await admin
       .from("company_holidays")
       .select("holiday_date")
@@ -130,8 +135,8 @@ Deno.serve(async (req) => {
     const holidays = new Set((holidayRows ?? []).map((h: { holiday_date: string }) => String(h.holiday_date).slice(0, 10)));
     const defaultDueDate = addBusinessDays(today, DUE_BUSINESS_DAYS, holidays);
 
-    if (action === "options") {
-      const options = await mesimon(`/options?subjectLabel=${encodeURIComponent(subjectLabel)}`);
+    if (optionsPromise) {
+      const options = await optionsPromise;
       return json({ ...options, defaultDueDate, defaultAssigneeEmail: senderEmail });
     }
     if (action !== "create") return json({ error: "unknown action" }, 400);
