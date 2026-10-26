@@ -20,7 +20,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Tax101AdminTab } from "@/components/payroll/Tax101AdminTab";
 import { AttendanceClockTab } from "@/components/payroll/AttendanceClockTab";
-import { HrAttendanceReports } from "@/components/payroll/HrAttendanceReports";
 import { MonthlyAttendanceReview } from "@/components/payroll/MonthlyAttendanceReview";
 import { MichpalExportCard } from "@/components/payroll/MichpalExportCard";
 
@@ -121,7 +120,7 @@ export default function Payroll() {
           </h2>
 
           {active.key === "overview" && <OverviewTab />}
-          {active.key === "reports" && <div className="space-y-4"><MonthlyAttendanceReview /><HrAttendanceReports /></div>}
+          {active.key === "reports" && <div className="space-y-4"><MonthlyAttendanceReview /></div>}
           {active.key === "michpal" && <MichpalExportCard />}
           {active.key === "attendance" && <AttendanceClockTab />}
           {active.key === "tax101" && <Tax101AdminTab />}
