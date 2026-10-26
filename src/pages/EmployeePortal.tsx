@@ -670,6 +670,7 @@ export default function EmployeePortal() {
               </div>
             )}
 
+            {myEmployee && <MonthReportConfirm employeeId={myEmployee.id} />}
 
             {myEmployee && myPunches.length > 0 ? (
 <MyPunchesList
