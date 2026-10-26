@@ -83,20 +83,30 @@ function GuidesManager({ companyId }: { companyId: string }) {
   };
   const mutation = useMutation({
     mutationFn: async () => {
-      if (!form.title.trim() || !form.topic_id) throw new Error("נא להזין כותרת ולבחור נושא");
+      if (!form.title.trim()) throw new Error("נא להזין שם למדריך");
       let resourceUrl = form.url.trim() || editing?.resource_url || "";
       let fileName = editing?.file_name ?? null;
-      if (form.content_type === "pdf" && form.file) { resourceUrl = await uploadLearningFile(companyId, "guides", form.file); fileName = form.file.name; }
-      if (!resourceUrl) throw new Error("נא לבחור PDF או להזין קישור");
-      const payload = { company_id: companyId, topic_id: form.topic_id, title: form.title.trim(), description: form.description.trim() || null, content_type: form.content_type, resource_url: resourceUrl, file_name: fileName };
+      let contentType: LearningContentType = editing?.content_type ?? "link";
+      if (form.file) {
+        resourceUrl = await uploadLearningFile(companyId, "guides", form.file);
+        fileName = form.file.name;
+        contentType = form.file.type.startsWith("video/") ? "video" : "pdf";
+      }
+      if (!resourceUrl) throw new Error("נא לבחור קובץ או להזין קישור");
+      const payload = { company_id: companyId, topic_id: editing?.topic_id ?? null, title: form.title.trim(), content_type: contentType, resource_url: resourceUrl, file_name: fileName };
       const result = editing ? await supabase.from("guides").update(payload).eq("id", editing.id) : await supabase.from("guides").insert(payload);
       if (result.error) throw result.error;
       if (editing?.resource_url && form.file && editing.resource_url !== resourceUrl) await removeLearningFile(editing.resource_url);
     },
-    onSuccess: () => { refresh(); setEditing(null); setForm({ title: "", description: "", topic_id: "", content_type: "pdf", url: "", file: null }); toast({ title: "המדריך נשמר" }); },
+    onSuccess: () => { refresh(); setEditing(null); setForm({ title: "", url: "", file: null }); toast({ title: "המדריך נשמר" }); },
     onError: (error: Error) => toast({ title: "שגיאה", description: error.message, variant: "destructive" }),
   });
-  const editItem = (item: GuideItem) => { setEditing(item); setForm({ title: item.title, description: item.description ?? "", topic_id: item.topic_id, content_type: item.content_type, url: item.resource_url.startsWith("http") ? item.resource_url : "", file: null }); };
+  const editItem = (item: GuideItem) => { setEditing(item); setForm({ title: item.title, url: item.resource_url.startsWith("http") ? item.resource_url : "", file: null }); };
+  const assignGuideTopic = async (item: GuideItem, topic_id: string | null) => {
+    const { error } = await supabase.from("guides").update({ topic_id }).eq("id", item.id);
+    if (error) return toast({ title: "שגיאה", description: error.message, variant: "destructive" });
+    refresh();
+  };
   return <div className="space-y-5 pt-4">
     <ManagerBlock title="נושאי מדריכים"><div className="grid sm:grid-cols-[1fr_180px_1fr_auto] gap-2"><Input value={topic.name} onChange={(e) => setTopic({ ...topic, name: e.target.value })} placeholder="שם הנושא" /><Select value={topic.topic_type} onValueChange={(topic_type) => setTopic({ ...topic, topic_type })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="software">תוכנה</SelectItem><SelectItem value="operations">תפעול</SelectItem><SelectItem value="safety">בטיחות</SelectItem><SelectItem value="general">כללי</SelectItem></SelectContent></Select><Input type="file" accept="image/*" onChange={(e) => setTopic({ ...topic, logo: e.target.files?.[0] ?? null })} /><Button onClick={addTopic} className="gap-1"><Plus className="w-4 h-4" />הוסף</Button></div><ManagedGroups table="guide_topics" groups={data.topics} refresh={refresh} filePath={(group) => (group as GuideTopic).logo_url} /></ManagerBlock>
     <ManagerBlock title={editing ? "עריכת מדריך" : "הוספת מדריך"}>
