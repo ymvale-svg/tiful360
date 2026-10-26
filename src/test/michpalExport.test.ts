@@ -12,7 +12,7 @@ import {
 } from "@/lib/michpalExport";
 
 describe("michpal export", () => {
-  it("downloads attendance files with the requested dat extension", () => {
+  it("exports csv by default and dat only when requested", () => {
     vi.useFakeTimers();
     vi.stubGlobal("URL", { createObjectURL: vi.fn(() => "blob:michpal"), revokeObjectURL: vi.fn() });
     const names: string[] = [];
@@ -21,10 +21,10 @@ describe("michpal export", () => {
     });
     try {
       downloadMichpalCsv("data", "michpal-2026-10-remote.csv");
-      downloadMichpalCsv("data", "michpal-2026-10-clock.dat");
-      downloadMichpalCsv("data", "michpal-2026-10-combined");
+      downloadMichpalCsv("data", "michpal-2026-10-clock.dat", "dat");
+      downloadMichpalCsv("data", "michpal-2026-10-combined", "dat");
       expect(names).toEqual([
-        "michpal-2026-10-remote.dat",
+        "michpal-2026-10-remote.csv",
         "michpal-2026-10-clock.dat",
         "michpal-2026-10-combined.dat",
       ]);
