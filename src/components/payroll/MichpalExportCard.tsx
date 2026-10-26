@@ -20,6 +20,7 @@ import {
   DEFAULT_ABSENCE_CODES,
   ilDayStartIso,
   ilDayEndIso,
+  type MichpalFileFormat,
   type MichpalSource,
 } from "@/lib/michpalExport";
 
@@ -51,6 +52,7 @@ export function MichpalExportCard() {
   const [customFrom, setCustomFrom] = useState(iso(prevMonth));
   const [customTo, setCustomTo] = useState(iso(new Date(prevMonth.getFullYear(), prevMonth.getMonth() + 1, 0)));
   const [source, setSource] = useState<MichpalSource>("clock");
+  const [fileFormat, setFileFormat] = useState<MichpalFileFormat>("csv");
   const [includeAbsences, setIncludeAbsences] = useState(false);
   const [department, setDepartment] = useState("all");
   const [employeeId, setEmployeeId] = useState("all");
@@ -180,7 +182,7 @@ export function MichpalExportCard() {
     }
     const csv = buildMichpalCsv(result.rows);
     const label = useCustomRange ? `${from}_${to}` : month;
-    downloadMichpalCsv(csv, `michpal-${label}-${SOURCE_SLUG[source]}.dat`);
+    downloadMichpalCsv(csv, `michpal-${label}-${SOURCE_SLUG[source]}`, fileFormat);
     toast({ title: "הקובץ הורד", description: `${result.rows.length} שורות · ${SOURCE_LABEL[source]}` });
   };
 
@@ -192,7 +194,7 @@ export function MichpalExportCard() {
         <CardTitle className="text-base flex flex-wrap items-center gap-2">
           <FileDown className="w-4 h-4 text-primary" />
           ייצוא נתוני נוכחות למיכפל
-          <Badge variant="outline" className="font-mono text-xs">DAT · Windows-1255</Badge>
+          <Badge variant="outline" className="font-mono text-xs">{fileFormat.toUpperCase()} · Windows-1255</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -205,6 +207,17 @@ export function MichpalExportCard() {
                 <SelectItem value="clock">שעון בלבד</SelectItem>
                 <SelectItem value="remote">החתמה מרחוק בלבד</SelectItem>
                 <SelectItem value="combined">משולב</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-xs text-muted-foreground block mb-1">סיומת קובץ</label>
+            <Select value={fileFormat} onValueChange={(v) => setFileFormat(v as MichpalFileFormat)}>
+              <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="csv">CSV (ברירת מחדל)</SelectItem>
+                <SelectItem value="dat">DAT</SelectItem>
               </SelectContent>
             </Select>
           </div>

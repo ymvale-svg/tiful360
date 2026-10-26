@@ -114,16 +114,24 @@ export function encodeWindows1255(text: string): Uint8Array {
   return out;
 }
 
+/** סיומת הקובץ: CSV (ברירת המחדל) או DAT — אותו מבנה ואותו קידוד. */
+export type MichpalFileFormat = "csv" | "dat";
+export const DEFAULT_MICHPAL_FORMAT: MichpalFileFormat = "csv";
+
 export function michpalCsvBlob(csv: string): Blob {
   const bytes = encodeWindows1255(csv);
   return new Blob([bytes.buffer as ArrayBuffer], { type: "text/csv;charset=windows-1255" });
 }
 
-export function downloadMichpalCsv(csv: string, fileName: string) {
+export function downloadMichpalCsv(
+  csv: string,
+  fileName: string,
+  format: MichpalFileFormat = DEFAULT_MICHPAL_FORMAT,
+) {
   const url = URL.createObjectURL(michpalCsvBlob(csv));
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${fileName.replace(/\.(csv|dat)$/i, "")}.dat`;
+  a.download = `${fileName.replace(/\.(csv|dat)$/i, "")}.${format}`;
   document.body.appendChild(a);
   a.click();
   a.remove();
