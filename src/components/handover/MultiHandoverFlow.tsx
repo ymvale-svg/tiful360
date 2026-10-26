@@ -687,7 +687,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
                 onFiles={(files) => setVideoFile(files[0] ?? null)}
               />
               <p className="text-[11px] text-muted-foreground">
-                הסרטון יכווץ אוטומטית לכ‑3 מ"ב לפני השמירה.
+                הסרטון יכווץ אוטומטית לפחות מ‑10 מ"ב לפני השמירה — השאירו את המסך פתוח עד הסיום.
               </p>
             </div>
 
