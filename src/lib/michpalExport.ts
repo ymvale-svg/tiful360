@@ -117,6 +117,8 @@ export function encodeWindows1255(text: string): Uint8Array {
 /** סיומת הקובץ: CSV (ברירת המחדל) או DAT — אותו מבנה ואותו קידוד. */
 export type MichpalFileFormat = "csv" | "dat";
 export const DEFAULT_MICHPAL_FORMAT: MichpalFileFormat = "csv";
+/** האם לכלול היעדרויות מאושרות בייצוא כברירת מחדל. */
+export const DEFAULT_INCLUDE_ABSENCES = true;
 
 export function michpalCsvBlob(csv: string): Blob {
   const bytes = encodeWindows1255(csv);

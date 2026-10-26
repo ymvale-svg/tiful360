@@ -18,6 +18,7 @@ import {
   punchesToMichpalRows,
   leavesToMichpalRows,
   DEFAULT_ABSENCE_CODES,
+  DEFAULT_INCLUDE_ABSENCES,
   ilDayStartIso,
   ilDayEndIso,
   type MichpalFileFormat,
@@ -53,7 +54,7 @@ export function MichpalExportCard() {
   const [customTo, setCustomTo] = useState(iso(new Date(prevMonth.getFullYear(), prevMonth.getMonth() + 1, 0)));
   const [source, setSource] = useState<MichpalSource>("clock");
   const [fileFormat, setFileFormat] = useState<MichpalFileFormat>("csv");
-  const [includeAbsences, setIncludeAbsences] = useState(false);
+  const [includeAbsences, setIncludeAbsences] = useState(DEFAULT_INCLUDE_ABSENCES);
   const [department, setDepartment] = useState("all");
   const [employeeId, setEmployeeId] = useState("all");
 
