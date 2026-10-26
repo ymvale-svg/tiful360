@@ -148,6 +148,13 @@
       "when": 1793007772583,
       "tag": "0020_attendance_month_reports",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1793018947206,
+      "tag": "0021_atomic_offboarding_and_activity_actor",
+      "breakpoints": true
     }
   ]
 }

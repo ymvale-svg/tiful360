@@ -25,6 +25,7 @@ export type Database = {
           entity_type: string | null
           id: string
           performed_by: string | null
+          performed_by_name: string | null
         }
         Insert: {
           action: string
@@ -36,6 +37,7 @@ export type Database = {
           entity_type?: string | null
           id?: string
           performed_by?: string | null
+          performed_by_name?: string | null
         }
         Update: {
           action?: string
@@ -47,6 +49,7 @@ export type Database = {
           entity_type?: string | null
           id?: string
           performed_by?: string | null
+          performed_by_name?: string | null
         }
         Relationships: [
           {
@@ -4345,6 +4348,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      start_employee_offboarding: {
+        Args: { _employee_id: string; _end_date: string }
+        Returns: Json
       }
       submit_tax_form_101_by_token: {
         Args: {
