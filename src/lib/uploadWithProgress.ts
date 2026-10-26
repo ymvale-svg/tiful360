@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import * as tus from "tus-js-client";
 
 export type UploadStage = "prepare" | "upload" | "save" | "done" | "error";
 export interface UploadJob {
@@ -47,8 +48,13 @@ function send(bucket: string, path: string, file: Blob, opts: Opts, token: strin
     xhr.setRequestHeader("x-upsert", opts.upsert ? "true" : "false");
     xhr.setRequestHeader("cache-control", `max-age=${opts.cacheControl ?? "3600"}`);
     xhr.setRequestHeader("Content-Type", opts.contentType || (file as File).type || "application/octet-stream");
-    xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100)); };
+    // Watchdog: abort if no bytes move for STALL_MS so the user is never left on a frozen percentage.
+    let stall: ReturnType<typeof setTimeout>;
+    const arm = () => { clearTimeout(stall); stall = setTimeout(() => { stalled = true; xhr.abort(); }, STALL_MS); };
+    let stalled = false;
+    xhr.upload.onprogress = (e) => { arm(); if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100)); };
     xhr.onload = () => {
+      clearTimeout(stall);
       if (xhr.status >= 200 && xhr.status < 300) return resolve({ data: { path, fullPath: `${bucket}/${path}` }, error: null });
       let msg = xhr.responseText;
       try { const j = JSON.parse(xhr.responseText); msg = j.message || j.error || msg; } catch { /* keep text */ }
@@ -56,8 +62,41 @@ function send(bucket: string, path: string, file: Blob, opts: Opts, token: strin
       (err as Error & { statusCode?: string }).statusCode = String(xhr.status);
       resolve({ data: null, error: err });
     };
-    xhr.onerror = () => resolve({ data: null, error: new Error(translateUploadError(0)) });
+    xhr.onerror = () => { clearTimeout(stall); resolve({ data: null, error: new Error(translateUploadError(0)) }); };
+    xhr.onabort = () => resolve({ data: null, error: new Error(stalled ? STALL_MSG : "ההעלאה בוטלה") });
+    arm();
     xhr.send(file);
+  });
+}
+
+const STALL_MS = 60_000;
+const STALL_MSG = "ההעלאה נתקעה — החיבור איטי מדי. נסו שוב";
+const RESUMABLE_FROM = 6 * 1024 * 1024;
+
+/** Large files go in 6MB chunks with automatic resume, so a slow or flaky connection keeps progressing. */
+function sendResumable(bucket: string, path: string, file: Blob, opts: Opts, token: string, onProgress: (p: number) => void): Promise<Result> {
+  return new Promise((resolve) => {
+    const base = import.meta.env.VITE_SUPABASE_URL as string;
+    let stall: ReturnType<typeof setTimeout>;
+    const upload = new tus.Upload(file, {
+      endpoint: `${base}/storage/v1/upload/resumable`,
+      retryDelays: [0, 2000, 5000, 10000, 20000],
+      headers: { authorization: `Bearer ${token}`, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string, "x-upsert": opts.upsert ? "true" : "false" },
+      uploadDataDuringCreation: true,
+      removeFingerprintOnSuccess: true,
+      chunkSize: 6 * 1024 * 1024,
+      metadata: { bucketName: bucket, objectName: path, contentType: opts.contentType || (file as File).type || "application/octet-stream", cacheControl: opts.cacheControl ?? "3600" },
+      onProgress: (sent, total) => { arm(); onProgress(Math.round((sent / total) * 100)); },
+      onSuccess: () => { clearTimeout(stall); resolve({ data: { path, fullPath: `${bucket}/${path}` }, error: null }); },
+      onError: (e) => {
+        clearTimeout(stall);
+        const status = (e as tus.DetailedError).originalResponse?.getStatus() ?? 0;
+        resolve({ data: null, error: new Error(translateUploadError(status, (e as tus.DetailedError).originalResponse?.getBody() ?? e.message)) });
+      },
+    });
+    const arm = () => { clearTimeout(stall); stall = setTimeout(() => { void upload.abort(); resolve({ data: null, error: new Error(STALL_MSG) }); }, STALL_MS * 2); };
+    arm();
+    upload.start();
   });
 }
 
@@ -70,7 +109,8 @@ export async function uploadFile(bucket: string, path: string, file: Blob, opts:
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token ?? (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string);
     uploadJobs.update(id, { stage: "upload" });
-    const res = await send(bucket, path, file, opts, token, (p) => uploadJobs.update(id, { percent: p }));
+    const sender = file.size >= RESUMABLE_FROM ? sendResumable : send;
+    const res = await sender(bucket, path, file, opts, token, (p) => uploadJobs.update(id, { percent: p }));
     if (res.error) {
       uploadJobs.update(id, { stage: "error", error: res.error.message, retry: () => { void run(); } });
       return res;
