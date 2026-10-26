@@ -113,7 +113,6 @@ function GuidesManager({ companyId }: { companyId: string }) {
       <div className="space-y-3">
         <div><Label>שם המדריך</Label><Input className="mt-1" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="למשל: פתיחת קריאת שירות" /></div>
         <div className="grid sm:grid-cols-2 gap-3"><div><Label>בחירת קובץ</Label><Input className="mt-1" type="file" accept="application/pdf,video/*" onChange={(e) => setForm({ ...form, file: e.target.files?.[0] ?? null })} /></div><div><Label>או קישור</Label><Input className="mt-1 text-left" dir="ltr" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="https://..." /></div></div>
-        <p className="text-xs text-muted-foreground">להעלאה מפייספון או מאייפון: השאירו את המסך פתוח עד שהקובץ נקלט.</p>
         <div className="flex gap-2"><Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>{editing ? "שמור שינויים" : "הוסף מדריך"}</Button>{editing && <Button variant="ghost" onClick={() => { setEditing(null); setForm({ title: "", url: "", file: null }); }}>ביטול</Button>}</div>
       </div>
     </ManagerBlock>
