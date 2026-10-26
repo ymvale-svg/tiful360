@@ -1,7 +1,9 @@
 // ייצוא נתוני נוכחות לקליטה במיכפל.
 // מבנה CSV לפי מסמך "הגדרת מבנה קובץ נתוני נוכחות" של מיכפל:
-// תאריך dd/mm/yyyy, שעה hh:mm:ss, קוד פעולה (0 כניסה / 1 יציאה / A יום היעדרות / H שעות היעדרות),
-// זיהוי כרטיס (קוד עובד), אירוע (סוג היעדרות), אירוע חלקי (שעת סיום היעדרות).
+// תאריך dd/mm/yyyy, שעה hh:mm:ss, קוד פעולה, זיהוי כרטיס (קוד עובד), אירוע, אירוע חלקי.
+// 0 = כניסה, 1 = יציאה, H = שעות היעדרות (עמודת "אירוע חלקי" = שעת סיום ההיעדרות).
+// יום היעדרות מלא (חופשה/מחלה/השתלמות/חל"ת/מילואים): קוד האירוע נכתב ב"קוד פעולה",
+// עמודת "שעה" נשארת ריקה ועמודת "אירוע" ריקה.
 // הקובץ ממוין לפי זיהוי כרטיס, תאריך, שעה, קוד פעולה, בקידוד Windows-1255 עם סיומי שורה CRLF.
 
 export const MICHPAL_HEADER = "תאריך,שעה,קוד פעולה,זיהוי כרטיס,אירוע ,אירוע חלקי";
@@ -83,12 +85,14 @@ export function sortMichpalRows(rows: MichpalRow[]): MichpalRow[] {
 }
 
 export function buildMichpalCsv(rows: MichpalRow[], includeHeader = true): string {
-  // ימי היעדרות מלאים: קוד האירוע (חפש/001/002/חלת/צבא) נכתב בעמודת "קוד פעולה".
+  // ימי היעדרות מלאים (חופשה/מחלה/השתלמות/חל"ת/מילואים):
+  // קוד האירוע (חפש/001/002/חלת/צבא) נכתב בעמודת "קוד פעולה",
+  // ועמודת "שעה" נשארת ריקה.
   const lines = sortMichpalRows(rows).map((r) => {
     const fullDay = r.action === "A" && !!r.absenceCode;
     return [
       toMichpalDate(r.date),
-      r.time,
+      fullDay ? "" : r.time,
       fullDay ? r.absenceCode : r.action,
       r.cardId,
       fullDay ? "" : r.absenceCode ?? "",
@@ -234,7 +238,7 @@ export const DEFAULT_ABSENCE_CODES: Record<string, string> = {
   other: "חפש",
 };
 
-/** כל יום היעדרות מאושר בטווח -> שורת A בשעה 00:00:00 */
+/** כל יום היעדרות מאושר בטווח -> שורת A עם עמודת "שעה" ריקה */
 export function leavesToMichpalRows(
   leaves: LeaveLike[],
   codeByEmployee: Map<string, string>,
@@ -254,7 +258,7 @@ export function leavesToMichpalRows(
     for (let d = new Date(`${start}T00:00:00`); ilDate(d) <= end; d.setDate(d.getDate() + 1)) {
       rows.push({
         date: ilDate(d),
-        time: "00:00:00",
+        time: "",
         action: "A",
         cardId: code,
         absenceCode: absence,

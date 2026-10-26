@@ -121,7 +121,7 @@ describe("michpal export", () => {
       "2026-05-31",
     );
     expect(rows.map((r) => r.date)).toEqual(["2026-05-01", "2026-05-02"]);
-    expect(rows[0]).toMatchObject({ action: "A", time: "00:00:00", absenceCode: "חפש" });
+    expect(rows[0]).toMatchObject({ action: "A", time: "", absenceCode: "חפש" });
   });
 });
 
@@ -129,6 +129,23 @@ import { buildMichpalCsv as _build } from "@/lib/michpalExport";
 describe("absence code in action column", () => {
   it("writes מחלה code 001 in קוד פעולה column", () => {
     const csv = _build([{ date: "2026-10-01", time: "00:00:00", action: "A", cardId: "5", absenceCode: "001" }], false);
-    expect(csv).toBe("01/10/2026,00:00:00,001,5,,\r\n");
+    expect(csv).toBe("01/10/2026,,001,5,,\r\n");
+  });
+
+  it("leaves the שעה column empty for a full-day absence and keeps it for punches", () => {
+    const csv = _build(
+      [
+        { date: "2026-10-04", time: "", action: "A", cardId: "7", absenceCode: "צבא" },
+        { date: "2026-10-05", time: "08:10:00", action: "0", cardId: "7" },
+        { date: "2026-10-05", time: "17:05:00", action: "1", cardId: "7" },
+      ],
+      false,
+    );
+    expect(csv.split("\r\n")).toEqual([
+      "04/10/2026,,צבא,7,,",
+      "05/10/2026,08:10:00,0,7,,",
+      "05/10/2026,17:05:00,1,7,,",
+      "",
+    ]);
   });
 });
