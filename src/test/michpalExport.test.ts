@@ -13,6 +13,10 @@ import {
 } from "@/lib/michpalExport";
 
 describe("michpal export", () => {
+  it("includes approved absences by default", () => {
+    expect(DEFAULT_INCLUDE_ABSENCES).toBe(true);
+  });
+
   it("exports csv by default and dat only when requested", () => {
     vi.useFakeTimers();
     vi.stubGlobal("URL", { createObjectURL: vi.fn(() => "blob:michpal"), revokeObjectURL: vi.fn() });
