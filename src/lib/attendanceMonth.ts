@@ -9,6 +9,8 @@ export const LEAVE_TYPE_LABEL: Record<string, string> = {
   sick: "מחלה",
   reserve: "מילואים",
   personal: "יום אישי",
+  training: "השתלמות",
+  unpaid: "חל\"ת",
   other: "היעדרות",
 };
 
@@ -52,3 +54,52 @@ export function leaveLabelForDay(leaves: ApprovedLeave[], dayKey: string): strin
   }
   return null;
 }
+
+export interface MonthPunch {
+  id: string;
+  employee_id: string | null;
+  punch_at: string;
+  direction: string;
+}
+
+export type DayStatus = "ok" | "missing" | "partial" | "leave";
+
+export interface ReviewDay {
+  day: string;
+  inPunch: MonthPunch | null;
+  outPunch: MonthPunch | null;
+  leave: string | null;
+  status: DayStatus;
+}
+
+/**
+ * שורת יום לכל יום עבודה: היעדרות מאושרת → "leave"; כניסה+יציאה → "ok";
+ * החתמה אחת בלבד → "partial"; בלי החתמה → "missing".
+ */
+export function buildReviewDays(
+  workingDays: string[],
+  punches: MonthPunch[],
+  leaves: ApprovedLeave[],
+): ReviewDay[] {
+  const byDay = new Map<string, MonthPunch[]>();
+  for (const p of punches) {
+    const k = toDayKey(new Date(p.punch_at));
+    if (!byDay.has(k)) byDay.set(k, []);
+    byDay.get(k)!.push(p);
+  }
+  return workingDays.map((day) => {
+    const list = (byDay.get(day) ?? []).slice().sort((a, b) => a.punch_at.localeCompare(b.punch_at));
+    const inPunch = list.find((p) => p.direction === "in") ?? (list.length ? list[0] : null);
+    const outCand = [...list].reverse().find((p) => p.direction === "out") ?? (list.length > 1 ? list[list.length - 1] : null);
+    const outPunch = outCand && outCand.id !== inPunch?.id ? outCand : null;
+    const leave = leaveLabelForDay(leaves, day);
+    let status: DayStatus;
+    if (inPunch && outPunch) status = "ok";
+    else if (leave) status = "leave";
+    else if (inPunch || outPunch) status = "partial";
+    else status = "missing";
+    return { day, inPunch, outPunch, leave, status };
+  });
+}
+
+export const isGapDay = (d: ReviewDay) => d.status === "missing" || d.status === "partial";

@@ -50,3 +50,19 @@ describe("leaveLabelForDay", () => {
     expect(leaveLabelForDay(leaves, "2026-10-15")).toBe("מחלה");
   });
 });
+
+import { buildReviewDays, isGapDay } from "@/lib/attendanceMonth";
+describe("buildReviewDays", () => {
+  const p = (id: string, at: string, direction: string) => ({ id, employee_id: "e", punch_at: at, direction });
+  it("מסמן חוסר, החתמה חסרה, היעדרות ויום תקין", () => {
+    const rows = buildReviewDays(
+      ["2026-10-20", "2026-10-21", "2026-10-22", "2026-10-25"],
+      [p("1", new Date(2026, 9, 20, 8).toISOString(), "in"), p("2", new Date(2026, 9, 20, 17).toISOString(), "out"),
+       p("3", new Date(2026, 9, 21, 8).toISOString(), "in")],
+      [{ start_date: "2026-10-22", end_date: "2026-10-22", request_type: "vacation" }],
+    );
+    expect(rows.map((r) => r.status)).toEqual(["ok", "partial", "leave", "missing"]);
+    expect(rows.filter(isGapDay).length).toBe(2);
+    expect(rows[2].leave).toBe("חופשה");
+  });
+});
