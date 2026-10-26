@@ -1,14 +1,15 @@
 /**
  * In-browser video re-encoding for protocol media.
  *
- * Phone clips are often 20-80MB, which times out the storage upload. We replay
- * the clip into a canvas and re-record it with MediaRecorder at a bitrate
- * calculated from the clip duration so the result lands around 3MB.
- * Audio is dropped (documentation clips don't need it) and resolution is
- * capped at 720px on the long edge.
+ * Phone clips (up to 60s) are re-recorded through a canvas with MediaRecorder
+ * at a bitrate computed from the duration, so the result lands well under
+ * VIDEO_MAX_BYTES. Audio is dropped and resolution is capped.
+ * The hidden <video> is attached to the DOM with muted/playsinline attributes —
+ * iOS Safari does not decode frames of a detached or non-inline video.
  */
 
-export const VIDEO_TARGET_BYTES = 3 * 1024 * 1024; // 3MB
+export const VIDEO_TARGET_BYTES = 6 * 1024 * 1024; // aim ~6MB
+export const VIDEO_MAX_BYTES = 10 * 1024 * 1024; // hard ceiling 10MB
 const MAX_DIMENSION = 720;
 const FPS = 24;
 
@@ -16,82 +17,71 @@ export interface CompressedVideo {
   blob: Blob;
   fileName: string;
   contentType: string;
-  /** true when the original was returned untouched (unsupported browser / already small). */
   original: boolean;
 }
 
 function pickMimeType(): string | null {
   if (typeof MediaRecorder === "undefined") return null;
   const candidates = [
+    "video/mp4;codecs=avc1",
+    "video/mp4",
     "video/webm;codecs=vp9",
     "video/webm;codecs=vp8",
     "video/webm",
-    "video/mp4",
   ];
   return candidates.find((t) => MediaRecorder.isTypeSupported?.(t)) ?? null;
 }
 
-export async function compressVideo(
-  file: File,
-  targetBytes: number = VIDEO_TARGET_BYTES,
-  onProgress?: (ratio: number) => void,
-): Promise<CompressedVideo> {
-  const asIs: CompressedVideo = {
-    blob: file,
-    fileName: file.name,
-    contentType: file.type || "video/mp4",
-    original: true,
-  };
-  if (!file.type.startsWith("video/") || file.size <= targetBytes) return asIs;
+const timeout = (ms: number, msg: string) =>
+  new Promise<never>((_, reject) => setTimeout(() => reject(new Error(msg)), ms));
 
+async function encodeOnce(file: File, targetBytes: number, maxDim: number, onProgress?: (r: number) => void): Promise<{ blob: Blob; mimeType: string }> {
   const mimeType = pickMimeType();
-  const video = document.createElement("video");
-  if (!mimeType || typeof (document.createElement("canvas") as any).captureStream !== "function") return asIs;
+  if (!mimeType) throw new Error("no recorder");
+  const canvas = document.createElement("canvas");
+  if (typeof (canvas as any).captureStream !== "function") throw new Error("no captureStream");
 
   const url = URL.createObjectURL(file);
+  const video = document.createElement("video");
+  video.setAttribute("muted", "");
+  video.setAttribute("playsinline", "");
+  video.setAttribute("webkit-playsinline", "");
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = "auto";
+  video.style.cssText = "position:fixed;left:0;top:0;width:2px;height:2px;opacity:0.01;pointer-events:none;z-index:-1";
+  document.body.appendChild(video);
+  let raf = 0;
   try {
     video.src = url;
-    video.muted = true;
-    video.playsInline = true;
-    video.preload = "auto";
-
-    await new Promise<void>((resolve, reject) => {
-      video.onloadedmetadata = () => resolve();
-      video.onerror = () => reject(new Error("video metadata load failed"));
-      // iOS sometimes never fires loadedmetadata for camera clips — don't hang.
-      setTimeout(() => reject(new Error("video metadata timeout")), 8000);
-    });
-
-    const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
-    if (!duration) return asIs;
-
-    const scale = Math.min(1, MAX_DIMENSION / Math.max(video.videoWidth, video.videoHeight));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.max(2, Math.round((video.videoWidth * scale) / 2) * 2);
-    canvas.height = Math.max(2, Math.round((video.videoHeight * scale) / 2) * 2);
+    video.load();
+    await Promise.race([
+      new Promise<void>((resolve, reject) => {
+        video.onloadedmetadata = () => resolve();
+        video.onerror = () => reject(new Error("metadata failed"));
+      }),
+      timeout(15000, "metadata timeout"),
+    ]);
+    const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 60;
+    const scale = Math.min(1, maxDim / Math.max(video.videoWidth || maxDim, video.videoHeight || maxDim));
+    canvas.width = Math.max(2, Math.round(((video.videoWidth || maxDim) * scale) / 2) * 2);
+    canvas.height = Math.max(2, Math.round(((video.videoHeight || maxDim) * scale) / 2) * 2);
     const ctx = canvas.getContext("2d");
-    if (!ctx) return asIs;
+    if (!ctx) throw new Error("no ctx");
 
-    // 90% of the budget leaves room for container overhead.
-    const bitrate = Math.max(250_000, Math.min(3_000_000, Math.floor((targetBytes * 8 * 0.9) / duration)));
+    const bitrate = Math.max(200_000, Math.min(2_500_000, Math.floor((targetBytes * 8 * 0.85) / duration)));
     const stream = (canvas as HTMLCanvasElement).captureStream(FPS);
     const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: bitrate });
     const chunks: BlobPart[] = [];
     recorder.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
-
     const done = new Promise<Blob>((resolve) => {
-      recorder.onstop = () => resolve(new Blob(chunks, { type: mimeType }));
+      recorder.onstop = () => resolve(new Blob(chunks, { type: mimeType.split(";")[0] }));
     });
 
+    await Promise.race([video.play(), timeout(10000, "play timeout")]);
     recorder.start(1000);
-    await Promise.race([
-      video.play(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("video play timeout")), 8000)),
-    ]);
-
-    let raf = 0;
     const draw = () => {
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      if (video.readyState >= 2) ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       onProgress?.(Math.min(1, video.currentTime / duration));
       raf = requestAnimationFrame(draw);
     };
@@ -99,31 +89,50 @@ export async function compressVideo(
 
     await new Promise<void>((resolve) => {
       video.onended = () => resolve();
-      // Safety net: never hang longer than the clip + 5s.
       setTimeout(resolve, duration * 1000 + 5000);
     });
-
     cancelAnimationFrame(raf);
     try { video.pause(); } catch { /* ignore */ }
     if (recorder.state !== "inactive") recorder.stop();
     stream.getTracks().forEach((t) => t.stop());
-
     const blob = await done;
-    onProgress?.(1);
-    if (!blob.size || blob.size >= file.size) return asIs;
-
-    const ext = mimeType.startsWith("video/mp4") ? "mp4" : "webm";
-    const base = file.name.replace(/\.[^.]+$/, "") || "video";
-    return {
-      blob,
-      fileName: `${base}-compressed.${ext}`,
-      contentType: mimeType.split(";")[0],
-      original: false,
-    };
-  } catch (e) {
-    console.warn("video compression failed, uploading original", e);
-    return asIs;
+    if (!blob.size) throw new Error("empty output");
+    return { blob, mimeType };
   } finally {
+    cancelAnimationFrame(raf);
+    video.remove();
     URL.revokeObjectURL(url);
   }
+}
+
+/**
+ * Compress a clip so it is always ≤ VIDEO_MAX_BYTES.
+ * Throws a Hebrew error if the device cannot produce a small enough file.
+ */
+export async function compressVideo(
+  file: File,
+  targetBytes: number = VIDEO_TARGET_BYTES,
+  onProgress?: (ratio: number) => void,
+): Promise<CompressedVideo> {
+  if (file.size <= VIDEO_MAX_BYTES) {
+    return { blob: file, fileName: file.name, contentType: file.type || "video/mp4", original: true };
+  }
+  const attempts: Array<[number, number]> = [[targetBytes, MAX_DIMENSION], [targetBytes / 2, 480]];
+  let lastErr: unknown = null;
+  for (const [bytes, dim] of attempts) {
+    try {
+      const { blob, mimeType } = await encodeOnce(file, bytes, dim, onProgress);
+      if (blob.size <= VIDEO_MAX_BYTES) {
+        onProgress?.(1);
+        const ext = mimeType.startsWith("video/mp4") ? "mp4" : "webm";
+        const base = file.name.replace(/\.[^.]+$/, "") || "video";
+        return { blob, fileName: `${base}-compressed.${ext}`, contentType: mimeType.split(";")[0], original: false };
+      }
+    } catch (e) {
+      lastErr = e;
+      console.warn("video compression attempt failed", e);
+    }
+  }
+  console.warn("video compression failed", lastErr);
+  throw new Error("לא הצלחנו לכווץ את הסרטון במכשיר הזה. צלמו סרטון קצר יותר (עד 60 שניות) ונסו שוב, או השאירו את המסך פתוח עד סיום הכיווץ.");
 }
