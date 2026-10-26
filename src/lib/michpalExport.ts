@@ -83,16 +83,18 @@ export function sortMichpalRows(rows: MichpalRow[]): MichpalRow[] {
 }
 
 export function buildMichpalCsv(rows: MichpalRow[], includeHeader = true): string {
-  const lines = sortMichpalRows(rows).map((r) =>
-    [
+  // ימי היעדרות מלאים: קוד האירוע (חפש/001/002/חלת/צבא) נכתב בעמודת "קוד פעולה".
+  const lines = sortMichpalRows(rows).map((r) => {
+    const fullDay = r.action === "A" && !!r.absenceCode;
+    return [
       toMichpalDate(r.date),
       r.time,
-      r.action,
+      fullDay ? r.absenceCode : r.action,
       r.cardId,
-      r.absenceCode ?? "",
+      fullDay ? "" : r.absenceCode ?? "",
       r.absenceEnd ?? "",
-    ].join(","),
-  );
+    ].join(",");
+  });
   const all = includeHeader ? [MICHPAL_HEADER, ...lines] : lines;
   return all.join("\r\n") + "\r\n";
 }

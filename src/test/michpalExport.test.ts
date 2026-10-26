@@ -124,3 +124,11 @@ describe("michpal export", () => {
     expect(rows[0]).toMatchObject({ action: "A", time: "00:00:00", absenceCode: "חפש" });
   });
 });
+
+import { buildMichpalCsv as _build } from "@/lib/michpalExport";
+describe("absence code in action column", () => {
+  it("writes מחלה code 001 in קוד פעולה column", () => {
+    const csv = _build([{ date: "2026-10-01", time: "00:00:00", action: "A", cardId: "5", absenceCode: "001" }], false);
+    expect(csv).toBe("01/10/2026,00:00:00,001,5,,\r\n");
+  });
+});
