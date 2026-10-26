@@ -12,6 +12,7 @@ interface TimelineEvent {
   icon: any;
   title: string;
   detail?: string;
+  actor?: string;
 }
 
 const FILTERS: { key: EventKind | "all"; label: string }[] = [
@@ -155,6 +156,7 @@ export function EmployeeActivityTimeline({
         icon: Activity,
         title: a.action,
         detail: a.details ?? undefined,
+        actor: a.performed_by_name ?? (a.performed_by ? "משתמש מזוהה — השם לא נשמר" : a.action?.includes("אוטומטי") ? "פעולה אוטומטית" : "מבצע הפעולה לא תועד"),
       });
     }
 
@@ -206,6 +208,7 @@ export function EmployeeActivityTimeline({
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
                       <time className="text-xs text-muted-foreground">{fmt(e.at)}</time>
                       {e.detail && <span className="text-xs text-muted-foreground">{e.detail}</span>}
+                      {e.actor && <span className="text-xs text-muted-foreground">בוצע על ידי: {e.actor}</span>}
                     </div>
                   </div>
                 </li>
