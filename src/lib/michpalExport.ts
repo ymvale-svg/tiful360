@@ -83,12 +83,14 @@ export function sortMichpalRows(rows: MichpalRow[]): MichpalRow[] {
 }
 
 export function buildMichpalCsv(rows: MichpalRow[], includeHeader = true): string {
-  // ימי היעדרות מלאים: קוד האירוע (חפש/001/002/חלת/צבא) נכתב בעמודת "קוד פעולה".
+  // ימי היעדרות מלאים (חופשה/מחלה/השתלמות/חל"ת/מילואים):
+  // קוד האירוע (חפש/001/002/חלת/צבא) נכתב בעמודת "קוד פעולה",
+  // ועמודת "שעה" נשארת ריקה.
   const lines = sortMichpalRows(rows).map((r) => {
     const fullDay = r.action === "A" && !!r.absenceCode;
     return [
       toMichpalDate(r.date),
-      r.time,
+      fullDay ? "" : r.time,
       fullDay ? r.absenceCode : r.action,
       r.cardId,
       fullDay ? "" : r.absenceCode ?? "",
@@ -234,7 +236,7 @@ export const DEFAULT_ABSENCE_CODES: Record<string, string> = {
   other: "חפש",
 };
 
-/** כל יום היעדרות מאושר בטווח -> שורת A בשעה 00:00:00 */
+/** כל יום היעדרות מאושר בטווח -> שורת A עם עמודת "שעה" ריקה */
 export function leavesToMichpalRows(
   leaves: LeaveLike[],
   codeByEmployee: Map<string, string>,
@@ -254,7 +256,7 @@ export function leavesToMichpalRows(
     for (let d = new Date(`${start}T00:00:00`); ilDate(d) <= end; d.setDate(d.getDate() + 1)) {
       rows.push({
         date: ilDate(d),
-        time: "00:00:00",
+        time: "",
         action: "A",
         cardId: code,
         absenceCode: absence,
