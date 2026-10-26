@@ -43,7 +43,7 @@ describe("leaveLabelForDay", () => {
   });
 
   it("מחזיר null מחוץ לטווח", () => {
-    expect(leaveLabelForDay(leaves, "2026-10-21")).toBeNull();
+    expect(leaveLabelForDay(leaves, "2026-10-09")).toBeNull();
   });
 
   it("היעדרות ללא תאריך סיום מכסה מיום ההתחלה ואילך", () => {
