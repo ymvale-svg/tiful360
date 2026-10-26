@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { AlertCircle, ArrowRight, ArrowLeft, Pencil, Check, X, Clock, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
