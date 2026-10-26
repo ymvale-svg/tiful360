@@ -153,14 +153,37 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
 
   const remaining = Math.max(0, 3 - selfEditCount);
 
+  /** מעבר ל-3 תיקונים בחודש — נשלחת בקשת תיקון עם נימוק חובה לאחראי השכר */
+  const requestCorrection = async (id: string, d: Date) => {
+    const p = punches.find((x) => x.id === id);
+    if (!p?.employee_id) return;
+    const reason = window.prompt("ניצלת את 3 התיקונים החודש. כתוב/י נימוק לבקשת התיקון (חובה):")?.trim();
+    if (!reason) {
+      toast({ title: "לא נשלח", description: "חובה לכתוב נימוק", variant: "destructive" });
+      return;
+    }
+    const day = ymd(new Date(p.punch_at));
+    const time = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    const { error } = await supabase.from("attendance_corrections").insert({
+      company_id: p.company_id, employee_id: p.employee_id, correction_date: day,
+      requested_check_in: p.direction === "out" ? null : time,
+      requested_check_out: p.direction === "out" ? time : null,
+      reason, initiated_by: "employee", status: "pending",
+    } as any);
+    if (error) toast({ title: "שגיאה", description: error.message, variant: "destructive" });
+    else toast({ title: "בקשת התיקון נשלחה", description: "השעה תתעדכן לאחר אישור" });
+  };
+
   const save = async (id: string, iso: string, newTime: string) => {
     const d = new Date(iso);
     const [h, m] = newTime.split(":").map(Number);
     d.setHours(h, m, 0, 0);
+    if (remaining <= 0) return requestCorrection(id, d);
     try {
       await edit.mutateAsync({ id, newPunchAt: d.toISOString() });
       toast({ title: "נשמר", description: "השעה עודכנה מיידית" });
     } catch (e: any) {
+      if (/ניצלת/.test(e.message ?? "")) return requestCorrection(id, d);
       toast({ title: "לא ניתן לתקן", description: e.message, variant: "destructive" });
     }
   };
