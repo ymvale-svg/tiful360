@@ -25,6 +25,14 @@ import { AttendanceGapsReport } from "./AttendanceGapsReport";
 import { AttendanceSettingsSection } from "./AttendanceSettingsSection";
 import { useCompany } from "@/hooks/useCompany";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { useCompanyHolidaySet } from "@/hooks/useCompanyHolidays";
+import {
+  monthWorkingDays,
+  leaveLabelForDay,
+  toDayKey,
+  type ApprovedLeave,
+} from "@/lib/attendanceMonth";
 
 const MONTHS = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
 
@@ -138,7 +146,7 @@ export function AttendanceClockTab() {
 
       {/* Employee monthly */}
       {employeeId ? (
-        <EmployeeMonthlyTable punches={punches} loading={isLoading} />
+        <EmployeeMonthlyTable punches={punches} loading={isLoading} employeeId={employeeId} year={year} month={month} />
       ) : (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
