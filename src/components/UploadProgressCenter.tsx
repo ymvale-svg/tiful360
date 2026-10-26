@@ -10,7 +10,7 @@ const STEPS = [
 ] as const;
 const ORDER = { prepare: 0, upload: 1, save: 2, done: 3, error: -1 };
 
-function Donut({ job }: { job: UploadJob }) {
+const Donut = function Donut({ job }: { job: UploadJob }) {
   const r = 26, c = 2 * Math.PI * r;
   const pct = job.stage === "done" || job.stage === "error" ? 100 : job.percent;
   const color = job.stage === "error" ? "hsl(var(--destructive))" : "hsl(var(--success))";
