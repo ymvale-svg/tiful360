@@ -4374,7 +4374,14 @@ export type Database = {
       employee_status: "active" | "onboarding" | "leaving" | "inactive"
       field_type: "text" | "number" | "date" | "list" | "list_multi"
       leave_request_status: "pending" | "approved" | "rejected" | "cancelled"
-      leave_request_type: "vacation" | "sick" | "personal" | "other" | "reserve"
+      leave_request_type:
+        | "vacation"
+        | "sick"
+        | "personal"
+        | "other"
+        | "reserve"
+        | "training"
+        | "unpaid"
       permission_level: "read" | "write" | "admin"
       protocol_domain:
         | "physical"
@@ -4541,7 +4548,15 @@ export const Constants = {
       employee_status: ["active", "onboarding", "leaving", "inactive"],
       field_type: ["text", "number", "date", "list", "list_multi"],
       leave_request_status: ["pending", "approved", "rejected", "cancelled"],
-      leave_request_type: ["vacation", "sick", "personal", "other", "reserve"],
+      leave_request_type: [
+        "vacation",
+        "sick",
+        "personal",
+        "other",
+        "reserve",
+        "training",
+        "unpaid",
+      ],
       permission_level: ["read", "write", "admin"],
       protocol_domain: [
         "physical",
