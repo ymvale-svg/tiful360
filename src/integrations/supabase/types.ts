@@ -1935,7 +1935,7 @@ export type Database = {
           resource_url: string
           sort_order: number
           title: string
-          topic_id: string
+          topic_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1950,7 +1950,7 @@ export type Database = {
           resource_url: string
           sort_order?: number
           title: string
-          topic_id: string
+          topic_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1965,7 +1965,7 @@ export type Database = {
           resource_url?: string
           sort_order?: number
           title?: string
-          topic_id?: string
+          topic_id?: string | null
           updated_at?: string
         }
         Relationships: [

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { GuideItem, GuideTopic, ProcedureDepartment, ProcedureItem, removeLearningFile, uploadLearningFile, useGuideLibrary, useProcedureLibrary } from "@/hooks/usePortalLearning";
+import { GuideItem, GuideTopic, LearningContentType, ProcedureDepartment, ProcedureItem, removeLearningFile, uploadLearningFile, useGuideLibrary, useProcedureLibrary } from "@/hooks/usePortalLearning";
 import { supabase } from "@/integrations/supabase/client";
 
 export function PortalLearningManager({ companyId }: { companyId: string }) {
@@ -72,7 +72,7 @@ function GuidesManager({ companyId }: { companyId: string }) {
   const { toast } = useToast();
   const [topic, setTopic] = useState({ name: "", topic_type: "general", logo: null as File | null });
   const [editing, setEditing] = useState<GuideItem | null>(null);
-  const [form, setForm] = useState({ title: "", description: "", topic_id: "", content_type: "pdf", url: "", file: null as File | null });
+  const [form, setForm] = useState({ title: "", url: "", file: null as File | null });
   const refresh = () => qc.invalidateQueries({ queryKey: ["guide-library"] });
   const addTopic = async () => {
     if (!topic.name.trim()) return;
@@ -83,28 +83,40 @@ function GuidesManager({ companyId }: { companyId: string }) {
   };
   const mutation = useMutation({
     mutationFn: async () => {
-      if (!form.title.trim() || !form.topic_id) throw new Error("נא להזין כותרת ולבחור נושא");
+      if (!form.title.trim()) throw new Error("נא להזין שם למדריך");
       let resourceUrl = form.url.trim() || editing?.resource_url || "";
       let fileName = editing?.file_name ?? null;
-      if (form.content_type === "pdf" && form.file) { resourceUrl = await uploadLearningFile(companyId, "guides", form.file); fileName = form.file.name; }
-      if (!resourceUrl) throw new Error("נא לבחור PDF או להזין קישור");
-      const payload = { company_id: companyId, topic_id: form.topic_id, title: form.title.trim(), description: form.description.trim() || null, content_type: form.content_type, resource_url: resourceUrl, file_name: fileName };
+      let contentType: LearningContentType = editing?.content_type ?? "link";
+      if (form.file) {
+        resourceUrl = await uploadLearningFile(companyId, "guides", form.file);
+        fileName = form.file.name;
+        contentType = form.file.type.startsWith("video/") ? "video" : "pdf";
+      }
+      if (!resourceUrl) throw new Error("נא לבחור קובץ או להזין קישור");
+      const payload = { company_id: companyId, topic_id: editing?.topic_id ?? null, title: form.title.trim(), content_type: contentType, resource_url: resourceUrl, file_name: fileName };
       const result = editing ? await supabase.from("guides").update(payload).eq("id", editing.id) : await supabase.from("guides").insert(payload);
       if (result.error) throw result.error;
       if (editing?.resource_url && form.file && editing.resource_url !== resourceUrl) await removeLearningFile(editing.resource_url);
     },
-    onSuccess: () => { refresh(); setEditing(null); setForm({ title: "", description: "", topic_id: "", content_type: "pdf", url: "", file: null }); toast({ title: "המדריך נשמר" }); },
+    onSuccess: () => { refresh(); setEditing(null); setForm({ title: "", url: "", file: null }); toast({ title: "המדריך נשמר" }); },
     onError: (error: Error) => toast({ title: "שגיאה", description: error.message, variant: "destructive" }),
   });
-  const editItem = (item: GuideItem) => { setEditing(item); setForm({ title: item.title, description: item.description ?? "", topic_id: item.topic_id, content_type: item.content_type, url: item.resource_url.startsWith("http") ? item.resource_url : "", file: null }); };
+  const editItem = (item: GuideItem) => { setEditing(item); setForm({ title: item.title, url: item.resource_url.startsWith("http") ? item.resource_url : "", file: null }); };
+  const assignGuideTopic = async (item: GuideItem, topic_id: string | null) => {
+    const { error } = await supabase.from("guides").update({ topic_id }).eq("id", item.id);
+    if (error) return toast({ title: "שגיאה", description: error.message, variant: "destructive" });
+    refresh();
+  };
   return <div className="space-y-5 pt-4">
     <ManagerBlock title="נושאי מדריכים"><div className="grid sm:grid-cols-[1fr_180px_1fr_auto] gap-2"><Input value={topic.name} onChange={(e) => setTopic({ ...topic, name: e.target.value })} placeholder="שם הנושא" /><Select value={topic.topic_type} onValueChange={(topic_type) => setTopic({ ...topic, topic_type })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="software">תוכנה</SelectItem><SelectItem value="operations">תפעול</SelectItem><SelectItem value="safety">בטיחות</SelectItem><SelectItem value="general">כללי</SelectItem></SelectContent></Select><Input type="file" accept="image/*" onChange={(e) => setTopic({ ...topic, logo: e.target.files?.[0] ?? null })} /><Button onClick={addTopic} className="gap-1"><Plus className="w-4 h-4" />הוסף</Button></div><ManagedGroups table="guide_topics" groups={data.topics} refresh={refresh} filePath={(group) => (group as GuideTopic).logo_url} /></ManagerBlock>
     <ManagerBlock title={editing ? "עריכת מדריך" : "הוספת מדריך"}>
-      <div className="grid sm:grid-cols-2 gap-3"><div><Label>נושא</Label><Select value={form.topic_id} onValueChange={(topic_id) => setForm({ ...form, topic_id })}><SelectTrigger className="mt-1"><SelectValue placeholder="בחר נושא" /></SelectTrigger><SelectContent>{data.topics.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent></Select></div><div><Label>סוג מדריך</Label><Select value={form.content_type} onValueChange={(content_type) => setForm({ ...form, content_type })}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="pdf">PDF</SelectItem><SelectItem value="video">סרטון</SelectItem><SelectItem value="link">קישור</SelectItem></SelectContent></Select></div></div>
-      <ContentForm title={form.title} description={form.description} url={form.url} setTitle={(title) => setForm({ ...form, title })} setDescription={(description) => setForm({ ...form, description })} setUrl={(url) => setForm({ ...form, url })} onFile={(file) => setForm({ ...form, file })} accept="application/pdf" hideFile={form.content_type !== "pdf"} />
-      <div className="flex gap-2"><Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>{editing ? "שמור שינויים" : "הוסף מדריך"}</Button>{editing && <Button variant="ghost" onClick={() => setEditing(null)}>ביטול</Button>}</div>
+      <div className="space-y-3">
+        <div><Label>שם המדריך</Label><Input className="mt-1" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="למשל: פתיחת קריאת שירות" /></div>
+        <div className="grid sm:grid-cols-2 gap-3"><div><Label>בחירת קובץ</Label><Input className="mt-1" type="file" accept="application/pdf,video/*" onChange={(e) => setForm({ ...form, file: e.target.files?.[0] ?? null })} /></div><div><Label>או קישור</Label><Input className="mt-1 text-left" dir="ltr" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="https://..." /></div></div>
+        <div className="flex gap-2"><Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>{editing ? "שמור שינויים" : "הוסף מדריך"}</Button>{editing && <Button variant="ghost" onClick={() => { setEditing(null); setForm({ title: "", url: "", file: null }); }}>ביטול</Button>}</div>
+      </div>
     </ManagerBlock>
-    <ManagedItems items={data.guides} groupName={(item) => data.topics.find((t) => t.id === (item as GuideItem).topic_id)?.name ?? "—"} onEdit={(item) => editItem(item as GuideItem)} table="guides" refresh={refresh} filePath={(item) => (item as GuideItem).resource_url} />
+    <ManagedItems items={data.guides} groupName={(item) => data.topics.find((t) => t.id === (item as GuideItem).topic_id)?.name ?? "כללי"} onEdit={(item) => editItem(item as GuideItem)} table="guides" refresh={refresh} filePath={(item) => (item as GuideItem).resource_url} assignTopic={{ topics: data.topics, onAssign: assignGuideTopic }} />
   </div>;
 }
 
@@ -117,8 +129,8 @@ function ManagedGroups({ table, groups, refresh, filePath }: { table: "procedure
   return <div className="space-y-1">{groups.map((group, index) => <div key={group.id} className="flex items-center gap-2 p-2 bg-muted/30 rounded-md"><span className="text-sm flex-1">{group.name}</span><Button variant="ghost" size="icon" disabled={index === 0} onClick={() => update(group.id, { sort_order: Math.max(0, group.sort_order - 1) })}><ChevronUp className="w-4 h-4" /></Button><Button variant="ghost" size="icon" onClick={() => update(group.id, { sort_order: group.sort_order + 1 })}><ChevronDown className="w-4 h-4" /></Button><Button variant="ghost" size="icon" onClick={() => update(group.id, { is_visible: !group.is_visible })}>{group.is_visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}</Button><Button variant="ghost" size="icon" className="text-destructive" onClick={() => remove(group)}><Trash2 className="w-4 h-4" /></Button></div>)}</div>;
 }
 
-function ManagedItems({ items, groupName, onEdit, table, refresh, filePath }: { items: Array<ProcedureItem | GuideItem>; groupName: (item: ProcedureItem | GuideItem) => string; onEdit: (item: ProcedureItem | GuideItem) => void; table: "knowledge_base" | "guides"; refresh: () => void; filePath: (item: ProcedureItem | GuideItem) => string | null }) {
+function ManagedItems({ items, groupName, onEdit, table, refresh, filePath, assignTopic }: { items: Array<ProcedureItem | GuideItem>; groupName: (item: ProcedureItem | GuideItem) => string; onEdit: (item: ProcedureItem | GuideItem) => void; table: "knowledge_base" | "guides"; refresh: () => void; filePath: (item: ProcedureItem | GuideItem) => string | null; assignTopic?: { topics: GuideTopic[]; onAssign: (item: GuideItem, topicId: string | null) => void } }) {
   const update = async (item: ProcedureItem | GuideItem) => { await supabase.from(table).update({ is_visible: !item.is_visible }).eq("id", item.id); refresh(); };
   const remove = async (item: ProcedureItem | GuideItem) => { await supabase.from(table).delete().eq("id", item.id); await removeLearningFile(filePath(item)); refresh(); };
-  return <ManagerBlock title="תוכן קיים"><div className="space-y-2">{items.map((item) => <div key={item.id} className="flex items-center gap-2 p-3 border border-border/50 rounded-md"><div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{item.title}</p><p className="text-xs text-muted-foreground">{groupName(item)}</p></div><Button variant="ghost" size="icon" onClick={() => onEdit(item)}><Pencil className="w-4 h-4" /></Button><Button variant="ghost" size="icon" onClick={() => update(item)}>{item.is_visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}</Button><Button variant="ghost" size="icon" className="text-destructive" onClick={() => remove(item)}><Trash2 className="w-4 h-4" /></Button></div>)}{!items.length && <p className="text-sm text-muted-foreground">עדיין לא נוסף תוכן</p>}</div></ManagerBlock>;
+  return <ManagerBlock title="תוכן קיים"><div className="space-y-2">{items.map((item) => <div key={item.id} className="flex items-center gap-2 p-3 border border-border/50 rounded-md"><div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{item.title}</p><p className="text-xs text-muted-foreground">{groupName(item)}</p></div>{assignTopic && <select aria-label="נושא המדריך" className="text-xs bg-card border border-border/60 rounded-md px-2 py-1.5 min-w-32" value={(item as GuideItem).topic_id ?? ""} onChange={(e) => assignTopic.onAssign(item as GuideItem, e.target.value || null)}><option value="">כללי</option>{assignTopic.topics.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select>}<Button variant="ghost" size="icon" onClick={() => onEdit(item)}><Pencil className="w-4 h-4" /></Button><Button variant="ghost" size="icon" onClick={() => update(item)}>{item.is_visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}</Button><Button variant="ghost" size="icon" className="text-destructive" onClick={() => remove(item)}><Trash2 className="w-4 h-4" /></Button></div>)}{!items.length && <p className="text-sm text-muted-foreground">עדיין לא נוסף תוכן</p>}</div></ManagerBlock>;
 }

@@ -1,0 +1,2 @@
+ALTER TABLE public.guides ALTER COLUMN topic_id DROP NOT NULL;
+COMMENT ON COLUMN public.guides.topic_id IS 'Nullable: a guide may be added without choosing a topic; such guides are listed under כללי.';

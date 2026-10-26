@@ -29,10 +29,10 @@ export function PortalLearningLibrary(props: Props) {
   const currentItems = props.items.filter((item) => {
     const belongs = props.mode === "procedures"
       ? (selectedId === "general" ? !(item as ProcedureItem).department_id : (item as ProcedureItem).department_id === selectedId)
-      : (item as GuideItem).topic_id === selectedId;
+      : (selectedId === "general" ? !(item as GuideItem).topic_id : (item as GuideItem).topic_id === selectedId);
     return belongs && (!normalized || item.title.toLocaleLowerCase("he").includes(normalized) || (item.description ?? "").toLocaleLowerCase("he").includes(normalized));
   });
-  const uncategorized = props.mode === "procedures" ? props.items.filter((item) => !(item as ProcedureItem).department_id) : [];
+  const uncategorized = props.mode === "procedures" ? props.items.filter((item) => !(item as ProcedureItem).department_id) : props.items.filter((item) => !(item as GuideItem).topic_id);
 
   const openItem = async (item: ProcedureItem | GuideItem) => {
     const path = props.mode === "procedures" ? (item as ProcedureItem).file_url : (item as GuideItem).resource_url;
@@ -68,7 +68,7 @@ export function PortalLearningLibrary(props: Props) {
   }
 
   const shownGroups = [...matchingGroups];
-  if (props.mode === "procedures" && uncategorized.length && (!normalized || uncategorized.some((item) => item.title.toLocaleLowerCase("he").includes(normalized)))) {
+  if (uncategorized.length && (!normalized || uncategorized.some((item) => item.title.toLocaleLowerCase("he").includes(normalized)))) {
     shownGroups.push({ id: "general", company_id: "", name: "כללי", sort_order: 999, is_visible: true });
   }
   return (
