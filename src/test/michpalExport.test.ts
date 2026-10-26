@@ -1,6 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   buildMichpalCsv,
+  downloadMichpalCsv,
   MICHPAL_HEADER,
   encodeWindows1255,
   punchesToMichpalRows,
@@ -11,6 +12,30 @@ import {
 } from "@/lib/michpalExport";
 
 describe("michpal export", () => {
+  it("downloads attendance files with the requested dat extension", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("URL", { createObjectURL: vi.fn(() => "blob:michpal"), revokeObjectURL: vi.fn() });
+    const names: string[] = [];
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function () {
+      names.push(this.download);
+    });
+    try {
+      downloadMichpalCsv("data", "michpal-2026-10-remote.csv");
+      downloadMichpalCsv("data", "michpal-2026-10-clock.dat");
+      downloadMichpalCsv("data", "michpal-2026-10-combined");
+      expect(names).toEqual([
+        "michpal-2026-10-remote.dat",
+        "michpal-2026-10-clock.dat",
+        "michpal-2026-10-combined.dat",
+      ]);
+    } finally {
+      vi.runAllTimers();
+      vi.useRealTimers();
+      click.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("formats dates and builds sorted CSV", () => {
     const csv = buildMichpalCsv([
       { date: "2014-05-01", time: "17:00:00", action: "1", cardId: "626" },

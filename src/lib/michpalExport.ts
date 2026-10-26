@@ -123,11 +123,11 @@ export function downloadMichpalCsv(csv: string, fileName: string) {
   const url = URL.createObjectURL(michpalCsvBlob(csv));
   const a = document.createElement("a");
   a.href = url;
-  a.download = fileName.endsWith(".csv") ? fileName : `${fileName}.csv`;
+  a.download = `${fileName.replace(/\.(csv|dat)$/i, "")}.dat`;
   document.body.appendChild(a);
   a.click();
   a.remove();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
 
 // ---- מיפוי נתוני המערכת לשורות מיכפל ----

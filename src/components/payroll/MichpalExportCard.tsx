@@ -180,7 +180,7 @@ export function MichpalExportCard() {
     }
     const csv = buildMichpalCsv(result.rows);
     const label = useCustomRange ? `${from}_${to}` : month;
-    downloadMichpalCsv(csv, `michpal-${label}-${SOURCE_SLUG[source]}.csv`);
+    downloadMichpalCsv(csv, `michpal-${label}-${SOURCE_SLUG[source]}.dat`);
     toast({ title: "הקובץ הורד", description: `${result.rows.length} שורות · ${SOURCE_LABEL[source]}` });
   };
 
@@ -192,7 +192,7 @@ export function MichpalExportCard() {
         <CardTitle className="text-base flex flex-wrap items-center gap-2">
           <FileDown className="w-4 h-4 text-primary" />
           ייצוא נתוני נוכחות למיכפל
-          <Badge variant="outline" className="font-mono text-xs">CSV · Windows-1255</Badge>
+          <Badge variant="outline" className="font-mono text-xs">DAT · Windows-1255</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
