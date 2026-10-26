@@ -66,20 +66,28 @@ function ProceduresManager({ companyId }: { companyId: string }) {
   </div>;
 }
 
+const SOFTWARE_OPTIONS = ["תפעול 360", "משימון", "תיקטק", "פריוריטי"];
+
 function GuidesManager({ companyId }: { companyId: string }) {
   const { data = { topics: [], guides: [] } } = useGuideLibrary(companyId, false);
   const qc = useQueryClient();
   const { toast } = useToast();
   const [topic, setTopic] = useState({ name: "", topic_type: "general", logo: null as File | null });
+  const [softwareChoice, setSoftwareChoice] = useState("");
+  const [customSoftware, setCustomSoftware] = useState("");
+  const softwareOptions = Array.from(new Set([...SOFTWARE_OPTIONS, ...data.topics.filter((t) => t.topic_type === "software").map((t) => t.name)]));
   const [editing, setEditing] = useState<GuideItem | null>(null);
   const [form, setForm] = useState({ title: "", url: "", file: null as File | null });
   const refresh = () => qc.invalidateQueries({ queryKey: ["guide-library"] });
   const addTopic = async () => {
-    if (!topic.name.trim()) return;
+    const name = topic.topic_type === "software"
+      ? (softwareChoice === "__new__" ? customSoftware.trim() : softwareChoice)
+      : topic.name.trim();
+    if (!name) return;
     const logoUrl = topic.logo ? await uploadLearningFile(companyId, "logos", topic.logo) : null;
-    const { error } = await supabase.from("guide_topics").insert({ company_id: companyId, name: topic.name.trim(), topic_type: topic.topic_type, logo_url: logoUrl, sort_order: data.topics.length });
+    const { error } = await supabase.from("guide_topics").insert({ company_id: companyId, name, topic_type: topic.topic_type, logo_url: logoUrl, sort_order: data.topics.length });
     if (error) return toast({ title: "שגיאה", description: error.message, variant: "destructive" });
-    setTopic({ name: "", topic_type: "general", logo: null }); refresh();
+    setTopic({ name: "", topic_type: "general", logo: null }); setSoftwareChoice(""); setCustomSoftware(""); refresh();
   };
   const mutation = useMutation({
     mutationFn: async () => {
@@ -108,7 +116,7 @@ function GuidesManager({ companyId }: { companyId: string }) {
     refresh();
   };
   return <div className="space-y-5 pt-4">
-    <ManagerBlock title="נושאי מדריכים"><div className="grid sm:grid-cols-[1fr_180px_1fr_auto] gap-2"><Input value={topic.name} onChange={(e) => setTopic({ ...topic, name: e.target.value })} placeholder="שם הנושא" /><Select value={topic.topic_type} onValueChange={(topic_type) => setTopic({ ...topic, topic_type })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="software">תוכנה</SelectItem><SelectItem value="operations">תפעול</SelectItem><SelectItem value="safety">בטיחות</SelectItem><SelectItem value="general">כללי</SelectItem></SelectContent></Select><Input type="file" accept="image/*" onChange={(e) => setTopic({ ...topic, logo: e.target.files?.[0] ?? null })} /><Button onClick={addTopic} className="gap-1"><Plus className="w-4 h-4" />הוסף</Button></div><ManagedGroups table="guide_topics" groups={data.topics} refresh={refresh} filePath={(group) => (group as GuideTopic).logo_url} /></ManagerBlock>
+    <ManagerBlock title="נושאי מדריכים"><div className="grid sm:grid-cols-[1fr_180px_1fr_auto] gap-2">{topic.topic_type === "software" ? <Select value={softwareChoice || undefined} onValueChange={setSoftwareChoice}><SelectTrigger><SelectValue placeholder="שם התוכנה" /></SelectTrigger><SelectContent>{softwareOptions.map((name) => <SelectItem key={name} value={name}>{name}</SelectItem>)}<SelectItem value="__new__">הוסף חדש...</SelectItem></SelectContent></Select> : <Input value={topic.name} onChange={(e) => setTopic({ ...topic, name: e.target.value })} placeholder="שם הנושא" />}<Select value={topic.topic_type} onValueChange={(topic_type) => { setTopic({ ...topic, topic_type }); setSoftwareChoice(""); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="software">תוכנה</SelectItem><SelectItem value="operations">תפעול</SelectItem><SelectItem value="safety">בטיחות</SelectItem><SelectItem value="general">כללי</SelectItem></SelectContent></Select><Input type="file" accept="image/*" onChange={(e) => setTopic({ ...topic, logo: e.target.files?.[0] ?? null })} /><Button onClick={addTopic} className="gap-1"><Plus className="w-4 h-4" />הוסף</Button></div>{topic.topic_type === "software" && softwareChoice === "__new__" && <Input className="mt-2" value={customSoftware} onChange={(e) => setCustomSoftware(e.target.value)} placeholder="שם תוכנה חדש" />}<ManagedGroups table="guide_topics" groups={data.topics} refresh={refresh} filePath={(group) => (group as GuideTopic).logo_url} /></ManagerBlock>
     <ManagerBlock title={editing ? "עריכת מדריך" : "הוספת מדריך"}>
       <div className="space-y-3">
         <div><Label>שם המדריך</Label><Input className="mt-1" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="למשל: פתיחת קריאת שירות" /></div>
