@@ -102,6 +102,18 @@ export function MonthlyAttendanceReview() {
     },
   });
 
+  const { data: reports = [] } = useQuery({
+    queryKey: ["attendance-month-reports", activeCompanyId, month], enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("attendance_month_reports" as any)
+        .select("employee_id, status, sent_at, employee_confirmed_at, approved_at")
+        .eq("company_id", activeCompanyId!).eq("month", month);
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+  const reportOf = (id: string) => reports.find((r) => r.employee_id === id);
+
   const rowsByEmp = useMemo(() => {
     const map = new Map<string, ReviewDay[]>();
     for (const e of employees as any[]) {
@@ -118,7 +130,23 @@ export function MonthlyAttendanceReview() {
     qc.invalidateQueries({ queryKey: ["attendance_punches"] });
     qc.invalidateQueries({ queryKey: ["mar-leaves"] });
     qc.invalidateQueries({ queryKey: ["attendance-corrections"] });
+    qc.invalidateQueries({ queryKey: ["attendance-month-reports"] });
   };
+
+  const upsertReports = async (ids: string[], patch: Record<string, any>) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    const rows = ids.map((id) => {
+      const cur = reportOf(id);
+      return { company_id: activeCompanyId!, employee_id: id, month, status: cur?.status ?? "sent", ...patch,
+        ...(patch.status === "approved" ? { approved_by: user?.id ?? null } : {}),
+        ...(patch.status === "sent" ? { sent_by: user?.id ?? null } : {}) };
+    });
+    const { error } = await supabase.from("attendance_month_reports" as any).upsert(rows, { onConflict: "employee_id,month" });
+    if (error) throw error;
+  };
+
+  const approveReports = (ids: string[]) =>
+    run(() => upsertReports(ids, { status: "approved", approved_at: new Date().toISOString() }), "הדוח אושר סופית");
 
   const run = async (fn: () => Promise<void>, ok: string) => {
     setBusy(true);
@@ -170,6 +198,8 @@ export function MonthlyAttendanceReview() {
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
+      const notApproved = ids.filter((id) => reportOf(id)?.status !== "approved");
+      if (notApproved.length) await upsertReports(notApproved, { status: "sent", sent_at: new Date().toISOString() });
     }, "הדוח נשלח במייל");
 
   const exportPdf = (ids: string[]) => {
@@ -217,6 +247,9 @@ export function MonthlyAttendanceReview() {
           <Button size="sm" variant="outline" onClick={() => exportPdf(selIds.length ? selIds : allIds)}>
             <FileDown className="w-4 h-4 ml-1" />ייצוא PDF {selIds.length ? "למסומנים" : "לכולם"}
           </Button>
+          {canApprove && <Button size="sm" disabled={!selIds.length || busy} onClick={() => approveReports(selIds)}>
+            <Check className="w-4 h-4 ml-1" />אשר דוח למסומנים
+          </Button>}
         </div>
       </CardHeader>
       <CardContent className="p-0">
@@ -226,7 +259,7 @@ export function MonthlyAttendanceReview() {
               <th className="p-2 w-8"><Checkbox aria-label="סמן הכול" checked={selIds.length > 0 && selIds.length === allIds.length}
                 onCheckedChange={(v) => setSelected(v ? new Set(allIds) : new Set())} /></th>
               <th className="p-2 text-right">עובד</th><th className="p-2 text-right">מספר</th>
-              <th className="p-2 text-right">ימים חסרים</th><th className="p-2 text-right">היעדרויות</th><th className="p-2 text-right">בקשות תיקון</th>
+              <th className="p-2 text-right">ימים חסרים</th><th className="p-2 text-right">היעדרויות</th><th className="p-2 text-right">בקשות תיקון</th><th className="p-2 text-right">מצב הדוח</th>
             </tr>
           </thead>
           <tbody>
@@ -249,13 +282,18 @@ export function MonthlyAttendanceReview() {
                     <td className="p-2">{gaps ? <Badge variant="destructive">{gaps}</Badge> : <Badge variant="secondary">0</Badge>}</td>
                     <td className="p-2">{rows.filter((r) => r.status === "leave").length}</td>
                     <td className="p-2">{pend.length ? <Badge>{pend.length} ממתינות</Badge> : "—"}</td>
+                    <td className="p-2"><ReportStatus status={pend.length && reportOf(e.id)?.status !== "approved" ? "pending" : reportOf(e.id)?.status} /></td>
                   </tr>
                   {isOpen && (
-                    <tr><td colSpan={6} className="p-3 bg-muted/20">
+                    <tr><td colSpan={7} className="p-3 bg-muted/20">
                       <div className="flex flex-wrap items-center gap-2 mb-2">
                         <label className="flex items-center gap-1 text-sm"><Checkbox checked={onlyGaps} onCheckedChange={(v) => setOnlyGaps(!!v)} />רק חוסרים</label>
                         <Button size="sm" variant="outline" disabled={busy} onClick={() => sendEmail([e.id])}><Mail className="w-4 h-4 ml-1" />שלח לעובד במייל</Button>
                         <Button size="sm" variant="outline" onClick={() => exportPdf([e.id])}><FileDown className="w-4 h-4 ml-1" />PDF</Button>
+                        {canApprove && reportOf(e.id)?.status !== "approved" && (
+                          <Button size="sm" variant="secondary" disabled={busy || pend.length > 0} title={pend.length ? "יש בקשות תיקון ממתינות" : undefined}
+                            onClick={() => approveReports([e.id])}><Check className="w-4 h-4 ml-1" />אשר דוח</Button>
+                        )}
                         {canApprove && pend.length > 0 && <>
                           <Button size="sm" disabled={busy} onClick={() => review(pend.map((c) => c.id), true)}><Check className="w-4 h-4 ml-1" />אשר את כל הבקשות</Button>
                           <Button size="sm" variant="outline" disabled={busy} onClick={() => review(pend.map((c) => c.id), false)}><X className="w-4 h-4 ml-1" />דחה הכול</Button>
@@ -282,6 +320,14 @@ export function MonthlyAttendanceReview() {
       </CardContent>
     </Card>
   );
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  sent: "נשלח לעובד", employee_confirmed: "העובד אישר", pending: "ממתין לבקשות תיקון", approved: "אושר סופית",
+};
+function ReportStatus({ status }: { status?: string }) {
+  if (!status) return <span className="text-muted-foreground">לא נשלח</span>;
+  return <Badge variant={status === "approved" ? "default" : "secondary"}>{STATUS_LABEL[status] ?? status}</Badge>;
 }
 
 function DayRow({ r, emp, pending, busy, canApprove, onTime, onAbsence, onReview }: any) {
