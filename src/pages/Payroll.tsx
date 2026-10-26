@@ -20,7 +20,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Tax101AdminTab } from "@/components/payroll/Tax101AdminTab";
 import { AttendanceClockTab } from "@/components/payroll/AttendanceClockTab";
-import { HrAttendanceReports } from "@/components/payroll/HrAttendanceReports";
 import { MonthlyAttendanceReview } from "@/components/payroll/MonthlyAttendanceReview";
 import { MichpalExportCard } from "@/components/payroll/MichpalExportCard";
 
@@ -38,7 +37,7 @@ type HubTile = {
 
 const HUB_TILES: HubTile[] = [
   { key: "overview", label: "סקירה", description: "תלושים אחרונים, מחלות, חופשות ותיקוני נוכחות", icon: LayoutDashboard },
-  { key: "reports", label: "דוחות נוכחות וחוסרים", description: "דוח יומי / חודשי, מי החתים ומי לא — כולל ייצוא לאקסל", icon: ClipboardList },
+  { key: "reports", label: "דוחות נוכחות וחוסרים", description: "דוח חודשי מרוכז: חוסרים, היעדרויות, בקשות תיקון, מייל ו-PDF", icon: ClipboardList },
   { key: "attendance", label: "שעוני נוכחות", description: "החתמות, שעונים פיזיים והחתמות ללא שיוך", icon: Clock4 },
   { key: "michpal", label: "ייצוא למיכפל", description: "ייצוא נתוני נוכחות חודשיים לקובץ קליטה במיכפל (CSV)", icon: FileDown, roles: ["admin", "super_admin", "payroll", "hr"] },
   { key: "onboarding", label: "קליטת עובדים", description: "תהליכי קליטה, טופס צרכים וצ'קליסט תפעול", icon: UserPlus, to: "/onboarding", roles: ["admin", "super_admin", "operations", "it_manager", "hr"] },
@@ -121,7 +120,7 @@ export default function Payroll() {
           </h2>
 
           {active.key === "overview" && <OverviewTab />}
-          {active.key === "reports" && <div className="space-y-4"><MonthlyAttendanceReview /><HrAttendanceReports /></div>}
+          {active.key === "reports" && <div className="space-y-4"><MonthlyAttendanceReview /></div>}
           {active.key === "michpal" && <MichpalExportCard />}
           {active.key === "attendance" && <AttendanceClockTab />}
           {active.key === "tax101" && <Tax101AdminTab />}
