@@ -84,7 +84,10 @@ export async function compressVideo(
     });
 
     recorder.start(1000);
-    await video.play();
+    await Promise.race([
+      video.play(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("video play timeout")), 8000)),
+    ]);
 
     let raf = 0;
     const draw = () => {
