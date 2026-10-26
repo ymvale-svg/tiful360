@@ -38,7 +38,7 @@ export interface GuideTopic {
 export interface GuideItem {
   id: string;
   company_id: string;
-  topic_id: string;
+  topic_id: string | null;
   title: string;
   description: string | null;
   content_type: LearningContentType;

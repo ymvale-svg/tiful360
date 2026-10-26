@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { GuideItem, GuideTopic, ProcedureDepartment, ProcedureItem, removeLearningFile, uploadLearningFile, useGuideLibrary, useProcedureLibrary } from "@/hooks/usePortalLearning";
+import { GuideItem, GuideTopic, LearningContentType, ProcedureDepartment, ProcedureItem, removeLearningFile, uploadLearningFile, useGuideLibrary, useProcedureLibrary } from "@/hooks/usePortalLearning";
 import { supabase } from "@/integrations/supabase/client";
 
 export function PortalLearningManager({ companyId }: { companyId: string }) {
@@ -72,7 +72,7 @@ function GuidesManager({ companyId }: { companyId: string }) {
   const { toast } = useToast();
   const [topic, setTopic] = useState({ name: "", topic_type: "general", logo: null as File | null });
   const [editing, setEditing] = useState<GuideItem | null>(null);
-  const [form, setForm] = useState({ title: "", description: "", topic_id: "", content_type: "pdf", url: "", file: null as File | null });
+  const [form, setForm] = useState({ title: "", url: "", file: null as File | null });
   const refresh = () => qc.invalidateQueries({ queryKey: ["guide-library"] });
   const addTopic = async () => {
     if (!topic.name.trim()) return;
