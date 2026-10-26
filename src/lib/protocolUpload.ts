@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 /** Practical ceiling for a single file uploaded to storage (server rejects larger with an HTML error page). */
-export const MAX_UPLOAD_BYTES = 45 * 1024 * 1024; // 45MB
+export const MAX_UPLOAD_BYTES = 400 * 1024 * 1024; // 400MB (storage allows 500MB)
 /** Images above this size are downscaled/recompressed in the browser before upload. */
 const IMAGE_COMPRESS_THRESHOLD = 1.5 * 1024 * 1024;
 const IMAGE_MAX_DIMENSION = 2000;

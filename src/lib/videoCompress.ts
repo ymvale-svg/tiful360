@@ -58,6 +58,8 @@ export async function compressVideo(
     await new Promise<void>((resolve, reject) => {
       video.onloadedmetadata = () => resolve();
       video.onerror = () => reject(new Error("video metadata load failed"));
+      // iOS sometimes never fires loadedmetadata for camera clips — don't hang.
+      setTimeout(() => reject(new Error("video metadata timeout")), 8000);
     });
 
     const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
@@ -82,7 +84,10 @@ export async function compressVideo(
     });
 
     recorder.start(1000);
-    await video.play();
+    await Promise.race([
+      video.play(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("video play timeout")), 8000)),
+    ]);
 
     let raf = 0;
     const draw = () => {
