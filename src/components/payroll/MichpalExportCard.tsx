@@ -214,7 +214,7 @@ export function MichpalExportCard() {
           <div>
             <label className="text-xs text-muted-foreground block mb-1">סיומת קובץ</label>
             <Select value={fileFormat} onValueChange={(v) => setFileFormat(v as MichpalFileFormat)}>
-              <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="csv">CSV (ברירת מחדל)</SelectItem>
                 <SelectItem value="dat">DAT</SelectItem>
