@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Camera, Loader2, MapPin, Package, Paperclip, Phone, Plus, User } from "lucide-react";
 import { TICKET_PRIORITIES, TICKET_SUBJECTS } from "@/lib/serviceTickets";
+import { TicketScreenshotButton } from "@/components/TicketScreenshotButton";
 import {
   useCreateServiceTicket,
   useEmployeeAssetOptions,
@@ -224,6 +225,7 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
             <Button variant="outline" type="button" className="w-full gap-2" onClick={() => fileInputRef.current?.click()}>
               <Camera className="w-4 h-4" aria-hidden="true" /> צילום או קובץ
             </Button>
+            <TicketScreenshotButton disabled={submitting} onAttach={(file) => setFiles((previous) => [...previous, file])} />
           </div>
 
           <div className="flex gap-2 pt-1">
