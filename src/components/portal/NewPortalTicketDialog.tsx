@@ -14,6 +14,7 @@ import {
   uploadTicketAttachments,
 } from "@/hooks/useServiceTickets";
 import { useCompany } from "@/hooks/useCompany";
+import { TicketScreenshotButton } from "@/components/TicketScreenshotButton";
 
 interface Props {
   open: boolean;
@@ -184,6 +185,7 @@ export function NewPortalTicketDialog({ open, onOpenChange, employeeId, employee
             <Button variant="outline" type="button" className="w-full gap-2" onClick={() => fileRef.current?.click()}>
               <Camera className="w-4 h-4" aria-hidden="true" /> צילום או קובץ
             </Button>
+            <TicketScreenshotButton disabled={submitting} onAttach={(file) => setFiles((previous) => [...previous, file])} />
           </div>
 
           <div className="flex gap-2 pt-1">
