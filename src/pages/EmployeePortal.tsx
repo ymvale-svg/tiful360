@@ -37,14 +37,14 @@ import { PortalLearningLibrary } from "@/components/portal/PortalLearningLibrary
 import { useGuideLibrary, useProcedureLibrary } from "@/hooks/usePortalLearning";
 
 const portalTabs = [
-  { id: "assets", label: "הציוד שלי", icon: Package },
-  { id: "attendance", label: "נוכחות", icon: Clock },
-  { id: "hr", label: "שכר וחופשות", icon: FileText },
-  { id: "tickets", label: "קריאות שירות", icon: Wrench },
-  { id: "news", label: "הודעות", icon: Megaphone },
-  { id: "kb", label: "נהלים", icon: BookOpen },
-  { id: "guides", label: "מדריכים", icon: FileText },
-  { id: "contacts", label: "אנשי קשר", icon: Phone },
+  { id: "assets", label: "הציוד שלי", icon: Package, tone: "portal-tile--teal", shape: "portal-tile--wash portal-tile--chip-round" },
+  { id: "attendance", label: "נוכחות", icon: Clock, tone: "portal-tile--blue", shape: "portal-tile--arc portal-tile--chip-square" },
+  { id: "hr", label: "שכר וחופשות", icon: FileText, tone: "portal-tile--amber", shape: "portal-tile--band portal-tile--chip-leaf" },
+  { id: "tickets", label: "קריאות שירות", icon: Wrench, tone: "portal-tile--coral", shape: "portal-tile--halo portal-tile--chip-flag" },
+  { id: "news", label: "הודעות", icon: Megaphone, tone: "portal-tile--violet", shape: "portal-tile--arc portal-tile--chip-round" },
+  { id: "kb", label: "נהלים", icon: BookOpen, tone: "portal-tile--green", shape: "portal-tile--band portal-tile--chip-square" },
+  { id: "guides", label: "מדריכים", icon: FileText, tone: "portal-tile--rose", shape: "portal-tile--halo portal-tile--chip-leaf" },
+  { id: "contacts", label: "אנשי קשר", icon: Phone, tone: "portal-tile--indigo", shape: "portal-tile--wash portal-tile--chip-flag" },
 ];
 
 export default function EmployeePortal() {
@@ -565,12 +565,17 @@ export default function EmployeePortal() {
                 type="button"
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className="aspect-[4/3] md:aspect-auto md:h-36 flex flex-col items-center justify-center gap-2 rounded-2xl border border-border/50 bg-card hover:bg-accent hover:border-primary/40 transition-colors shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className={cn(
+                  "portal-tile",
+                  tab.tone,
+                  tab.shape,
+                  "aspect-[4/3] md:aspect-auto md:h-36 flex flex-col items-center justify-center gap-2 px-3",
+                )}
               >
-                <span className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <tab.icon className="w-6 h-6 text-primary" aria-hidden="true" />
+                <span className="portal-tile-icon w-12 h-12 flex items-center justify-center">
+                  <tab.icon className="w-6 h-6" aria-hidden="true" />
                 </span>
-                <span className="text-sm font-semibold">{tab.label}</span>
+                <span className="portal-tile-label text-sm font-semibold">{tab.label}</span>
               </button>
             ))}
           </nav>
