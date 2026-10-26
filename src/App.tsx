@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
+import { UploadProgressCenter } from "@/components/UploadProgressCenter";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CompanyProvider } from "@/hooks/useCompany";
@@ -65,6 +66,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <PwaUpdatePrompt />
+      <UploadProgressCenter />
       <BrowserRouter>
         <AuthProvider>
           <CompanyProvider>

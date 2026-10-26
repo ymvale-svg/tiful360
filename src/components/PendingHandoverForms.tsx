@@ -1,3 +1,4 @@
+import { uploadFile } from "@/lib/uploadWithProgress";
 import { useEffect, useRef, useState } from "react";
 import { formatDateTimeDMY } from "@/lib/utils";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -68,9 +69,7 @@ export function PendingHandoverForms({ employeeId }: Props) {
 
       const blob = await buildPdfForFormSnapshot(active.form_snapshot, sig);
       const pdfPath = `${active.company_id}/${active.employee_id}/${active.asset_id}-${Date.now()}.pdf`;
-      const { error: upErr } = await supabase.storage
-        .from("handover-forms")
-        .upload(pdfPath, blob, { contentType: "application/pdf", upsert: true });
+      const { error: upErr } = await uploadFile("handover-forms", pdfPath, blob, { contentType: "application/pdf", upsert: true });
       if (upErr) throw upErr;
       // Private bucket: persist the path, not a public URL.
       const pdfUrl = pdfPath;

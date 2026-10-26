@@ -1,3 +1,4 @@
+import { uploadFile } from "@/lib/uploadWithProgress";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
@@ -89,9 +90,7 @@ export function useCreateLeaveRequest() {
       if (input.attachment_file) {
         const ext = input.attachment_file.name.split(".").pop() || "bin";
         const path = `${input.employee_id}/${crypto.randomUUID()}.${ext}`;
-        const { error: upErr } = await supabase.storage
-          .from("leave-attachments")
-          .upload(path, input.attachment_file, { upsert: false });
+        const { error: upErr } = await uploadFile("leave-attachments", path, input.attachment_file, { upsert: false });
         if (upErr) throw upErr;
         const { data } = await supabase.storage
           .from("leave-attachments")
@@ -204,9 +203,7 @@ export function useUpdateSickLeaveRequest() {
       if (input.attachment_file) {
         const ext = input.attachment_file.name.split(".").pop() || "bin";
         const path = `${input.employee_id}/${crypto.randomUUID()}.${ext}`;
-        const { error: upErr } = await supabase.storage
-          .from("leave-attachments")
-          .upload(path, input.attachment_file, { upsert: false });
+        const { error: upErr } = await uploadFile("leave-attachments", path, input.attachment_file, { upsert: false });
         if (upErr) throw upErr;
         const { data } = await supabase.storage
           .from("leave-attachments")

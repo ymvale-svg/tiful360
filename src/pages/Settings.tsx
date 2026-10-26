@@ -1,3 +1,4 @@
+import { uploadFile } from "@/lib/uploadWithProgress";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -288,7 +289,7 @@ function GeneralSettings() {
       setUploading(true);
       const ext = file.name.split(".").pop()?.toLowerCase() || "png";
       const path = `${activeCompanyId}/logo-${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("company-logos").upload(path, file, {
+      const { error: upErr } = await uploadFile("company-logos", path, file, {
         cacheControl: "3600",
         upsert: true,
         contentType: file.type,

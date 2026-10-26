@@ -13,7 +13,7 @@ const ORDER = { prepare: 0, upload: 1, save: 2, done: 3, error: -1 };
 function Donut({ job }: { job: UploadJob }) {
   const r = 26, c = 2 * Math.PI * r;
   const pct = job.stage === "done" || job.stage === "error" ? 100 : job.percent;
-  const color = job.stage === "error" ? "hsl(var(--destructive))" : "hsl(var(--success, 142 71% 40%))";
+  const color = job.stage === "error" ? "hsl(var(--destructive))" : "hsl(var(--success))";
   return (
     <div className="relative w-16 h-16 shrink-0">
       <svg viewBox="0 0 64 64" className="w-16 h-16 -rotate-90">
@@ -41,7 +41,7 @@ export function UploadProgressCenter() {
           <Donut job={j} />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate" title={j.name}>{j.name}</p>
-            <p className={`text-xs ${j.stage === "error" ? "text-destructive" : j.stage === "done" ? "text-[hsl(var(--success,142_71%_40%))]" : "text-muted-foreground"}`}>{statusText(j)}</p>
+            <p className={`text-xs ${j.stage === "error" ? "text-destructive" : j.stage === "done" ? "text-success" : "text-muted-foreground"}`}>{statusText(j)}</p>
             {j.stage === "error" ? (
               <div className="flex gap-2 mt-2">
                 {j.retry && <Button size="sm" variant="destructive" onClick={j.retry}>נסה שוב</Button>}

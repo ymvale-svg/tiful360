@@ -1,3 +1,4 @@
+import { uploadFile } from "@/lib/uploadWithProgress";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -95,7 +96,7 @@ export function useGuideLibrary(companyId?: string | null, visibleOnly = true) {
 export async function uploadLearningFile(companyId: string, area: "procedures" | "guides" | "logos", file: File) {
   const ext = file.name.split(".").pop()?.toLowerCase() || "bin";
   const path = `${companyId}/${area}/${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage.from("portal-learning").upload(path, file, { cacheControl: "3600", upsert: false });
+  const { error } = await uploadFile("portal-learning", path, file, { cacheControl: "3600", upsert: false });
   if (error) throw error;
   return path;
 }

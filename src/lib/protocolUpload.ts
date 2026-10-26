@@ -1,3 +1,4 @@
+import { uploadFile } from "@/lib/uploadWithProgress";
 import { supabase } from "@/integrations/supabase/client";
 
 /** Practical ceiling for a single file uploaded to storage (server rejects larger with an HTML error page). */
@@ -80,9 +81,7 @@ export async function uploadProtocolFile(
     );
   }
   try {
-    const { error } = await supabase.storage
-      .from(bucket)
-      .upload(path, file, { contentType: contentType ?? (file as File).type, upsert: true });
+    const { error } = await uploadFile(bucket, path, file, { contentType: contentType ?? (file as File).type, upsert: true });
     if (error) throw error;
   } catch (e) {
     throw new Error(describeUploadError(e, fileName));

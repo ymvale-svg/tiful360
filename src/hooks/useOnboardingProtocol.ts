@@ -1,3 +1,4 @@
+import { uploadFile } from "@/lib/uploadWithProgress";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
@@ -137,9 +138,7 @@ async function generateProtocol(params: {
 
   const fileName = `${documentId}.pdf`;
   const path = `${params.companyId}/${p.employee_id}/${Date.now()}-${fileName}`;
-  const up = await supabase.storage
-    .from("employee-documents")
-    .upload(path, blob, { cacheControl: "3600", upsert: false, contentType: "application/pdf" });
+  const up = await uploadFile("employee-documents", path, blob, { cacheControl: "3600", upsert: false, contentType: "application/pdf" });
   if (up.error) throw up.error;
 
   const { data: auth } = await supabase.auth.getUser();

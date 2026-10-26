@@ -1,3 +1,4 @@
+import { uploadFile } from "@/lib/uploadWithProgress";
 import { useEffect, useState } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -103,7 +104,7 @@ export function RenewExpiryDialog({ open, onOpenChange, item }: Props) {
           // Upload the new file as the current document
           const safeName = replaceFile.name.replace(/[^\w.\-א-ת]+/g, "_");
           const path = `${activeCompanyId}/${item.asset_id}/${Date.now()}_${safeName}`;
-          const up = await supabase.storage.from("asset-documents").upload(path, replaceFile);
+          const up = await uploadFile("asset-documents", path, replaceFile);
           if (up.error) throw up.error;
           const { data: oldDoc } = await supabase
             .from("asset_documents" as any)

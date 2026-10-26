@@ -1,3 +1,4 @@
+import { uploadFile } from "@/lib/uploadWithProgress";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
@@ -60,9 +61,7 @@ export function useUploadEmployeeDocument() {
       const ext = params.file.name.split(".").pop() || "bin";
       const path = `${activeCompanyId}/${params.employee_id}/${Date.now()}.${ext}`;
 
-      const up = await supabase.storage
-        .from("employee-documents")
-        .upload(path, params.file, { cacheControl: "3600", upsert: false });
+      const up = await uploadFile("employee-documents", path, params.file, { cacheControl: "3600", upsert: false });
       if (up.error) throw up.error;
 
       const { data: { user } } = await supabase.auth.getUser();
