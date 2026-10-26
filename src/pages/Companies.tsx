@@ -1,3 +1,4 @@
+import { uploadFile } from "@/lib/uploadWithProgress";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -109,7 +110,7 @@ export default function Companies() {
       setLogoUploading(true);
       const ext = file.name.split(".").pop() || "png";
       const path = `portal/${editId || "new"}-${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("company-logos").upload(path, file, {
+      const { error: upErr } = await uploadFile("company-logos", path, file, {
         upsert: true, contentType: file.type,
       });
       if (upErr) throw upErr;

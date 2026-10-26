@@ -1,3 +1,4 @@
+import { uploadFile } from "@/lib/uploadWithProgress";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { supabase } from "@/integrations/supabase/client";
@@ -109,9 +110,7 @@ export async function generateAndUploadTax101Pdf(
 
   const blob = pdf.output("blob");
 
-  const { error } = await supabase.storage
-    .from("tax-forms-101")
-    .upload(path, blob, { contentType: "application/pdf", upsert: true });
+  const { error } = await uploadFile("tax-forms-101", path, blob, { contentType: "application/pdf", upsert: true });
   if (error) throw error;
 
   // Store the storage path; consumers fetch a short-lived signed URL on demand.

@@ -1,3 +1,4 @@
+import { uploadFile } from "@/lib/uploadWithProgress";
 import { useEffect, useState } from "react";
 import { ShieldCheck, Save, AlertTriangle, Sparkles, FileUp, Loader2, FileText } from "lucide-react";
 import { periodFromExpiry } from "@/hooks/useAssetDocuments";
@@ -193,7 +194,7 @@ export function InsuranceDetailsPanel({ asset }: Props) {
     try {
       const ext = file.name.split(".").pop() || "bin";
       const path = `${asset.company_id}/${asset.id}/${Date.now()}.${ext}`;
-      const up = await supabase.storage.from("asset-documents").upload(path, file);
+      const up = await uploadFile("asset-documents", path, file);
       if (up.error) throw up.error;
       // Archive previous current policy documents
       const period = asset.expiry_date ? periodFromExpiry(asset.expiry_date) : null;

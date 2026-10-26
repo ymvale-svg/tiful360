@@ -1,3 +1,4 @@
+import { uploadFile } from "@/lib/uploadWithProgress";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
@@ -161,7 +162,7 @@ export async function uploadTicketAttachments(companyId: string, files: File[]) 
   const out: { name: string; url: string }[] = [];
   for (const f of files) {
     const path = `it-tickets/${companyId}/${Date.now()}-${f.name}`;
-    const { error } = await supabase.storage.from("documents").upload(path, f, { upsert: false });
+    const { error } = await uploadFile("documents", path, f, { upsert: false });
     if (!error) {
       const { data } = supabase.storage.from("documents").getPublicUrl(path);
       out.push({ name: f.name, url: data.publicUrl });

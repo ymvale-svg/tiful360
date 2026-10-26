@@ -1,3 +1,4 @@
+import { uploadFile } from "@/lib/uploadWithProgress";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
@@ -62,7 +63,7 @@ export function useUploadAssetDocument() {
       // Storage keys must be ASCII-safe — strip Hebrew/unicode from the path key
       const path = `${activeCompanyId}/${params.asset_id}/${Date.now()}.${ext}`;
 
-      const up = await supabase.storage.from("asset-documents").upload(path, params.file, {
+      const up = await uploadFile("asset-documents", path, params.file, {
         cacheControl: "3600",
         upsert: false,
       });
