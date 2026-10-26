@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import * as tus from "tus-js-client";
 
 export type UploadStage = "prepare" | "upload" | "save" | "done" | "error";
 export interface UploadJob {
