@@ -25,6 +25,7 @@ import { Tax101Banner } from "@/components/portal/Tax101Banner";
 import { MyTax101FormsList } from "@/components/portal/MyTax101FormsList";
 import { useMyPunches, useCreateRemotePunch } from "@/hooks/useAttendancePunches";
 import { MyPunchesList } from "@/components/portal/MyPunchesList";
+import { MonthReportConfirm } from "@/components/portal/MonthReportConfirm";
 import { useToast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
 import { InstallAppBanner } from "@/components/InstallAppBanner";
@@ -670,6 +671,7 @@ export default function EmployeePortal() {
               </div>
             )}
 
+            {myEmployee && <MonthReportConfirm employeeId={myEmployee.id} />}
 
             {myEmployee && myPunches.length > 0 ? (
 <MyPunchesList

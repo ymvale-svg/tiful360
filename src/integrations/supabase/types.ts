@@ -863,6 +863,73 @@ export type Database = {
         }
         Relationships: []
       }
+      attendance_month_reports: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          company_id: string
+          created_at: string
+          employee_confirmed_at: string | null
+          employee_id: string
+          id: string
+          month: string
+          sent_at: string | null
+          sent_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          company_id: string
+          created_at?: string
+          employee_confirmed_at?: string | null
+          employee_id: string
+          id?: string
+          month: string
+          sent_at?: string | null
+          sent_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          company_id?: string
+          created_at?: string
+          employee_confirmed_at?: string | null
+          employee_id?: string
+          id?: string
+          month?: string
+          sent_at?: string | null
+          sent_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_month_reports_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_month_reports_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_month_reports_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attendance_punches: {
         Row: {
           company_id: string
@@ -3765,6 +3832,29 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "offboarding_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      confirm_my_attendance_month: {
+        Args: { _month: string }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          company_id: string
+          created_at: string
+          employee_confirmed_at: string | null
+          employee_id: string
+          id: string
+          month: string
+          sent_at: string | null
+          sent_by: string | null
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "attendance_month_reports"
           isOneToOne: true
           isSetofReturn: false
         }
