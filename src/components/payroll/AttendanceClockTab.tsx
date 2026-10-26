@@ -21,7 +21,6 @@ import { Check, X, Clock4, AlertTriangle, UserPlus2, ArrowRight, ArrowLeft, Penc
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 import { AttendanceFlowIndicator } from "./AttendanceFlowIndicator";
-import { AttendanceGapsReport } from "./AttendanceGapsReport";
 import { AttendanceSettingsSection } from "./AttendanceSettingsSection";
 import { useCompany } from "@/hooks/useCompany";
 import { supabase } from "@/integrations/supabase/client";
@@ -155,7 +154,6 @@ export function AttendanceClockTab() {
         </Card>
       )}
 
-      <AttendanceGapsReport />
       <AttendanceSettingsSection />
     </div>
   );
