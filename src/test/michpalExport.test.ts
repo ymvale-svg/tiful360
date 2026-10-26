@@ -8,6 +8,8 @@ import {
   leavesToMichpalRows,
   DEFAULT_ABSENCE_CODES,
   DEFAULT_INCLUDE_ABSENCES,
+  DEFAULT_MICHPAL_SOURCE,
+  currentMonthKey,
   matchesSource,
   toMichpalDate,
 } from "@/lib/michpalExport";
@@ -15,6 +17,12 @@ import {
 describe("michpal export", () => {
   it("includes approved absences by default", () => {
     expect(DEFAULT_INCLUDE_ABSENCES).toBe(true);
+  });
+
+  it("uses combined source and the current month by default", () => {
+    expect(DEFAULT_MICHPAL_SOURCE).toBe("combined");
+    expect(currentMonthKey(new Date(2026, 9, 26))).toBe("2026-10");
+    expect(currentMonthKey(new Date(2026, 0, 5))).toBe("2026-01");
   });
 
   it("exports csv by default and dat only when requested", () => {

@@ -19,6 +19,8 @@ import {
   leavesToMichpalRows,
   DEFAULT_ABSENCE_CODES,
   DEFAULT_INCLUDE_ABSENCES,
+  DEFAULT_MICHPAL_SOURCE,
+  currentMonthKey,
   ilDayStartIso,
   ilDayEndIso,
   type MichpalFileFormat,
@@ -42,17 +44,15 @@ const SOURCE_SLUG: Record<MichpalSource, string> = {
 export function MichpalExportCard() {
   const { activeCompanyId } = useCompany();
 
-  const prevMonth = new Date();
-  prevMonth.setDate(1);
-  prevMonth.setMonth(prevMonth.getMonth() - 1);
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
-  const [month, setMonth] = useState(
-    `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, "0")}`,
-  );
+  const [month, setMonth] = useState(currentMonthKey());
   const [useCustomRange, setUseCustomRange] = useState(false);
-  const [customFrom, setCustomFrom] = useState(iso(prevMonth));
-  const [customTo, setCustomTo] = useState(iso(new Date(prevMonth.getFullYear(), prevMonth.getMonth() + 1, 0)));
-  const [source, setSource] = useState<MichpalSource>("clock");
+  const [customFrom, setCustomFrom] = useState(iso(monthStart));
+  const [customTo, setCustomTo] = useState(iso(monthEnd));
+  const [source, setSource] = useState<MichpalSource>(DEFAULT_MICHPAL_SOURCE);
   const [fileFormat, setFileFormat] = useState<MichpalFileFormat>("csv");
   const [includeAbsences, setIncludeAbsences] = useState(DEFAULT_INCLUDE_ABSENCES);
   const [department, setDepartment] = useState("all");

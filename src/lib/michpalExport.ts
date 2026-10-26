@@ -143,6 +143,12 @@ export function downloadMichpalCsv(
 // ---- מיפוי נתוני המערכת לשורות מיכפל ----
 
 export type MichpalSource = "clock" | "remote" | "combined";
+/** מקור הנתונים שנבחר כברירת מחדל בייצוא. */
+export const DEFAULT_MICHPAL_SOURCE: MichpalSource = "combined";
+/** מפתח חודש (YYYY-MM) של החודש הנוכחי — ברירת המחדל לייצוא. */
+export function currentMonthKey(now: Date = new Date()): string {
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
 
 /** מקורות ההחתמה הנחשבים "החתמה מרחוק" */
 export const REMOTE_SOURCES = ["portal_remote", "manual_self", "manual", "portal"];
