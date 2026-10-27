@@ -111,7 +111,7 @@ export function NewLeaveRequestDialog({ open, onOpenChange, employeeId, managerI
           <form onSubmit={handleSubmit} className="space-y-3">
             <fieldset>
               <legend className="text-sm font-medium mb-1">סוג בקשה</legend>
-              <div role="radiogroup" aria-label="סוג בקשה" className="grid grid-cols-4 gap-2 mt-1">
+              <div role="radiogroup" aria-label="סוג בקשה" className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
                 {TYPES.map((t) => (
                   <button
                     key={t.value}
@@ -131,7 +131,7 @@ export function NewLeaveRequestDialog({ open, onOpenChange, employeeId, managerI
               </div>
             </fieldset>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label htmlFor="leave-start">מתאריך</Label>
                 <Input id="leave-start" type="date" value={start} onChange={(e) => setStart(e.target.value)} required aria-required="true" />

@@ -204,7 +204,7 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
 
   return (
     <div className="space-y-2">
-      <div className="flex items-start gap-2 text-[11px] text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
+      <div className="flex items-start gap-2 text-[0.8125rem] text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
         <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
         <span className="leading-relaxed">
           לחץ על השעה לעריכה, ועל <span className="font-semibold text-foreground">＋ הוסף</span> להשלמת החתמה שנשכחה — השינוי נשמר <span className="font-semibold text-foreground">מיידית</span>, ללא צורך באישור.
@@ -227,11 +227,11 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
             >
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold">{day}</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-sky-500/15 text-sky-700 dark:text-sky-300">
+                <span className="text-[0.8125rem] px-2 py-0.5 rounded-full font-medium bg-sky-500/15 text-sky-700 dark:text-sky-300">
                   {leaveLabel}
                 </span>
               </div>
-              <p className="text-[11px] text-muted-foreground mt-2">היעדרות מאושרת — לא נדרשת החתמה</p>
+              <p className="text-[0.8125rem] text-muted-foreground mt-2">היעדרות מאושרת — לא נדרשת החתמה</p>
             </div>
           );
         }
@@ -267,13 +267,13 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
               <span className="text-sm font-semibold">{day}</span>
               <div className="flex items-center gap-1.5">
                 {hasMissing && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                  <span className="text-[0.8125rem] px-2 py-0.5 rounded-full font-medium bg-amber-500/15 text-amber-700 dark:text-amber-300">
                     {sorted.length === 0 ? "ללא החתמה" : "חסרה החתמה"}
                   </span>
                 )}
                 {sorted.length > 0 && (
                   <span className={cn(
-                    "text-[10px] px-2 py-0.5 rounded-full font-medium",
+                    "text-[0.8125rem] px-2 py-0.5 rounded-full font-medium",
                     isRemote ? "bg-accent text-accent-foreground" : "bg-primary/10 text-primary",
                   )}>
                     {isRemote ? "מרחוק" : "שעון"}
@@ -306,7 +306,7 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
             </div>
 
 
-            <div className="flex items-center gap-3 text-[11px] text-muted-foreground border-t border-border/50 pt-2">
+            <div className="flex items-center gap-3 text-[0.8125rem] text-muted-foreground border-t border-border/50 pt-2">
               <span className="inline-flex items-center gap-1 font-medium text-foreground">
                 <Clock className="w-3 h-3" /> {hours} שעות
               </span>
@@ -378,9 +378,9 @@ function PunchSlot({
     )}>
       <span className={cn("shrink-0", punch ? accentClasses.icon : "text-muted-foreground")}>{icon}</span>
       <div className="flex-1 min-w-0">
-        <div className="text-[10px] text-muted-foreground leading-none mb-1">{label}</div>
+        <div className="text-xs text-muted-foreground leading-none mb-1">{label}</div>
         {editing ? (
-          <div className="flex items-center gap-1">
+          <div className="flex flex-wrap items-center gap-1">
             <Input
               type="time"
               autoFocus
@@ -390,13 +390,13 @@ function PunchSlot({
                 if (e.key === "Enter") submit();
                 if (e.key === "Escape") cancel();
               }}
-              className="h-7 px-1.5 text-xs font-mono w-[92px]"
+              className="h-11 px-2 text-base font-mono w-[120px]"
             />
-            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={submit} disabled={pending} aria-label="שמור">
-              <Check className="w-3.5 h-3.5 text-emerald-600" />
+            <Button size="icon" variant="ghost" className="h-11 w-11" onClick={submit} disabled={pending} aria-label="שמור">
+              <Check className="w-5 h-5 text-emerald-600" />
             </Button>
-            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={cancel} aria-label="ביטול">
-              <X className="w-3.5 h-3.5" />
+            <Button size="icon" variant="ghost" className="h-11 w-11" onClick={cancel} aria-label="ביטול">
+              <X className="w-5 h-5" />
             </Button>
           </div>
         ) : punch ? (

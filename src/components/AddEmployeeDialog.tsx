@@ -314,7 +314,7 @@ export function AddEmployeeDialog({ open, onOpenChange, onCreated }: Props) {
               placeholder="החברה הראשית"
               searchPlaceholder="חפש מעסיק..."
             />
-            <p className="text-[11px] text-muted-foreground mt-1">
+            <p className="text-[0.8125rem] text-muted-foreground mt-1">
               קובע באיזה ישות משפטית ייצא טופס 101 של העובד
             </p>
           </div>

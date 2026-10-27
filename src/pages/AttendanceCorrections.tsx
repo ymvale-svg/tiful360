@@ -80,7 +80,7 @@ export default function AttendanceCorrections() {
           >
             {f.label}
             {f.id !== "all" && (
-              <span className="mr-1.5 text-[11px] opacity-80">
+              <span className="mr-1.5 text-[0.8125rem] opacity-80">
                 ({items.filter((r: any) => r.status === f.id).length})
               </span>
             )}
@@ -101,26 +101,26 @@ export default function AttendanceCorrections() {
                   <p className="font-semibold text-sm">
                     <EmployeeLink employeeId={r.employee_id} name={r.employee?.full_name} />
                   </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <p className="text-sm text-muted-foreground mt-0.5">
                     {r.employee?.department} • תאריך תיקון: {new Date(r.correction_date).toLocaleDateString("en-GB")}
                   </p>
-                  <div className="mt-2 grid grid-cols-2 gap-x-6 text-xs">
+                  <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm">
                     <div className="text-muted-foreground">
-                      מקורי: <span className="font-mono text-foreground">{r.original_check_in?.slice(0, 5) ?? "—"} – {r.original_check_out?.slice(0, 5) ?? "—"}</span>
+                      מקורי: <span className="font-mono text-base text-foreground">{r.original_check_in?.slice(0, 5) ?? "—"} – {r.original_check_out?.slice(0, 5) ?? "—"}</span>
                     </div>
                     <div className="text-muted-foreground">
-                      מבוקש: <span className="font-mono text-foreground">{r.requested_check_in?.slice(0, 5) ?? "—"} – {r.requested_check_out?.slice(0, 5) ?? "—"}</span>
+                      מבוקש: <span className="font-mono text-base text-foreground">{r.requested_check_in?.slice(0, 5) ?? "—"} – {r.requested_check_out?.slice(0, 5) ?? "—"}</span>
                     </div>
                   </div>
                   {r.reason && <p className="text-xs text-muted-foreground mt-2 italic">"{r.reason}"</p>}
                   {r.manager_note && <p className="text-xs mt-1">הערת מנהל: {r.manager_note}</p>}
                   {r.applied_at && (
-                    <span className="inline-flex items-center mt-2 text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                    <span className="inline-flex items-center mt-2 text-[0.8125rem] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
                       הוחל על השכר
                     </span>
                   )}
                 </div>
-                <span className={`text-[11px] px-2 py-1 rounded-full font-medium ${
+                <span className={`shrink-0 text-[0.8125rem] px-2 py-1 rounded-full font-medium ${
                   r.status === "approved" ? "bg-success/15 text-success" :
                   r.status === "rejected" ? "bg-destructive/15 text-destructive" :
                   "bg-muted text-muted-foreground"

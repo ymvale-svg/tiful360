@@ -116,26 +116,26 @@ export default function LeaveRequests() {
               key={r.id}
               className="bg-card rounded-xl border border-border/50 p-4 hover:shadow-md transition-shadow"
             >
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-sm">{r.employee?.full_name}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <p className="font-semibold text-base">{r.employee?.full_name}</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">
                     {r.employee?.department} • {TYPE_LABELS[r.request_type as string]} •{" "}
                     {r.end_date ? `${r.total_days} ימים • ` : ""}
                     {new Date(r.start_date).toLocaleDateString("en-GB")} –{" "}
                     {r.end_date ? new Date(r.end_date).toLocaleDateString("en-GB") : <span className="text-warning">טרם עודכן</span>}
                   </p>
-                  {r.reason && <p className="text-xs text-muted-foreground mt-1">{r.reason}</p>}
+                  {r.reason && <p className="text-sm text-muted-foreground mt-1">{r.reason}</p>}
                   {r.attachment_url && (
                     <a href={r.attachment_url} target="_blank" rel="noopener noreferrer" className="inline-block mt-2">
-                      <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
+                      <Button variant="outline" size="sm" className="h-11 sm:h-9 text-sm gap-1">
                         <Paperclip className="w-3 h-3" />
                         קובץ מצורף
                       </Button>
                     </a>
                   )}
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
                   {r.status === "approved" && r.end_date && (isAdmin || isDirectManager || isHR || isPayroll) && (
                     <a
                       href={buildGoogleCalendarUrl({
@@ -147,14 +147,14 @@ export default function LeaveRequests() {
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
+                      <Button variant="outline" size="sm" className="h-11 sm:h-9 text-sm gap-1">
                         <CalendarPlus className="w-3 h-3" />
                         הוסף ליומן
                       </Button>
                     </a>
                   )}
                   {(
-                    <span className={`text-[11px] px-2 py-1 rounded-full font-medium ${
+                    <span className={`text-[0.8125rem] px-2 py-1 rounded-full font-medium ${
                       r.status === "approved" ? "bg-success/15 text-success" :
                       r.status === "rejected" ? "bg-destructive/15 text-destructive" :
                       r.status === "pending" ? "bg-warning/15 text-warning" :

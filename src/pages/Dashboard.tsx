@@ -182,7 +182,7 @@ export default function Dashboard() {
 
       {/* KPI Cards */}
       {statCards.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(13rem,1fr))] gap-4">
           {statCards.map((stat) => {
             // A zero has nothing to act on. Keep the card so the grid stays
             // stable, but drop the colour — otherwise "0 התראות פתוחות" shouts

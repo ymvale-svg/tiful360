@@ -324,7 +324,7 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
                       aria-invalid={hebDayInvalid}
                     />
                     {hebDayInvalid && (
-                      <p className="text-[11px] text-destructive mt-1">יום לא תקין</p>
+                      <p className="text-[0.8125rem] text-destructive mt-1">יום לא תקין</p>
                     )}
                   </div>
                   <div>
@@ -349,7 +349,7 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
                       aria-invalid={hebYearInvalid}
                     />
                     {hebYearInvalid && (
-                      <p className="text-[11px] text-destructive mt-1">שנה לא תקינה</p>
+                      <p className="text-[0.8125rem] text-destructive mt-1">שנה לא תקינה</p>
                     )}
                   </div>
                 </div>
@@ -379,7 +379,7 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
               )}
               <span className="text-sm font-medium">גישה למערכת</span>
               {hasAccount && (
-                <Badge variant="outline" className="bg-success/10 text-success border-success/20 text-[11px]">פעיל</Badge>
+                <Badge variant="outline" className="bg-success/10 text-success border-success/20 text-[0.8125rem]">פעיל</Badge>
               )}
             </div>
             <p className="text-xs text-muted-foreground">

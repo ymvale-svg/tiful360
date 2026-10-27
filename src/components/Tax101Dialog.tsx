@@ -826,7 +826,7 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                     <Input
                       type="number"
                       min={0}
-                      className="h-7 w-16 text-xs"
+                      className="h-11 w-20 text-base"
                       value={val}
                       onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))}
                     />
@@ -898,11 +898,11 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                           3. אני תושב/ת קבע ביישוב מזכה
                         </label>
                         {tc.settlement_eligible && (
-                          <label className="flex items-center gap-2 mr-6 mt-1 text-xs">
+                          <label className="flex flex-wrap items-center gap-2 mr-6 mt-1 text-xs">
                             מתאריך:
                             <Input
                               type="date"
-                              className="h-7 text-xs w-40"
+                              className="h-11 text-base w-44"
                               value={tc.settlement_start_date}
                               onChange={(e) => setTc({ settlement_start_date: e.target.value })}
                             />
@@ -992,20 +992,20 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                         </label>
                         {tc.discharged_soldier && (
                           <div className="flex flex-wrap gap-3 mr-6 mt-1 text-xs items-center">
-                            <label className="flex items-center gap-2">
+                            <label className="flex flex-wrap items-center gap-2">
                               תאריכי שירות מ:
                               <Input
                                 type="date"
-                                className="h-7 text-xs w-36"
+                                className="h-11 text-base w-40"
                                 value={tc.discharged_soldier_service_start_date}
                                 onChange={(e) => setTc({ discharged_soldier_service_start_date: e.target.value })}
                               />
                             </label>
-                            <label className="flex items-center gap-2">
+                            <label className="flex flex-wrap items-center gap-2">
                               עד:
                               <Input
                                 type="date"
-                                className="h-7 text-xs w-36"
+                                className="h-11 text-base w-40"
                                 value={tc.discharged_soldier_service_end_date}
                                 onChange={(e) => setTc({ discharged_soldier_service_end_date: e.target.value })}
                               />
@@ -1020,11 +1020,11 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                           15. סיימתי לימודים אקדמיים (מצורף טופס 119)
                         </label>
                         {tc.academic_degree_completed && (
-                          <label className="flex items-center gap-2 mr-6 mt-1 text-xs">
+                          <label className="flex flex-wrap items-center gap-2 mr-6 mt-1 text-xs">
                             תאריך סיום:
                             <Input
                               type="date"
-                              className="h-7 text-xs w-40"
+                              className="h-11 text-base w-44"
                               value={tc.academic_degree_end_date}
                               onChange={(e) => setTc({ academic_degree_end_date: e.target.value })}
                             />
@@ -1090,21 +1090,21 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                       <div key={i} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end p-2 bg-background rounded">
                         <div className="md:col-span-3 space-y-1">
                           <Label className="text-xs">שם המעסיק</Label>
-                          <Input className="h-8 text-xs" value={emp.employer_name} onChange={(e) => updateEmployer(i, "employer_name", e.target.value)} />
+                          <Input className="h-11 text-base" value={emp.employer_name} onChange={(e) => updateEmployer(i, "employer_name", e.target.value)} />
                         </div>
                         <div className="md:col-span-3 space-y-1">
                           <Label className="text-xs">כתובת</Label>
-                          <Input className="h-8 text-xs" value={emp.employer_address} onChange={(e) => updateEmployer(i, "employer_address", e.target.value)} />
+                          <Input className="h-11 text-base" value={emp.employer_address} onChange={(e) => updateEmployer(i, "employer_address", e.target.value)} />
                         </div>
                         <div className="md:col-span-2 space-y-1">
                           <Label className="text-xs">סוג ההכנסה</Label>
-                          <Input className="h-8 text-xs" value={emp.income_type} onChange={(e) => updateEmployer(i, "income_type", e.target.value)} />
+                          <Input className="h-11 text-base" value={emp.income_type} onChange={(e) => updateEmployer(i, "income_type", e.target.value)} />
                         </div>
                         <div className="md:col-span-2 space-y-1">
                           <Label className="text-xs">הכנסה חודשית</Label>
                           <Input
                             type="number"
-                            className="h-8 text-xs"
+                            className="h-11 text-base"
                             value={emp.monthly_gross}
                             onChange={(e) => updateEmployer(i, "monthly_gross", e.target.value === "" ? "" : Number(e.target.value))}
                           />
@@ -1113,7 +1113,7 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                           <Label className="text-xs">מס %</Label>
                           <Input
                             type="number"
-                            className="h-8 text-xs"
+                            className="h-11 text-base"
                             value={emp.tax_withheld_percent}
                             onChange={(e) => updateEmployer(i, "tax_withheld_percent", e.target.value === "" ? "" : Number(e.target.value))}
                           />

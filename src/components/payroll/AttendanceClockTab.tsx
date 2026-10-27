@@ -466,7 +466,7 @@ function EmployeeMonthlyTable({ punches, loading, employeeId, year, month }: {
                   </div>
                 )}
                 {hasPair && (
-                  <div className="text-[11px] text-muted-foreground pt-1 border-t border-border/50">
+                  <div className="text-[0.8125rem] text-muted-foreground pt-1 border-t border-border/50">
                     {formatTime(firstIn!)} → {formatTime(lastOut!)} · {hours} שעות
                   </div>
                 )}
@@ -540,21 +540,21 @@ function PunchChip({ punch }: { punch: AttendancePunch }) {
           {wasEdited && <Pencil className="w-2.5 h-2.5 opacity-60" aria-label="נערך ידנית" />}
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-64 p-3" align="start" dir="rtl">
+      <PopoverContent className="w-72 max-w-[calc(100vw-2rem)] p-3" align="start" dir="rtl">
         <div className="space-y-3">
           <div>
-            <label className="text-[11px] text-muted-foreground block mb-1">שעה</label>
+            <label className="text-sm text-muted-foreground block mb-1">שעה</label>
             <Input
               type="time"
               value={timeVal}
               onChange={(e) => setTimeVal(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") save(); }}
               autoFocus
-              className="h-9"
+              className="h-11"
             />
           </div>
           <div>
-            <label className="text-[11px] text-muted-foreground block mb-1.5">כיוון</label>
+            <label className="text-sm text-muted-foreground block mb-1.5">כיוון</label>
             <div className="grid grid-cols-3 gap-1">
               {([
                 { v: "in" as const, label: "כניסה", Icon: ArrowRight, active: "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40" },
@@ -565,7 +565,8 @@ function PunchChip({ punch }: { punch: AttendancePunch }) {
                   key={v}
                   type="button"
                   onClick={() => setDirVal(v)}
-                  className={`h-8 rounded-md border text-[11px] font-medium inline-flex items-center justify-center gap-1 transition-colors ${
+                  aria-pressed={dirVal === v}
+                  className={`min-h-11 rounded-md border text-sm font-medium inline-flex items-center justify-center gap-1 transition-colors ${
                     dirVal === v ? active : "border-border text-muted-foreground hover:bg-accent"
                   }`}
                 >
@@ -576,10 +577,10 @@ function PunchChip({ punch }: { punch: AttendancePunch }) {
             </div>
           </div>
           <div className="flex items-center justify-end gap-2 pt-1">
-            <Button size="sm" variant="ghost" onClick={() => setOpen(false)} disabled={saving}>
+            <Button size="touch" variant="ghost" onClick={() => setOpen(false)} disabled={saving}>
               <X className="w-3.5 h-3.5 ml-1" /> ביטול
             </Button>
-            <Button size="sm" onClick={save} disabled={saving}>
+            <Button size="touch" onClick={save} disabled={saving}>
               <Check className="w-3.5 h-3.5 ml-1" /> {saving ? "שומר..." : "שמירה"}
             </Button>
           </div>

@@ -121,12 +121,13 @@ export default function Assets() {
               <div className="relative">
                 <div
                   className={cn(
-                    "flex items-center gap-3 bg-card border rounded-2xl px-4 py-3 transition-all",
+                    "flex flex-wrap items-center gap-3 bg-card border rounded-2xl px-4 py-3 transition-all",
                     searchFocused
                       ? "border-primary shadow-lg ring-2 ring-primary/15"
                       : "border-border shadow-sm hover:shadow"
                   )}
                 >
+                  <div className="flex flex-1 min-w-[12rem] items-center gap-3">
                   <Search className="w-5 h-5 text-muted-foreground shrink-0" aria-hidden="true" />
                   <input
                     ref={searchInputRef}
@@ -142,11 +143,12 @@ export default function Assets() {
                   <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded border border-border bg-muted/50 text-[10px] font-mono text-muted-foreground shrink-0">
                     ⌘K
                   </kbd>
+                  </div>
 
-                  <div className="flex items-center gap-2 shrink-0 pl-2 border-r border-border pr-3">
+                  <div className="flex w-full sm:w-auto items-center gap-2 shrink-0 sm:pl-2 sm:border-r sm:border-border sm:pr-3">
                     <Button
                       size="sm"
-                      className="gap-1.5 rounded-full"
+                      className="flex-1 sm:flex-none h-11 sm:h-9 gap-1.5 rounded-full"
                       onClick={() => { setAddCategoryId(undefined); setAddOpen(true); }}
                     >
                       <Plus className="w-4 h-4" />
@@ -155,7 +157,7 @@ export default function Assets() {
                     <Button
                       size="sm"
                       variant="secondary"
-                      className="gap-1.5 rounded-full"
+                      className="hidden md:inline-flex gap-1.5 rounded-full"
                       onClick={() => navigate("/assets-handover")}
                     >
                       <FileSignature className="w-4 h-4" />
@@ -164,7 +166,7 @@ export default function Assets() {
                     <Button
                       size="sm"
                       variant="secondary"
-                      className="gap-1.5 rounded-full"
+                      className="hidden md:inline-flex gap-1.5 rounded-full"
                       onClick={() => navigate("/assets-subscriptions")}
                     >
                       <Ticket className="w-4 h-4" />
@@ -173,7 +175,7 @@ export default function Assets() {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="gap-1.5 rounded-full"
+                      className="hidden md:inline-flex gap-1.5 rounded-full"
                       onClick={() => setQuickAssignOpen(true)}
                     >
                       <Zap className="w-4 h-4" />
@@ -181,11 +183,22 @@ export default function Assets() {
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="sm" variant="ghost" className="px-2" aria-label="פעולות נוספות">
+                        <Button size="sm" variant="ghost" className="h-11 w-11 sm:h-9 sm:w-auto px-2" aria-label="פעולות נוספות">
                           <MoreHorizontal className="w-4 h-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48">
+                        {/* Secondary toolbar actions collapse into this menu on narrow screens. */}
+                        <DropdownMenuItem className="md:hidden" onClick={() => navigate("/assets-handover")}>
+                          בצע מסירה
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="md:hidden" onClick={() => navigate("/assets-subscriptions")}>
+                          מנויים ואגרות
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="md:hidden" onClick={() => setQuickAssignOpen(true)}>
+                          שיוך מהיר
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator className="md:hidden" />
                         <DropdownMenuItem
                           disabled={!assets?.length}
                           onClick={() => {
@@ -233,7 +246,7 @@ export default function Assets() {
                       <>
                         {searchResults.assets.length > 0 && (
                           <div>
-                            <div className="flex items-center gap-2 px-4 py-2 bg-muted/40 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+                            <div className="flex items-center gap-2 px-4 py-2 bg-muted/40 text-[0.8125rem] font-semibold text-muted-foreground uppercase tracking-wide">
                               <Package className="w-3.5 h-3.5" />
                               פריטים <span className="font-normal">({searchResults.assets.length})</span>
                             </div>
@@ -264,7 +277,7 @@ export default function Assets() {
                         )}
                         {searchResults.employees.length > 0 && (
                           <div>
-                            <div className="flex items-center gap-2 px-4 py-2 bg-muted/40 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+                            <div className="flex items-center gap-2 px-4 py-2 bg-muted/40 text-[0.8125rem] font-semibold text-muted-foreground uppercase tracking-wide">
                               <UserRound className="w-3.5 h-3.5" />
                               עובדים <span className="font-normal">({searchResults.employees.length})</span>
                             </div>
@@ -288,7 +301,7 @@ export default function Assets() {
                         )}
                         {searchResults.categories.length > 0 && (
                           <div>
-                            <div className="flex items-center gap-2 px-4 py-2 bg-muted/40 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+                            <div className="flex items-center gap-2 px-4 py-2 bg-muted/40 text-[0.8125rem] font-semibold text-muted-foreground uppercase tracking-wide">
                               <FolderTree className="w-3.5 h-3.5" />
                               קטגוריות <span className="font-normal">({searchResults.categories.length})</span>
                             </div>

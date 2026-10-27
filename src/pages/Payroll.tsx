@@ -232,7 +232,7 @@ function PayrollSettingsTab() {
             className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 font-mono"
             dir="ltr"
           />
-          <p className="text-[11px] text-muted-foreground mt-1">
+          <p className="text-[0.8125rem] text-muted-foreground mt-1">
             הדוחות היומי והשבועי של החתמות נוכחות יישלחו לכתובות אלו בלבד. משאבי אנוש וחשבות שכר הם משתמשים נפרדים.
           </p>
 
@@ -259,7 +259,7 @@ function PayrollSettingsTab() {
             className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 font-mono"
             dir="ltr"
           />
-          <p className="text-[11px] text-muted-foreground mt-1">
+          <p className="text-[0.8125rem] text-muted-foreground mt-1">
             אישורי חופשה/מחלה, טפסי 101, הדוח השבועי של החתמות ללא שיוך והדוח החודשי של כלל החוסרים יישלחו לכתובות אלו.
           </p>
 
@@ -416,7 +416,7 @@ function OverviewTab() {
                   <td className="font-mono">{b.total_pages}</td>
                   <td className="font-mono text-success">{b.matched_count}</td>
                   <td className="font-mono text-warning">{b.unmatched_count}</td>
-                  <td><span className="text-[11px] px-2 py-0.5 rounded-full bg-muted">{b.status}</span></td>
+                  <td><span className="text-[0.8125rem] px-2 py-0.5 rounded-full bg-muted">{b.status}</span></td>
                 </tr>
               ))}
             </tbody>
@@ -609,7 +609,7 @@ function BatchesManagementTab() {
                     <td className="font-mono text-success">{b.matched_count}</td>
                     <td className="font-mono text-warning">{b.unmatched_count}</td>
                     <td className="font-mono text-destructive">{b.failed_count}</td>
-                    <td><span className="text-[11px] px-2 py-0.5 rounded-full bg-muted">{b.status}</span></td>
+                    <td><span className="text-[0.8125rem] px-2 py-0.5 rounded-full bg-muted">{b.status}</span></td>
                     <td className="text-xs text-muted-foreground">{new Date(b.created_at).toLocaleDateString("en-GB")}</td>
                     <td>
                       <div className="flex items-center gap-2 justify-end">
@@ -759,13 +759,13 @@ function BatchPayslipsList({ batch }: { batch: any }) {
         const isMatched = !!p.employee_id;
         const isFailed = p.extraction_status === "failed";
         return (
-          <div key={p.id} className={`flex items-center gap-3 bg-background p-2.5 rounded-lg border ${isFailed ? "border-destructive/30" : "border-border/40"}`}>
-            <div className="flex-1 text-sm">
+          <div key={p.id} className={`flex flex-wrap items-center gap-3 bg-background p-2.5 rounded-lg border ${isFailed ? "border-destructive/30" : "border-border/40"}`}>
+            <div className="flex-1 min-w-0 text-sm">
               <p className="font-medium">
                 {isMatched ? p.employee?.full_name : (p.employee_name_detected ?? "לא זוהה שם")}
-                {isFailed && <span className="ms-2 text-[10px] px-2 py-0.5 rounded-full bg-destructive/10 text-destructive">נכשל</span>}
-                {!isFailed && isMatched && <span className="ms-2 text-[10px] px-2 py-0.5 rounded-full bg-success/10 text-success">משויך</span>}
-                {!isFailed && !isMatched && <span className="ms-2 text-[10px] px-2 py-0.5 rounded-full bg-warning/10 text-warning">לא משויך</span>}
+                {isFailed && <span className="ms-2 text-[0.8125rem] px-2 py-0.5 rounded-full bg-destructive/10 text-destructive">נכשל</span>}
+                {!isFailed && isMatched && <span className="ms-2 text-[0.8125rem] px-2 py-0.5 rounded-full bg-success/10 text-success">משויך</span>}
+                {!isFailed && !isMatched && <span className="ms-2 text-[0.8125rem] px-2 py-0.5 rounded-full bg-warning/10 text-warning">לא משויך</span>}
               </p>
               <p className="text-xs text-muted-foreground">
                 ת.ז.: <span className="font-mono">{p.id_number_detected ?? p.employee?.id_number ?? "—"}</span>
@@ -774,7 +774,7 @@ function BatchPayslipsList({ batch }: { batch: any }) {
               {isFailed && p.extraction_notes && <p className="mt-1 text-xs text-destructive/80">{p.extraction_notes}</p>}
             </div>
             {!isMatched && (
-              <div className="w-72">
+              <div className="order-last w-full sm:order-none sm:w-72">
                 <SearchableSelect
                   options={employeeOptions}
                   value=""
@@ -786,8 +786,9 @@ function BatchPayslipsList({ batch }: { batch: any }) {
             <Button
               size="sm"
               variant="ghost"
-              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+              className="h-11 w-11 sm:h-8 sm:w-8 p-0 text-destructive hover:text-destructive"
               title="מחק תלוש"
+              aria-label="מחק תלוש"
               onClick={() => setDeleteTarget(p)}
             >
               <Trash2 className="w-4 h-4" />
@@ -859,14 +860,14 @@ function UnmatchedPayslipsList({ batchId }: { batchId: string }) {
     <div className="p-4 space-y-2">
       <p className="text-sm font-medium mb-2">תלושים לא משויכים ({unmatched.length})</p>
       {unmatched.map((p) => (
-        <div key={p.id} className="flex items-center gap-3 bg-background p-2.5 rounded-lg border border-border/40">
-          <div className="flex-1 text-sm">
+        <div key={p.id} className="flex flex-col sm:flex-row sm:items-center gap-3 bg-background p-2.5 rounded-lg border border-border/40">
+          <div className="flex-1 min-w-0 text-sm">
             <p className="font-medium">{p.employee_name_detected ?? "לא זוהה שם"}</p>
             <p className="text-xs text-muted-foreground">
               ת.ז.: <span className="font-mono">{p.id_number_detected ?? "—"}</span>
             </p>
           </div>
-          <div className="w-72">
+          <div className="w-full sm:w-72">
             <SearchableSelect
               options={employeeOptions}
               value=""

@@ -388,9 +388,9 @@ export default function ITTickets() {
       {isLoading ? (
         <div className="text-center py-12 text-muted-foreground">טוען...</div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(20rem,26rem)_minmax(0,1fr)] gap-6">
           {/* Ticket list */}
-          <div className={cn("lg:col-span-1 space-y-2", selectedTicket && "hidden lg:block")}>
+          <div className={cn("space-y-2", selectedTicket && "hidden xl:block")}>
             <div className="flex flex-wrap gap-2 pb-1" role="group" aria-label="סינון לפי העברה לטיפול חיצוני">
               {([
                 { value: "any", label: "הכל", classes: "border-border/60 text-muted-foreground", activeClasses: "bg-foreground text-background border-foreground" },
@@ -443,10 +443,10 @@ export default function ITTickets() {
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
                       <span className="font-mono text-xs text-muted-foreground">{ticket.ticket_code}</span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${priorityColors[ticket.priority] ?? ""}`}>
+                      <span className={`text-[0.8125rem] px-1.5 py-0.5 rounded-full font-medium ${priorityColors[ticket.priority] ?? ""}`}>
                         {PRIORITY_LABELS[ticket.priority] ?? ticket.priority}
                       </span>
-                      <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full border", STATUS_CLASSES[ticket.status])}>
+                      <span className={cn("text-[0.8125rem] px-1.5 py-0.5 rounded-full border", STATUS_CLASSES[ticket.status])}>
                         {STATUS_LABELS[ticket.status] ?? ticket.status}
                       </span>
                       {Array.isArray(ticket.it_forwards) && ticket.it_forwards.length > 0 && (
@@ -481,11 +481,11 @@ export default function ITTickets() {
           </div>
 
           {/* Detail */}
-          <div className="lg:col-span-2">
+          <div className="min-w-0">
             {selectedTicket ? (
               <div id="ticket-details" className="bg-card rounded-xl border border-border/50 shadow-card animate-fade-in">
                 <div className="p-5 border-b border-border/50">
-                  <button onClick={() => setSelectedId(null)} className="lg:hidden flex items-center gap-1 text-sm text-muted-foreground mb-3">
+                  <button onClick={() => setSelectedId(null)} className="xl:hidden flex items-center gap-1 min-h-11 text-sm text-muted-foreground mb-3">
                     <ChevronLeft className="w-4 h-4 rotate-180" aria-hidden="true" />
                     חזרה
                   </button>
@@ -522,7 +522,7 @@ export default function ITTickets() {
                       <div className="flex items-center gap-1">
                         <SlaBadge deadline={selectedTicket.sla_deadline} done={selectedTicket.status === "done"} holidays={holidays} />
                         {selectedTicket.status !== "done" && (
-                          <button type="button" onClick={() => setSlaEditOpen(true)} className="text-xs px-2 py-1 rounded-md border border-border hover:bg-muted flex items-center gap-1" title="עריכת יעד הטיפול">
+                          <button type="button" onClick={() => setSlaEditOpen(true)} className="text-sm px-3 min-h-11 sm:min-h-9 rounded-md border border-border hover:bg-muted flex items-center gap-1" title="עריכת יעד הטיפול">
                             <CalendarClock className="w-3.5 h-3.5" aria-hidden="true" />
                             ערוך SLA
                           </button>
@@ -533,7 +533,7 @@ export default function ITTickets() {
                         type="button"
                         onClick={sendToIT}
                         disabled={sendingIT}
-                        className="text-xs px-3 py-1.5 rounded-md border border-border hover:bg-muted flex items-center gap-1 disabled:opacity-50"
+                        className="text-sm px-3 min-h-11 sm:min-h-9 rounded-md border border-border hover:bg-muted flex items-center gap-1 disabled:opacity-50"
                         title="שליחת הקריאה במייל לאנשי ה-IT שהוגדרו לחברה"
                       >
                         <Send className="w-3.5 h-3.5" aria-hidden="true" />
@@ -692,7 +692,7 @@ export default function ITTickets() {
                 </div>
               </div>
             ) : (
-              <div className="bg-card rounded-xl border border-border/50 shadow-card p-12 text-center text-muted-foreground">
+              <div className="hidden xl:block bg-card rounded-xl border border-border/50 shadow-card p-12 text-center text-muted-foreground">
                 <Wrench className="w-12 h-12 mx-auto mb-4 opacity-20" aria-hidden="true" />
                 <p className="font-medium">בחר קריאה מהרשימה</p>
               </div>

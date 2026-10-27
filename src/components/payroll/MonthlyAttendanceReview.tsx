@@ -253,7 +253,8 @@ export function MonthlyAttendanceReview() {
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[48rem] text-sm">
           <thead className="bg-muted/50">
             <tr>
               <th className="p-2 w-8"><Checkbox aria-label="סמן הכול" checked={selIds.length > 0 && selIds.length === allIds.length}
@@ -299,7 +300,8 @@ export function MonthlyAttendanceReview() {
                           <Button size="sm" variant="outline" disabled={busy} onClick={() => review(pend.map((c) => c.id), false)}><X className="w-4 h-4 ml-1" />דחה הכול</Button>
                         </>}
                       </div>
-                      <table className="w-full text-sm bg-card rounded">
+                      <div className="overflow-x-auto">
+                      <table className="w-full min-w-[40rem] text-sm bg-card rounded">
                         <thead><tr className="text-muted-foreground"><th className="p-1 text-right">תאריך</th><th className="p-1 text-right">יום</th>
                           <th className="p-1 text-right">כניסה</th><th className="p-1 text-right">יציאה</th><th className="p-1 text-right">מצב / סיבה</th><th className="p-1 text-right">פעולות</th></tr></thead>
                         <tbody>
@@ -310,6 +312,7 @@ export function MonthlyAttendanceReview() {
                           {!shown.length && <tr><td colSpan={6} className="p-3 text-center text-muted-foreground">אין חוסרים החודש</td></tr>}
                         </tbody>
                       </table>
+                      </div>
                     </td></tr>
                   )}
                 </Fragment>
@@ -317,6 +320,7 @@ export function MonthlyAttendanceReview() {
             })}
           </tbody>
         </table>
+        </div>
       </CardContent>
     </Card>
   );
@@ -343,8 +347,8 @@ function DayRow({ r, emp, pending, busy, canApprove, onTime, onAbsence, onReview
     <>
       <tr className={cn("border-t", gap && "bg-destructive/15")}>
         <td className="p-1">{fmtDate(r.day)}</td><td className="p-1">{dow(r.day)}</td>
-        <td className="p-1"><Input type="time" className="h-8 w-28" value={inT} onChange={(e) => setInT(e.target.value)} aria-label="כניסה" /></td>
-        <td className="p-1"><Input type="time" className="h-8 w-28" value={outT} onChange={(e) => setOutT(e.target.value)} aria-label="יציאה" /></td>
+        <td className="p-1"><Input type="time" className="h-10 w-32" value={inT} onChange={(e) => setInT(e.target.value)} aria-label="כניסה" /></td>
+        <td className="p-1"><Input type="time" className="h-10 w-32" value={outT} onChange={(e) => setOutT(e.target.value)} aria-label="יציאה" /></td>
         <td className="p-1">
           {r.leave ? <Badge variant="secondary">{r.leave}</Badge>
             : r.status === "missing" ? <span className="text-destructive font-medium">לא החתים</span>
@@ -356,7 +360,7 @@ function DayRow({ r, emp, pending, busy, canApprove, onTime, onAbsence, onReview
             {changed && <Button size="sm" disabled={busy} onClick={save}><Save className="w-4 h-4 ml-1" />שמור</Button>}
             {gap && (
               <Select onValueChange={(v) => onAbsence(emp, r.day, v)}>
-                <SelectTrigger className="h-8 w-32"><SelectValue placeholder="סמן היעדרות" /></SelectTrigger>
+                <SelectTrigger className="h-10 w-36"><SelectValue placeholder="סמן היעדרות" /></SelectTrigger>
                 <SelectContent>{ABSENCE_TYPES.map((t) => <SelectItem key={t} value={t}>{LEAVE_TYPE_LABEL[t]}</SelectItem>)}</SelectContent>
               </Select>
             )}
