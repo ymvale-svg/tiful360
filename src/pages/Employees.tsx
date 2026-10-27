@@ -260,7 +260,7 @@ export default function Employees() {
 
             {/* Filters */}
             <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2 w-72">
+              <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 min-h-11 w-full sm:w-72">
                 <Search className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
                 <input
                   type="search"
@@ -268,16 +268,18 @@ export default function Employees() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="חיפוש לפי שם, מזהה, תפקיד..."
-                  className="bg-transparent text-sm outline-none w-full"
+                  className="bg-transparent text-base outline-none w-full"
                 />
               </div>
 
-              <div className="flex items-center gap-1 bg-card border border-border rounded-lg p-1">
+              <div className="flex items-center gap-1 bg-card border border-border rounded-lg p-1 max-w-full overflow-x-auto">
                 {(["all", "active", "onboarding", "leaving", "inactive"] as const).map((s) => (
                   <button
                     key={s}
+                    type="button"
                     onClick={() => setStatusFilter(s)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                    aria-pressed={statusFilter === s}
+                    className={`shrink-0 min-h-10 px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${
                       statusFilter === s
                         ? "bg-primary text-primary-foreground"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -304,8 +306,54 @@ export default function Employees() {
               )}
             </div>
 
+            {/* Mobile: one card per employee with the identifying fields. */}
+            <div className="sm:hidden space-y-2">
+              {isLoading ? (
+                <div className="p-8 text-center text-muted-foreground">טוען...</div>
+              ) : filtered.length === 0 ? (
+                <div className="p-8 text-center text-muted-foreground">לא נמצאו עובדים</div>
+              ) : (
+                filtered.map((emp) => {
+                  const full = fullById.get(emp.id);
+                  const canInvite = canManageUsers && !!full?.email && !full?.linked_user_id;
+                  return (
+                    <div key={emp.id} className="bg-card rounded-xl border border-border/50 shadow-card p-3">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/employees/${emp.id}`)}
+                        className="w-full text-right flex items-start justify-between gap-3 min-h-11"
+                      >
+                        <span className="min-w-0">
+                          <span className="block font-semibold text-base break-words">{emp.full_name}</span>
+                          <span className="block text-sm text-muted-foreground mt-0.5">
+                            {[emp.role, emp.department].filter(Boolean).join(" • ")}
+                          </span>
+                          <span className="block font-mono text-[0.8125rem] text-muted-foreground mt-0.5">{emp.employee_code}</span>
+                        </span>
+                        <span className={`status-badge shrink-0 ${statusClasses[emp.status as EmployeeStatus] ?? "status-inactive"}`}>
+                          {statusLabels[emp.status as EmployeeStatus] ?? emp.status}
+                        </span>
+                      </button>
+                      {canInvite && (
+                        <Button
+                          size="touch"
+                          variant="outline"
+                          className="w-full mt-2 gap-1"
+                          disabled={inviteMutation.isPending}
+                          onClick={() => handleSingleInvite(emp.id, emp.full_name)}
+                        >
+                          <Mail className="w-4 h-4" />
+                          צור חשבון
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
             {/* Table */}
-            <div className="bg-card rounded-xl border border-border/50 shadow-card overflow-auto">
+            <div className="hidden sm:block bg-card rounded-xl border border-border/50 shadow-card overflow-auto">
               {isLoading ? (
                 <div className="p-8 text-center text-muted-foreground">טוען...</div>
               ) : (
@@ -379,7 +427,7 @@ export default function Employees() {
                           {canManageUsers && (
                             <td onClick={(e) => e.stopPropagation()}>
                               {hasAccount ? (
-                                <Badge variant="outline" className="gap-1 text-[11px] bg-success/10 text-success border-success/20">
+                                <Badge variant="outline" className="gap-1 text-[0.8125rem] bg-success/10 text-success border-success/20">
                                   <ShieldCheck className="w-3 h-3" />
                                   פעיל
                                 </Badge>
@@ -387,7 +435,7 @@ export default function Employees() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="h-7 text-[11px] gap-1"
+                                  className="h-9 text-sm gap-1"
                                   disabled={inviteMutation.isPending}
                                   onClick={() => handleSingleInvite(emp.id, emp.full_name)}
                                 >
@@ -397,7 +445,7 @@ export default function Employees() {
                               ) : (
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                                    <span className="inline-flex items-center gap-1 text-[0.8125rem] text-muted-foreground">
                                       <ShieldAlert className="w-3 h-3" />
                                       אין מייל
                                     </span>

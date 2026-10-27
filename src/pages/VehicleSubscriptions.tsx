@@ -321,7 +321,7 @@ export default function VehicleSubscriptions() {
     exportToExcel(data, headers, "מנויי_רכב");
   };
 
-  const selectClass = "h-9 px-2 rounded-md border border-input bg-background text-sm";
+  const selectClass = "h-11 sm:h-9 px-2 rounded-md border border-input bg-background text-base sm:text-sm";
 
   return (
     <div className="space-y-5 animate-fade-in" dir="rtl">
@@ -416,7 +416,7 @@ export default function VehicleSubscriptions() {
       <div className="bg-card border border-border rounded-xl overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-xs text-muted-foreground border-b border-border">
+            <tr className="text-[0.8125rem] text-muted-foreground border-b border-border">
               <th className="text-right font-medium px-4 py-3">עובד</th>
               <th className="text-right font-medium px-4 py-3">מס' רכב</th>
               <th className="text-right font-medium px-4 py-3">סוג רכב</th>

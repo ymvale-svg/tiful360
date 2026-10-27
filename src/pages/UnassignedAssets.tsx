@@ -137,7 +137,7 @@ export default function UnassignedAssets() {
 
       {/* Filters */}
       <div className="bg-card border border-border rounded-2xl p-3 flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-[220px]">
+        <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-[220px]">
           <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={q}
@@ -157,7 +157,7 @@ export default function UnassignedAssets() {
             setSelectedIds([]);
           }}
         >
-          <SelectTrigger className="w-[180px]"><SelectValue placeholder="דומיין" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="דומיין" /></SelectTrigger>
           <SelectContent>
             {DOMAIN_ORDER.map((d) => (
               <SelectItem key={d} value={d}>{DOMAIN_META[d].title}</SelectItem>
@@ -166,7 +166,7 @@ export default function UnassignedAssets() {
         </Select>
 
         <Select value={categoryId} onValueChange={(v) => { setCategoryId(v); setGroupId("all"); }}>
-          <SelectTrigger className="w-[180px]"><SelectValue placeholder="קטגוריה" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="קטגוריה" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">כל הקטגוריות</SelectItem>
             {visibleCategories.map((c: any) => (
@@ -176,7 +176,7 @@ export default function UnassignedAssets() {
         </Select>
 
         <Select value={groupId} onValueChange={setGroupId}>
-          <SelectTrigger className="w-[180px]"><SelectValue placeholder="תת-קטגוריה" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="תת-קטגוריה" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">כל תתי-הקטגוריות</SelectItem>
             {visibleGroups.map((g: any) => (
@@ -186,7 +186,7 @@ export default function UnassignedAssets() {
         </Select>
 
         <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="w-[140px]"><SelectValue placeholder="סטטוס" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[140px]"><SelectValue placeholder="סטטוס" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">כל הסטטוסים</SelectItem>
             {Object.entries(statusLabels).map(([k, v]) => (
@@ -255,7 +255,7 @@ export default function UnassignedAssets() {
                     {catById.get(a.category_id)?.category_name} · {statusLabels[a.status] ?? a.status}
                   </div>
                 </button>
-                <Button size="sm" className="w-full gap-1.5" onClick={() => setHandoverAsset(a)}>
+                <Button size="touch" className="w-full gap-1.5" onClick={() => setHandoverAsset(a)}>
                   <FileSignature className="w-4 h-4" /> בצע מסירה
                 </Button>
               </div>
@@ -263,8 +263,8 @@ export default function UnassignedAssets() {
           </div>
 
           {/* Table */}
-          <div className="hidden sm:block bg-card border border-border rounded-2xl overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="hidden sm:block bg-card border border-border rounded-2xl overflow-x-auto">
+            <table className="w-full min-w-[44rem] text-sm">
               <thead className="bg-muted/40 text-muted-foreground text-xs">
                 <tr>
                   <th className="px-3 py-2 w-10" aria-label="בחירה למסירה מרובה" />

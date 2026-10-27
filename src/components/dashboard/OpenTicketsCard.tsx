@@ -89,7 +89,7 @@ export function OpenTicketsCard() {
               <div className="flex flex-col items-end gap-1.5 shrink-0">
                 <span
                   className={cn(
-                    "text-[10px] px-1.5 py-0.5 rounded-full border",
+                    "text-[0.8125rem] px-1.5 py-0.5 rounded-full border",
                     ticket.status === "in_progress"
                       ? "bg-info/15 text-info border-info/40"
                       : "bg-warning/15 text-warning-foreground border-warning/40",
@@ -109,7 +109,7 @@ export function OpenTicketsCard() {
                     נשלח למשימון
                   </span>
                 )}
-                <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                <span className="text-[0.8125rem] text-muted-foreground flex items-center gap-1">
                   <span
                     className={cn(
                       "w-1.5 h-1.5 rounded-full",
@@ -121,7 +121,7 @@ export function OpenTicketsCard() {
                 {!(Array.isArray(ticket.it_forwards) && ticket.it_forwards.length > 0) && !ticket.mesimon_task_id && (
                 <button
                   type="button"
-                  className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-medium text-primary border border-primary/40 bg-primary/10 rounded-md px-2 py-1 hover:bg-primary/15 transition-colors disabled:opacity-50"
+                  className="mt-0.5 inline-flex items-center gap-1 text-[0.8125rem] font-medium text-primary border border-primary/40 bg-primary/10 rounded-md px-2 py-1 hover:bg-primary/15 transition-colors disabled:opacity-50"
                   disabled={sendingId === ticket.id}
                   onClick={(e) => {
                     e.preventDefault();

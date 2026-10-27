@@ -752,8 +752,8 @@ export default function AssetsDomainPage() {
 
                   </div>
                 ) : (
-                  <div className="bg-card border border-border rounded-xl overflow-hidden">
-                    <div className="grid grid-cols-[1fr_7rem_5rem_6rem_2rem_2rem] gap-2 px-4 py-2 bg-muted/40 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide text-right">
+                  <div className="bg-card border border-border rounded-xl overflow-x-auto">
+                    <div className="min-w-[34rem] grid grid-cols-[1fr_7rem_5rem_6rem_2rem_2rem] gap-2 px-4 py-2 bg-muted/40 text-[0.8125rem] font-semibold text-muted-foreground uppercase tracking-wide text-right">
                       <div>תת-קטגוריה</div>
                       <div>אחראי</div>
                       <div>סה״כ</div>
@@ -775,7 +775,7 @@ export default function AssetsDomainPage() {
                           tabIndex={0}
                           onClick={() => { setSelectedIds(new Set()); updateParams({ cat: category.id, sub: c.id }); }}
                           onKeyDown={(e) => { if (e.key === "Enter") { setSelectedIds(new Set()); updateParams({ cat: category.id, sub: c.id }); } }}
-                          className="w-full grid grid-cols-[1fr_7rem_5rem_6rem_2rem_2rem] gap-2 px-4 py-2.5 text-sm border-t border-border hover:bg-muted/40 text-right items-center transition-colors cursor-pointer"
+                          className="w-full min-w-[34rem] grid grid-cols-[1fr_7rem_5rem_6rem_2rem_2rem] gap-2 px-4 py-3 text-base border-t border-border hover:bg-muted/40 text-right items-center transition-colors cursor-pointer"
                         >
                           <div className="flex items-center gap-2 truncate">
                             {hasExpired && <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0" />}
@@ -909,7 +909,7 @@ const SubCategoryCard = React.forwardRef<HTMLDivElement, {
         extraClass,
       )}
     >
-      <span className="absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+      <span className="absolute top-2 right-2 text-[0.8125rem] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
         {total}
       </span>
       {hasExpired && (
@@ -962,7 +962,7 @@ const SubCategoryCard = React.forwardRef<HTMLDivElement, {
           </div>
         )}
         {!isUnassigned && card.ownerRole && (
-          <div className="text-[10px] text-muted-foreground mt-0.5">
+          <div className="text-[0.8125rem] text-muted-foreground mt-0.5">
             אחראי: {OWNER_ROLE_LABEL[card.ownerRole] ?? card.ownerRole}
           </div>
         )}

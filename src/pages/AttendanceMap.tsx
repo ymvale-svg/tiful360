@@ -31,7 +31,7 @@ export default function AttendanceMap() {
   const outCount = filtered.filter((l) => l.direction === "out").length;
 
   return (
-    <div dir="rtl" className="p-4 md:p-6 h-[calc(100vh-3rem)] flex flex-col gap-4">
+    <div dir="rtl" className="p-4 md:p-6 flex flex-col gap-4 lg:h-[calc(100dvh-5.5rem)]">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -42,7 +42,7 @@ export default function AttendanceMap() {
             מיקומי GPS של עובדים שביצעו החתמה היום
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline" className="gap-1">
             <span className="w-2 h-2 rounded-full bg-green-600 inline-block" />
             בעבודה: {inCount}
@@ -51,15 +51,15 @@ export default function AttendanceMap() {
             <span className="w-2 h-2 rounded-full bg-gray-500 inline-block" />
             יצא: {outCount}
           </Badge>
-          <Button size="sm" variant="outline" onClick={() => refetch()} disabled={isFetching} aria-label="רענן מיקומי עובדים">
+          <Button size="icon-touch" variant="outline" onClick={() => refetch()} disabled={isFetching} aria-label="רענן מיקומי עובדים">
             <RefreshCw className={cn("w-4 h-4", isFetching && "animate-spin")} aria-hidden="true" />
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 flex-1 min-h-0">
+      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 lg:flex-1 lg:min-h-0">
         {/* Sidebar list */}
-        <Card className="p-3 flex flex-col gap-3 min-h-0">
+        <Card className="p-3 flex flex-col gap-3 min-h-0 max-h-[55dvh] lg:max-h-none">
           <div className="relative">
             <Search className="absolute right-2 top-2.5 w-4 h-4 text-muted-foreground" aria-hidden="true" />
             <Input
@@ -77,7 +77,7 @@ export default function AttendanceMap() {
               <Button
                 variant={deptFilter === null ? "default" : "outline"}
                 size="sm"
-                className="h-7 text-xs"
+                className="min-h-11 lg:min-h-9 text-sm"
                 onClick={() => setDeptFilter(null)}
               >
                 הכל
@@ -87,7 +87,7 @@ export default function AttendanceMap() {
                   key={d}
                   variant={deptFilter === d ? "default" : "outline"}
                   size="sm"
-                  className="h-7 text-xs"
+                  className="min-h-11 lg:min-h-9 text-sm"
                   onClick={() => setDeptFilter(d)}
                 >
                   {d}
@@ -113,14 +113,14 @@ export default function AttendanceMap() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="font-medium text-sm truncate">{loc.full_name}</div>
-                    <div className="text-[11px] text-muted-foreground truncate">
+                    <div className="font-medium text-base truncate">{loc.full_name}</div>
+                    <div className="text-[0.8125rem] text-muted-foreground truncate">
                       {loc.role}{loc.department && ` • ${loc.department}`}
                     </div>
                   </div>
                   <span
                     className={cn(
-                      "text-[10px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap",
+                      "text-[0.8125rem] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap",
                       loc.direction === "in"
                         ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                         : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400",
@@ -129,7 +129,7 @@ export default function AttendanceMap() {
                     {loc.direction === "in" ? "בעבודה" : "יצא"}
                   </span>
                 </div>
-                <div className="text-[11px] text-muted-foreground mt-1 flex items-center justify-between">
+                <div className="text-[0.8125rem] text-muted-foreground mt-1 flex items-center justify-between">
                   <span>
                     {new Date(loc.punch_at).toLocaleTimeString("he-IL", {
                       hour: "2-digit",
@@ -144,7 +144,7 @@ export default function AttendanceMap() {
         </Card>
 
         {/* Map */}
-        <Card className="overflow-hidden p-0 min-h-[400px]">
+        <Card className="overflow-hidden p-0 h-[60dvh] min-h-[400px] lg:h-auto">
           <EmployeeMapView locations={filtered} />
         </Card>
       </div>

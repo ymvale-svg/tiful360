@@ -314,7 +314,10 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
           <DialogDescription>ארבעה שלבים קצרים להקמת עובד חדש</DialogDescription>
         </DialogHeader>
 
-        {/* Stepper */}
+        {/* Stepper: on narrow screens only the active step is named. */}
+        <p className="sm:hidden text-sm text-muted-foreground mt-2" aria-hidden="true">
+          שלב {step + 1} מתוך {STEPS.length}
+        </p>
         <ol className="flex items-center gap-1 sm:gap-2 mt-2" aria-label="שלבי הקליטה">
           {STEPS.map((s, i) => {
             const Icon = s.icon;
@@ -328,20 +331,20 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
                   disabled={i > step}
                   aria-current={active ? "step" : undefined}
                   className={cn(
-                    "flex items-center gap-1.5 min-w-0 rounded-full px-2 py-1 transition-colors",
+                    "flex items-center gap-1.5 min-w-0 min-h-11 rounded-full px-2 py-1 transition-colors",
                     active && "bg-primary/10 text-primary",
                     done && "text-primary hover:bg-muted",
                     !active && !done && "text-muted-foreground",
                   )}
                 >
                   <span className={cn(
-                    "w-6 h-6 shrink-0 rounded-full flex items-center justify-center border text-[11px]",
+                    "w-6 h-6 shrink-0 rounded-full flex items-center justify-center border",
                     active ? "border-primary bg-primary text-primary-foreground"
                       : done ? "border-primary bg-primary/15" : "border-border",
                   )}>
                     {done ? <Check className="w-3.5 h-3.5" aria-hidden="true" /> : <Icon className="w-3.5 h-3.5" aria-hidden="true" />}
                   </span>
-                  <span className="text-[11px] sm:text-xs whitespace-nowrap">{s.label}</span>
+                  <span className={cn("text-sm whitespace-nowrap", !active && "sr-only sm:not-sr-only")}>{s.label}</span>
                 </button>
                 {i < STEPS.length - 1 && <span className="h-0.5 w-2 sm:w-4 bg-border rounded shrink" aria-hidden="true" />}
               </li>
@@ -446,7 +449,7 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
                   ]}
                   placeholder="החברה הראשית" searchPlaceholder="חפש מעסיק..."
                 />
-                <p className="text-[11px] text-muted-foreground mt-1">קובע באיזו ישות משפטית ייצא טופס 101 של העובד</p>
+                <p className="text-[0.8125rem] text-muted-foreground mt-1">קובע באיזו ישות משפטית ייצא טופס 101 של העובד</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -493,7 +496,7 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
                       <div className="flex items-center gap-2">
                         <FileText className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden="true" />
                         <span className="text-sm truncate flex-1">{d.file.name}</span>
-                        <span className="text-[11px] text-muted-foreground shrink-0">
+                        <span className="text-[0.8125rem] text-muted-foreground shrink-0">
                           {(d.file.size / 1024 / 1024).toFixed(1)}MB
                         </span>
                         <Button

@@ -69,8 +69,8 @@ function InfoRow({ icon: Icon, label, value, mono }: { icon: any; label: string;
     <div className="flex items-start gap-3">
       <Icon className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
       <div className="min-w-0">
-        <dt className="text-xs text-muted-foreground">{label}</dt>
-        <dd className={cn("text-sm font-medium mt-0.5 break-words", mono && "font-mono")}>{value || "—"}</dd>
+        <dt className="text-sm text-muted-foreground">{label}</dt>
+        <dd className={cn("text-base font-medium mt-0.5 break-words", mono && "font-mono")}>{value || "—"}</dd>
       </div>
     </div>
   );
@@ -209,34 +209,34 @@ export default function EmployeeDetail() {
       </div>
 
       {/* Header */}
-      <div className="bg-card rounded-xl border border-border/50 shadow-card p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-5">
-            <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center">
+      <div className="bg-card rounded-xl border border-border/50 shadow-card p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-4 sm:gap-5 min-w-0">
+            <div className="w-16 h-16 shrink-0 rounded-xl bg-primary/10 flex items-center justify-center">
               <span className="text-2xl font-bold text-primary">{initials}</span>
             </div>
-            <div>
-              <h1 className="text-xl font-bold">{employee.full_name}</h1>
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold break-words">{employee.full_name}</h1>
               <p className="text-sm text-muted-foreground mt-0.5">{employee.role} • {employee.department}</p>
-              <div className="flex items-center gap-3 mt-2">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
                 <span className={`status-badge ${statusClasses[employee.status] ?? ""}`}>
                   {statusLabels[employee.status] ?? employee.status}
                 </span>
-                <span className="text-xs text-muted-foreground">ת.ז: {employee.id_number}</span>
-                <span className="text-xs text-muted-foreground">{employee.employee_code}</span>
+                <span className="text-sm text-muted-foreground">ת.ז: {employee.id_number}</span>
+                <span className="text-sm text-muted-foreground">{employee.employee_code}</span>
                 {employee.birth_date && (
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-sm text-muted-foreground">
                     תאריך לידה: {new Date(employee.birth_date).toLocaleDateString("en-GB")}
                   </span>
                 )}
-                <span className="text-xs text-muted-foreground">
+                <span className="text-sm text-muted-foreground">
                   תחילת עבודה: {new Date(employee.start_date).toLocaleDateString("en-GB")}
                 </span>
               </div>
             </div>
           </div>
           {employee.status !== "leaving" && employee.status !== "inactive" && (
-            <Button variant="destructive" className="gap-2" onClick={() => setOffboardingOpen(true)}>
+            <Button variant="destructive" className="gap-2 h-11 w-full sm:w-auto shrink-0" onClick={() => setOffboardingOpen(true)}>
               <UserMinus className="w-4 h-4" />
               התנעת עזיבה
             </Button>
@@ -283,13 +283,15 @@ export default function EmployeeDetail() {
       )}
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 bg-card border border-border rounded-lg p-1 w-fit">
+      <div className="flex items-center gap-1 bg-card border border-border rounded-lg p-1 w-fit max-w-full overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.id}
+            type="button"
+            aria-current={activeTab === tab.id ? "true" : undefined}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors",
+              "flex shrink-0 items-center gap-2 min-h-11 px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors",
               activeTab === tab.id
                 ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted"

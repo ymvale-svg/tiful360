@@ -333,11 +333,11 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
                                   <span className={`text-sm font-medium ${item.status === "done" ? "line-through text-muted-foreground" : ""}`}>
                                     {item.title}
                                   </span>
-                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                                  <span className="text-[0.8125rem] px-1.5 py-0.5 rounded bg-primary/10 text-primary">
                                     {OWNER_ROLE_LABEL[item.owner_role] ?? item.owner_role}
                                   </span>
                                   {item.assigned_at && (
-                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600">
+                                    <span className="text-[0.8125rem] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600">
                                       הוצמד ב-{formatDateTimeDMY(item.assigned_at)}
                                     </span>
                                   )}

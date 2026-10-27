@@ -139,11 +139,11 @@ export function Tax101AdminTab() {
                   <tr key={f.id}>
                     <td>
                       <p className="font-medium">{f.employee?.full_name ?? "—"}</p>
-                      <p className="text-[11px] text-muted-foreground">{f.employee?.employee_code}</p>
+                      <p className="text-[0.8125rem] text-muted-foreground">{f.employee?.employee_code}</p>
                     </td>
                     <td className="font-mono">{f.tax_year}</td>
                     <td>
-                      <span className={`text-[11px] px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
+                      <span className={`text-[0.8125rem] px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
                     </td>
                     <td className="text-xs text-muted-foreground">{new Date(f.created_at).toLocaleDateString("en-GB")}</td>
                     <td className="text-xs text-muted-foreground">
@@ -153,7 +153,7 @@ export function Tax101AdminTab() {
                       <div className="flex items-center gap-1 justify-end">
                         {f.status === "pending" && f.employee?.email && (
                           <Button
-                            size="sm" variant="ghost" className="h-7 gap-1 text-xs"
+                            size="sm" variant="ghost" className="h-10 gap-1 text-sm"
                             onClick={() => handleResend(f.id)}
                             disabled={sendInvite.isPending}
                           >
@@ -163,7 +163,7 @@ export function Tax101AdminTab() {
                         )}
                         {f.pdf_url && (
                           <Button
-                            size="sm" variant="ghost" className="h-7 gap-1 text-xs"
+                            size="sm" variant="ghost" className="h-10 gap-1 text-sm"
                             onClick={() => openTax101Pdf(f.pdf_url)}
                           >
                             <Download className="w-3 h-3" />
@@ -171,7 +171,8 @@ export function Tax101AdminTab() {
                           </Button>
                         )}
                         <Button
-                          size="icon" variant="ghost" className="h-7 w-7"
+                          size="icon" variant="ghost" className="h-10 w-10"
+                          aria-label="מחק טופס"
                           onClick={() => setDeleteTarget(f)}
                         >
                           <Trash2 className="w-3.5 h-3.5 text-destructive" />

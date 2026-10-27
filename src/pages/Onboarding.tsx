@@ -54,7 +54,7 @@ export default function Onboarding() {
           <h1 className="page-title">קליטת עובדים</h1>
           <p className="page-subtitle">ניהול תהליכי הקליטה — מהזנת הצרכים ועד מסירת הציוד</p>
         </div>
-        <Button className="gap-2 w-full sm:w-auto" onClick={() => setDialogOpen(true)}>
+        <Button size="touch" className="gap-2 w-full sm:w-auto" onClick={() => setDialogOpen(true)}>
           <UserPlus className="w-4 h-4" />
           תהליך קליטה חדש
         </Button>
@@ -67,7 +67,7 @@ export default function Onboarding() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="חיפוש לפי שם או מזהה עובד"
-            className="w-full pr-9 pl-3 py-2 bg-card border border-border rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
+            className="w-full min-h-11 pr-9 pl-3 py-2 bg-card border border-border rounded-lg text-base outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
         <div className="grid grid-cols-3 sm:flex gap-1.5 w-full sm:w-auto">
@@ -75,7 +75,7 @@ export default function Onboarding() {
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
-              className={`min-w-0 px-2.5 py-1.5 rounded-lg text-xs whitespace-nowrap border transition-colors ${
+              className={`min-w-0 min-h-11 px-2.5 py-1.5 rounded-lg text-sm whitespace-nowrap border transition-colors ${
                 statusFilter === s ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"
               }`}
             >
@@ -115,22 +115,22 @@ export default function Onboarding() {
                   <span className="font-medium">
                     <EmployeeLink employeeId={p.employee_id} name={p.employees?.full_name} />
                   </span>
-                  <span className={`text-[11px] px-2 py-0.5 rounded-full ${STATUS_STYLE[p.status]}`}>
+                  <span className={`text-[0.8125rem] px-2 py-0.5 rounded-full ${STATUS_STYLE[p.status]}`}>
                     {ONBOARDING_STATUS_LABEL[p.status]}
                   </span>
                   {p.status !== "done" && d !== null && d <= 2 && (
-                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-destructive/10 text-destructive">
+                    <span className="text-[0.8125rem] px-2 py-0.5 rounded-full bg-destructive/10 text-destructive">
                       {d >= 0 ? `מתחיל בעוד ${d} ימים` : "כבר התחיל"}
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-sm text-muted-foreground mt-0.5">
                   {p.employees?.role} · {p.employees?.department} · תחילת עבודה{" "}
                   {p.employees?.start_date ? new Date(p.employees.start_date).toLocaleDateString("en-GB") : "—"}
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                <span className="text-sm text-muted-foreground whitespace-nowrap">
                   {done}/{items.length} פריטים
                 </span>
                 {p.status === "draft" && (

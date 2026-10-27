@@ -16,10 +16,10 @@ export function CompanySelector() {
   if (loading || companies.length <= 1) return null;
 
   return (
-    <div className="flex items-center gap-2">
-      <Building2 className="w-4 h-4 text-muted-foreground shrink-0" />
+    <div className="flex items-center gap-2 min-w-0">
+      <Building2 className="hidden sm:block w-4 h-4 text-muted-foreground shrink-0" aria-hidden="true" />
       <Select value={activeCompanyId ?? ""} onValueChange={setActiveCompanyId}>
-        <SelectTrigger className="w-[200px] h-8 text-sm">
+        <SelectTrigger className="w-36 sm:w-[200px] h-10 text-sm" aria-label="בחירת חברה">
           <SelectValue placeholder="בחר חברה" />
         </SelectTrigger>
         <SelectContent>

@@ -157,7 +157,7 @@
   }
 
   .page-title {
-    @apply text-2xl font-bold text-foreground;
+    @apply text-2xl lg:text-3xl font-bold text-foreground;
   }
 
   .page-subtitle {
@@ -165,7 +165,7 @@
   }
 
   .status-badge {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium;
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[0.8125rem] font-medium;
   }
 
   .status-active {

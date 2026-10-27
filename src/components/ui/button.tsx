@@ -21,6 +21,9 @@ const buttonVariants = cva(
         sm: "h-9 rounded-md px-3",
         lg: "h-11 rounded-md px-8",
         icon: "h-10 w-10",
+        // Touch-sized targets for primary actions on mobile and dense rows.
+        touch: "h-11 rounded-md px-4",
+        "icon-touch": "h-11 w-11",
       },
     },
     defaultVariants: {
