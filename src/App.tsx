@@ -54,8 +54,9 @@ import { ThemeProvider } from "next-themes";
 const queryClient = new QueryClient();
 
 const PageLoader = () => (
-  <div className="min-h-screen flex items-center justify-center bg-background">
-    <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+  <div className="min-h-screen flex items-center justify-center bg-background" role="status" aria-busy="true">
+    <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin motion-reduce:animate-none" aria-hidden="true" />
+    <span className="sr-only">טוען…</span>
   </div>
 );
 
