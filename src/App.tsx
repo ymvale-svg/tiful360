@@ -5,6 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { UploadProgressCenter } from "@/components/UploadProgressCenter";
 import { SaveProgressBar } from "@/components/SaveProgressBar";
+import { ConfirmProvider } from "@/components/feedback/ConfirmDialog";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CompanyProvider } from "@/hooks/useCompany";
@@ -69,6 +70,7 @@ const App = () => (
       <PwaUpdatePrompt />
       <UploadProgressCenter />
       <SaveProgressBar />
+      <ConfirmProvider>
       <BrowserRouter>
         <AuthProvider>
           <CompanyProvider>
@@ -119,6 +121,7 @@ const App = () => (
           </CompanyProvider>
         </AuthProvider>
       </BrowserRouter>
+      </ConfirmProvider>
     </TooltipProvider>
     </ThemeProvider>
   </QueryClientProvider>

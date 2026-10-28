@@ -8,7 +8,10 @@ export interface UploadJob {
   stage: UploadStage;
   percent: number;
   error?: string;
-  retry?: () => void;
+  /** Optional progress line, e.g. "שורה 37 מתוך 120" for bulk jobs. */
+  detail?: string;
+  /** Bulk jobs (imports, multi-row saves) show a count instead of upload stages. */
+  kind?: "upload" | "batch";
 }
 
 let jobs: UploadJob[] = [];
@@ -112,11 +115,12 @@ export async function uploadFile(bucket: string, path: string, file: Blob, opts:
     const sender = file.size >= RESUMABLE_FROM ? sendResumable : send;
     const res = await sender(bucket, path, file, opts, token, (p) => uploadJobs.update(id, { percent: p }));
     if (res.error) {
-      uploadJobs.update(id, { stage: "error", error: res.error.message, retry: () => { void run(); } });
+      // No retry from the progress card: the caller already got this error, so a re-upload started
+      // here would never be linked to its record. The user retries from the screen that started it.
+      uploadJobs.update(id, { stage: "error", error: res.error.message });
       return res;
     }
-    uploadJobs.update(id, { stage: "save", percent: 100 });
-    setTimeout(() => uploadJobs.update(id, { stage: "done" }), 500);
+    uploadJobs.update(id, { stage: "done", percent: 100 });
     setTimeout(() => uploadJobs.remove(id), 4500);
     return res;
   };
