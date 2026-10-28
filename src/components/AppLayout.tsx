@@ -2,7 +2,7 @@ import { Suspense, useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { CompanySelector } from "./CompanySelector";
-import { Bell, LogOut, Menu, UserRound } from "lucide-react";
+import { LogOut, Menu, UserRound } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useData";
@@ -11,6 +11,7 @@ import { SkipLink } from "./SkipLink";
 import { AiAssistantWidget } from "./AiAssistantWidget";
 import { useSignedFormAlerts } from "@/hooks/useSignedFormAlerts";
 import { GlobalSearch } from "./GlobalSearch";
+import { NotificationBell } from "./NotificationCenter";
 
 export function AppLayout() {
   const { user, signOut, isSuperAdmin, roles } = useAuth();
@@ -43,7 +44,7 @@ export function AppLayout() {
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
-              className="lg:hidden p-2 rounded-lg hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="lg:hidden grid h-10 w-10 place-items-center rounded-lg hover:bg-muted transition-colors [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label="פתיחת תפריט ניווט"
               aria-expanded={mobileMenuOpen}
             >
@@ -61,7 +62,7 @@ export function AppLayout() {
                   sessionStorage.setItem("activeExperience", "portal");
                   navigate("/portal");
                 }}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-muted hover:bg-muted/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="flex min-h-10 items-center gap-2 px-3 rounded-lg text-sm bg-muted [@media(pointer:coarse)]:min-h-11 hover:bg-muted/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 aria-label="מעבר לפורטל עובדים"
                 title="מעבר לפורטל עובדים"
               >
@@ -70,14 +71,7 @@ export function AppLayout() {
               </button>
             )}
             <ThemeToggle />
-            <button
-              type="button"
-              className="relative p-2 rounded-lg hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              aria-label="התראות"
-            >
-              <Bell className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
-              <span className="absolute top-1.5 left-1.5 w-2 h-2 bg-destructive rounded-full animate-pulse-dot" aria-hidden="true" />
-            </button>
+            <NotificationBell />
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0" aria-hidden="true">
                 <span className="text-xs font-bold text-primary-foreground">{initials}</span>
@@ -90,7 +84,7 @@ export function AppLayout() {
             <button
               type="button"
               onClick={handleSignOut}
-              className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="grid h-10 w-10 place-items-center rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               aria-label="יציאה מהמערכת"
               title="יציאה"
             >

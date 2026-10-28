@@ -219,7 +219,8 @@
   }
 
   .sidebar-item-active {
-    @apply bg-sidebar-accent text-sidebar-primary;
+    /* Colour, weight and an edge marker: the current page is never shown by colour alone. */
+    @apply bg-sidebar-accent text-sidebar-primary font-semibold shadow-[inset_-3px_0_0_hsl(var(--sidebar-primary))];
   }
 
   .sidebar-item-inactive {

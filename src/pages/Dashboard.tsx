@@ -1,7 +1,6 @@
 import { useState } from "react";
 import {
-  Users, Package, AlertTriangle, Shield, UserPlus,
-  UserMinus, Clock, SlidersHorizontal
+  UserMinus, Clock, SlidersHorizontal, OctagonAlert, AlertTriangle, Info,
 } from "lucide-react";
 import { Link, Navigate } from "react-router-dom";
 import { useDashboardStats, useAlerts, useEmployees, useActivityLog } from "@/hooks/useData";
@@ -18,6 +17,10 @@ import { hasDualAccess } from "@/lib/dualAccess";
 import { resolveDashboardConfig, type KpiKey, type WidgetKey } from "@/lib/dashboardConfig";
 import { useDashboardPrefs, applyWidgetOrder } from "@/hooks/useDashboardPrefs";
 import { cn } from "@/lib/utils";
+import { KpiTile } from "@/components/ui/kpi-tile";
+import { ListSkeleton } from "@/components/feedback/StateView";
+import { Skeleton } from "@/components/ui/skeleton";
+import { notificationCenter } from "@/lib/notificationCenter";
 
 export default function Dashboard() {
   const { roles, loading, user } = useAuth();
@@ -32,8 +35,13 @@ export default function Dashboard() {
   // for employee-only users before the redirect kicks in.
   if (loading || roles.length === 0) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="space-y-6" role="status" aria-busy="true">
+        <span className="sr-only">טוען את לוח הבקרה…</span>
+        <Skeleton className="h-8 w-48" />
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(13rem,1fr))] gap-4">
+          {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
+        </div>
+        <ListSkeleton rows={5} className="rounded-xl border border-border/50 bg-card" />
       </div>
     );
   }
@@ -60,12 +68,14 @@ export default function Dashboard() {
 
   const leavingEmployees = employees?.filter(e => e.status === "leaving") ?? [];
 
-  const KPI_DEFS: Record<KpiKey, { label: string; value: number | string; icon: typeof Users; color: string; bg: string }> = {
-    activeEmployees: { label: "עובדים פעילים", value: stats?.activeEmployees ?? "—", icon: Users, color: "text-primary", bg: "bg-primary/10" },
-    onboardingEmployees: { label: "עובדים בקליטה", value: stats?.onboardingEmployees ?? "—", icon: UserPlus, color: "text-success", bg: "bg-success/10" },
-    totalAssets: { label: "פריטי ציוד", value: stats?.totalAssets ?? "—", icon: Package, color: "text-info", bg: "bg-info/10" },
-    openAlerts: { label: "התראות פתוחות", value: stats?.openAlerts ?? "—", icon: AlertTriangle, color: "text-warning", bg: "bg-warning/10" },
-    openTickets: { label: "משימות IT פתוחות", value: stats?.openTickets ?? "—", icon: Shield, color: "text-destructive", bg: "bg-destructive/10" },
+  // Every number leads to the list behind it. Open alerts open the notification center, which
+  // every dashboard role can use (the /alerts page is admin and IT only).
+  const KPI_DEFS: Record<KpiKey, { label: string; value?: number; href?: string; linkLabel?: string; onOpen?: () => void }> = {
+    activeEmployees: { label: "עובדים פעילים", value: stats?.activeEmployees, href: "/employees" },
+    onboardingEmployees: { label: "עובדים בקליטה", value: stats?.onboardingEmployees, href: "/onboarding" },
+    totalAssets: { label: "פריטי ציוד", value: stats?.totalAssets, href: "/assets" },
+    openAlerts: { label: "התראות פתוחות", value: stats?.openAlerts, onOpen: () => notificationCenter.set(true), linkLabel: "לפתיחת ההתראות" },
+    openTickets: { label: "קריאות שירות פתוחות", value: stats?.openTickets, href: "/it-tickets" },
   };
 
   const statCards = config.kpis.map((k) => ({ key: k, ...KPI_DEFS[k] }));
@@ -75,7 +85,6 @@ export default function Dashboard() {
     <div className="bg-card rounded-xl border border-border/50 shadow-card h-full">
       <div className="p-5 border-b border-border/50 flex items-center justify-between">
         <h2 className="font-semibold">פעילות אחרונה</h2>
-        <Link to="/employees" className="text-xs text-primary hover:underline">הצג הכל</Link>
       </div>
       <div className="divide-y divide-border/50">
         {(activityLog ?? []).slice(0, 5).map((item) => (
@@ -87,43 +96,59 @@ export default function Dashboard() {
               <p className="text-sm">{item.action}</p>
               {item.details && <p className="text-xs text-muted-foreground">{item.details}</p>}
             </div>
-            <span className="text-xs text-muted-foreground whitespace-nowrap">
-              {new Date(item.created_at).toLocaleDateString("en-GB")}
-            </span>
+            <time dateTime={item.created_at} className="text-xs text-muted-foreground whitespace-nowrap tabular-nums">
+              {new Date(item.created_at).toLocaleDateString("he-IL")}
+            </time>
           </div>
         ))}
         {(!activityLog || activityLog.length === 0) && (
-          <div className="p-8 text-center text-muted-foreground text-sm">אין פעילות עדיין</div>
+          <div className="p-8 text-center text-sm">
+            <p className="font-medium">אין פעילות עדיין</p>
+            <p className="text-muted-foreground mt-1">שיוכים, קליטות ועזיבות יופיעו כאן.</p>
+          </div>
         )}
       </div>
     </div>
   );
 
+  const SEVERITY = {
+    critical: { label: "קריטי", icon: OctagonAlert, cls: "bg-destructive/10 text-destructive" },
+    warning: { label: "אזהרה", icon: AlertTriangle, cls: "bg-warning/15 text-warning" },
+    info: { label: "מידע", icon: Info, cls: "bg-info/10 text-info" },
+  } as const;
+
   const alertsWidget = (
     <div className="bg-card rounded-xl border border-border/50 shadow-card">
       <div className="p-5 border-b border-border/50 flex items-center justify-between">
         <h2 className="font-semibold">התראות קרובות</h2>
-        <Link to="/alerts" className="text-xs text-primary hover:underline">הכל</Link>
+        <button type="button" onClick={() => notificationCenter.set(true)} className="min-h-8 text-xs font-medium text-primary hover:underline">
+          לכל ההתראות
+        </button>
       </div>
-      <div className="divide-y divide-border/50">
-        {(alerts ?? []).slice(0, 4).map((alert) => (
-          <div key={alert.id} className="p-4 flex items-center gap-3">
-            <div className={`w-2 h-2 rounded-full shrink-0 ${
-              alert.severity === "critical" ? "bg-destructive" :
-              alert.severity === "warning" ? "bg-warning" : "bg-info"
-            }`} />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm truncate">{alert.title}</p>
-              <p className="text-xs text-muted-foreground">
-                {alert.target_date ? new Date(alert.target_date).toLocaleDateString("en-GB") : "—"}
-              </p>
-            </div>
-          </div>
-        ))}
+      <ul className="divide-y divide-border/50">
+        {(alerts ?? []).slice(0, 4).map((alert) => {
+          const sev = SEVERITY[alert.severity as keyof typeof SEVERITY] ?? SEVERITY.info;
+          return (
+            <li key={alert.id} className="p-4 flex items-center gap-3">
+              <span className={cn("inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold", sev.cls)}>
+                <sev.icon className="h-3 w-3" aria-hidden="true" />{sev.label}
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm truncate">{alert.title}</p>
+                <p className="text-xs text-muted-foreground tabular-nums">
+                  {alert.target_date ? new Date(alert.target_date).toLocaleDateString("he-IL") : "ללא תאריך יעד"}
+                </p>
+              </div>
+            </li>
+          );
+        })}
         {(!alerts || alerts.length === 0) && (
-          <div className="p-6 text-center text-muted-foreground text-sm">אין התראות</div>
+          <li className="p-6 text-center text-sm">
+            <p className="font-medium">אין התראות פתוחות</p>
+            <p className="text-muted-foreground mt-1">תפוגות וציוד ללא שיוך יופיעו כאן.</p>
+          </li>
         )}
-      </div>
+      </ul>
     </div>
   );
 
@@ -180,35 +205,25 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI tiles: the number, and a link to the list behind it */}
       {statCards.length > 0 && (
         <div className="grid grid-cols-[repeat(auto-fit,minmax(13rem,1fr))] gap-4">
-          {statCards.map((stat) => {
-            // A zero has nothing to act on. Keep the card so the grid stays
-            // stable, but drop the colour — otherwise "0 התראות פתוחות" shouts
-            // as loudly as the counts that actually need attention.
-            const isZero = stat.value === 0;
-            return (
-              <div key={stat.key} className="stat-card">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">{stat.label}</p>
-                    <p className={cn("kpi-number mt-1", isZero && "text-muted-foreground/70")}>
-                      {stat.value}
-                    </p>
-                  </div>
-                  <div
-                    className={cn(
-                      "p-2.5 rounded-lg",
-                      isZero ? "bg-muted text-muted-foreground/70" : `${stat.bg} ${stat.color}`,
-                    )}
-                  >
-                    <stat.icon className="w-5 h-5" />
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          {statCards.map((stat) => (
+            <KpiTile
+              key={stat.key}
+              label={stat.label}
+              value={stat.value}
+              loading={!stats}
+              format={(n) => Math.round(n).toLocaleString("he-IL")}
+              href={stat.href}
+              action={stat.onOpen ? (
+                <button type="button" onClick={stat.onOpen} className="-mt-1 self-start rounded text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  {stat.linkLabel} ←
+                </button>
+              ) : undefined}
+              className={cn(stat.value === 0 && "[&_[data-slot=kpi-value]]:text-muted-foreground/70")}
+            />
+          ))}
         </div>
       )}
 
