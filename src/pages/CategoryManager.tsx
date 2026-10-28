@@ -3,7 +3,7 @@ import { useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import {
   Plus, GripVertical, Trash2, Save, Pencil, Search, ArrowRight,
-  Type, Hash, Calendar, List, ListChecks, Settings2, Check, X, ChevronLeft, ChevronDown, Users,
+  Type, Hash, Calendar, List, ListChecks, Settings2, Check, X, ChevronLeft, ChevronDown, ChevronUp, Square, Users,
 } from "lucide-react";
 import { ManageGroupsDialog } from "@/components/ManageGroupsDialog";
 import { SubCategoryFieldsChecklist } from "@/components/SubCategoryFieldsInline";
@@ -23,6 +23,8 @@ import { DOMAIN_ORDER, DOMAIN_META, DOMAIN_DEFAULTS, getDomain, type DomainKey }
 import { OWNER_ROLE_OPTIONS, getAllDomainLabels, type DomainLabels } from "@/lib/domainConfig";
 import { useCreateAssetGroup, useAssetGroups, useDeleteAssetGroup, useMoveAssetGroup, useUpdateAssetGroup } from "@/hooks/useAssetGroups";
 import { useCompany } from "@/hooks/useCompany";
+import { useConfirm } from "@/components/feedback/ConfirmDialog";
+import { IconButton } from "@/components/feedback/IconButton";
 
 type FieldType = "text" | "number" | "date" | "list" | "list_multi";
 
@@ -84,6 +86,7 @@ export default function CategoryManager() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; assetCount: number } | null>(null);
   const { data: groups } = useAssetGroups();
   const { data: assets } = useAssets();
+  const confirm = useConfirm();
 
   // Focus the requested domain when arriving from the domain card "quick edit" button
   useEffect(() => {
@@ -112,21 +115,27 @@ export default function CategoryManager() {
     [groups, selectedGroupId, selectedId],
   );
   const normalizedSearch = search.trim().toLocaleLowerCase("he");
-  const canChangeSelection = () => !fieldsDirty || window.confirm("יש שינויים לא שמורים בשדות. לעבור בלי לשמור?");
-  const changeDomain = (domain: DomainKey) => {
-    if (!canChangeSelection()) return;
+  const canChangeSelection = async () => !fieldsDirty || confirm({
+    title: "לעבור בלי לשמור?",
+    description: "יש שינויים לא שמורים בשדות. אם תעברו עכשיו, הם יאבדו.",
+    confirmLabel: "עבור בלי לשמור",
+    cancelLabel: "המשך לערוך",
+    destructive: true,
+  });
+  const changeDomain = async (domain: DomainKey) => {
+    if (!(await canChangeSelection())) return;
     setFieldsDirty(false);
     setSelectedDomain(domain);
     setSelectedGroupId(null);
   };
-  const changeCategory = (id: string) => {
-    if (!canChangeSelection()) return;
+  const changeCategory = async (id: string) => {
+    if (!(await canChangeSelection())) return;
     setFieldsDirty(false);
     setSelectedId(id);
     setSelectedGroupId(null);
   };
-  const changeGroup = (id: string | null) => {
-    if (!canChangeSelection()) return;
+  const changeGroup = async (id: string | null) => {
+    if (!(await canChangeSelection())) return;
     setFieldsDirty(false);
     setSelectedGroupId(id);
   };
@@ -211,7 +220,7 @@ export default function CategoryManager() {
                   const categoryCount = byDomain[key]?.length ?? 0;
                   const groupCount = (groups ?? []).filter((group) => byDomain[key]?.some((category: any) => category.id === group.category_id)).length;
                   return (
-                      <Button key={key} variant="ghost" onClick={() => changeDomain(key)} className={cn("w-full h-auto min-h-14 justify-start gap-3 px-3 py-2.5 border", selectedDomain === key ? "border-link-domain bg-link-domain-bg text-link-domain ring-1 ring-link-domain/30" : "border-border bg-background")}>
+                      <Button key={key} variant="ghost" onClick={() => { void changeDomain(key); }} className={cn("w-full h-auto min-h-14 justify-start gap-3 px-3 py-2.5 border", selectedDomain === key ? "border-link-domain bg-link-domain-bg text-link-domain ring-1 ring-link-domain/30" : "border-border bg-background")}>
                       <span className={cn("w-9 h-9 rounded-md flex items-center justify-center shrink-0", meta.color.bg, meta.color.text)}><Icon className="w-4.5 h-4.5" /></span>
                       <span className="min-w-0 flex-1 text-right"><span className="block text-sm font-semibold truncate">{labels[key].title}</span><span className="block text-[0.8125rem] font-normal text-muted-foreground">{categoryCount} קטגוריות · {groupCount} תתי-קטגוריות</span></span>
                       <ChevronLeft className="w-4 h-4 text-muted-foreground" />
@@ -219,20 +228,20 @@ export default function CategoryManager() {
                   );
                 })}
               </HierarchyColumn>
-              <HierarchyColumn title={`קטגוריות ב${labels[selectedDomain].title}`} action={<Button size="icon" variant="ghost" className="h-11 w-11 lg:h-9 lg:w-9" onClick={() => openNewInDomain(selectedDomain)} title="קטגוריה חדשה"><Plus className="w-4 h-4" /></Button>}>
+              <HierarchyColumn title={`קטגוריות ב${labels[selectedDomain].title}`} action={<IconButton label="קטגוריה חדשה" onClick={() => openNewInDomain(selectedDomain)}><Plus aria-hidden="true" /></IconButton>}>
                 {visibleCategories.length === 0 ? <EmptyHierarchy text="לא נמצאו קטגוריות" /> : visibleCategories.map((category: any) => {
                   const active = selectedId === category.id;
                   const groupCount = (groups ?? []).filter((group) => group.category_id === category.id).length;
                   return (
                     <div key={category.id} className={cn("flex items-center gap-1 rounded-md border p-1", active ? "border-link-category bg-link-category-bg text-link-category ring-1 ring-link-category/30" : "border-border bg-background")}>
-                      <Button variant="ghost" onClick={() => changeCategory(category.id)} className="h-auto min-h-12 flex-1 justify-start px-2 text-right"><span className="min-w-0 flex-1"><span className="block text-sm font-semibold truncate">{category.category_name}</span><span className="block text-[0.8125rem] font-normal text-muted-foreground"><span className="font-mono">{category.prefix}</span> · {groupCount} תתי-קטגוריות · {category.assets?.[0]?.count ?? 0} פריטים</span></span><ChevronLeft className="w-4 h-4 text-muted-foreground" /></Button>
-                      <Button size="icon" variant="ghost" className="h-11 w-11 lg:h-9 lg:w-9 text-destructive" title="מחק קטגוריה" onClick={(event) => handleDeleteClick(event, category)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                      <Button variant="ghost" onClick={() => { void changeCategory(category.id); }} className="h-auto min-h-12 flex-1 justify-start px-2 text-right"><span className="min-w-0 flex-1"><span className="block text-sm font-semibold truncate">{category.category_name}</span><span className="block text-[0.8125rem] font-normal text-muted-foreground"><span className="font-mono">{category.prefix}</span> · {groupCount} תתי-קטגוריות · {category.assets?.[0]?.count ?? 0} פריטים</span></span><ChevronLeft className="w-4 h-4 text-muted-foreground" /></Button>
+                      <IconButton label={`מחק קטגוריה ${category.category_name}`} className="text-destructive" onClick={(event) => handleDeleteClick(event, category)}><Trash2 aria-hidden="true" /></IconButton>
                     </div>
                   );
                 })}
               </HierarchyColumn>
               <HierarchyColumn title={selectedCategory ? `תתי-קטגוריות ב${selectedCategory.category_name}` : "תתי-קטגוריות"}>
-                {selectedCategory ? <SubCategoryColumn category={selectedCategory} categories={categories ?? []} groups={groups ?? []} assets={assets ?? []} search={normalizedSearch} selectedGroupId={selectedGroupId} onSelect={changeGroup} /> : <EmptyHierarchy text="בחר קטגוריה כדי להציג תתי-קטגוריות" />}
+                {selectedCategory ? <SubCategoryColumn category={selectedCategory} categories={categories ?? []} groups={groups ?? []} assets={assets ?? []} search={normalizedSearch} selectedGroupId={selectedGroupId} onSelect={(id) => { void changeGroup(id); }} /> : <EmptyHierarchy text="בחר קטגוריה כדי להציג תתי-קטגוריות" />}
               </HierarchyColumn>
             </div>
           </section>
@@ -242,13 +251,13 @@ export default function CategoryManager() {
                 <span className="font-semibold">עורך כעת:</span>
                 <span className="rounded-md border border-link-domain bg-link-domain-bg px-2 py-1 font-semibold text-link-domain">{labels[selectedDomain].title}</span>
                 <ChevronLeft className="h-4 w-4 text-muted-foreground" />
-                <button type="button" onClick={() => changeGroup(null)} className="rounded-md border border-link-category bg-link-category-bg px-2 py-1 font-semibold text-link-category">{selectedCategory.category_name}</button>
+                <button type="button" onClick={() => { void changeGroup(null); }} className="rounded-md border border-link-category bg-link-category-bg px-2 py-1 font-semibold text-link-category">{selectedCategory.category_name}</button>
                 {selectedGroup && <><ChevronLeft className="h-4 w-4 text-muted-foreground" /><span className="rounded-md border border-link-subcategory bg-link-subcategory-bg px-2 py-1 font-semibold text-link-subcategory">{selectedGroup.name}</span></>}
               </div>
               <p className="mt-1 text-xs text-muted-foreground">{selectedGroup ? "עריכת תת־קטגוריה — השינויים יחולו רק עליה" : "עריכת קטגוריה — השינויים יחולו על כל תתי־הקטגוריות"}</p>
             </div>
             <div className="flex gap-1 border-b border-border" role="tablist" aria-label="רמת העריכה">
-              <Button type="button" variant="ghost" role="tab" aria-selected={!selectedGroup} onClick={() => changeGroup(null)} className={cn("rounded-b-none border-b-2", !selectedGroup ? "border-link-category text-link-category" : "border-transparent text-muted-foreground")}>הגדרות קטגוריה</Button>
+              <Button type="button" variant="ghost" role="tab" aria-selected={!selectedGroup} onClick={() => { void changeGroup(null); }} className={cn("rounded-b-none border-b-2", !selectedGroup ? "border-link-category text-link-category" : "border-transparent text-muted-foreground")}>הגדרות קטגוריה</Button>
               <Button type="button" variant="ghost" role="tab" aria-selected={!!selectedGroup} disabled={!selectedGroup} className={cn("rounded-b-none border-b-2", selectedGroup ? "border-link-subcategory text-link-subcategory" : "border-transparent text-muted-foreground")}>הגדרות תת־קטגוריה</Button>
             </div>
             {selectedGroup ? <><SubCategoryEditor group={selectedGroup} domain={selectedDomain} /><FieldsEditor key={`${selectedCategory.id}-${selectedGroup.id}`} categoryId={selectedCategory.id} categoryName={selectedCategory.category_name} scopeGroupId={selectedGroup.id} scopeLabel={selectedGroup.name} onDirtyChange={setFieldsDirty} /></> : <><CategoryEditor category={selectedCategory} /><FieldsEditor key={`${selectedCategory.id}-category`} categoryId={selectedCategory.id} categoryName={selectedCategory.category_name} scopeGroupId={null} scopeLabel="כל תתי־הקטגוריות" onDirtyChange={setFieldsDirty} /></>}
@@ -315,21 +324,31 @@ function SubCategoryColumn({ category, categories, groups, assets, search, selec
   const deleteGroup = useDeleteAssetGroup();
   const moveGroup = useMoveAssetGroup();
   const { toast } = useToast();
+  const confirm = useConfirm();
   const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const categoryGroups = groups.filter((group) => group.category_id === category.id && (!search || group.name.toLocaleLowerCase("he").includes(search)));
   const create = async () => { if (!newName.trim()) return; try { await createGroup.mutateAsync({ category_id: category.id, name: newName.trim(), default_owner_role: category.default_owner_role ?? null, company_id: category.company_id ?? null }); setNewName(""); toast({ title: "תת-הקטגוריה נוצרה" }); } catch (error: any) { toast({ title: "שגיאה", description: error.message, variant: "destructive" }); } };
   const rename = async (id: string) => { if (!editName.trim()) return; try { await updateGroup.mutateAsync({ id, name: editName.trim() }); setEditingId(null); toast({ title: "תת-הקטגוריה עודכנה" }); } catch (error: any) { toast({ title: "שגיאה", description: error.message, variant: "destructive" }); } };
-  const remove = async (id: string, name: string) => { if (!window.confirm(`למחוק את תת-הקטגוריה "${name}"? הפריטים יישארו ללא תת-קטגוריה.`)) return; try { await deleteGroup.mutateAsync(id); toast({ title: "תת-הקטגוריה נמחקה" }); } catch (error: any) { toast({ title: "שגיאה", description: error.message, variant: "destructive" }); } };
+  const remove = async (id: string, name: string) => {
+    const ok = await confirm({
+      title: `למחוק את תת-הקטגוריה "${name}"?`,
+      description: "הפריטים שבה יישארו במערכת, ללא תת-קטגוריה.",
+      confirmLabel: "מחק תת-קטגוריה",
+      destructive: true,
+      onConfirm: () => deleteGroup.mutateAsync(id),
+    });
+    if (ok) toast({ title: "תת-הקטגוריה נמחקה" });
+  };
   return <>
-    <div className="flex gap-2 pb-1"><input value={newName} onChange={(event) => setNewName(event.target.value)} onKeyDown={(event) => event.key === "Enter" && create()} placeholder="שם תת-קטגוריה חדשה" className="min-w-0 flex-1 h-9 px-3 rounded-md border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/25" /><Button size="icon" className="h-9 w-9 shrink-0" onClick={create} disabled={!newName.trim() || createGroup.isPending} title="הוסף תת-קטגוריה"><Plus className="w-4 h-4" /></Button></div>
+    <div className="flex gap-2 pb-1"><input aria-label="שם תת-קטגוריה חדשה" value={newName} onChange={(event) => setNewName(event.target.value)} onKeyDown={(event) => event.key === "Enter" && create()} placeholder="שם תת-קטגוריה חדשה" className="min-w-0 flex-1 h-10 px-3 rounded-md border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/25" /><IconButton label="הוסף תת-קטגוריה" variant="default" className="shrink-0" onClick={create} disabled={!newName.trim() || createGroup.isPending}><Plus aria-hidden="true" /></IconButton></div>
     {categoryGroups.length === 0 ? <EmptyHierarchy text="אין עדיין תתי-קטגוריות" /> : categoryGroups.map((group) => {
       const assetCount = assets.filter((asset) => asset.group_id === group.id).length;
       const active = selectedGroupId === group.id;
-      return <div key={group.id} onClick={() => onSelect(group.id)} className={cn("rounded-md border p-3 space-y-2 cursor-pointer transition-colors", active ? "border-link-subcategory bg-link-subcategory-bg text-link-subcategory ring-1 ring-link-subcategory/30" : "border-border bg-background")}>
-        {editingId === group.id ? <div className="flex gap-1" onClick={(event) => event.stopPropagation()}><input autoFocus value={editName} onChange={(event) => setEditName(event.target.value)} onKeyDown={(event) => event.key === "Enter" && rename(group.id)} className="min-w-0 flex-1 h-8 px-2 rounded border border-border bg-card text-sm outline-none focus:ring-2 focus:ring-primary/25" /><Button size="icon" variant="ghost" className="h-11 w-11 lg:h-9 lg:w-9" onClick={() => rename(group.id)}><Check className="w-4 h-4" /></Button><Button size="icon" variant="ghost" className="h-11 w-11 lg:h-9 lg:w-9" onClick={() => setEditingId(null)}><X className="w-4 h-4" /></Button></div> : <div className="flex items-center gap-1"><div className="min-w-0 flex-1"><p className="text-sm font-semibold truncate">{group.name}</p><p className="text-[0.8125rem] text-muted-foreground">{assetCount} פריטים · {OWNER_ROLE_OPTIONS.find((option) => option.value === group.default_owner_role)?.label ?? "אחראי מהקטגוריה"}</p></div><Button size="icon" variant="ghost" className="h-11 w-11 lg:h-9 lg:w-9" title="ערוך שם" onClick={(event) => { event.stopPropagation(); setEditingId(group.id); setEditName(group.name); }}><Pencil className="w-3.5 h-3.5" /></Button><Button size="icon" variant="ghost" className="h-11 w-11 lg:h-9 lg:w-9 text-destructive" title="מחק" onClick={(event) => { event.stopPropagation(); remove(group.id, group.name); }}><Trash2 className="w-3.5 h-3.5" /></Button></div>}
-        <div className="grid grid-cols-2 gap-2" onClick={(event) => event.stopPropagation()}><select value={group.default_owner_role ?? ""} onChange={(event) => updateGroup.mutate({ id: group.id, default_owner_role: event.target.value || null })} aria-label={`אחראי עבור ${group.name}`} className="min-w-0 h-8 px-2 rounded border border-border bg-muted/40 text-[0.8125rem] outline-none"><option value="">אחראי מהקטגוריה</option>{OWNER_ROLE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><select value={category.id} onChange={(event) => moveGroup.mutate({ groupId: group.id, categoryId: event.target.value })} aria-label={`העבר את ${group.name}`} className="min-w-0 h-8 px-2 rounded border border-border bg-muted/40 text-[0.8125rem] outline-none">{DOMAIN_ORDER.map((domain) => <optgroup key={domain} label={DOMAIN_META[domain].title}>{categories.filter((item) => getDomain(item) === domain).map((item) => <option key={item.id} value={item.id}>{item.category_name}</option>)}</optgroup>)}</select></div>
+      return <div key={group.id} role="button" tabIndex={0} aria-pressed={active} aria-label={`בחר תת-קטגוריה ${group.name}`} onClick={() => onSelect(group.id)} onKeyDown={(event) => { if (event.target !== event.currentTarget) return; if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelect(group.id); } }} className={cn("rounded-md border p-3 space-y-2 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", active ? "border-link-subcategory bg-link-subcategory-bg text-link-subcategory ring-1 ring-link-subcategory/30" : "border-border bg-background")}>
+        {editingId === group.id ? <div className="flex gap-1" onClick={(event) => event.stopPropagation()}><input autoFocus aria-label={`שם חדש לתת-הקטגוריה ${group.name}`} value={editName} onChange={(event) => setEditName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") rename(group.id); if (event.key === "Escape") setEditingId(null); }} className="min-w-0 flex-1 h-10 px-2 rounded border border-border bg-card text-sm outline-none focus:ring-2 focus:ring-primary/25" /><IconButton label="שמור שם" onClick={() => rename(group.id)} disabled={!editName.trim() || updateGroup.isPending}><Check aria-hidden="true" /></IconButton><IconButton label="בטל שינוי שם" onClick={() => setEditingId(null)}><X aria-hidden="true" /></IconButton></div> : <div className="flex items-center gap-1"><div className="min-w-0 flex-1"><p className="text-sm font-semibold truncate">{group.name}</p><p className="text-[0.8125rem] text-muted-foreground">{assetCount} פריטים · {OWNER_ROLE_OPTIONS.find((option) => option.value === group.default_owner_role)?.label ?? "אחראי מהקטגוריה"}</p></div><IconButton label={`ערוך שם ${group.name}`} onClick={(event) => { event.stopPropagation(); setEditingId(group.id); setEditName(group.name); }}><Pencil aria-hidden="true" /></IconButton><IconButton label={`מחק תת-קטגוריה ${group.name}`} className="text-destructive" onClick={(event) => { event.stopPropagation(); void remove(group.id, group.name); }}><Trash2 aria-hidden="true" /></IconButton></div>}
+        <div className="grid grid-cols-2 gap-2" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}><select value={group.default_owner_role ?? ""} onChange={(event) => updateGroup.mutate({ id: group.id, default_owner_role: event.target.value || null })} aria-label={`אחראי עבור ${group.name}`} className="min-w-0 h-10 px-2 rounded border border-border bg-muted/40 text-[0.8125rem] outline-none focus:ring-2 focus:ring-primary/25"><option value="">אחראי מהקטגוריה</option>{OWNER_ROLE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><select value={category.id} onChange={(event) => moveGroup.mutate({ groupId: group.id, categoryId: event.target.value })} aria-label={`העבר את ${group.name}`} className="min-w-0 h-10 px-2 rounded border border-border bg-muted/40 text-[0.8125rem] outline-none focus:ring-2 focus:ring-primary/25">{DOMAIN_ORDER.map((domain) => <optgroup key={domain} label={DOMAIN_META[domain].title}>{categories.filter((item) => getDomain(item) === domain).map((item) => <option key={item.id} value={item.id}>{item.category_name}</option>)}</optgroup>)}</select></div>
       </div>;
     })}
   </>;
@@ -360,8 +379,8 @@ function SubCategoryEditor({ group, domain }: { group: any; domain: DomainKey })
   };
 
   return <div className="grid grid-cols-1 gap-5 border-b border-border pb-5 lg:grid-cols-2">
-    <div className="space-y-4 lg:border-l lg:border-border lg:pl-5"><div><h2 className="font-semibold">{group.name}</h2><p className="text-xs text-muted-foreground">פרטי תת־הקטגוריה</p></div><div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><div><label className="mb-1 block text-sm font-medium">שם תת־הקטגוריה</label><input value={name} onChange={(event) => { setName(event.target.value); setSaved(false); }} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/25" /></div><div><label className="mb-1 block text-sm font-medium">אחראי ברירת מחדל</label><select value={ownerRole} onChange={(event) => { setOwnerRole(event.target.value); setSaved(false); }} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/25"><option value="">אחראי מהקטגוריה</option>{OWNER_ROLE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div></div><div className="flex items-center justify-end gap-2"><span className={cn("text-xs", saved ? "text-muted-foreground" : "text-warning")}>{saved ? "כל השינויים נשמרו" : "שינויים לא שמורים"}</span><Button size="sm" onClick={save} disabled={saved || updateGroup.isPending}><Save className="ml-1 h-3.5 w-3.5" />{updateGroup.isPending ? "שומר..." : "שמירה"}</Button></div></div>
-    <div className="space-y-3"><div><h3 className="font-semibold">שדות רלוונטיים</h3><p className="text-xs text-muted-foreground">נשמרים מיד וחלים רק על {group.name}</p></div><SubCategoryFieldsChecklist group={group} domain={domain} /></div>
+    <div className="space-y-4 lg:border-l lg:border-border lg:pl-5"><div><h2 className="font-semibold">{group.name}</h2><p className="text-xs text-muted-foreground">שם ואחראי — נשמרים בלחיצה על "שמור שם ואחראי"</p></div><div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><div><label htmlFor={`sub-name-${group.id}`} className="mb-1 block text-sm font-medium">שם תת־הקטגוריה</label><input id={`sub-name-${group.id}`} value={name} onChange={(event) => { setName(event.target.value); setSaved(false); }} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/25" /></div><div><label htmlFor={`sub-owner-${group.id}`} className="mb-1 block text-sm font-medium">אחראי ברירת מחדל</label><select id={`sub-owner-${group.id}`} value={ownerRole} onChange={(event) => { setOwnerRole(event.target.value); setSaved(false); }} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/25"><option value="">אחראי מהקטגוריה</option>{OWNER_ROLE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div></div><div className="flex items-center justify-end gap-2"><span role="status" className={cn("text-xs", saved ? "text-muted-foreground" : "text-warning")}>{saved ? "השם והאחראי נשמרו" : "שינויים לא שמורים בשם או באחראי"}</span><Button size="sm" onClick={save} disabled={saved || updateGroup.isPending}><Save className="ml-1 h-3.5 w-3.5" aria-hidden="true" />{updateGroup.isPending ? "שומר..." : "שמור שם ואחראי"}</Button></div></div>
+    <div className="space-y-3"><div><h3 className="font-semibold">שדות רלוונטיים</h3><p className="text-xs text-muted-foreground">כל סימון נשמר מיד, בלי כפתור שמירה, וחל רק על {group.name}</p></div><SubCategoryFieldsChecklist group={group} domain={domain} /></div>
   </div>;
 }
 
@@ -388,19 +407,21 @@ function QuickCategoryEdit({
   const [newSubName, setNewSubName] = useState("");
   const { data: allGroups } = useAssetGroups();
   const deleteGroupMutation = useDeleteAssetGroup();
+  const confirm = useConfirm();
   const subGroups = useMemo(
     () => (allGroups ?? []).filter((g: any) => g.category_id === category.id),
     [allGroups, category.id],
   );
 
   const handleDeleteSub = async (id: string, subName: string) => {
-    if (!window.confirm(`למחוק את תת-הקטגוריה "${subName}"? הפריטים יוסרו ממנה אך לא יימחקו.`)) return;
-    try {
-      await deleteGroupMutation.mutateAsync(id);
-      toast({ title: "תת-הקטגוריה נמחקה" });
-    } catch (err: any) {
-      toast({ title: "שגיאה", description: err.message, variant: "destructive" });
-    }
+    const ok = await confirm({
+      title: `למחוק את תת-הקטגוריה "${subName}"?`,
+      description: "הפריטים יוסרו ממנה אך לא יימחקו.",
+      confirmLabel: "מחק תת-קטגוריה",
+      destructive: true,
+      onConfirm: () => deleteGroupMutation.mutateAsync(id),
+    });
+    if (ok) toast({ title: "תת-הקטגוריה נמחקה" });
   };
 
 
@@ -467,8 +488,8 @@ function QuickCategoryEdit({
       />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <div>
-          <label className="text-[0.8125rem] text-muted-foreground mb-1 block">העבר דומיין</label>
-          <select
+          <label htmlFor="categoryma-f1" className="text-[0.8125rem] text-muted-foreground mb-1 block">העבר דומיין</label>
+          <select id="categoryma-f1"
             value={domain}
             onChange={(e) => setDomain(e.target.value as DomainKey)}
             className="w-full px-2.5 py-1.5 bg-background rounded-md text-sm outline-none border border-border/50 focus:ring-1 focus:ring-primary/30"
@@ -479,8 +500,8 @@ function QuickCategoryEdit({
           </select>
         </div>
         <div>
-          <label className="text-[0.8125rem] text-muted-foreground mb-1 block">אחראי ברירת מחדל</label>
-          <select
+          <label htmlFor="categoryma-f2" className="text-[0.8125rem] text-muted-foreground mb-1 block">אחראי ברירת מחדל</label>
+          <select id="categoryma-f2"
             value={ownerRole}
             onChange={(e) => setOwnerRole(e.target.value)}
             className="w-full px-2.5 py-1.5 bg-background rounded-md text-sm outline-none border border-border/50 focus:ring-1 focus:ring-primary/30"
@@ -508,15 +529,15 @@ function QuickCategoryEdit({
           {subGroups.map((g: any) => (
             <div key={g.id} className="flex items-center gap-2 px-2.5 py-1.5 bg-background rounded-md border border-border/50">
               <span className="flex-1 truncate text-sm">{g.name}</span>
-              <button
+              <IconButton
                 type="button"
-                title="מחק תת-קטגוריה"
-                onClick={() => handleDeleteSub(g.id, g.name)}
+                label={`מחק תת-קטגוריה ${g.name}`}
+                onClick={() => { void handleDeleteSub(g.id, g.name); }}
                 disabled={deleteGroupMutation.isPending}
-                className="text-muted-foreground hover:text-destructive p-1 rounded-md disabled:opacity-50"
+                className="text-muted-foreground hover:text-destructive"
               >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
+                <Trash2 aria-hidden="true" />
+              </IconButton>
             </div>
           ))}
         </div>
@@ -604,6 +625,17 @@ function FieldsEditor({ categoryId, categoryName, scopeGroupId, scopeLabel, onDi
     onDirtyChange(true);
   };
 
+  /** Keyboard / touch alternative to dragging: move a field one place up or down. */
+  const moveField = (index: number, delta: -1 | 1) => {
+    const target = index + delta;
+    if (target < 0 || target >= fields.length) return;
+    const reordered = [...fields];
+    [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+    setFields(reordered.map((f, i) => ({ ...f, sort_order: i })));
+    setDirty(true);
+    onDirtyChange(true);
+  };
+
   const handleDragStart = (index: number) => {
     dragItem.current = index;
   };
@@ -664,7 +696,7 @@ function FieldsEditor({ categoryId, categoryName, scopeGroupId, scopeLabel, onDi
         <div>
           <h2 className="font-semibold">שדות מותאמים · {scopeLabel}</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {fields.length} שדות מותאמים • גרור לסידור מחדש
+            {fields.length} שדות מותאמים • גררו או השתמשו בחיצים לסידור מחדש
             {scopeGroupId ? ` • עבור ${scopeLabel} בלבד` : ` • עבור כל תתי־הקטגוריות של ${categoryName}`}
           </p>
         </div>
@@ -675,8 +707,8 @@ function FieldsEditor({ categoryId, categoryName, scopeGroupId, scopeLabel, onDi
             </span>
           )}
           <Button size="sm" className="gap-1.5" onClick={handleSave} disabled={saveMutation.isPending || !dirty}>
-            <Save className="w-3.5 h-3.5" />
-            {saveMutation.isPending ? "שומר..." : "שמור"}
+            <Save className="w-3.5 h-3.5" aria-hidden="true" />
+            {saveMutation.isPending ? "שומר..." : "שמור שדות"}
           </Button>
         </div>
       </div>
@@ -696,18 +728,28 @@ function FieldsEditor({ categoryId, categoryName, scopeGroupId, scopeLabel, onDi
                 "hover:border-primary/30 transition-all group"
               )}
             >
-            {/* Drag handle */}
+            {/* Drag handle (pointer) + up/down buttons (keyboard and touch) */}
             <div
               draggable
               onDragStart={() => handleDragStart(index)}
               onDragEnd={handleDragEnd}
-              className="text-muted-foreground/40 group-hover:text-muted-foreground transition-colors cursor-grab active:cursor-grabbing"
+              aria-hidden="true"
+              className="text-muted-foreground/60 group-hover:text-muted-foreground transition-colors cursor-grab active:cursor-grabbing"
             >
               <GripVertical className="w-4 h-4" />
+            </div>
+            <div className="flex flex-col shrink-0">
+              <IconButton label={`הזז את ${field.field_name || "השדה"} למעלה`} className="h-6 w-10" disabled={index === 0} onClick={() => moveField(index, -1)}>
+                <ChevronUp aria-hidden="true" />
+              </IconButton>
+              <IconButton label={`הזז את ${field.field_name || "השדה"} למטה`} className="h-6 w-10" disabled={index === fields.length - 1} onClick={() => moveField(index, 1)}>
+                <ChevronDown aria-hidden="true" />
+              </IconButton>
             </div>
 
             {/* Field name */}
             <input
+              aria-label={`שם שדה ${index + 1}`}
               value={field.field_name}
               onChange={(e) => updateField(field.tempId, { field_name: e.target.value })}
               placeholder="שם השדה"
@@ -715,7 +757,7 @@ function FieldsEditor({ categoryId, categoryName, scopeGroupId, scopeLabel, onDi
             />
 
             {/* Field type selector */}
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex items-center gap-1 shrink-0" role="group" aria-label={`סוג השדה ${field.field_name || index + 1}`}>
               {(Object.keys(fieldTypeIcons) as FieldType[]).map((type) => {
                 const Icon = fieldTypeIcons[type];
                 return (
@@ -727,15 +769,18 @@ function FieldsEditor({ categoryId, categoryName, scopeGroupId, scopeLabel, onDi
                         field_options: (type === "list" || type === "list_multi") ? [""] : null,
                       });
                     }}
+                    type="button"
                     title={fieldTypeLabels[type]}
+                    aria-label={fieldTypeLabels[type]}
+                    aria-pressed={field.field_type === type}
                     className={cn(
-                      "w-7 h-7 rounded-md flex items-center justify-center transition-colors",
+                      "w-9 h-9 rounded-md flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       field.field_type === type
                         ? "bg-primary text-primary-foreground"
                         : "text-muted-foreground hover:bg-muted"
                     )}
                   >
-                    <Icon className="w-3.5 h-3.5" />
+                    <Icon className="w-4 h-4" aria-hidden="true" />
                   </button>
                 );
               })}
@@ -747,6 +792,7 @@ function FieldsEditor({ categoryId, categoryName, scopeGroupId, scopeLabel, onDi
                 value={field.group_id ?? ""}
                 onChange={(e) => updateField(field.tempId, { group_id: e.target.value || null })}
                 title="הצג שדה זה רק בתת-קטגוריה נבחרת"
+                aria-label={`תת-קטגוריה עבור ${field.field_name || "השדה"}`}
                 className={cn(
                   "shrink-0 max-w-[150px] text-xs rounded-md px-2 py-1 outline-none border transition-colors",
                   field.group_id
@@ -767,7 +813,7 @@ function FieldsEditor({ categoryId, categoryName, scopeGroupId, scopeLabel, onDi
                 variant="ghost"
                 size="sm"
                 onClick={() => setExpandedOptionsField(optionsExpanded ? null : field.tempId)}
-                className="h-7 gap-1 px-2 text-xs text-muted-foreground shrink-0"
+                className="h-9 gap-1 px-2 text-xs text-muted-foreground shrink-0"
                 aria-expanded={optionsExpanded}
               >
                 {(field.field_options ?? []).filter((option) => option.trim()).length} אפשרויות
@@ -777,10 +823,13 @@ function FieldsEditor({ categoryId, categoryName, scopeGroupId, scopeLabel, onDi
 
             {/* Required toggle */}
             <button
+              type="button"
               onClick={() => updateField(field.tempId, { is_required: !field.is_required })}
-              title={field.is_required ? "שדה חובה" : "שדה רשות"}
+              aria-pressed={field.is_required}
+              aria-label={`שדה חובה: ${field.field_name || "השדה"}`}
+              title={field.is_required ? "שדה חובה — לחצו להפוך לרשות" : "שדה רשות — לחצו להפוך לחובה"}
               className={cn(
-                "text-xs px-2 py-1 rounded-md font-medium transition-colors shrink-0",
+                "min-h-9 text-xs px-2.5 py-1 rounded-md font-medium transition-colors shrink-0",
                 field.is_required
                   ? "bg-destructive/10 text-destructive"
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
@@ -790,12 +839,13 @@ function FieldsEditor({ categoryId, categoryName, scopeGroupId, scopeLabel, onDi
             </button>
 
             {/* Delete */}
-            <button
+            <IconButton
+              label={`מחק את השדה ${field.field_name || index + 1}`}
               onClick={() => removeField(field.tempId)}
-              className="text-muted-foreground/40 hover:text-destructive transition-colors shrink-0"
+              className="text-muted-foreground hover:text-destructive shrink-0"
             >
-              <Trash2 className="w-4 h-4" />
-            </button>
+              <Trash2 aria-hidden="true" />
+            </IconButton>
             </div>
 
             {hasOptions && optionsExpanded && (
@@ -806,6 +856,7 @@ function FieldsEditor({ categoryId, categoryName, scopeGroupId, scopeLabel, onDi
                 {(field.field_options ?? [""]).map((opt, oi) => (
                   <div key={oi} className="flex items-center gap-2">
                     <input
+                      aria-label={`אפשרות ${oi + 1}`}
                       value={opt}
                       onChange={(e) => {
                         const newOpts = [...(field.field_options ?? [""])];
@@ -815,16 +866,16 @@ function FieldsEditor({ categoryId, categoryName, scopeGroupId, scopeLabel, onDi
                       placeholder={`אפשרות ${oi + 1}`}
                       className="flex-1 bg-background rounded-md px-3 py-1.5 text-sm outline-none border border-border/50 focus:ring-1 focus:ring-primary/30"
                     />
-                    <button
+                    <IconButton
+                      label={`מחק אפשרות ${oi + 1}`}
                       onClick={() => {
                         const newOpts = (field.field_options ?? [""]).filter((_, i) => i !== oi);
                         updateField(field.tempId, { field_options: newOpts.length ? newOpts : [""] });
                       }}
                       className="text-muted-foreground hover:text-destructive"
-                      aria-label={`מחק אפשרות ${oi + 1}`}
                     >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
+                      <X aria-hidden="true" />
+                    </IconButton>
                   </div>
                 ))}
                 <Button
@@ -832,7 +883,7 @@ function FieldsEditor({ categoryId, categoryName, scopeGroupId, scopeLabel, onDi
                   variant="ghost"
                   size="sm"
                   onClick={() => updateField(field.tempId, { field_options: [...(field.field_options ?? [""]), ""] })}
-                  className="h-7 px-2 text-xs text-primary"
+                  className="h-9 px-2 text-xs text-primary"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   הוסף אפשרות
@@ -845,6 +896,7 @@ function FieldsEditor({ categoryId, categoryName, scopeGroupId, scopeLabel, onDi
 
         {/* Add field button */}
         <button
+          type="button"
           onClick={addField}
           className="w-full py-3 rounded-lg border-2 border-dashed border-border hover:border-primary/40 text-muted-foreground hover:text-primary flex items-center justify-center gap-2 text-sm transition-colors"
         >
@@ -860,7 +912,7 @@ function FieldsEditor({ categoryId, categoryName, scopeGroupId, scopeLabel, onDi
           <div className="grid grid-cols-2 gap-3">
             {fields.map((field) => (
               <div key={`preview-${field.tempId}`} className="space-y-1">
-                <label className="text-xs font-medium">
+                <label htmlFor="categoryma-f3" className="text-xs font-medium">
                   {field.field_name || "ללא שם"}
                   {field.is_required && <span className="text-destructive mr-1">*</span>}
                   {field.group_id && (
@@ -870,7 +922,7 @@ function FieldsEditor({ categoryId, categoryName, scopeGroupId, scopeLabel, onDi
                   )}
                 </label>
                 {field.field_type === "list" ? (
-                  <select className="w-full bg-muted rounded-md px-3 py-2 text-sm outline-none" disabled>
+                  <select id="categoryma-f3" className="w-full bg-muted rounded-md px-3 py-2 text-sm outline-none" disabled>
                     <option>בחר...</option>
                     {(field.field_options ?? []).filter(Boolean).map((o, i) => (
                       <option key={i}>{o}</option>
@@ -879,7 +931,7 @@ function FieldsEditor({ categoryId, categoryName, scopeGroupId, scopeLabel, onDi
                 ) : field.field_type === "list_multi" ? (
                   <div className="w-full bg-muted rounded-md px-3 py-2 text-sm flex flex-wrap gap-1 min-h-[38px] opacity-70">
                     {(field.field_options ?? []).filter(Boolean).slice(0, 3).map((o, i) => (
-                      <span key={i} className="px-2 py-0.5 rounded bg-background text-xs border border-border/50">☐ {o}</span>
+                      <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-background text-xs border border-border/50"><Square className="w-3 h-3" aria-hidden="true" />{o}</span>
                     ))}
                     {(!field.field_options || field.field_options.filter(Boolean).length === 0) && (
                       <span className="text-muted-foreground text-xs">בחר אפשרויות (אחת או יותר)...</span>
@@ -1019,26 +1071,26 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
     <div className="bg-card rounded-xl border border-primary/30 shadow-card p-5 space-y-3 animate-fade-in">
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-sm font-medium mb-1 block">שם הקטגוריה</label>
-          <input value={name} onChange={e => setName(e.target.value)}
+          <label htmlFor="categoryma-f4" className="text-sm font-medium mb-1 block">שם הקטגוריה</label>
+          <input id="categoryma-f4" value={name} onChange={e => setName(e.target.value)}
             className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30" />
         </div>
         <div>
-          <label className="text-sm font-medium mb-1 block">קידומת</label>
-          <input value={prefix} onChange={e => setPrefix(e.target.value.replace(/[^a-zA-Z]/g, "").slice(0, 3))}
+          <label htmlFor="categoryma-f5" className="text-sm font-medium mb-1 block">קידומת</label>
+          <input id="categoryma-f5" value={prefix} onChange={e => setPrefix(e.target.value.replace(/[^a-zA-Z]/g, "").slice(0, 3))}
             className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 font-mono uppercase" dir="ltr" maxLength={3} />
         </div>
       </div>
       <div>
-        <label className="text-sm font-medium mb-1 block">תיאור</label>
-        <input value={description} onChange={e => setDescription(e.target.value)} placeholder="תיאור קצר..."
+        <label htmlFor="categoryma-f6" className="text-sm font-medium mb-1 block">תיאור</label>
+        <input id="categoryma-f6" value={description} onChange={e => setDescription(e.target.value)} placeholder="תיאור קצר..."
           className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30" />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-sm font-medium mb-1 block">העבר דומיין</label>
-          <select
+          <label htmlFor="categoryma-f7" className="text-sm font-medium mb-1 block">העבר דומיין</label>
+          <select id="categoryma-f7"
             value={domain}
             onChange={(e) => setDomain(e.target.value as DomainKey)}
             className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
@@ -1049,8 +1101,8 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
           </select>
         </div>
         <div>
-          <label className="text-sm font-medium mb-1 block">אחראי ברירת מחדל</label>
-          <select
+          <label htmlFor="categoryma-f8" className="text-sm font-medium mb-1 block">אחראי ברירת מחדל</label>
+          <select id="categoryma-f8"
             value={ownerRole}
             onChange={(e) => setOwnerRole(e.target.value)}
             className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
@@ -1130,8 +1182,8 @@ function CategoryEditor({ category }: { category: { id: string; category_name: s
       )}
 
       <div className="pt-2 border-t border-border/50">
-        <label className="text-sm font-medium mb-1 block">ימי התראה ברירת מחדל לתפוגה</label>
-        <input
+        <label htmlFor="categoryma-f9" className="text-sm font-medium mb-1 block">ימי התראה ברירת מחדל לתפוגה</label>
+        <input id="categoryma-f9"
           type="number"
           min={0}
           max={365}
@@ -1264,8 +1316,8 @@ function NewCategoryDialog({
         <div className="space-y-4 mt-4">
           {!lockedDomain && (
             <div>
-              <label className="text-sm font-medium mb-1.5 block">דומיין</label>
-              <select
+              <label htmlFor="categoryma-f10" className="text-sm font-medium mb-1.5 block">דומיין</label>
+              <select id="categoryma-f10"
                 value={domain}
                 onChange={(e) => {
                   const d = e.target.value as DomainKey;
@@ -1291,8 +1343,8 @@ function NewCategoryDialog({
           )}
 
           <div>
-            <label className="text-sm font-medium mb-1.5 block">שם הקטגוריה</label>
-            <input
+            <label htmlFor="categoryma-f11" className="text-sm font-medium mb-1.5 block">שם הקטגוריה</label>
+            <input id="categoryma-f11"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="למשל: טאבלטים"
@@ -1300,8 +1352,8 @@ function NewCategoryDialog({
             />
           </div>
           <div>
-            <label className="text-sm font-medium mb-1.5 block">קידומת (3 אותיות באנגלית)</label>
-            <input
+            <label htmlFor="categoryma-f12" className="text-sm font-medium mb-1.5 block">קידומת (3 אותיות באנגלית)</label>
+            <input id="categoryma-f12"
               value={prefix}
               onChange={(e) => setPrefix(e.target.value.replace(/[^a-zA-Z]/g, "").slice(0, 4))}
               placeholder={defaults.suggested_prefix}
@@ -1311,8 +1363,8 @@ function NewCategoryDialog({
             />
           </div>
           <div>
-            <label className="text-sm font-medium mb-1.5 block">תיאור (אופציונלי)</label>
-            <input
+            <label htmlFor="categoryma-f13" className="text-sm font-medium mb-1.5 block">תיאור (אופציונלי)</label>
+            <input id="categoryma-f13"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="תיאור קצר של הקטגוריה"
@@ -1321,17 +1373,18 @@ function NewCategoryDialog({
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-1.5 block">תתי-קטגוריות (אופציונלי)</label>
+            <label htmlFor="new-cat-sub" className="text-sm font-medium mb-1.5 block">תתי-קטגוריות (אופציונלי)</label>
             <div className="flex gap-2">
               <input
+                id="new-cat-sub"
                 value={newSub}
                 onChange={(e) => setNewSub(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSub(); } }}
                 placeholder="למשל: מסך / ראוטר"
                 className="flex-1 px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
               />
-              <Button type="button" size="sm" variant="outline" onClick={addSub} disabled={!newSub.trim()}>
-                <Plus className="w-4 h-4" />
+              <Button type="button" size="icon" variant="outline" onClick={addSub} disabled={!newSub.trim()} aria-label="הוסף תת-קטגוריה לרשימה" title="הוסף תת-קטגוריה">
+                <Plus className="w-4 h-4" aria-hidden="true" />
               </Button>
             </div>
             {subs.length > 0 && (
@@ -1339,8 +1392,8 @@ function NewCategoryDialog({
                 {subs.map((s) => (
                   <span key={s} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-primary/10 text-primary text-xs">
                     {s}
-                    <button type="button" onClick={() => setSubs(subs.filter((x) => x !== s))} className="hover:text-destructive">
-                      <X className="w-3 h-3" />
+                    <button type="button" onClick={() => setSubs(subs.filter((x) => x !== s))} className="-my-1 inline-flex h-7 w-7 items-center justify-center rounded hover:text-destructive" aria-label={`הסר את ${s}`}>
+                      <X className="w-3 h-3" aria-hidden="true" />
                     </button>
                   </span>
                 ))}

@@ -25,6 +25,10 @@ import { SubCategorySelect } from "@/components/assets/SubCategorySelect";
 import { SubCategoryFieldsChecklist } from "@/components/SubCategoryFieldsInline";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import { useConfirm } from "@/components/feedback/ConfirmDialog";
+import { IconButton } from "@/components/feedback/IconButton";
+import { EmptyState, ListSkeleton } from "@/components/feedback/StateView";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAssets, useAssetCategories } from "@/hooks/useData";
 import { useAssetGroups, useCreateAssetGroup, useAssignAssetsToGroup, useDeleteAssetGroup, useUpdateAssetGroup } from "@/hooks/useAssetGroups";
 import { useExpiringAssets } from "@/hooks/useExpiringAssets";
@@ -39,6 +43,7 @@ import {
   DOMAIN_META,
   getDomain,
   domainSlugToKey,
+  domainKeyToSlug,
   NO_SUBCATEGORY_KEY,
   NO_SUBCATEGORY_LABEL,
   type DomainKey,
@@ -100,18 +105,19 @@ export default function AssetsDomainPage() {
   const assignToGroup = useAssignAssetsToGroup();
   const deleteGroup = useDeleteAssetGroup();
   const updateGroup = useUpdateAssetGroup();
+  const confirm = useConfirm();
 
   const handleDeleteGroup = async (groupId: string, groupName: string, itemCount: number) => {
-    const msg = itemCount > 0
-      ? `למחוק את תת-הקטגוריה "${groupName}"? ${itemCount} פריטים יעברו ל"ללא תת-קטגוריה" (הם לא יימחקו).`
-      : `למחוק את תת-הקטגוריה "${groupName}"?`;
-    if (!window.confirm(msg)) return;
-    try {
-      await deleteGroup.mutateAsync(groupId);
-      toast({ title: "תת-הקטגוריה נמחקה" });
-    } catch (e: any) {
-      toast({ title: "שגיאה במחיקה", description: e.message, variant: "destructive" });
-    }
+    const ok = await confirm({
+      title: `למחוק את תת-הקטגוריה "${groupName}"?`,
+      description: itemCount > 0
+        ? `${itemCount} פריטים יעברו ל"ללא תת-קטגוריה". הפריטים עצמם לא יימחקו.`
+        : "תת-הקטגוריה ריקה.",
+      confirmLabel: "מחק תת-קטגוריה",
+      destructive: true,
+      onConfirm: () => deleteGroup.mutateAsync(groupId),
+    });
+    if (ok) toast({ title: "תת-הקטגוריה נמחקה" });
   };
 
   const handleRenameGroup = async () => {
@@ -332,7 +338,10 @@ export default function AssetsDomainPage() {
       if (v === null) p.delete(k);
       else p.set(k, v);
     }
-    setSearchParams(p, { replace: true });
+    // Moving between category / sub-category levels adds a history entry, so the browser's
+    // Back button steps back one level instead of leaving the domain.
+    const changesLevel = ("cat" in next && next.cat !== catParam) || ("sub" in next && next.sub !== subParam);
+    setSearchParams(p, { replace: !changesLevel });
   };
 
   const handleCreateSub = async (cat: any) => {
@@ -365,6 +374,16 @@ export default function AssetsDomainPage() {
     }
   };
 
+  const clearFilters = () => {
+    setSearch("");
+    updateParams({ expired: null });
+  };
+  const openAddHere = () => {
+    setAddCategoryId(catParam ?? domainCats[0]?.id);
+    setAddGroupId(subParam && subParam !== NO_SUBCATEGORY_KEY ? subParam : undefined);
+    setAddOpen(true);
+  };
+
   if (!domainKey) {
     return (
       <div className="p-8 text-center" dir="rtl">
@@ -377,6 +396,16 @@ export default function AssetsDomainPage() {
   // Item detail route: /assets/:domain/:itemId
   if (params.itemId) {
     const asset = (assets ?? []).find((a: any) => a.id === params.itemId);
+    if (!asset && isLoading) {
+      return (
+        <div role="status" aria-busy="true" className="space-y-4" dir="rtl">
+          <span className="sr-only">טוען את פרטי הפריט…</span>
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-20 w-full rounded-2xl" />
+          <Skeleton className="h-64 w-full rounded-xl" />
+        </div>
+      );
+    }
     if (!asset) {
       return (
         <div className="p-8 text-center" dir="rtl">
@@ -391,7 +420,7 @@ export default function AssetsDomainPage() {
         <AssetDetailView
           assetId={asset.id}
           categoryId={asset.category_id}
-          onBack={() => navigate(`/assets/${params.domain}`)}
+          onBack={() => navigate(`/assets/${params.domain}?cat=${asset.category_id}`)}
           onBackToCategories={() => navigate("/assets")}
         />
         <PendingSignatureDialog
@@ -476,12 +505,13 @@ export default function AssetsDomainPage() {
             <AlertTriangle className="w-3.5 h-3.5" />
             מציג רק פריטים שפג תוקפם ({visibleAssets.length})
             <button
+              type="button"
               onClick={() => updateParams({ expired: null })}
-              className="mr-1 rounded-full hover:bg-destructive/20 p-0.5"
+              className="ms-1 -my-1 inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-destructive/20"
               aria-label="בטל סינון פגי תוקף"
               title="בטל סינון"
             >
-              <X className="w-3 h-3" />
+              <X className="w-4 h-4" aria-hidden="true" />
             </button>
           </span>
         </div>
@@ -490,7 +520,7 @@ export default function AssetsDomainPage() {
       {/* Search + category chips + sort */}
       <div className="space-y-3">
         <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
-          <Search className="w-4 h-4 text-muted-foreground" />
+          <Search className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
           <input
             type="search"
             value={search}
@@ -506,9 +536,11 @@ export default function AssetsDomainPage() {
             {domainCats.length > 1 ? (
               <div className="flex flex-wrap gap-1.5">
                 <button
+                  type="button"
+                  aria-pressed={!catParam}
                   onClick={() => updateParams({ cat: null, sub: null })}
                   className={cn(
-                    "text-xs px-3 py-1.5 rounded-full border transition-colors",
+                    "text-xs min-h-9 px-3 py-1.5 rounded-full border transition-colors",
                     !catParam ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border hover:bg-muted",
                   )}
                 >
@@ -520,9 +552,11 @@ export default function AssetsDomainPage() {
                   return (
                     <button
                       key={c.id}
+                      type="button"
+                      aria-pressed={active}
                       onClick={() => updateParams({ cat: active ? null : c.id, sub: null })}
                       className={cn(
-                        "text-xs px-3 py-1.5 rounded-full border transition-colors",
+                        "text-xs min-h-9 px-3 py-1.5 rounded-full border transition-colors",
                         active ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border hover:bg-muted",
                       )}
                     >
@@ -534,8 +568,8 @@ export default function AssetsDomainPage() {
             ) : <div />}
 
             <div className="flex items-center gap-3 text-xs">
-              <div className="flex items-center gap-1">
-                <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground" />
+              <div className="flex items-center gap-1" role="group" aria-label="מיון תתי-קטגוריות">
+                <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
                 {([
                   { v: "count", l: "הכי הרבה" },
                   { v: "alpha", l: "א-ב" },
@@ -543,9 +577,11 @@ export default function AssetsDomainPage() {
                 ] as const).map((o) => (
                   <button
                     key={o.v}
+                    type="button"
+                    aria-pressed={sortMode === o.v}
                     onClick={() => setSortMode(o.v)}
                     className={cn(
-                      "px-2.5 py-1 rounded-md transition-colors",
+                      "min-h-10 px-3 py-1 rounded-md transition-colors",
                       sortMode === o.v ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/50",
                     )}
                   >
@@ -553,27 +589,23 @@ export default function AssetsDomainPage() {
                   </button>
                 ))}
               </div>
-              <div className="flex items-center gap-0.5 border border-border rounded-md p-0.5">
-                <button
+              <div className="flex items-center gap-0.5 border border-border rounded-md p-0.5" role="group" aria-label="תצוגה">
+                <IconButton
+                  label="תצוגת אייקונים"
+                  aria-pressed={viewMode === "grid"}
                   onClick={() => changeView("grid")}
-                  title="תצוגת אייקונים"
-                  className={cn(
-                    "p-1 rounded transition-colors",
-                    viewMode === "grid" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50",
-                  )}
+                  className={cn(viewMode === "grid" ? "bg-muted text-foreground" : "text-muted-foreground")}
                 >
-                  <LayoutGrid className="w-3.5 h-3.5" />
-                </button>
-                <button
+                  <LayoutGrid aria-hidden="true" />
+                </IconButton>
+                <IconButton
+                  label="תצוגת רשימה"
+                  aria-pressed={viewMode === "list"}
                   onClick={() => changeView("list")}
-                  title="תצוגת רשימה"
-                  className={cn(
-                    "p-1 rounded transition-colors",
-                    viewMode === "list" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50",
-                  )}
+                  className={cn(viewMode === "list" ? "bg-muted text-foreground" : "text-muted-foreground")}
                 >
-                  <List className="w-3.5 h-3.5" />
-                </button>
+                  <List aria-hidden="true" />
+                </IconButton>
               </div>
             </div>
           </div>
@@ -582,7 +614,10 @@ export default function AssetsDomainPage() {
 
       {/* Content */}
       {isLoading ? (
-        <div className="p-8 text-center text-muted-foreground">טוען...</div>
+        <div role="status" aria-busy="true" className="bg-card border border-border rounded-2xl">
+          <span className="sr-only">טוען פריטים…</span>
+          <ListSkeleton rows={5} />
+        </div>
       ) : domainCats.length === 0 ? (
         <div className="bg-card border border-dashed border-border rounded-2xl p-8 text-center">
           <p className="text-muted-foreground mb-3">אין עדיין קטגוריות בדומיין זה</p>
@@ -633,8 +668,19 @@ export default function AssetsDomainPage() {
             </div>
           )}
           {drilledItems.length === 0 ? (
-            <div className="bg-card border border-dashed border-border rounded-2xl p-8 text-center">
-              <p className="text-muted-foreground">לא נמצאו פריטים</p>
+            <div className="bg-card border border-dashed border-border rounded-2xl">
+              {search.trim() || expiredOnly ? (
+                <EmptyState
+                  title="לא נמצאו פריטים"
+                  description={search.trim() ? `אין פריטים שתואמים את "${search.trim()}" בתת-קטגוריה זו.` : "אין פריטים שפג תוקפם בתת-קטגוריה זו."}
+                  action={<Button variant="outline" onClick={clearFilters}>נקה סינון</Button>}
+                />
+              ) : (
+                <EmptyState
+                  title="אין עדיין פריטים בתת-קטגוריה זו"
+                  action={<Button onClick={openAddHere} className="gap-1.5"><Plus aria-hidden="true" />פריט חדש</Button>}
+                />
+              )}
             </div>
           ) : (
             <InstancesTable
@@ -658,8 +704,14 @@ export default function AssetsDomainPage() {
           )}
         </div>
       ) : cardsByCategory.length === 0 ? (
-        <div className="bg-card border border-dashed border-border rounded-2xl p-8 text-center">
-          <p className="text-muted-foreground">לא נמצאו תוצאות</p>
+        <div className="bg-card border border-dashed border-border rounded-2xl">
+          <EmptyState
+            title="לא נמצאו תוצאות"
+            description={search.trim() ? `אין פריטים או תתי-קטגוריות שתואמים את "${search.trim()}".` : undefined}
+            action={(search.trim() || expiredOnly || catParam)
+              ? <Button variant="outline" onClick={clearFilters}>נקה סינון</Button>
+              : <Button onClick={openAddHere} className="gap-1.5"><Plus aria-hidden="true" />פריט חדש</Button>}
+          />
         </div>
       ) : (
         <div className="space-y-6">
@@ -688,9 +740,9 @@ export default function AssetsDomainPage() {
                       copyAction("העתק שם קטגוריה", category.category_name, true),
                     ]}
                   >
-                  <button onClick={() => toggleCat(category.id)} className="flex items-center group">
+                  <button type="button" onClick={() => toggleCat(category.id)} aria-expanded={!collapsed} className="flex min-h-10 items-center group">
                     <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-1.5 group-hover:text-foreground transition-colors">
-                      <ChevronDown className={cn("w-4 h-4 transition-transform", collapsed && "-rotate-90")} />
+                      <ChevronDown aria-hidden="true" className={cn("w-4 h-4 transition-transform", collapsed && "-rotate-90")} />
                       {category.category_name}
                       <span className="font-normal">
                         ({cards.filter((c) => c.id !== NO_SUBCATEGORY_KEY).length} תת-קטגוריות · {total} פריטים)
@@ -710,22 +762,24 @@ export default function AssetsDomainPage() {
                           if (e.key === "Escape") { setNewSubFor(null); setNewSubName(""); }
                         }}
                         placeholder="שם תת-קטגוריה"
+                        aria-label={`שם תת-קטגוריה חדשה ב${category.category_name}`}
                         dir="rtl"
-                        className="h-8 w-48 text-right"
+                        className="h-10 w-48 text-right"
                       />
-                      <Button size="sm" className="h-8" disabled={!newSubName.trim() || createGroup.isPending} onClick={() => handleCreateSub(category)}>
-                        <Check className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button size="sm" variant="ghost" className="h-8" onClick={() => { setNewSubFor(null); setNewSubName(""); }}>
-                        <X className="w-3.5 h-3.5" />
-                      </Button>
+                      <IconButton label="צור תת-קטגוריה" variant="default" disabled={!newSubName.trim() || createGroup.isPending} onClick={() => handleCreateSub(category)}>
+                        <Check aria-hidden="true" />
+                      </IconButton>
+                      <IconButton label="בטל יצירת תת-קטגוריה" onClick={() => { setNewSubFor(null); setNewSubName(""); }}>
+                        <X aria-hidden="true" />
+                      </IconButton>
                     </div>
                   ) : (
                     <button
+                      type="button"
                       onClick={() => { setNewSubFor(category.id); setNewSubName(""); }}
-                      className="text-xs text-muted-foreground hover:text-primary inline-flex items-center gap-1"
+                      className="min-h-10 px-2 rounded-md text-xs text-muted-foreground hover:text-primary inline-flex items-center gap-1"
                     >
-                      <FolderPlus className="w-3.5 h-3.5" />
+                      <FolderPlus className="w-3.5 h-3.5" aria-hidden="true" />
                       תת-קטגוריה חדשה
                     </button>
                   )}
@@ -753,7 +807,7 @@ export default function AssetsDomainPage() {
                   </div>
                 ) : (
                   <div className="bg-card border border-border rounded-xl overflow-x-auto">
-                    <div className="min-w-[34rem] grid grid-cols-[1fr_7rem_5rem_6rem_2rem_2rem] gap-2 px-4 py-2 bg-muted/40 text-[0.8125rem] font-semibold text-muted-foreground uppercase tracking-wide text-right">
+                    <div className="min-w-[34rem] grid grid-cols-[1fr_7rem_5rem_6rem_2.5rem_2rem] gap-2 px-4 py-2 bg-muted/40 text-[0.8125rem] font-semibold text-muted-foreground uppercase tracking-wide text-right">
                       <div>תת-קטגוריה</div>
                       <div>אחראי</div>
                       <div>סה״כ</div>
@@ -774,11 +828,20 @@ export default function AssetsDomainPage() {
                           role="button"
                           tabIndex={0}
                           onClick={() => { setSelectedIds(new Set()); updateParams({ cat: category.id, sub: c.id }); }}
-                          onKeyDown={(e) => { if (e.key === "Enter") { setSelectedIds(new Set()); updateParams({ cat: category.id, sub: c.id }); } }}
-                          className="w-full min-w-[34rem] grid grid-cols-[1fr_7rem_5rem_6rem_2rem_2rem] gap-2 px-4 py-3 text-base border-t border-border hover:bg-muted/40 text-right items-center transition-colors cursor-pointer"
+                          aria-label={`פתח תת-קטגוריה ${c.name}`}
+                          onKeyDown={(e) => {
+                            if (e.target !== e.currentTarget) return;
+                            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedIds(new Set()); updateParams({ cat: category.id, sub: c.id }); }
+                          }}
+                          className="w-full min-w-[34rem] grid grid-cols-[1fr_7rem_5rem_6rem_2.5rem_2rem] gap-2 px-4 py-3 text-base border-t border-border hover:bg-muted/40 text-right items-center transition-colors cursor-pointer"
                         >
                           <div className="flex items-center gap-2 truncate">
-                            {hasExpired && <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0" />}
+                            {hasExpired && (
+                              <span className="inline-flex shrink-0 text-destructive" title="יש פריטים פגי תוקף">
+                                <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
+                                <span className="sr-only">יש פריטים פגי תוקף</span>
+                              </span>
+                            )}
                             <span className={cn("truncate font-medium", c.id === NO_SUBCATEGORY_KEY && "text-muted-foreground")}>
                               {c.name}
                             </span>
@@ -789,16 +852,15 @@ export default function AssetsDomainPage() {
                           <div className="text-xs text-muted-foreground">{c.items.length}</div>
                           <div className="text-xs">{active} / {c.items.length}</div>
                           {c.id === NO_SUBCATEGORY_KEY ? <div /> : (
-                            <button
-                              type="button"
-                              title="מחק תת-קטגוריה"
+                            <IconButton
+                              label={`מחק תת-קטגוריה ${c.name}`}
                               onClick={(e) => { e.stopPropagation(); handleDeleteGroup(c.id, c.name, c.items.length); }}
-                              className="text-muted-foreground hover:text-destructive p-1 rounded-md"
+                              className="text-muted-foreground hover:text-destructive"
                             >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                              <Trash2 aria-hidden="true" />
+                            </IconButton>
                           )}
-                          <ArrowRight className="w-4 h-4 text-muted-foreground rtl:rotate-180" />
+                          <ArrowRight aria-hidden="true" className="w-4 h-4 text-muted-foreground rtl:rotate-180" />
                         </div>
                         </RowContextMenu>
                       );
@@ -812,15 +874,11 @@ export default function AssetsDomainPage() {
       )}
 
       <MultiHandoverFlow
-
         open={handoverOpen}
-
         assets={drilledItems.filter((a: any) => selectedIds.has(a.id))}
-
-        onOpenChange={(o) => { setHandoverOpen(o); if (!o) setSelectedIds(new Set()); }}
-
+        // Cancelling keeps the selection so the user can retry; only a completed handover clears it.
+        onOpenChange={setHandoverOpen}
         onAssigned={() => setSelectedIds(new Set())}
-
       />
 
 
@@ -844,6 +902,7 @@ export default function AssetsDomainPage() {
             onChange={(e) => setRenameName(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") handleRenameGroup(); }}
             placeholder="שם תת-הקטגוריה"
+            aria-label="שם תת-הקטגוריה"
             dir="rtl"
             className="text-right"
             autoFocus
@@ -900,7 +959,12 @@ const SubCategoryCard = React.forwardRef<HTMLDivElement, {
       role="button"
       tabIndex={0}
       onClick={onClick}
-      onKeyDown={(e) => { if (e.key === "Enter") onClick(); }}
+      aria-label={`פתח תת-קטגוריה ${card.name}`}
+      onKeyDown={(e) => {
+        // Only the card itself: Enter on the edit/delete buttons must not also open the card.
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); }
+      }}
       className={cn(
         "group relative bg-card border rounded-2xl p-4 text-center cursor-pointer",
         "hover:shadow-xl hover:-translate-y-1 hover:ring-2 active:scale-[0.98] transition-all duration-200",
@@ -914,35 +978,38 @@ const SubCategoryCard = React.forwardRef<HTMLDivElement, {
       </span>
       {hasExpired && (
         <span className="absolute top-2 left-2 inline-flex items-center justify-center w-5 h-5 rounded-full bg-destructive/15 text-destructive" title="יש פריטים פגי תוקף">
-          <AlertTriangle className="w-3 h-3" />
+          <AlertTriangle className="w-3 h-3" aria-hidden="true" />
+          <span className="sr-only">יש פריטים פגי תוקף</span>
         </span>
       )}
       {onEdit && (
         <button
           type="button"
           title="ערוך תת-קטגוריה"
+          aria-label={`ערוך תת-קטגוריה ${card.name}`}
           onClick={(e) => { e.stopPropagation(); onEdit(); }}
           className={cn(
-            "absolute bottom-2 left-9 p-1.5 rounded-lg text-muted-foreground/70",
+            "absolute bottom-1 left-11 inline-flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground",
             "hover:bg-muted hover:text-foreground transition-colors",
-            "opacity-0 group-hover:opacity-100 focus:opacity-100 md:opacity-0 max-md:opacity-100",
+            "[@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100",
           )}
         >
-          <Pencil className="w-3.5 h-3.5" />
+          <Pencil className="w-4 h-4" aria-hidden="true" />
         </button>
       )}
       {onDelete && (
         <button
           type="button"
           title="מחק תת-קטגוריה"
+          aria-label={`מחק תת-קטגוריה ${card.name}`}
           onClick={(e) => { e.stopPropagation(); onDelete(); }}
           className={cn(
-            "absolute bottom-2 left-2 p-1.5 rounded-lg text-muted-foreground/70",
+            "absolute bottom-1 left-1 inline-flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground",
             "hover:bg-destructive/10 hover:text-destructive transition-colors",
-            "opacity-0 group-hover:opacity-100 focus:opacity-100 md:opacity-0 max-md:opacity-100",
+            "[@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100",
           )}
         >
-          <Trash2 className="w-3.5 h-3.5" />
+          <Trash2 className="w-4 h-4" aria-hidden="true" />
         </button>
       )}
 
@@ -1228,7 +1295,7 @@ function InstancesTable({
               const selected = selectedIds?.has(a.id) ?? false;
               return <RowContextMenu key={a.id} actions={[
                 { label: "פתח כרטיס פריט", onSelect: () => onSelect(a.id) },
-                { label: "פתח בלשונית חדשה", onSelect: () => openInNewTab(`/assets/${domain}/${a.id}`) },
+                { label: "פתח בלשונית חדשה", onSelect: () => openInNewTab(`/assets/${domainKeyToSlug(domain)}/${a.id}`) },
                 ...(onToggleSelect ? [{ label: selected ? "בטל בחירה" : "בחר לפעולה מרובה", onSelect: () => onToggleSelect(a.id) }] : []),
                 copyAction("העתק קוד", a.asset_code, true),
                 copyAction("העתק מס' סידורי", a.serial_number),

@@ -6,6 +6,7 @@ import { useSubEmployers, useDeleteSubEmployer, useSubEmployerEmployeeCounts, Su
 import { AddSubEmployerDialog } from "./AddSubEmployerDialog";
 import { EditSubEmployerDialog } from "./EditSubEmployerDialog";
 import { useToast } from "@/hooks/use-toast";
+import { IconButton } from "@/components/feedback/IconButton";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -95,17 +96,18 @@ export function SubEmployersTab() {
                     </td>
                     <td>
                       <div className="flex items-center gap-1 justify-end">
-                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditTarget(s)}>
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button
-                          size="icon" variant="ghost" className="h-7 w-7"
+                        <IconButton label={`ערוך את ${s.legal_name}`} onClick={() => setEditTarget(s)}>
+                          <Pencil />
+                        </IconButton>
+                        <IconButton
+                          label={`מחק את ${s.legal_name}`}
+                          className="text-destructive hover:text-destructive"
                           onClick={() => setDeleteTarget(s)}
                           disabled={employeeCount > 0}
-                          title={employeeCount > 0 ? `${employeeCount} עובדים משויכים — לא ניתן למחוק` : "מחק"}
+                          title={employeeCount > 0 ? `${employeeCount} עובדים משויכים — לא ניתן למחוק` : undefined}
                         >
-                          <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                        </Button>
+                          <Trash2 />
+                        </IconButton>
                       </div>
                     </td>
                   </tr>

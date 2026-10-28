@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Download, Plus, Search, Ticket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { usePersistentFilter } from "@/hooks/usePersistentFilter";
 import { exportToExcel } from "@/lib/exportExcel";
 import { QuickAddSubscriptionDialog } from "@/components/vehicles/QuickAddSubscriptionDialog";
 import { VehicleSubscriptionDialog } from "@/components/vehicles/VehicleSubscriptionDialog";
+import { StateView } from "@/components/feedback/StateView";
 
 import {
   SUBSCRIPTION_PROVIDERS,
@@ -83,11 +84,21 @@ const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString("en-G
 
 export default function VehicleSubscriptions() {
   const navigate = useNavigate();
-  const { data: subscriptions } = useVehicleSubscriptions();
-  const { data: vehicles } = useEmployeeVehicles();
-  const { data: assets } = useAssets();
-  const { data: employees } = useEmployees();
-  const { data: groups } = useAssetGroups();
+  const subsQ = useVehicleSubscriptions();
+  const vehiclesQ = useEmployeeVehicles();
+  const assetsQ = useAssets();
+  const employeesQ = useEmployees();
+  const groupsQ = useAssetGroups();
+  const { data: subscriptions } = subsQ;
+  const { data: vehicles } = vehiclesQ;
+  const { data: assets } = assetsQ;
+  const { data: employees } = employeesQ;
+  const { data: groups } = groupsQ;
+  const queries = [subsQ, vehiclesQ, assetsQ, employeesQ, groupsQ];
+  // Until every source has loaded, counts of 0 and "no vehicles" would be wrong, so they are not shown.
+  const loading = queries.some((q) => q.isLoading);
+  const loadError = queries.find((q) => q.error)?.error;
+  const retryAll = () => queries.forEach((q) => { if (q.error) void q.refetch(); });
 
 
   const [quickAdd, setQuickAdd] = useState<
@@ -321,6 +332,9 @@ export default function VehicleSubscriptions() {
     exportToExcel(data, headers, "מנויי_רכב");
   };
 
+  const filtersActive = !!filters.q.trim() || filters.provider !== "all" || filters.status !== "all"
+    || filters.vehicleType !== "all" || filters.department !== "all" || filters.coverage !== "all";
+
   const selectClass = "h-11 sm:h-9 px-2 rounded-md border border-input bg-background text-base sm:text-sm";
 
   return (
@@ -328,7 +342,7 @@ export default function VehicleSubscriptions() {
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div className="page-header">
           <h1 className="page-title flex items-center gap-2">
-            <Ticket className="w-5 h-5" />
+            <Ticket className="w-5 h-5" aria-hidden="true" />
             מנויים ואגרות
           </h1>
           <p className="page-subtitle">כל הרכבים המוצמדים לעובדים — פרטיים ורכבי חברה — והמנויים שלהם</p>
@@ -348,17 +362,17 @@ export default function VehicleSubscriptions() {
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <div className="bg-card border border-border rounded-xl p-4">
           <div className="text-xs text-muted-foreground">רכבים מוצמדים</div>
-          <div className="text-2xl font-bold mt-1">{vehicleList.length}</div>
+          <div className="text-2xl font-bold mt-1">{loading ? "—" : vehicleList.length}</div>
         </div>
         <div className="bg-card border border-border rounded-xl p-4">
           <div className="text-xs text-muted-foreground">מנויים פעילים</div>
-          <div className="text-2xl font-bold mt-1">{activeCount}</div>
+          <div className="text-2xl font-bold mt-1">{loading ? "—" : activeCount}</div>
         </div>
         <div className="bg-card border border-border rounded-xl p-4">
           <div className="text-xs text-muted-foreground">רכבים ללא מנוי</div>
-          <div className="text-2xl font-bold mt-1">{noSubCount}</div>
+          <div className="text-2xl font-bold mt-1">{loading ? "—" : noSubCount}</div>
           {orphanCount > 0 && (
-            <div className="text-[11px] text-muted-foreground mt-1">{orphanCount} מנויים ללא רכב פעיל</div>
+            <div className="text-xs text-muted-foreground mt-1">{orphanCount} מנויים ללא רכב פעיל</div>
           )}
         </div>
         <div className="bg-card border border-border rounded-xl p-4 col-span-2 lg:col-span-1">
@@ -379,34 +393,36 @@ export default function VehicleSubscriptions() {
 
       <div className="bg-card border border-border rounded-xl p-3 flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[12rem]">
-          <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
           <Input
+            type="search"
+            aria-label="חיפוש לפי שם עובד או מס' רכב"
             value={filters.q}
             onChange={(e) => setFilters({ ...filters, q: e.target.value })}
             placeholder="חיפוש לפי שם עובד או מס' רכב"
             className="pr-9"
           />
         </div>
-        <select className={selectClass} value={filters.coverage} onChange={(e) => setFilters({ ...filters, coverage: e.target.value })}>
+        <select aria-label="סינון לפי מנוי" className={selectClass} value={filters.coverage} onChange={(e) => setFilters({ ...filters, coverage: e.target.value })}>
           <option value="all">כל הרכבים</option>
           <option value="with">עם מנוי</option>
           <option value="without">ללא מנוי</option>
         </select>
-        <select className={selectClass} value={filters.provider} onChange={(e) => setFilters({ ...filters, provider: e.target.value })}>
+        <select aria-label="סינון לפי ספק" className={selectClass} value={filters.provider} onChange={(e) => setFilters({ ...filters, provider: e.target.value })}>
           <option value="all">כל הספקים</option>
           {providerOptions.map((p) => <option key={p} value={p}>{p}</option>)}
         </select>
-        <select className={selectClass} value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
+        <select aria-label="סינון לפי סטטוס" className={selectClass} value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
           <option value="all">כל הסטטוסים</option>
           {Object.entries(SUBSCRIPTION_STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
-        <select className={selectClass} value={filters.vehicleType} onChange={(e) => setFilters({ ...filters, vehicleType: e.target.value })}>
+        <select aria-label="סינון לפי סוג רכב" className={selectClass} value={filters.vehicleType} onChange={(e) => setFilters({ ...filters, vehicleType: e.target.value })}>
           <option value="all">כל סוגי הרכב</option>
           {Object.values(VEHICLE_TYPE_LABELS).map((v) => <option key={v} value={v}>{v}</option>)}
           <option value="ללא רכב">ללא רכב</option>
         </select>
 
-        <select className={selectClass} value={filters.department} onChange={(e) => setFilters({ ...filters, department: e.target.value })}>
+        <select aria-label="סינון לפי מחלקה" className={selectClass} value={filters.department} onChange={(e) => setFilters({ ...filters, department: e.target.value })}>
           <option value="all">כל המחלקות</option>
           {departments.map((d) => <option key={d} value={d}>{d}</option>)}
         </select>
@@ -414,27 +430,50 @@ export default function VehicleSubscriptions() {
       </div>
 
       <div className="bg-card border border-border rounded-xl overflow-x-auto">
+        <StateView
+          loading={loading}
+          error={loadError}
+          onRetry={retryAll}
+          label="רכבים ומנויים"
+          isEmpty={filtered.length === 0}
+          empty={filtersActive ? {
+            title: "לא נמצאו רכבים שתואמים את הסינון",
+            action: <Button variant="outline" onClick={resetFilters}>נקה סינון</Button>,
+          } : {
+            title: "אין עדיין רכבים מוצמדים לעובדים",
+            description: "רכב פרטי מוסיפים בכרטיס העובד; רכב חברה — בשיוך פריט מקטגוריית רכב.",
+          }}
+        >
         <table className="w-full text-sm">
+          <caption className="sr-only">רכבים מוצמדים ומנוייהם</caption>
           <thead>
             <tr className="text-[0.8125rem] text-muted-foreground border-b border-border">
-              <th className="text-right font-medium px-4 py-3">עובד</th>
-              <th className="text-right font-medium px-4 py-3">מס' רכב</th>
-              <th className="text-right font-medium px-4 py-3">סוג רכב</th>
-              <th className="text-right font-medium px-4 py-3">מנויים</th>
-              <th className="text-right font-medium px-4 py-3"></th>
+              <th scope="col" className="text-right font-medium px-4 py-3">עובד</th>
+              <th scope="col" className="text-right font-medium px-4 py-3">מס' רכב</th>
+              <th scope="col" className="text-right font-medium px-4 py-3">סוג רכב</th>
+              <th scope="col" className="text-right font-medium px-4 py-3">מנויים</th>
+              <th scope="col" className="text-right font-medium px-4 py-3"><span className="sr-only">פעולות</span></th>
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">לא נמצאו רכבים</td></tr>
-            ) : (
-              filtered.map((r) => (
+            {filtered.map((r) => (
                 <tr
                   key={r.id}
                   onClick={() => r.employee_id && navigate(`/employees/${r.employee_id}?tab=vehicles`)}
                   className="border-b border-border/60 last:border-0 hover:bg-muted/40 cursor-pointer align-top"
                 >
-                  <td className="px-4 py-3 font-medium">{r.employee_name}</td>
+                  <td className="px-4 py-3 font-medium">
+                    {/* The row is clickable for the mouse; this link is the keyboard / screen-reader path. */}
+                    {r.employee_id ? (
+                      <Link
+                        to={`/employees/${r.employee_id}?tab=vehicles`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="rounded hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        {r.employee_name}
+                      </Link>
+                    ) : r.employee_name}
+                  </td>
                   <td className="px-4 py-3 font-mono">{r.plate}</td>
                   <td className="px-4 py-3">{r.vehicle_type}</td>
                   <td className="px-4 py-3">
@@ -454,7 +493,7 @@ export default function VehicleSubscriptions() {
                               if (s.source_asset_id) navigate(`/assets/licenses/${s.source_asset_id}`);
                               else setEditSub({ sub: s, label: `${r.employee_name} · ${r.plate}` });
                             }}
-                            className={`text-xs px-2 py-1 rounded-full border transition-opacity hover:opacity-80 ${statusClass[s.status] ?? "bg-muted text-muted-foreground border-border"}`}
+                            className={`min-h-8 text-xs px-2.5 py-1 rounded-full border transition-opacity hover:opacity-80 ${statusClass[s.status] ?? "bg-muted text-muted-foreground border-border"}`}
                           >
                             {s.provider}
                             {s.start_date && <span className="opacity-70"> · {fmtDate(s.start_date)}</span>}
@@ -484,10 +523,10 @@ export default function VehicleSubscriptions() {
                     </div>
                   </td>
                 </tr>
-              ))
-            )}
+            ))}
           </tbody>
         </table>
+        </StateView>
       </div>
 
       <QuickAddSubscriptionDialog

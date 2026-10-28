@@ -13,6 +13,8 @@ import {
   useAssignAssetsToGroup,
 } from "@/hooks/useAssetGroups";
 import { useToast } from "@/hooks/use-toast";
+import { useConfirm } from "@/components/feedback/ConfirmDialog";
+import { IconButton } from "@/components/feedback/IconButton";
 import { OWNER_ROLE_OPTIONS } from "@/lib/domainConfig";
 import { getBuiltinFields, isBuiltinFieldVisible } from "@/lib/builtinFields";
 import { DOMAIN_META, DOMAIN_ORDER, getDomain, type DomainKey } from "@/lib/assetDomains";
@@ -38,6 +40,7 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
   const { data: categories } = useAssetCategories();
   const assignAssets = useAssignAssetsToGroup();
   const { toast } = useToast();
+  const confirm = useConfirm();
 
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
@@ -97,15 +100,17 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("למחוק את תת-הקטגוריה? הפריטים יוסרו ממנה אך לא יימחקו.")) return;
-    try {
-      await deleteGroup.mutateAsync(id);
-      if (selectedGroupId === id) setSelectedGroupId(null);
-      toast({ title: "תת-הקטגוריה נמחקה" });
-    } catch (e: any) {
-      toast({ title: "שגיאה", description: e.message, variant: "destructive" });
-    }
+  const handleDelete = async (id: string, name: string) => {
+    const ok = await confirm({
+      title: `למחוק את תת-הקטגוריה "${name}"?`,
+      description: "הפריטים יוסרו ממנה אך לא יימחקו.",
+      confirmLabel: "מחק תת-קטגוריה",
+      destructive: true,
+      onConfirm: () => deleteGroup.mutateAsync(id),
+    });
+    if (!ok) return;
+    if (selectedGroupId === id) setSelectedGroupId(null);
+    toast({ title: "תת-הקטגוריה נמחקה" });
   };
 
   /** Every category in the company, grouped by domain — the move targets. */
@@ -128,17 +133,15 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
     if (!targetCategoryId || targetCategoryId === categoryId) return;
     const target = (categories ?? []).find((c: any) => c.id === targetCategoryId) as any;
     const count = catAssets.filter((a: any) => a.group_id === groupId).length;
-    if (!confirm(
-      `להעביר את "${groupName}" לקטגוריה "${target?.category_name}"?\n` +
-      `${count} פריטים יעברו יחד איתה. מזהי הפריטים (הקידומת) יישארו ללא שינוי.`,
-    )) return;
-    try {
-      await moveGroup.mutateAsync({ groupId, categoryId: targetCategoryId });
-      if (selectedGroupId === groupId) setSelectedGroupId(null);
-      toast({ title: "תת-הקטגוריה הועברה", description: `כעת תחת ${target?.category_name}` });
-    } catch (e: any) {
-      toast({ title: "שגיאה", description: e.message, variant: "destructive" });
-    }
+    const ok = await confirm({
+      title: `להעביר את "${groupName}" לקטגוריה "${target?.category_name}"?`,
+      description: `${count} פריטים יעברו יחד איתה. מזהי הפריטים (הקידומת) יישארו ללא שינוי.`,
+      confirmLabel: "העבר",
+      onConfirm: () => moveGroup.mutateAsync({ groupId, categoryId: targetCategoryId }),
+    });
+    if (!ok) return;
+    if (selectedGroupId === groupId) setSelectedGroupId(null);
+    toast({ title: "תת-הקטגוריה הועברה", description: `כעת תחת ${target?.category_name}` });
   };
 
   const selectedGroup = useMemo(
@@ -171,10 +174,18 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
 
   const moveToGroup = async (assetId: string) => {
     if (!selectedGroupId) return;
-    await assignAssets.mutateAsync({ groupId: selectedGroupId, assetIds: [assetId] });
+    try {
+      await assignAssets.mutateAsync({ groupId: selectedGroupId, assetIds: [assetId] });
+    } catch (e: any) {
+      toast({ title: "השיוך נכשל", description: e.message, variant: "destructive" });
+    }
   };
   const removeFromGroup = async (assetId: string) => {
-    await assignAssets.mutateAsync({ groupId: null, assetIds: [assetId] });
+    try {
+      await assignAssets.mutateAsync({ groupId: null, assetIds: [assetId] });
+    } catch (e: any) {
+      toast({ title: "ההסרה נכשלה", description: e.message, variant: "destructive" });
+    }
   };
 
 
@@ -191,9 +202,10 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Groups list */}
           <div className="space-y-2">
-            <div className="text-xs font-medium text-muted-foreground">תת-קטגוריות</div>
+            <div className="text-xs font-medium text-muted-foreground" id="groups-heading">תת-קטגוריות</div>
             <div className="flex gap-2">
               <input
+                aria-label="שם תת-קטגוריה חדשה"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleCreate()}
@@ -204,6 +216,7 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
                 value={newOwnerRole}
                 onChange={(e) => setNewOwnerRole(e.target.value)}
                 title="אחראי ברירת מחדל"
+                aria-label="אחראי ברירת מחדל לתת-הקטגוריה החדשה"
                 className="px-2 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
               >
                 <option value="">ללא אחראי</option>
@@ -211,9 +224,9 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
-              <Button size="sm" onClick={handleCreate} disabled={!newName.trim() || createGroup.isPending}>
+              <IconButton label="הוסף תת-קטגוריה" variant="default" onClick={handleCreate} disabled={!newName.trim()} loading={createGroup.isPending}>
                 <Plus className="w-4 h-4" />
-              </Button>
+              </IconButton>
             </div>
 
             <div className="space-y-1 max-h-80 overflow-y-auto">
@@ -239,32 +252,37 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
                           <input
                             value={editName}
                             onChange={(e) => setEditName(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === "Enter") void handleRename(g.id); if (e.key === "Escape") setEditingId(null); }}
+                            aria-label={`שם חדש עבור ${g.name}`}
                             className="flex-1 px-2 py-1 bg-background rounded text-sm outline-none focus:ring-2 focus:ring-primary/30"
                             autoFocus
                           />
-                          <button onClick={() => handleRename(g.id)} className="text-primary p-1">
+                          <IconButton label="שמור שם" className="text-primary" onClick={() => handleRename(g.id)}>
                             <Check className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => setEditingId(null)} className="text-muted-foreground p-1">
+                          </IconButton>
+                          <IconButton label="בטל עריכה" onClick={() => setEditingId(null)}>
                             <X className="w-4 h-4" />
-                          </button>
+                          </IconButton>
                         </>
                       ) : (
                         <>
                           <button
+                            type="button"
                             onClick={() => setSelectedGroupId(g.id)}
-                            className="flex-1 text-right text-sm flex items-center gap-2 min-w-0"
+                            aria-pressed={active}
+                            className="flex-1 min-h-10 text-right text-sm flex items-center gap-2 min-w-0 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           >
-                            <Users className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                            <Users className="w-3.5 h-3.5 text-muted-foreground shrink-0" aria-hidden="true" />
                             <span className="truncate">{g.name}</span>
-                            <span className="text-[11px] text-muted-foreground">({count})</span>
+                            <span className="text-xs text-muted-foreground">({count} פריטים)</span>
                           </button>
                           <select
                             value={g.default_owner_role ?? ""}
                             onChange={(e) => handleOwnerRoleChange(g.id, e.target.value)}
                             onClick={(e) => e.stopPropagation()}
                             title="אחראי ברירת מחדל"
-                            className="shrink-0 px-1.5 py-1 bg-background rounded-md text-[11px] outline-none border border-border/50 focus:ring-1 focus:ring-primary/30"
+                            aria-label={`אחראי ברירת מחדל ל${g.name}`}
+                            className="shrink-0 min-h-10 px-1.5 py-1 bg-background rounded-md text-xs outline-none border border-border/50 focus:ring-1 focus:ring-primary/30"
                           >
                             <option value="">ללא אחראי</option>
                             {OWNER_ROLE_OPTIONS.map((o) => (
@@ -277,7 +295,8 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
                             onClick={(e) => e.stopPropagation()}
                             disabled={moveGroup.isPending}
                             title="העבר לקטגוריה אחרת (גם בדומיין אחר)"
-                            className="shrink-0 max-w-[9rem] px-1.5 py-1 bg-background rounded-md text-[11px] outline-none border border-border/50 focus:ring-1 focus:ring-primary/30"
+                            aria-label={`העבר את ${g.name} לקטגוריה אחרת`}
+                            className="shrink-0 min-h-10 max-w-[9rem] px-1.5 py-1 bg-background rounded-md text-xs outline-none border border-border/50 focus:ring-1 focus:ring-primary/30"
                           >
                             {moveTargets.map((d) => (
                               <optgroup key={d.domain} label={d.title}>
@@ -287,20 +306,12 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
                               </optgroup>
                             ))}
                           </select>
-                          <button
-                            onClick={() => { setEditingId(g.id); setEditName(g.name); }}
-                            className="text-muted-foreground hover:text-foreground p-1"
-                            title="ערוך שם"
-                          >
+                          <IconButton label={`ערוך את השם ${g.name}`} className="text-muted-foreground hover:text-foreground" onClick={() => { setEditingId(g.id); setEditName(g.name); }}>
                             <Pencil className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(g.id)}
-                            className="text-muted-foreground hover:text-destructive p-1"
-                            title="מחק"
-                          >
+                          </IconButton>
+                          <IconButton label={`מחק את ${g.name}`} className="text-muted-foreground hover:text-destructive" onClick={() => { void handleDelete(g.id, g.name); }}>
                             <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          </IconButton>
                         </>
                       )}
                     </div>
@@ -317,14 +328,14 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
                 <div className="text-xs font-medium text-muted-foreground">
                   שדות רלוונטיים לתת-הקטגוריה
                 </div>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   שדה שלא מסומן לא יופיע בכרטיס הפריט ולא בטופס ההוספה.
                 </p>
                 <div className="grid grid-cols-2 gap-1">
                   {builtinFields.map((f) => {
                     const checked = isBuiltinFieldVisible(selectedGroup, f.key, domain ?? null);
                     return (
-                      <label key={f.key} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <label key={f.key} className="flex min-h-10 items-center gap-2 text-sm cursor-pointer">
                         <input
                           type="checkbox"
                           className="w-4 h-4 accent-primary"
@@ -345,37 +356,37 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
             {selectedGroupId ? (
               <div className="space-y-3 max-h-80 overflow-y-auto">
                 <div>
-                  <div className="text-[11px] text-muted-foreground mb-1">בתת-הקטגוריה ({inGroup.length})</div>
+                  <div className="text-xs text-muted-foreground mb-1">בתת-הקטגוריה ({inGroup.length})</div>
                   {inGroup.length === 0 ? (
-                    <p className="text-[11px] text-muted-foreground p-2 border border-dashed rounded">אין פריטים</p>
+                    <p className="text-xs text-muted-foreground p-2 border border-dashed rounded">אין פריטים</p>
                   ) : (
                     <ul className="space-y-1">
                       {inGroup.map((a: any) => (
                         <li key={a.id} className="flex items-center justify-between gap-2 px-2 py-1.5 bg-primary/5 rounded text-sm">
-                          <span className="truncate">{a.asset_name} · <span className="font-mono text-[11px]">{a.asset_code}</span></span>
-                          <button onClick={() => removeFromGroup(a.id)} className="text-muted-foreground hover:text-destructive shrink-0" title="הסר מתת-הקטגוריה">
+                          <span className="truncate">{a.asset_name} · <span className="font-mono text-xs">{a.asset_code}</span></span>
+                          <IconButton label={`הסר את ${a.asset_name} מתת-הקטגוריה`} className="shrink-0 text-muted-foreground hover:text-destructive" onClick={() => removeFromGroup(a.id)}>
                             <X className="w-3.5 h-3.5" />
-                          </button>
+                          </IconButton>
                         </li>
                       ))}
                     </ul>
                   )}
                 </div>
                 <div>
-                  <div className="text-[11px] text-muted-foreground mb-1">פריטים זמינים ({outGroup.length})</div>
+                  <div className="text-xs text-muted-foreground mb-1">פריטים זמינים ({outGroup.length})</div>
                   {outGroup.length === 0 ? (
-                    <p className="text-[11px] text-muted-foreground p-2 border border-dashed rounded">אין פריטים נוספים</p>
+                    <p className="text-xs text-muted-foreground p-2 border border-dashed rounded">אין פריטים נוספים</p>
                   ) : (
                     <ul className="space-y-1">
                       {outGroup.map((a: any) => (
                         <li key={a.id} className="flex items-center justify-between gap-2 px-2 py-1.5 hover:bg-muted/50 rounded text-sm">
                           <span className="truncate">
-                            {a.asset_name} · <span className="font-mono text-[11px]">{a.asset_code}</span>
-                            {a.group_id && <span className="text-[10px] text-muted-foreground mr-1">(בתת-קטגוריה אחרת)</span>}
+                            {a.asset_name} · <span className="font-mono text-xs">{a.asset_code}</span>
+                            {a.group_id && <span className="text-xs text-muted-foreground mr-1">(בתת-קטגוריה אחרת)</span>}
                           </span>
-                          <button onClick={() => moveToGroup(a.id)} className="text-primary hover:underline text-[11px] shrink-0">
+                          <Button variant="ghost" className="shrink-0 text-primary" onClick={() => moveToGroup(a.id)} aria-label={`הוסף את ${a.asset_name} לתת-הקטגוריה`}>
                             הוסף
-                          </button>
+                          </Button>
                         </li>
                       ))}
                     </ul>
@@ -384,7 +395,7 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
               </div>
             ) : (
               <div className="text-xs text-muted-foreground p-6 text-center border border-dashed rounded-lg">
-                <ChevronRight className="w-4 h-4 mx-auto mb-2 opacity-50" />
+                <ChevronRight className="w-4 h-4 mx-auto mb-2 opacity-50" aria-hidden="true" />
                 בחר תת-קטגוריה מימין
               </div>
             )}

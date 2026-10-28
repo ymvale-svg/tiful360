@@ -1,16 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatDateTimeDMY } from "@/lib/utils";
 import { Megaphone, Plus, Pencil, Trash2, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { FormField, focusFirstInvalid } from "@/components/feedback/FormField";
+import { IconButton } from "@/components/feedback/IconButton";
+import { useConfirm } from "@/components/feedback/ConfirmDialog";
+import { useDirtyGuard } from "@/components/feedback/useDirtyGuard";
+import { StateView } from "@/components/feedback/StateView";
 import { useToast } from "@/hooks/use-toast";
 import {
   useCompanyAnnouncements, useAnnouncementMutations, useSignatureDefaults,
@@ -32,13 +32,15 @@ const STATUS_META: Record<string, { label: string; className: string }> = {
 
 export default function Announcements() {
   const { toast } = useToast();
-  const { data: announcements = [], isLoading } = useCompanyAnnouncements();
+  const { data: announcements = [], isLoading, error: loadError, refetch } = useCompanyAnnouncements();
   const { data: signature } = useSignatureDefaults();
   const { create, update, remove } = useAnnouncementMutations();
 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Announcement | null>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const confirm = useConfirm();
+  const formRef = useRef<HTMLDivElement>(null);
+  const [errors, setErrors] = useState<{ title?: string; content?: string; expires?: string }>({});
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -49,6 +51,7 @@ export default function Announcements() {
 
   useEffect(() => {
     if (!open) return;
+    setErrors({});
     if (editing) {
       setTitle(editing.title);
       setContent(editing.content);
@@ -66,12 +69,25 @@ export default function Announcements() {
     }
   }, [open, editing, signature]);
 
+  // Dirty = the title/content differ from what the dialog opened with (a new draft starts empty).
+  const dirty = editing
+    ? title !== editing.title || content !== editing.content
+    : !!(title.trim() || content.trim());
+  const saving = create.isPending || update.isPending;
+  const guard = useDirtyGuard(dirty, saving);
+
   const openNew = () => { setEditing(null); setOpen(true); };
   const openEdit = (a: Announcement) => { setEditing(a); setOpen(true); };
 
   const save = async () => {
-    if (!title.trim() || !content.trim()) {
-      toast({ title: "נא למלא כותרת ותוכן", variant: "destructive" });
+    const nextErrors = {
+      title: title.trim() ? undefined : "כתבו כותרת להודעה",
+      content: content.trim() ? undefined : "כתבו את תוכן ההודעה",
+      expires: expiresAt && publishedAt && new Date(expiresAt) <= new Date(publishedAt) ? "התפוגה חייבת להיות אחרי מועד הפרסום" : undefined,
+    };
+    setErrors(nextErrors);
+    if (nextErrors.title || nextErrors.content || nextErrors.expires) {
+      requestAnimationFrame(() => focusFirstInvalid(formRef.current));
       return;
     }
     const payload = {
@@ -92,16 +108,15 @@ export default function Announcements() {
     }
   };
 
-  const confirmDelete = async () => {
-    if (!deleteId) return;
-    try {
-      await remove.mutateAsync(deleteId);
-      toast({ title: "ההודעה נמחקה" });
-    } catch (e: any) {
-      toast({ title: "שגיאה", description: e.message, variant: "destructive" });
-    } finally {
-      setDeleteId(null);
-    }
+  const confirmDelete = async (a: Announcement) => {
+    const ok = await confirm({
+      title: `למחוק את ההודעה "${a.title}"?`,
+      description: "ההודעה תוסר לצמיתות מהפורטל של כל העובדים.",
+      confirmLabel: "מחק הודעה",
+      destructive: true,
+      onConfirm: () => remove.mutateAsync(a.id),
+    });
+    if (ok) toast({ title: "ההודעה נמחקה" });
   };
 
   return (
@@ -112,19 +127,24 @@ export default function Announcements() {
           <p className="page-subtitle">פרסום, תזמון וניהול הודעות שמוצגות לעובדים בפורטל</p>
         </div>
         <Button className="gap-1.5" onClick={openNew}>
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4" aria-hidden="true" />
           הודעה חדשה
         </Button>
       </div>
 
-      {isLoading ? (
-        <p className="text-sm text-muted-foreground">טוען...</p>
-      ) : announcements.length === 0 ? (
-        <div className="bg-card rounded-xl border border-border/50 p-10 text-center">
-          <Megaphone className="w-8 h-8 mx-auto mb-3 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">אין הודעות עדיין</p>
-        </div>
-      ) : (
+      <StateView
+        loading={isLoading}
+        error={loadError}
+        onRetry={() => { void refetch(); }}
+        label="את ההודעות"
+        isEmpty={announcements.length === 0}
+        empty={{
+          icon: <Megaphone className="w-6 h-6" />,
+          title: "אין הודעות עדיין",
+          description: "הודעה שתפרסמו תופיע בפורטל העובדים בזמן שתבחרו.",
+          action: <Button onClick={openNew} className="gap-1.5"><Plus className="w-4 h-4" aria-hidden="true" />הודעה חדשה</Button>,
+        }}
+      >
         <div className="space-y-3">
           {announcements.map((a) => {
             const status = STATUS_META[announcementStatus(a)];
@@ -136,16 +156,16 @@ export default function Announcements() {
                     <Badge variant="outline" className={status.className}>{status.label}</Badge>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="sm" className="gap-1" onClick={() => openEdit(a)}>
+                    <IconButton label={`ערוך את ההודעה ${a.title}`} onClick={() => openEdit(a)}>
                       <Pencil className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" className="gap-1 text-destructive" onClick={() => setDeleteId(a.id)}>
+                    </IconButton>
+                    <IconButton label={`מחק את ההודעה ${a.title}`} className="text-destructive hover:text-destructive" onClick={() => { void confirmDelete(a); }}>
                       <Trash2 className="w-4 h-4" />
-                    </Button>
+                    </IconButton>
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground whitespace-pre-line">{a.content}</p>
-                <div className="mt-3 pt-2 border-t border-border/40 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+                <div className="mt-3 pt-2 border-t border-border/40 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                   <span>פרסום: {formatDateTimeDMY(a.published_at)}</span>
                   {a.expires_at && <span>תפוגה: {formatDateTimeDMY(a.expires_at)}</span>}
                   {a.sender_name && (
@@ -156,68 +176,49 @@ export default function Announcements() {
             );
           })}
         </div>
-      )}
+      </StateView>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={guard(setOpen)}>
         <DialogContent dir="rtl" className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? "עריכת הודעה" : "הודעה חדשה"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label className="mb-1.5 block">כותרת</Label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="כותרת ההודעה" />
-            </div>
-            <div>
-              <Label className="mb-1.5 block">תוכן</Label>
-              <Textarea rows={6} value={content} onChange={(e) => setContent(e.target.value)} placeholder="תוכן ההודעה" />
-            </div>
+          <div className="space-y-4" ref={formRef}>
+            <FormField label="כותרת" required error={errors.title} id="ann-title">
+              <Input value={title} onChange={(e) => { setTitle(e.target.value); if (errors.title) setErrors((x) => ({ ...x, title: undefined })); }} placeholder="כותרת ההודעה" />
+            </FormField>
+            <FormField label="תוכן" required error={errors.content} id="ann-content">
+              <Textarea rows={6} value={content} onChange={(e) => { setContent(e.target.value); if (errors.content) setErrors((x) => ({ ...x, content: undefined })); }} placeholder="תוכן ההודעה" />
+            </FormField>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <Label className="mb-1.5 block">תאריך ושעת פרסום</Label>
+              <FormField label="תאריך ושעת פרסום" id="ann-published">
                 <Input type="datetime-local" value={publishedAt} onChange={(e) => setPublishedAt(e.target.value)} />
-              </div>
-              <div>
-                <Label className="mb-1.5 block">תאריך תפוגה (אופציונלי)</Label>
-                <Input type="datetime-local" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} />
-              </div>
+              </FormField>
+              <FormField label="תאריך תפוגה (לא חובה)" error={errors.expires} id="ann-expires">
+                <Input type="datetime-local" value={expiresAt} onChange={(e) => { setExpiresAt(e.target.value); if (errors.expires) setErrors((x) => ({ ...x, expires: undefined })); }} />
+              </FormField>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <Label className="mb-1.5 block">חתימה - שם</Label>
+              <FormField label="חתימה - שם" id="ann-sender-name">
                 <Input value={senderName} onChange={(e) => setSenderName(e.target.value)} placeholder="שם השולח" />
-              </div>
-              <div>
-                <Label className="mb-1.5 block">חתימה - תפקיד</Label>
+              </FormField>
+              <FormField label="חתימה - תפקיד" id="ann-sender-role">
                 <Input value={senderRole} onChange={(e) => setSenderRole(e.target.value)} placeholder="תפקיד השולח" />
-              </div>
+              </FormField>
             </div>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" className="gap-1.5" onClick={() => setOpen(false)}>
-              <X className="w-4 h-4" />
+            <Button variant="outline" className="gap-1.5" onClick={() => guard(setOpen)(false)} disabled={saving}>
+              <X className="w-4 h-4" aria-hidden="true" />
               ביטול
             </Button>
-            <Button className="gap-1.5" onClick={save} disabled={create.isPending || update.isPending}>
-              <Save className="w-4 h-4" />
-              {create.isPending || update.isPending ? "שומר..." : "שמירה"}
+            <Button className="gap-1.5" onClick={save} loading={saving} loadingText="שומר…">
+              <Save className="w-4 h-4" aria-hidden="true" />
+              {editing ? "שמירה" : "פרסום"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
-        <AlertDialogContent dir="rtl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>מחיקת הודעה</AlertDialogTitle>
-            <AlertDialogDescription>ההודעה תוסר לצמיתות מהפורטל. האם להמשיך?</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>ביטול</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>מחיקה</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

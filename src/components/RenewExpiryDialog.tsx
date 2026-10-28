@@ -93,15 +93,9 @@ export function RenewExpiryDialog({ open, onOpenChange, item }: Props) {
         if (error) throw error;
       } else if (item.source_type === "document") {
         if (replaceFile && activeCompanyId) {
-          // Archive the previous document instead of overwriting it
-          const period = periodFromExpiry(item.expiry_date);
-          const { error: archErr } = await supabase
-            .from("asset_documents" as any)
-            .update({ is_archived: true, period })
-            .eq("id", item.source_id);
-          if (archErr) throw archErr;
-
-          // Upload the new file as the current document
+          // Upload the new file first; the previous document is archived (not
+          // overwritten) only after the new one is safely stored, so a failed
+          // upload never leaves the item without a current document.
           const safeName = replaceFile.name.replace(/[^\w.\-א-ת]+/g, "_");
           const path = `${activeCompanyId}/${item.asset_id}/${Date.now()}_${safeName}`;
           const up = await uploadFile("asset-documents", path, replaceFile);
@@ -112,7 +106,7 @@ export function RenewExpiryDialog({ open, onOpenChange, item }: Props) {
             .eq("id", item.source_id)
             .single();
           const { data: { user } } = await supabase.auth.getUser();
-          const { error } = await supabase.from("asset_documents" as any).insert({
+          const { data: newDoc, error } = await supabase.from("asset_documents" as any).insert({
             asset_id: item.asset_id,
             company_id: activeCompanyId,
             document_type: (oldDoc as any)?.document_type ?? "other",
@@ -123,8 +117,23 @@ export function RenewExpiryDialog({ open, onOpenChange, item }: Props) {
             expiry_date: newDate,
             notes: (oldDoc as any)?.notes ?? null,
             uploaded_by: user?.id ?? null,
-          } as any);
-          if (error) throw error;
+          } as any).select("id").single();
+          if (error) {
+            await supabase.storage.from("asset-documents").remove([path]);
+            throw error;
+          }
+
+          const period = periodFromExpiry(item.expiry_date);
+          const { error: archErr } = await supabase
+            .from("asset_documents" as any)
+            .update({ is_archived: true, period })
+            .eq("id", item.source_id);
+          if (archErr) {
+            // Roll back the new document so the old one stays the only current one.
+            await supabase.from("asset_documents" as any).delete().eq("id", (newDoc as any)?.id);
+            await supabase.storage.from("asset-documents").remove([path]);
+            throw archErr;
+          }
         } else {
           const { error } = await supabase
             .from("asset_documents" as any)
@@ -191,14 +200,14 @@ export function RenewExpiryDialog({ open, onOpenChange, item }: Props) {
             )}
             {!item.is_assignable && (
               <div className="text-xs">
-                <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px]">נכס מוסדי</span>
+                <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-xs">נכס מוסדי</span>
               </div>
             )}
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-1 block">תאריך תוקף חדש</label>
-            <input
+            <label htmlFor="renewexpir-f1" className="text-sm font-medium mb-1 block">תאריך תוקף חדש</label>
+            <input id="renewexpir-f1"
               type="date"
               value={newDate}
               onChange={(e) => setNewDate(e.target.value)}
@@ -209,11 +218,11 @@ export function RenewExpiryDialog({ open, onOpenChange, item }: Props) {
 
           {item.source_type === "document" && (
             <div>
-              <label className="text-sm font-medium mb-1 block flex items-center gap-1.5">
+              <label htmlFor="renewexpir-f2" className="text-sm font-medium mb-1 block flex items-center gap-1.5">
                 <Upload className="w-3.5 h-3.5" />
                 החלף קובץ (אופציונלי)
               </label>
-              <input
+              <input id="renewexpir-f2"
                 type="file"
                 onChange={(e) => setReplaceFile(e.target.files?.[0] ?? null)}
                 className="w-full text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:bg-primary file:text-primary-foreground"
@@ -223,8 +232,8 @@ export function RenewExpiryDialog({ open, onOpenChange, item }: Props) {
           )}
 
           <div>
-            <label className="text-sm font-medium mb-1 block">הערות (אופציונלי)</label>
-            <textarea
+            <label htmlFor="renewexpir-f3" className="text-sm font-medium mb-1 block">הערות (אופציונלי)</label>
+            <textarea id="renewexpir-f3"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}

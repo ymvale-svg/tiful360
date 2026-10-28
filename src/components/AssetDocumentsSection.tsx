@@ -16,6 +16,9 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { useConfirm } from "@/components/feedback/ConfirmDialog";
+import { IconButton } from "@/components/feedback/IconButton";
+import { FileDrop } from "@/components/feedback/FileDrop";
 
 interface Props {
   assetId: string;
@@ -28,6 +31,7 @@ export function AssetDocumentsSection({ assetId }: Props) {
   const archive = useArchiveAssetDocument();
   const { toast } = useToast();
   const qc = useQueryClient();
+  const confirm = useConfirm();
 
   const [showForm, setShowForm] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -106,13 +110,14 @@ export function AssetDocumentsSection({ assetId }: Props) {
   };
 
   const handleDelete = async (doc: AssetDocument) => {
-    if (!confirm(`למחוק את "${doc.document_label || doc.file_name}"?`)) return;
-    try {
-      await del.mutateAsync(doc);
-      toast({ title: "המסמך נמחק" });
-    } catch (err: any) {
-      toast({ title: "שגיאה במחיקה", description: err.message, variant: "destructive" });
-    }
+    const ok = await confirm({
+      title: `למחוק את "${doc.document_label || doc.file_name}"?`,
+      description: "הקובץ יימחק לצמיתות. כדי לשמור אותו לתיעוד, העבירו אותו לארכיון במקום.",
+      confirmLabel: "מחק מסמך",
+      destructive: true,
+      onConfirm: () => del.mutateAsync(doc),
+    });
+    if (ok) toast({ title: "המסמך נמחק" });
   };
 
   const handleArchive = async (doc: AssetDocument, toArchive: boolean) => {
@@ -148,6 +153,7 @@ export function AssetDocumentsSection({ assetId }: Props) {
       : null;
     const isExpired = !doc.is_archived && expiringSoon !== null && expiringSoon <= 0;
     const isWarning = !doc.is_archived && expiringSoon !== null && expiringSoon > 0 && expiringSoon <= 14;
+    const name = doc.document_label || doc.file_name;
     return (
       <li
         key={doc.id}
@@ -158,17 +164,17 @@ export function AssetDocumentsSection({ assetId }: Props) {
             <span className="font-medium text-foreground break-words break-all">
               {doc.document_label || doc.file_name}
             </span>
-            <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground text-[10px]">
+            <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground text-xs">
               {typeLabel(doc.document_type)}
             </span>
             {isExpired && (
-              <span className="px-1.5 py-0.5 rounded bg-destructive/10 text-destructive text-[10px] flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" /> פג תוקף
+              <span className="px-1.5 py-0.5 rounded bg-destructive/10 text-destructive text-xs flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" aria-hidden="true" /> פג תוקף
               </span>
             )}
             {isWarning && (
-              <span className="px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 text-[10px] flex items-center gap-1">
-                <Calendar className="w-3 h-3" /> {expiringSoon} ימים
+              <span className="px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 text-xs flex items-center gap-1">
+                <Calendar className="w-3 h-3" aria-hidden="true" /> פג בעוד {expiringSoon} ימים
               </span>
             )}
           </div>
@@ -178,45 +184,25 @@ export function AssetDocumentsSection({ assetId }: Props) {
             {doc.expiry_date && <span>· תפוגה: {new Date(doc.expiry_date).toLocaleDateString("en-GB")}</span>}
           </div>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
-          <button
-            onClick={() => handlePreview(doc)}
-            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary"
-            title="צפה"
-          >
-            <Eye className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => handleDownload(doc)}
-            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-            title="הורד"
-          >
-            <Download className="w-4 h-4" />
-          </button>
+        <div className="flex flex-wrap items-center gap-1 shrink-0">
+          <IconButton label={`צפה ב${name}`} onClick={() => { void handlePreview(doc); }} className="text-muted-foreground hover:text-primary">
+            <Eye aria-hidden="true" />
+          </IconButton>
+          <IconButton label={`הורד את ${name}`} onClick={() => { void handleDownload(doc); }} className="text-muted-foreground hover:text-foreground">
+            <Download aria-hidden="true" />
+          </IconButton>
           {doc.is_archived ? (
-            <button
-              onClick={() => handleArchive(doc, false)}
-              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary"
-              title="שחזר מארכיון"
-            >
-              <ArchiveRestore className="w-4 h-4" />
-            </button>
+            <IconButton label={`שחזר את ${name} מהארכיון`} onClick={() => handleArchive(doc, false)} className="text-muted-foreground hover:text-primary">
+              <ArchiveRestore aria-hidden="true" />
+            </IconButton>
           ) : (
-            <button
-              onClick={() => handleArchive(doc, true)}
-              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary"
-              title="העבר לארכיון"
-            >
-              <Archive className="w-4 h-4" />
-            </button>
+            <IconButton label={`העבר את ${name} לארכיון`} onClick={() => handleArchive(doc, true)} className="text-muted-foreground hover:text-primary">
+              <Archive aria-hidden="true" />
+            </IconButton>
           )}
-          <button
-            onClick={() => handleDelete(doc)}
-            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-destructive"
-            title="מחק"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          <IconButton label={`מחק את ${name}`} onClick={() => { void handleDelete(doc); }} className="text-muted-foreground hover:text-destructive">
+            <Trash2 aria-hidden="true" />
+          </IconButton>
         </div>
       </li>
     );
@@ -242,7 +228,7 @@ export function AssetDocumentsSection({ assetId }: Props) {
           {isDragging && <span className="text-xs text-primary">שחרר כאן להעלאה</span>}
         </div>
         {!showForm && (
-          <Button size="sm" variant="outline" className="h-7 gap-1.5" onClick={() => setShowForm(true)}>
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowForm(true)}>
             <Upload className="w-3.5 h-3.5" />
             העלה מסמך
           </Button>
@@ -252,8 +238,8 @@ export function AssetDocumentsSection({ assetId }: Props) {
       {showForm && (
         <div className="border rounded-lg p-3 space-y-2 bg-muted/20">
           <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-xs font-medium mb-1 block">סוג מסמך</label>
+            <div role="group" aria-labelledby={`doc-type-${assetId}`}>
+              <span id={`doc-type-${assetId}`} className="text-xs font-medium mb-1 block">סוג מסמך</span>
               <SearchableSelect
                 value={docType}
                 onChange={setDocType}
@@ -261,8 +247,9 @@ export function AssetDocumentsSection({ assetId }: Props) {
               />
             </div>
             <div>
-              <label className="text-xs font-medium mb-1 block">תאריך תפוגה (אופציונלי)</label>
+              <label htmlFor={`doc-expiry-${assetId}`} className="text-xs font-medium mb-1 block">תאריך תפוגה (אופציונלי)</label>
               <input
+                id={`doc-expiry-${assetId}`}
                 type="date"
                 value={expiryDate}
                 onChange={(e) => setExpiryDate(e.target.value)}
@@ -272,22 +259,21 @@ export function AssetDocumentsSection({ assetId }: Props) {
             </div>
           </div>
           <div>
-            <label className="text-xs font-medium mb-1 block">תווית/תיאור</label>
+            <label htmlFor={`doc-label-${assetId}`} className="text-xs font-medium mb-1 block">תווית/תיאור</label>
             <input
+              id={`doc-label-${assetId}`}
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="למשל: אישור ביטוח חובה 2026"
               className="w-full px-2.5 py-1.5 bg-background rounded-md text-sm outline-none focus:ring-2 focus:ring-primary/30 border"
             />
           </div>
-          <div>
-            <label className="text-xs font-medium mb-1 block">קובץ</label>
-            <input
-              type="file"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="w-full text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:bg-primary file:text-primary-foreground"
-            />
-          </div>
+          <FileDrop
+            onFiles={(files) => setFile(files[0] ?? null)}
+            title={file ? file.name : "גררו קובץ לכאן או לחצו לבחירה"}
+            hint={file ? "לחצו או גררו קובץ אחר כדי להחליף" : undefined}
+            className="[&_label]:min-h-20 [&_label]:py-3"
+          />
           <div className="flex gap-2 pt-1">
             <Button size="sm" variant="outline" className="flex-1" onClick={reset}>ביטול</Button>
             <Button size="sm" className="flex-1" onClick={handleUpload} disabled={upload.isPending || !file}>
@@ -298,7 +284,7 @@ export function AssetDocumentsSection({ assetId }: Props) {
       )}
 
       {isLoading ? (
-        <p className="text-xs text-muted-foreground text-center py-2">טוען...</p>
+        <p role="status" className="text-xs text-muted-foreground text-center py-2">טוען מסמכים…</p>
       ) : !documents || documents.length === 0 ? (
         <p className="text-xs text-muted-foreground text-center py-2">אין מסמכים מצורפים</p>
       ) : (
@@ -314,8 +300,10 @@ export function AssetDocumentsSection({ assetId }: Props) {
           {archivedDocs.length > 0 && (
             <div className="border-t pt-2">
               <button
+                type="button"
                 onClick={() => setShowArchive((v) => !v)}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                aria-expanded={showArchive}
+                className="flex min-h-9 items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
               >
                 <Archive className="w-3.5 h-3.5" />
                 ארכיון ({archivedDocs.length})
@@ -325,7 +313,7 @@ export function AssetDocumentsSection({ assetId }: Props) {
                 <div className="mt-2 space-y-3">
                   {archivePeriods.map((period) => (
                     <div key={period}>
-                      <div className="text-[11px] font-medium text-muted-foreground mb-1 flex items-center gap-1.5">
+                      <div className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1.5">
                         <Archive className="w-3 h-3" />
                         {period}
                       </div>

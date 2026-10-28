@@ -375,7 +375,7 @@ export function useCompleteOnboardingProcess() {
         })
         .catch((e) => console.warn("notify-onboarding-process (final) failed", e));
 
-      return built;
+      return { ...built, version };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["onboarding-processes"] });

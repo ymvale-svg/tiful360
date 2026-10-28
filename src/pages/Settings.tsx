@@ -1,6 +1,8 @@
 import { uploadFile } from "@/lib/uploadWithProgress";
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { FormField } from "@/components/feedback/FormField";
+import { Input } from "@/components/ui/input";
 import {
   Settings as SettingsIcon, Bell, Shield, Database, Users,
   Building2, Save, Smartphone, Upload, Trash2, FileText,
@@ -34,9 +36,12 @@ function EmailsSettings({
   const [loaded, setLoaded] = useState(false);
 
   // Load current recipients via the security-definer RPC (direct column reads
-  // are restricted for non-admin roles).
+  // are restricted for non-admin roles). Reload from scratch whenever the
+  // active company changes so one company's addresses are never saved into another.
   useEffect(() => {
-    if (!activeCompanyId || loaded) return;
+    setEmails("");
+    setLoaded(false);
+    if (!activeCompanyId) return;
     let cancelled = false;
     supabase
       .rpc("get_company_routing_emails", { _company_id: activeCompanyId })
@@ -48,7 +53,7 @@ function EmailsSettings({
         setLoaded(true);
       });
     return () => { cancelled = true; };
-  }, [activeCompanyId, columnKey, loaded]);
+  }, [activeCompanyId, columnKey]);
 
   const updateMutation = useMutation({
     mutationFn: async () => {
@@ -74,23 +79,25 @@ function EmailsSettings({
   return (
     <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 space-y-4 max-w-xl">
       <div className="flex items-center gap-3 mb-2">
-        <Mail className="w-5 h-5 text-primary" />
+        <Mail className="w-5 h-5 text-primary" aria-hidden="true" />
         <h3 className="font-semibold">{title}</h3>
       </div>
-      <p className="text-xs text-muted-foreground">{description}</p>
-      <div>
-        <label className="text-sm font-medium mb-1.5 block">כתובות דוא"ל</label>
-        <input
+      <FormField label='כתובות דוא"ל' hint={description} id={`emails-${columnKey}`}>
+        <Input
+          type="text"
+          inputMode="email"
+          autoComplete="off"
           value={emails}
           onChange={(e) => setEmails(e.target.value)}
           placeholder={placeholder}
-          className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 font-mono"
+          disabled={!loaded}
+          className="font-mono"
           dir="ltr"
         />
-      </div>
-      <Button className="gap-1.5" onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>
-        <Save className="w-4 h-4" />
-        {updateMutation.isPending ? "שומר..." : "שמור שינויים"}
+      </FormField>
+      <Button className="gap-1.5" onClick={() => updateMutation.mutate()} disabled={!loaded} loading={updateMutation.isPending} loadingText="שומר…">
+        <Save className="w-4 h-4" aria-hidden="true" />
+        שמור שינויים
       </Button>
     </div>
   );
@@ -100,6 +107,14 @@ export default function Settings() {
   const navigate = useNavigate();
   const { isAdmin, isSuperAdmin, isOperations } = useAuth();
   const canManageProtocols = isAdmin || isSuperAdmin || isOperations;
+  // The active tab lives in ?tab= so reloads, shared links and Back keep it.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "general";
+  const changeTab = (tab: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (tab === "general") next.delete("tab"); else next.set("tab", tab);
+    setSearchParams(next, { replace: true });
+  };
 
   const shortcuts = [
     { icon: Database, title: "מחולל קטגוריות", desc: "הוספה ועריכת סוגי ציוד", path: "/categories" },
@@ -114,37 +129,37 @@ export default function Settings() {
         <p className="page-subtitle">ניהול הגדרות המערכת, התראות ואבטחה</p>
       </div>
 
-      <Tabs defaultValue={new URLSearchParams(window.location.search).get("tab") || "general"} dir="rtl">
+      <Tabs value={activeTab} onValueChange={changeTab} dir="rtl">
         <TabsList className="mb-4">
           <TabsTrigger value="general" className="gap-1.5">
-            <SettingsIcon className="w-4 h-4" />
+            <SettingsIcon className="w-4 h-4" aria-hidden="true" />
             כללי
           </TabsTrigger>
           <TabsTrigger value="sub_employers" className="gap-1.5">
-            <Building2 className="w-4 h-4" />
+            <Building2 className="w-4 h-4" aria-hidden="true" />
             מעסיקים / תת-חברות
           </TabsTrigger>
           <TabsTrigger value="portal" className="gap-1.5">
-            <Smartphone className="w-4 h-4" />
+            <Smartphone className="w-4 h-4" aria-hidden="true" />
             פורטל עובדים
           </TabsTrigger>
           <TabsTrigger value="email_templates" className="gap-1.5">
-            <Mail className="w-4 h-4" />
+            <Mail className="w-4 h-4" aria-hidden="true" />
             תבניות מייל
           </TabsTrigger>
           {canManageProtocols && (
             <TabsTrigger value="protocols" className="gap-1.5">
-              <FileText className="w-4 h-4" />
+              <FileText className="w-4 h-4" aria-hidden="true" />
               פרוטוקולי מסירה
             </TabsTrigger>
           )}
           <TabsTrigger value="alerts" className="gap-1.5">
-            <Bell className="w-4 h-4" />
+            <Bell className="w-4 h-4" aria-hidden="true" />
             חוקי התראות
           </TabsTrigger>
           {(isAdmin || isSuperAdmin) && (
             <TabsTrigger value="permission_audit" className="gap-1.5">
-              <Shield className="w-4 h-4" />
+              <Shield className="w-4 h-4" aria-hidden="true" />
               לוג הרשאות
             </TabsTrigger>
           )}
@@ -223,11 +238,12 @@ export default function Settings() {
           {shortcuts.map((item) => (
             <button
               key={item.title}
+              type="button"
               onClick={() => navigate(item.path)}
-              className="bg-card rounded-xl border border-border/50 p-4 hover:shadow-md hover:border-primary/30 transition-all text-right flex items-center gap-3"
+              className="bg-card rounded-xl border border-border/50 p-4 hover:shadow-md hover:border-primary/30 transition-all text-right flex items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                <item.icon className="w-5 h-5 text-primary" />
+                <item.icon className="w-5 h-5 text-primary" aria-hidden="true" />
               </div>
               <div>
                 <p className="font-medium text-sm">{item.title}</p>
@@ -279,6 +295,12 @@ function GeneralSettings() {
     },
   });
 
+  // One save model for the whole card: uploading or removing the logo only changes the draft;
+  // "שמור שינויים" writes name + logo together.
+  const savedName = activeCompany?.name ?? "";
+  const savedLogo = activeCompany?.logo_url ?? "";
+  const dirty = name !== savedName || (logoUrl || "") !== (savedLogo || "");
+
   const handleUpload = async (file: File) => {
     if (!activeCompanyId) return;
     if (file.size > 5 * 1024 * 1024) {
@@ -296,12 +318,8 @@ function GeneralSettings() {
       });
       if (upErr) throw upErr;
       const { data: pub } = supabase.storage.from("company-logos").getPublicUrl(path);
-      const url = pub.publicUrl;
-      const { error: updErr } = await supabase.from("companies").update({ logo_url: url }).eq("id", activeCompanyId);
-      if (updErr) throw updErr;
-      setLogoUrl(url);
-      queryClient.invalidateQueries({ queryKey: ["companies"] });
-      toast({ title: "הלוגו הועלה בהצלחה" });
+      setLogoUrl(pub.publicUrl);
+      toast({ title: "הלוגו הועלה", description: "לחצו \"שמור שינויים\" כדי להחיל אותו." });
     } catch (e: any) {
       toast({ title: "שגיאה בהעלאה", description: e.message, variant: "destructive" });
     } finally {
@@ -310,17 +328,7 @@ function GeneralSettings() {
     }
   };
 
-  const removeLogo = async () => {
-    if (!activeCompanyId) return;
-    setLogoUrl("");
-    const { error } = await supabase.from("companies").update({ logo_url: null }).eq("id", activeCompanyId);
-    if (error) {
-      toast({ title: "שגיאה", description: error.message, variant: "destructive" });
-      return;
-    }
-    queryClient.invalidateQueries({ queryKey: ["companies"] });
-    toast({ title: "הלוגו הוסר" });
-  };
+  const removeLogo = () => setLogoUrl("");
 
   if (!activeCompanyId) {
     return <div className="text-center py-8 text-muted-foreground">לא נבחרה חברה</div>;
@@ -329,26 +337,21 @@ function GeneralSettings() {
   return (
     <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 space-y-4 max-w-xl">
       <div className="flex items-center gap-3 mb-2">
-        <Building2 className="w-5 h-5 text-primary" />
+        <Building2 className="w-5 h-5 text-primary" aria-hidden="true" />
         <h3 className="font-semibold">פרטי החברה</h3>
       </div>
-      <div>
-        <label className="text-sm font-medium mb-1.5 block">שם החברה</label>
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
-        />
-      </div>
+      <FormField label="שם החברה" id="company-name">
+        <Input value={name} onChange={(e) => setName(e.target.value)} autoComplete="organization" />
+      </FormField>
 
-      <div>
-        <label className="text-sm font-medium mb-1.5 block">לוגו החברה</label>
+      <div role="group" aria-labelledby="company-logo-label">
+        <p id="company-logo-label" className="text-sm font-medium mb-1.5">לוגו החברה</p>
         <div className="flex items-center gap-4">
           <div className="w-24 h-24 rounded-lg border border-border/50 overflow-hidden bg-muted flex items-center justify-center shrink-0">
             {logoUrl ? (
-              <img src={logoUrl} alt="לוגו" className="max-w-full max-h-full object-contain" />
+              <img src={logoUrl} alt="לוגו החברה" className="max-w-full max-h-full object-contain" />
             ) : (
-              <Building2 className="w-8 h-8 text-muted-foreground" />
+              <Building2 className="w-8 h-8 text-muted-foreground" aria-label="אין לוגו" />
             )}
           </div>
           <div className="flex flex-col gap-2">
@@ -357,6 +360,7 @@ function GeneralSettings() {
               type="file"
               accept="image/png,image/jpeg,image/svg+xml,image/webp"
               className="hidden"
+              aria-label="בחירת קובץ לוגו"
               onChange={(e) => {
                 const f = e.target.files?.[0];
                 if (f) handleUpload(f);
@@ -365,40 +369,48 @@ function GeneralSettings() {
             <Button
               type="button"
               variant="outline"
-              size="sm"
               className="gap-1.5"
               onClick={() => fileRef.current?.click()}
-              disabled={uploading}
+              loading={uploading}
+              loadingText="מעלה…"
             >
-              <Upload className="w-4 h-4" />
-              {uploading ? "מעלה..." : "העלאת לוגו"}
+              <Upload className="w-4 h-4" aria-hidden="true" />
+              העלאת לוגו
             </Button>
             {logoUrl && (
-              <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-destructive" onClick={removeLogo}>
-                <Trash2 className="w-4 h-4" />
+              <Button type="button" variant="ghost" className="gap-1.5 text-destructive" onClick={removeLogo} disabled={uploading}>
+                <Trash2 className="w-4 h-4" aria-hidden="true" />
                 הסר לוגו
               </Button>
             )}
-            <p className="text-xs text-muted-foreground">PNG / JPG / SVG עד 5MB. הלוגו יופיע ממורכז בתחילת מיילים שנשלחים לעובדים.</p>
+            <p className="text-xs text-muted-foreground">PNG / JPG / SVG עד 5MB. הלוגו יופיע ממורכז בתחילת מיילים שנשלחים לעובדים. השינוי נשמר בלחיצה על "שמור שינויים".</p>
           </div>
         </div>
       </div>
 
-      <div>
-        <label className="text-sm font-medium mb-1.5 block">או הדבק כתובת לוגו (URL)</label>
-        <input
+      <FormField label="או הדבק כתובת לוגו (URL)" id="company-logo-url">
+        <Input
+          type="url"
           value={logoUrl}
           onChange={(e) => setLogoUrl(e.target.value)}
           placeholder="https://example.com/logo.png"
-          className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 font-mono"
+          className="font-mono"
           dir="ltr"
         />
-      </div>
+      </FormField>
 
-      <Button className="gap-1.5" onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>
-        <Save className="w-4 h-4" />
-        {updateMutation.isPending ? "שומר..." : "שמור שינויים"}
-      </Button>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button className="gap-1.5" onClick={() => updateMutation.mutate()} disabled={uploading || !dirty} loading={updateMutation.isPending} loadingText="שומר…">
+          <Save className="w-4 h-4" aria-hidden="true" />
+          שמור שינויים
+        </Button>
+        {dirty && !updateMutation.isPending && (
+          <>
+            <span className="text-xs text-muted-foreground" role="status">יש שינויים שלא נשמרו</span>
+            <Button type="button" variant="ghost" onClick={() => { setName(savedName); setLogoUrl(savedLogo); }} disabled={uploading}>בטל שינויים</Button>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -407,54 +419,43 @@ function GeneralSettings() {
 // Alert Rules Settings
 // ============================
 function AlertRulesSettings() {
-  const { activeCompanyId } = useCompany();
-  const { toast } = useToast();
-
-  const [rules, setRules] = useState([
+  // There is no table behind these rules yet: they are fixed in the system, so
+  // show them as information only instead of toggles that pretend to save.
+  const rules = [
     { id: "expiry", label: "התראה על ציוד שפג תוקפו", desc: "שלח התראה 30 יום לפני תפוגת ציוד", enabled: true },
     { id: "leaving", label: "התראה על עובד עוזב", desc: "הצג התראה כשעובד עובר לסטטוס ׳עוזב׳", enabled: true },
     { id: "unassigned", label: "ציוד ללא שיוך", desc: "הצג ציוד שנמצא במלאי מעל 60 יום", enabled: false },
     { id: "license", label: "חידוש רישיונות", desc: "תזכורת לחידוש רישיונות תוכנה", enabled: true },
-  ]);
-
-  const toggle = (id: string) => {
-    setRules(rules.map(r => r.id === id ? { ...r, enabled: !r.enabled } : r));
-    toast({ title: "חוק עודכן" });
-  };
+  ];
 
   return (
     <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 space-y-3 max-w-xl">
       <div className="flex items-center gap-3 mb-2">
-        <Bell className="w-5 h-5 text-primary" />
+        <Bell className="w-5 h-5 text-primary" aria-hidden="true" />
         <h3 className="font-semibold">חוקי התראות</h3>
       </div>
-      <p className="text-xs text-muted-foreground">הגדר אילו התראות אוטומטיות יופעלו במערכת</p>
+      <p className="text-xs text-muted-foreground">כללי ההתראות מוגדרים במערכת ואינם ניתנים לשינוי מכאן.</p>
 
-      <div className="space-y-2 mt-3">
+      <ul className="space-y-2 mt-3">
         {rules.map((rule) => (
-          <div
+          <li
             key={rule.id}
-            className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-background"
+            className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border/50 bg-background"
           >
             <div>
               <p className="text-sm font-medium">{rule.label}</p>
               <p className="text-xs text-muted-foreground">{rule.desc}</p>
             </div>
-            <button
-              onClick={() => toggle(rule.id)}
-              className={`w-11 h-6 rounded-full transition-colors relative ${
-                rule.enabled ? "bg-primary" : "bg-muted"
+            <span
+              className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                rule.enabled ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
               }`}
             >
-              <div
-                className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                  rule.enabled ? "right-0.5" : "left-0.5"
-                }`}
-              />
-            </button>
-          </div>
+              {rule.enabled ? "פעיל" : "כבוי"}
+            </span>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }

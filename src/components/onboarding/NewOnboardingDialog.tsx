@@ -58,6 +58,7 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
   const [newEmployeeOpen, setNewEmployeeOpen] = useState(false);
   const [quickAdd, setQuickAdd] = useState<Record<string, string>>({});
   const [quickModel, setQuickModel] = useState<Record<string, string>>({});
+  const [savingEdit, setSavingEdit] = useState(false);
   const [pendingSend, setPendingSend] = useState<
     { processId: string; employeeId: string; count: number } | null
   >(null);
@@ -293,7 +294,8 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
   // Items already done or with an assigned asset are never deleted; manual items
   // (without a catalog reference) are kept as-is.
   const saveEdit = async () => {
-    if (!editProcess) return;
+    // One save at a time: a second click would insert the same new items twice.
+    if (!editProcess || savingEdit) return;
     const newItems = buildItems();
     const key = (i: { catalog_ref_id?: string | null; selected_group_id?: string | null; selected_model_id?: string | null }) =>
       `${i.catalog_ref_id ?? ""}|${i.selected_group_id ?? "_"}|${i.selected_model_id ?? ""}`;
@@ -313,6 +315,7 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
         return ex.owner_role !== item.owner_role || (ex.notes ?? null) !== (item.notes ?? null) || ex.title !== item.title;
       });
 
+    setSavingEdit(true);
     try {
       for (const d of toDelete) {
         const { error } = await supabase.from("onboarding_items").delete().eq("id", d.id);
@@ -356,6 +359,8 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
       onOpenChange(false);
     } catch (e: any) {
       toast({ title: "שגיאה בשמירה", description: e.message, variant: "destructive" });
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -393,7 +398,7 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={(o) => { if (!o && (savingEdit || create.isPending)) return; onOpenChange(o); }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" dir="rtl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -421,6 +426,7 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
                       variant="outline"
                       size="icon"
                       title="עובד חדש"
+                      aria-label="הקמת עובד חדש"
                       onClick={() => setNewEmployeeOpen(true)}
                     >
                       <UserPlus className="w-4 h-4" />
@@ -494,14 +500,15 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
                                         key={g.id}
                                         type="button"
                                         onClick={() => toggleGroup(c.id, g.id)}
+                                        aria-pressed={checked}
                                         className={`
-                                          inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border transition-colors
+                                          inline-flex items-center gap-1 min-h-9 px-3 py-1 rounded-full text-xs border transition-colors
                                           ${checked
                                             ? "bg-primary text-primary-foreground border-primary"
                                             : "bg-background text-foreground border-border hover:bg-muted"}
                                         `}
                                       >
-                                        {checked && <X className="w-3 h-3" />}
+                                        {checked && <X className="w-3 h-3" aria-hidden="true" />}
                                         {g.name}
                                       </button>
                                     );
@@ -518,6 +525,7 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
                                       }
                                     }}
                                     placeholder="＋ הוסף תת-קטגוריה..."
+                                    aria-label={`תת-קטגוריה חדשה ל${c.category_name}`}
                                     className="flex-1 min-w-0 px-3 py-1.5 bg-background border border-border rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
                                   />
                                   <Button
@@ -653,17 +661,17 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
           </div>
 
           <div className="flex flex-col-reverse sm:flex-row gap-2 justify-end mt-4">
-            <Button variant="ghost" onClick={() => onOpenChange(false)}>ביטול</Button>
+            <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={savingEdit || create.isPending}>ביטול</Button>
             {editProcess ? (
-              <Button onClick={saveEdit} className="gap-2">
+              <Button onClick={() => { void saveEdit(); }} loading={savingEdit} loadingText="שומר שינויים…" className="gap-2">
                 שמור שינויים
               </Button>
             ) : (
               <>
-                <Button variant="outline" onClick={() => submit("draft")} disabled={create.isPending}>
+                <Button variant="outline" onClick={() => { void submit("draft"); }} disabled={create.isPending}>
                   שמור כטיוטה
                 </Button>
-                <Button onClick={() => submit("sent")} disabled={create.isPending} className="gap-2">
+                <Button onClick={() => { void submit("sent"); }} loading={create.isPending} loadingText="שומר…" className="gap-2">
                   <Send className="w-4 h-4" />
                   שלח לתפעול
                 </Button>

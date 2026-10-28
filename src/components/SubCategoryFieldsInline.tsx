@@ -27,7 +27,7 @@ export function SubCategoryFieldsChecklist({ group, domain }: { group: any; doma
 
   return (
     <div className="space-y-2">
-      <p className="text-[11px] text-muted-foreground">שדה שלא מסומן לא יופיע בכרטיס הפריט ולא בטופס ההוספה. נשמר מיד.</p>
+      <p className="text-xs text-muted-foreground">שדה שלא מסומן לא יופיע בכרטיס הפריט ולא בטופס ההוספה. נשמר מיד.</p>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
         {fields.map((f) => (
           <label key={f.key} className="flex items-center gap-2 text-sm cursor-pointer">
@@ -50,7 +50,7 @@ export function SubCategoryFieldsInline({ categoryId, domain }: { categoryId: st
   return (
     <div className="bg-card rounded-xl border border-border/50 shadow-card p-4 space-y-2">
       <div className="text-sm font-medium">שדות לפי תת-קטגוריה</div>
-      <p className="text-[11px] text-muted-foreground">לחצו על תת-קטגוריה כדי לבחור אילו שדות יופיעו בה.</p>
+      <p className="text-xs text-muted-foreground">לחצו על תת-קטגוריה כדי לבחור אילו שדות יופיעו בה.</p>
       <div className="divide-y divide-border rounded-lg border border-border">
         {list.map((g: any) => {
           const open = openId === g.id;

@@ -122,9 +122,9 @@ export function DigitalAccessPanel({ asset }: Props) {
       <div className="grid grid-cols-2 gap-x-4 gap-y-3">
         {show("account_username", asset.account_username) && (
         <div>
-          <Label className="text-xs text-muted-foreground">שם משתמש</Label>
+          <Label htmlFor="digitalacc-f1" className="text-xs text-muted-foreground">שם משתמש</Label>
           {editing ? (
-            <Input value={form.account_username} onChange={(e) => setForm({ ...form, account_username: e.target.value })} className="mt-1 text-left" dir="ltr" />
+            <Input id="digitalacc-f1" value={form.account_username} onChange={(e) => setForm({ ...form, account_username: e.target.value })} className="mt-1 text-left" dir="ltr" />
           ) : (
             <div className="font-mono text-sm mt-1">{asset.account_username ?? "—"}</div>
           )}
@@ -132,9 +132,9 @@ export function DigitalAccessPanel({ asset }: Props) {
         )}
         {show("account_url", asset.account_url) && (
         <div>
-          <Label className="text-xs text-muted-foreground">כתובת / URL</Label>
+          <Label htmlFor="digitalacc-f2" className="text-xs text-muted-foreground">כתובת / URL</Label>
           {editing ? (
-            <Input value={form.account_url} onChange={(e) => setForm({ ...form, account_url: e.target.value })} className="mt-1 text-left" dir="ltr" />
+            <Input id="digitalacc-f2" value={form.account_url} onChange={(e) => setForm({ ...form, account_url: e.target.value })} className="mt-1 text-left" dir="ltr" />
           ) : asset.account_url ? (
             <a href={asset.account_url} target="_blank" rel="noreferrer" className="font-medium mt-1 text-primary inline-flex items-center gap-1 hover:underline text-sm" dir="ltr">
               {asset.account_url}

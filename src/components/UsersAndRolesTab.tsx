@@ -6,6 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -208,10 +212,39 @@ export function UsersAndRolesTab() {
     },
   });
 
-  const handleRoleChange = (userId: string, currentRoles: string[], newRole: string) => {
-    const has = currentRoles.includes(newRole);
-    roleMutation.mutate({ user_id: userId, role: newRole, remove: has });
+  // Access changes are confirmed first: nothing is applied until the dialog is approved.
+  type PendingAccessChange =
+    | { kind: "role"; userId: string; userName: string; role: string; remove: boolean }
+    | { kind: "ban"; userId: string; userName: string };
+  const [pendingChange, setPendingChange] = useState<PendingAccessChange | null>(null);
+  const accessBusy = roleMutation.isPending || banMutation.isPending;
+
+  const handleRoleChange = (user: { id: string; full_name?: string | null; email?: string | null }, currentRoles: string[], newRole: string) => {
+    if (!newRole) return;
+    setPendingChange({
+      kind: "role",
+      userId: user.id,
+      userName: user.full_name || user.email || "המשתמש",
+      role: newRole,
+      remove: currentRoles.includes(newRole),
+    });
   };
+
+  const confirmPendingChange = async () => {
+    if (!pendingChange) return;
+    try {
+      if (pendingChange.kind === "role") {
+        await roleMutation.mutateAsync({ user_id: pendingChange.userId, role: pendingChange.role, remove: pendingChange.remove });
+      } else {
+        await banMutation.mutateAsync({ user_id: pendingChange.userId, ban: true });
+      }
+      setPendingChange(null);
+    } catch {
+      // onError already shows the failure toast; keep the dialog so the user can retry or cancel.
+    }
+  };
+
+  const pendingRoleLabel = pendingChange?.kind === "role" ? ROLE_LABELS[pendingChange.role] || pendingChange.role : "";
 
   return (
     <div className="space-y-6">
@@ -371,9 +404,14 @@ export function UsersAndRolesTab() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Select
-                          onValueChange={(role) => handleRoleChange(u.id, u.roles, role)}
+                          value=""
+                          onValueChange={(role) => handleRoleChange(u, u.roles, role)}
+                          disabled={accessBusy}
                         >
-                          <SelectTrigger className="w-[130px] h-8 text-xs">
+                          <SelectTrigger
+                            className="w-[130px] h-8 text-xs"
+                            aria-label={`שינוי תפקיד עבור ${u.full_name || u.email || "המשתמש"}`}
+                          >
                             <SelectValue placeholder="שנה תפקיד" />
                           </SelectTrigger>
                           <SelectContent>
@@ -406,8 +444,12 @@ export function UsersAndRolesTab() {
                             variant={u.banned ? "outline" : "destructive"}
                             size="sm"
                             className="h-8 text-xs gap-1"
-                            onClick={() => banMutation.mutate({ user_id: u.id, ban: !u.banned })}
-                            disabled={banMutation.isPending}
+                            onClick={() =>
+                              u.banned
+                                ? banMutation.mutate({ user_id: u.id, ban: false })
+                                : setPendingChange({ kind: "ban", userId: u.id, userName: u.full_name || u.email || "המשתמש" })
+                            }
+                            disabled={accessBusy}
                           >
                             {u.banned ? (
                               <>
@@ -431,6 +473,51 @@ export function UsersAndRolesTab() {
           </Table>
         </CardContent>
       </Card>
+      <AlertDialog open={!!pendingChange} onOpenChange={(o) => !o && !accessBusy && setPendingChange(null)}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingChange?.kind === "ban"
+                ? `להשהות את ${pendingChange.userName}?`
+                : pendingChange?.kind === "role" && pendingChange.remove
+                  ? `להסיר את התפקיד "${pendingRoleLabel}" מ-${pendingChange.userName}?`
+                  : pendingChange?.kind === "role"
+                    ? `להוסיף את התפקיד "${pendingRoleLabel}" ל-${pendingChange.userName}?`
+                    : ""}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingChange?.kind === "ban"
+                ? "המשתמש לא יוכל להתחבר למערכת עד שיופעל מחדש."
+                : pendingChange?.kind === "role" && pendingChange.remove
+                  ? "ההרשאות של התפקיד יוסרו מהמשתמש מיד. השינוי נרשם ביומן ההרשאות."
+                  : "המשתמש יקבל את ההרשאות של התפקיד מיד. השינוי נרשם ביומן ההרשאות."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={accessBusy}>ביטול</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={accessBusy}
+              className={
+                pendingChange?.kind === "ban" || (pendingChange?.kind === "role" && pendingChange.remove)
+                  ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  : undefined
+              }
+              onClick={(e) => {
+                e.preventDefault();
+                void confirmPendingChange();
+              }}
+            >
+              {accessBusy
+                ? "מעדכן..."
+                : pendingChange?.kind === "ban"
+                  ? "השהה משתמש"
+                  : pendingChange?.kind === "role" && pendingChange.remove
+                    ? "הסר תפקיד"
+                    : "הוסף תפקיד"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <ImportExcelDialog open={importOpen} onOpenChange={setImportOpen} mode="employees" />
       <InviteExternalUserDialog open={inviteExternalOpen} onOpenChange={setInviteExternalOpen} />
     </div>

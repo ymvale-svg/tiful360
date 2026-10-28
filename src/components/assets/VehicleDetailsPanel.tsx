@@ -137,17 +137,17 @@ export function VehicleDetailsPanel({ asset }: Props) {
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-3">
         <div>
-          <Label className="text-xs text-muted-foreground">לוחית רישוי</Label>
+          <Label htmlFor="vehicledet-f1" className="text-xs text-muted-foreground">לוחית רישוי</Label>
           {editing ? (
-            <Input value={form.license_plate} onChange={(e) => setForm({ ...form, license_plate: e.target.value })} className="text-left mt-1" dir="ltr" />
+            <Input id="vehicledet-f1" value={form.license_plate} onChange={(e) => setForm({ ...form, license_plate: e.target.value })} className="text-left mt-1" dir="ltr" />
           ) : (
             <div className="font-mono font-medium mt-1">{asset.license_plate ?? "—"}</div>
           )}
         </div>
         <div>
-          <Label className="text-xs text-muted-foreground">סוג רכב</Label>
+          <Label htmlFor="vehicledet-f2" className="text-xs text-muted-foreground">סוג רכב</Label>
           {editing ? (
-            <select value={form.vehicle_type} onChange={(e) => setForm({ ...form, vehicle_type: e.target.value })} className="w-full mt-1 h-9 px-2 rounded-md border border-input bg-background text-sm">
+            <select id="vehicledet-f2" value={form.vehicle_type} onChange={(e) => setForm({ ...form, vehicle_type: e.target.value })} className="w-full mt-1 h-9 px-2 rounded-md border border-input bg-background text-sm">
               <option value="">—</option>
               {VEHICLE_TYPE_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
@@ -156,9 +156,9 @@ export function VehicleDetailsPanel({ asset }: Props) {
           )}
         </div>
         <div>
-          <Label className="text-xs text-muted-foreground">סוג דלק</Label>
+          <Label htmlFor="vehicledet-f3" className="text-xs text-muted-foreground">סוג דלק</Label>
           {editing ? (
-            <select value={form.fuel_type} onChange={(e) => setForm({ ...form, fuel_type: e.target.value })} className="w-full mt-1 h-9 px-2 rounded-md border border-input bg-background text-sm">
+            <select id="vehicledet-f3" value={form.fuel_type} onChange={(e) => setForm({ ...form, fuel_type: e.target.value })} className="w-full mt-1 h-9 px-2 rounded-md border border-input bg-background text-sm">
               <option value="">—</option>
               {FUEL_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
@@ -167,26 +167,26 @@ export function VehicleDetailsPanel({ asset }: Props) {
           )}
         </div>
         <div>
-          <Label className="text-xs text-muted-foreground">שנת ייצור</Label>
+          <Label htmlFor="vehicledet-f4" className="text-xs text-muted-foreground">שנת ייצור</Label>
           {editing ? (
-            <Input type="number" value={form.year_of_manufacture} onChange={(e) => setForm({ ...form, year_of_manufacture: e.target.value })} className="mt-1" />
+            <Input id="vehicledet-f4" type="number" value={form.year_of_manufacture} onChange={(e) => setForm({ ...form, year_of_manufacture: e.target.value })} className="mt-1" />
           ) : (
             <div className="font-medium mt-1">{asset.year_of_manufacture ?? "—"}</div>
           )}
         </div>
         <div>
-          <Label className="text-xs text-muted-foreground">קילומטראז' נוכחי</Label>
+          <Label htmlFor="vehicledet-f5" className="text-xs text-muted-foreground">קילומטראז' נוכחי</Label>
           {editing ? (
-            <Input type="number" value={form.current_km} onChange={(e) => setForm({ ...form, current_km: e.target.value })} className="mt-1" />
+            <Input id="vehicledet-f5" type="number" value={form.current_km} onChange={(e) => setForm({ ...form, current_km: e.target.value })} className="mt-1" />
           ) : (
             <div className="font-medium mt-1">{asset.current_km ? asset.current_km.toLocaleString() + " ק\"מ" : "—"}</div>
           )}
         </div>
         {ownedVehicle && (editing || asset.insurance_company) && (
           <div>
-            <Label className="text-xs text-muted-foreground">חברת ביטוח</Label>
+            <Label htmlFor="vehicledet-f6" className="text-xs text-muted-foreground">חברת ביטוח</Label>
             {editing ? (
-              <Input value={form.insurance_company} onChange={(e) => setForm({ ...form, insurance_company: e.target.value })} className="mt-1" />
+              <Input id="vehicledet-f6" value={form.insurance_company} onChange={(e) => setForm({ ...form, insurance_company: e.target.value })} className="mt-1" />
             ) : (
               <div className="font-medium mt-1">{asset.insurance_company ?? "—"}</div>
             )}
@@ -194,9 +194,9 @@ export function VehicleDetailsPanel({ asset }: Props) {
         )}
         {ownedVehicle && (editing || asset.insurance_policy_number) && (
           <div className="col-span-2">
-            <Label className="text-xs text-muted-foreground">מספר פוליסה</Label>
+            <Label htmlFor="vehicledet-f7" className="text-xs text-muted-foreground">מספר פוליסה</Label>
             {editing ? (
-              <Input value={form.insurance_policy_number} onChange={(e) => setForm({ ...form, insurance_policy_number: e.target.value })} className="mt-1 text-left" dir="ltr" />
+              <Input id="vehicledet-f7" value={form.insurance_policy_number} onChange={(e) => setForm({ ...form, insurance_policy_number: e.target.value })} className="mt-1 text-left" dir="ltr" />
             ) : (
               <div className="font-mono text-sm mt-1">{asset.insurance_policy_number ?? "—"}</div>
             )}

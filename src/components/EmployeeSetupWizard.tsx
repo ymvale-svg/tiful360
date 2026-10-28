@@ -1,10 +1,14 @@
 import { useMemo, useState } from "react";
+import { isValidEmail, isValidIsraeliId, isValidPhone } from "@/lib/employeeValidation";
+import { useDirtyGuard } from "@/components/feedback/useDirtyGuard";
+import { FileDrop } from "@/components/feedback/FileDrop";
+import { focusFirstInvalid } from "@/components/feedback/FormField";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
-  UserPlus, AlertCircle, Mail, EyeOff, Briefcase, FileText, Upload, Trash2,
+  UserPlus, AlertCircle, Mail, EyeOff, Briefcase, FileText, Trash2,
   Check, ChevronRight, ChevronLeft, User,
 } from "lucide-react";
 import { useCreateEmployee } from "@/hooks/useMutations";
@@ -23,28 +27,6 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated?: (employee: { id: string; full_name: string }) => void;
-}
-
-function isValidIsraeliId(id: string): boolean {
-  const trimmed = id.replace(/\D/g, "");
-  if (trimmed.length < 5 || trimmed.length > 9) return false;
-  const padded = trimmed.padStart(9, "0");
-  let sum = 0;
-  for (let i = 0; i < 9; i++) {
-    let digit = parseInt(padded[i], 10) * ((i % 2) + 1);
-    if (digit > 9) digit -= 9;
-    sum += digit;
-  }
-  return sum % 10 === 0;
-}
-
-function isValidPhone(phone: string): boolean {
-  const cleaned = phone.trim().replace(/(?!^\+)[^\d]/g, "");
-  return /^(\+972|0)(5\d)\d{7}$/.test(cleaned) || /^\+?\d{7,15}$/.test(cleaned);
-}
-
-function isValidEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
 }
 
 const ALL_ROLES: { value: AppRole; label: string }[] = [
@@ -102,6 +84,9 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
   const [docs, setDocs] = useState<PendingDoc[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
+  const isDirty = docs.length > 0 || (Object.keys(emptyForm) as (keyof typeof emptyForm)[]).some((k) => form[k] !== emptyForm[k]);
+  // Closing drops all four steps (including picked documents), so ask first; block while saving.
+  const guard = useDirtyGuard(isDirty, submitting);
   const mutation = useCreateEmployee();
   const uploadDoc = useUploadEmployeeDocument();
   const { data: existingEmployees } = useEmployees();
@@ -184,6 +169,7 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
     setErrors(v);
     if (Object.keys(v).length > 0) {
       toast({ title: "שגיאת ולידציה", description: "נא לתקן את השגיאות המסומנות", variant: "destructive" });
+      requestAnimationFrame(() => focusFirstInvalid(document.querySelector("[role=dialog]")));
       return;
     }
     setStep(s => Math.min(3, s + 1));
@@ -291,20 +277,28 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
     }
   };
 
+  const close = guard((v: boolean) => { onOpenChange(v); if (!v) reset(); });
+
   const inputCls = (k: string) =>
     `w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 transition-all ${
       errors[k] ? "ring-2 ring-destructive/50 focus:ring-destructive/50" : "focus:ring-primary/30"
     }`;
 
+  const fieldProps = (k: string) => ({
+    id: `wiz-${k}`,
+    "aria-invalid": errors[k] ? true : undefined,
+    "aria-describedby": errors[k] ? `wiz-${k}-error` : undefined,
+  });
+
   const errMsg = (k: string) => errors[k] && (
-    <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+    <p id={`wiz-${k}-error`} role="alert" className="text-xs text-destructive mt-1 flex items-center gap-1">
       <AlertCircle className="w-3 h-3" aria-hidden="true" />
       {errors[k]}
     </p>
   );
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) reset(); }}>
+    <Dialog open={open} onOpenChange={close}>
       <DialogContent className="max-w-xl max-h-[92vh] overflow-y-auto" dir="rtl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -358,16 +352,16 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
             <div className="space-y-3 animate-fade-in">
               <div className="flex items-center justify-between rounded-xl border border-border bg-muted/30 px-3 py-2">
                 <div>
-                  <label className="text-sm font-medium">פרילנסר</label>
+                  <label htmlFor="wiz-freelancer" className="text-sm font-medium">פרילנסר</label>
                   <p className="text-xs text-muted-foreground">לא מחתים נוכחות — ללא מס' עובד</p>
                 </div>
-                <Switch checked={form.is_freelancer} onCheckedChange={(v) => set("is_freelancer", v)} />
+                <Switch id="wiz-freelancer" checked={form.is_freelancer} onCheckedChange={(v) => set("is_freelancer", v)} />
               </div>
               {!form.is_freelancer && <div>
-                <label className="text-sm font-medium mb-1 block">מס' עובד<span className="text-destructive mr-1">*</span></label>
+                <label htmlFor="wiz-employee_number" className="text-sm font-medium mb-1 block">מס' עובד<span className="text-destructive mr-1">*</span></label>
                 <div className="flex gap-2 items-center" dir="ltr">
                   <span className="px-3 py-2 bg-muted/60 rounded-lg text-sm font-mono text-muted-foreground select-none">EMP-</span>
-                  <input
+                  <input{...fieldProps("employee_number")}
                     value={form.employee_number}
                     onChange={(e) => set("employee_number", e.target.value.replace(/\D/g, "").slice(0, 6))}
                     placeholder="009" inputMode="numeric" dir="ltr"
@@ -377,37 +371,37 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
                 {errMsg("employee_number")}
               </div>}
               <div>
-                <label className="text-sm font-medium mb-1 block">שם מלא<span className="text-destructive mr-1">*</span></label>
-                <input value={form.full_name} maxLength={100} onChange={(e) => set("full_name", e.target.value)} placeholder="ישראל ישראלי" className={inputCls("full_name")} />
+                <label htmlFor="wiz-full_name" className="text-sm font-medium mb-1 block">שם מלא<span className="text-destructive mr-1">*</span></label>
+                <input{...fieldProps("full_name")} value={form.full_name} maxLength={100} onChange={(e) => set("full_name", e.target.value)} placeholder="ישראל ישראלי" className={inputCls("full_name")} />
                 {errMsg("full_name")}
               </div>
               <div>
-                <label className="text-sm font-medium mb-1 block">תעודת זהות<span className="text-destructive mr-1">*</span></label>
-                <input value={form.id_number} maxLength={9} onChange={(e) => set("id_number", e.target.value.replace(/\D/g, ""))} placeholder="123456789" dir="ltr" className={inputCls("id_number")} />
+                <label htmlFor="wiz-id_number" className="text-sm font-medium mb-1 block">תעודת זהות<span className="text-destructive mr-1">*</span></label>
+                <input{...fieldProps("id_number")} value={form.id_number} maxLength={9} onChange={(e) => set("id_number", e.target.value.replace(/\D/g, ""))} placeholder="123456789" dir="ltr" className={inputCls("id_number")} />
                 {errMsg("id_number")}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm font-medium mb-1 block">דוא"ל<span className="text-destructive mr-1">*</span></label>
-                  <input value={form.email} maxLength={255} onChange={(e) => set("email", e.target.value)} placeholder="user@company.co.il" dir="ltr" className={inputCls("email")} />
+                  <label htmlFor="wiz-email" className="text-sm font-medium mb-1 block">דוא"ל<span className="text-destructive mr-1">*</span></label>
+                  <input{...fieldProps("email")} value={form.email} maxLength={255} onChange={(e) => set("email", e.target.value)} placeholder="user@company.co.il" dir="ltr" className={inputCls("email")} />
                   {errMsg("email")}
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-1 block">טלפון</label>
-                  <input value={form.phone} maxLength={20} onChange={(e) => set("phone", e.target.value)} placeholder="050-1234567" dir="ltr" className={inputCls("phone")} />
+                  <label htmlFor="wiz-phone" className="text-sm font-medium mb-1 block">טלפון</label>
+                  <input{...fieldProps("phone")} value={form.phone} maxLength={20} onChange={(e) => set("phone", e.target.value)} placeholder="050-1234567" dir="ltr" className={inputCls("phone")} />
                   {errMsg("phone")}
                 </div>
               </div>
               <div>
-                <label className="text-sm font-medium mb-1 block">תאריך לידה</label>
-                <input type="date" value={form.birth_date} onChange={(e) => set("birth_date", e.target.value)} className={inputCls("birth_date")} dir="ltr" />
+                <label htmlFor="wiz-birth_date" className="text-sm font-medium mb-1 block">תאריך לידה</label>
+                <input{...fieldProps("birth_date")} type="date" value={form.birth_date} onChange={(e) => set("birth_date", e.target.value)} className={inputCls("birth_date")} dir="ltr" />
               </div>
               <div className="flex items-center justify-between border border-border/50 rounded-lg p-3">
                 <div className="flex items-center gap-2">
                   <EyeOff className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-                  <label className="text-sm">אל תכלול ברשימת אנשי הקשר</label>
+                  <label htmlFor="wiz-exclude" className="text-sm">אל תכלול ברשימת אנשי הקשר</label>
                 </div>
-                <Switch checked={form.exclude_from_contacts} onCheckedChange={(v) => set("exclude_from_contacts", v)} />
+                <Switch id="wiz-exclude" checked={form.exclude_from_contacts} onCheckedChange={(v) => set("exclude_from_contacts", v)} />
               </div>
             </div>
           )}
@@ -453,8 +447,8 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm font-medium mb-1 block">תאריך התחלה<span className="text-destructive mr-1">*</span></label>
-                  <input type="date" value={form.start_date} onChange={(e) => set("start_date", e.target.value)} className={inputCls("start_date")} dir="ltr" />
+                  <label htmlFor="wiz-start_date" className="text-sm font-medium mb-1 block">תאריך התחלה<span className="text-destructive mr-1">*</span></label>
+                  <input{...fieldProps("start_date")} type="date" value={form.start_date} onChange={(e) => set("start_date", e.target.value)} className={inputCls("start_date")} dir="ltr" />
                   {errMsg("start_date")}
                 </div>
                 <div>
@@ -471,19 +465,13 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
           {/* Step 2 — documents */}
           {step === 2 && (
             <div className="space-y-3 animate-fade-in">
-              <label
-                htmlFor="wizard-docs"
-                className="flex flex-col items-center justify-center gap-2 border border-dashed border-border rounded-xl py-8 cursor-pointer hover:bg-muted/50 transition-colors text-center px-4"
-              >
-                <Upload className="w-6 h-6 text-muted-foreground" aria-hidden="true" />
-                <span className="text-sm font-medium">גרור קבצים או לחץ לבחירה</span>
-                <span className="text-xs text-muted-foreground">חוזה העסקה, ת"ז, תעודות — עד {MAX_FILE_MB}MB לקובץ</span>
-                <input
-                  id="wizard-docs" type="file" multiple className="sr-only"
-                  accept="image/*,.pdf,.doc,.docx"
-                  onChange={(e) => { addFiles(Array.from(e.target.files ?? [])); e.currentTarget.value = ""; }}
-                />
-              </label>
+              <FileDrop
+                multiple
+                accept="image/*,.pdf,.doc,.docx"
+                onFiles={addFiles}
+                title="גררו קבצים לכאן או לחצו לבחירה"
+                hint={`חוזה העסקה, ת"ז, תעודות — עד ${MAX_FILE_MB}MB לקובץ`}
+              />
 
               {docs.length === 0 ? (
                 <p className="text-xs text-muted-foreground text-center">
@@ -517,6 +505,7 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
                           value={d.document_label} maxLength={100}
                           onChange={(e) => setDocs(prev => prev.map(x => x.id === d.id ? { ...x, document_label: e.target.value } : x))}
                           placeholder="תיאור (אופציונלי)"
+                          aria-label={`תיאור ${d.file.name}`}
                           className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
                         />
                       </div>
@@ -544,8 +533,8 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
                   {errMsg("system_role")}
                 </div>
                 <div className="flex items-center justify-between">
-                  <label className="text-sm">שלח הזמנה במייל ל-{form.email || "—"}</label>
-                  <Switch checked={form.send_invite} onCheckedChange={(v) => set("send_invite", v)} />
+                  <label htmlFor="wiz-invite" className="text-sm">שלח הזמנה במייל ל-{form.email || "—"}</label>
+                  <Switch id="wiz-invite" checked={form.send_invite} onCheckedChange={(v) => set("send_invite", v)} />
                 </div>
               </div>
 
@@ -567,7 +556,7 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
           {/* Footer nav */}
           <div className="flex gap-3 pt-3">
             {step === 0 ? (
-              <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>ביטול</Button>
+              <Button variant="outline" className="flex-1" onClick={() => close(false)}>ביטול</Button>
             ) : (
               <Button variant="outline" className="flex-1" onClick={goBack}>
                 <ChevronRight className="w-4 h-4 ml-1" aria-hidden="true" />
@@ -580,8 +569,8 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
                 <ChevronLeft className="w-4 h-4 mr-1" aria-hidden="true" />
               </Button>
             ) : (
-              <Button className="flex-1" onClick={handleFinish} disabled={submitting} aria-busy={submitting}>
-                {submitting ? "מקים עובד..." : "סיים והקם עובד"}
+              <Button className="flex-1" onClick={handleFinish} loading={submitting} loadingText="מקים עובד…">
+                סיים והקם עובד
               </Button>
             )}
           </div>

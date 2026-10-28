@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, BookOpen, Building2, Car, Download, ExternalLink, FileText, Laptop, PlayCircle, Search, ShieldCheck, X } from "lucide-react";
+import { ArrowRight, BookOpen, Building2, Car, Download, ExternalLink, FileText, Laptop, Loader2, PlayCircle, Search, ShieldCheck, X } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DocumentPreviewDialog } from "@/components/DocumentPreviewDialog";
 import { GuideItem, GuideTopic, ProcedureDepartment, ProcedureItem, getLearningSignedUrl } from "@/hooks/usePortalLearning";
@@ -14,6 +15,7 @@ export function PortalLearningLibrary(props: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [preview, setPreview] = useState<{ url: string; name: string; title: string } | null>(null);
+  const [openingId, setOpeningId] = useState<string | null>(null);
   const groups = props.mode === "procedures" ? props.departments : props.topics;
   const normalized = search.trim().toLocaleLowerCase("he");
 
@@ -35,30 +37,43 @@ export function PortalLearningLibrary(props: Props) {
   const uncategorized = props.mode === "procedures" ? props.items.filter((item) => !(item as ProcedureItem).department_id) : props.items.filter((item) => !(item as GuideItem).topic_id);
 
   const openItem = async (item: ProcedureItem | GuideItem) => {
+    if (openingId) return;
     const path = props.mode === "procedures" ? (item as ProcedureItem).file_url : (item as GuideItem).resource_url;
-    if (!path) return;
+    if (!path) { toast.error("לפריט זה עדיין לא צורף קובץ או קישור"); return; }
     const isExternal = path.startsWith("http://") || path.startsWith("https://");
-    const url = isExternal ? path : await getLearningSignedUrl(path);
     const isPdf = props.mode === "procedures" || (item as GuideItem).content_type === "pdf";
-    if (isPdf) setPreview({ url, name: (item as GuideItem).file_name || `${item.title}.pdf`, title: item.title });
-    else window.open(url, "_blank", "noopener,noreferrer");
+    // Open the tab synchronously (inside the tap) so mobile pop-up blockers allow it, then point it at the URL.
+    const tab = !isPdf && !isExternal ? window.open("", "_blank") : null;
+    setOpeningId(item.id);
+    try {
+      const url = isExternal ? path : await getLearningSignedUrl(path);
+      if (isPdf) setPreview({ url, name: (item as GuideItem).file_name || `${item.title}.pdf`, title: item.title });
+      else if (tab) { tab.opener = null; tab.location.href = url; }
+      else window.open(url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      tab?.close();
+      toast.error("לא הצלחנו לפתוח את הפריט", { description: e instanceof Error ? e.message : "נסו שוב בעוד רגע." });
+    } finally {
+      setOpeningId(null);
+    }
   };
 
   if (selectedId && currentGroup) {
     return (
       <div className="space-y-3 animate-fade-in">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => setSelectedId(null)} aria-label="חזרה לנושאים"><ArrowRight className="w-4 h-4" /></Button>
+          <Button variant="ghost" size="icon" onClick={() => setSelectedId(null)} aria-label="חזרה לנושאים"><ArrowRight className="w-4 h-4" aria-hidden="true" /></Button>
           <div><h2 className="font-semibold">{currentGroup.name}</h2><p className="text-xs text-muted-foreground">{currentItems.length} פריטים</p></div>
         </div>
         <SearchBox value={search} onChange={setSearch} />
         {currentItems.map((item) => {
           const guide = item as GuideItem;
           const Icon = props.mode === "guides" ? (guide.content_type === "video" ? PlayCircle : guide.content_type === "link" ? ExternalLink : FileText) : FileText;
-          return <button key={item.id} onClick={() => openItem(item)} className="w-full bg-card rounded-lg border border-border/50 p-3 flex items-center gap-3 text-right hover:bg-muted/40 transition-colors">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0"><Icon className="w-5 h-5 text-primary" /></div>
+          const busy = openingId === item.id;
+          return <button key={item.id} type="button" onClick={() => { void openItem(item); }} disabled={!!openingId} aria-busy={busy || undefined} className="w-full bg-card rounded-lg border border-border/50 p-3 flex items-center gap-3 text-right hover:bg-muted/40 transition-colors disabled:cursor-progress disabled:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0"><Icon className="w-5 h-5 text-primary" aria-hidden="true" /></div>
             <div className="flex-1 min-w-0"><p className="text-sm font-medium">{item.title}</p>{item.description && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{item.description}</p>}</div>
-            {props.mode === "guides" && guide.content_type === "pdf" ? <Download className="w-4 h-4 text-muted-foreground" /> : <ExternalLink className="w-4 h-4 text-muted-foreground" />}
+            {busy ? <Loader2 className="w-4 h-4 animate-spin text-primary" aria-label="פותח…" /> : props.mode === "guides" && guide.content_type === "pdf" ? <Download className="w-4 h-4 text-muted-foreground" aria-hidden="true" /> : <ExternalLink className="w-4 h-4 text-muted-foreground" aria-hidden="true" />}
           </button>;
         })}
         {!currentItems.length && <Empty label="לא נמצאו פריטים בנושא זה" />}
@@ -79,9 +94,9 @@ export function PortalLearningLibrary(props: Props) {
           const topic = group as GuideTopic;
           const Icon = props.mode === "guides" ? (topicIcons[topic.topic_type] ?? BookOpen) : Building2;
           const count = group.id === "general" ? uncategorized.length : props.items.filter((item) => props.mode === "procedures" ? (item as ProcedureItem).department_id === group.id : (item as GuideItem).topic_id === group.id).length;
-          return <button key={group.id} onClick={() => setSelectedId(group.id)} className="bg-card border border-border/50 rounded-lg p-4 min-h-28 flex flex-col items-center justify-center gap-2 hover:border-primary/40 hover:bg-muted/30 transition-colors">
-            {props.mode === "guides" && topic.logo_url ? <TopicLogo path={topic.logo_url} name={topic.name} /> : <div className="w-11 h-11 rounded-lg bg-primary/10 flex items-center justify-center"><Icon className="w-6 h-6 text-primary" /></div>}
-            <span className="text-sm font-semibold text-center">{group.name}</span><span className="text-[11px] text-muted-foreground">{count} פריטים</span>
+          return <button key={group.id} type="button" onClick={() => setSelectedId(group.id)} className="bg-card border border-border/50 rounded-lg p-4 min-h-28 flex flex-col items-center justify-center gap-2 hover:border-primary/40 hover:bg-muted/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            {props.mode === "guides" && topic.logo_url ? <TopicLogo path={topic.logo_url} name={topic.name} /> : <div className="w-11 h-11 rounded-lg bg-primary/10 flex items-center justify-center"><Icon className="w-6 h-6 text-primary" aria-hidden="true" /></div>}
+            <span className="text-sm font-semibold text-center">{group.name}</span><span className="text-xs text-muted-foreground">{count} פריטים</span>
           </button>;
         })}
       </div>
@@ -97,7 +112,7 @@ function TopicLogo({ path, name }: { path: string; name: string }) {
 }
 
 function SearchBox({ value, onChange }: { value: string; onChange: (value: string) => void }) {
-  return <div className="relative"><Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><input type="search" value={value} onChange={(e) => onChange(e.target.value)} placeholder="חיפוש..." className="w-full pr-9 pl-9 py-2.5 bg-card border border-border/50 rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30" />{value && <button onClick={() => onChange("")} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label="נקה חיפוש"><X className="w-4 h-4" /></button>}</div>;
+  return <div className="relative"><Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" aria-hidden="true" /><input type="search" value={value} onChange={(e) => onChange(e.target.value)} placeholder="חיפוש..." aria-label="חיפוש בספרייה" className="w-full min-h-11 pr-9 pl-12 py-2.5 bg-card border border-border/50 rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30" />{value && <button type="button" onClick={() => onChange("")} className="absolute left-0.5 top-1/2 -translate-y-1/2 h-11 w-11 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="נקה חיפוש"><X className="w-4 h-4" aria-hidden="true" /></button>}</div>;
 }
 
 function Empty({ label }: { label: string }) { return <p className="text-center text-sm text-muted-foreground py-8">{label}</p>; }

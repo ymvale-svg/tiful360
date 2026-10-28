@@ -171,8 +171,8 @@ export function InsuranceDetailsPanel({ asset }: Props) {
     <div>
       <Label className="text-xs text-muted-foreground flex items-center gap-1">
         {label}
-        {(fromPolicy.includes(field) && editing) ? <span className="text-[10px] text-primary flex items-center gap-0.5"><Sparkles className="w-3 h-3" /> מולא מהפוליסה</span>
-          : hint && <span className="text-[10px] text-primary flex items-center gap-0.5"><Sparkles className="w-3 h-3" /> {hint}</span>}
+        {(fromPolicy.includes(field) && editing) ? <span className="text-xs text-primary flex items-center gap-0.5"><Sparkles className="w-3 h-3" /> מולא מהפוליסה</span>
+          : hint && <span className="text-xs text-primary flex items-center gap-0.5"><Sparkles className="w-3 h-3" /> {hint}</span>}
       </Label>
       {editing ? (
         <Input type={type} list={list} autoComplete="off" value={v} onChange={(e) => onChange(e.target.value)} onBlur={onBlur} className={cn("mt-1", ltr && "text-left")} dir={ltr ? "ltr" : undefined} />
@@ -180,7 +180,7 @@ export function InsuranceDetailsPanel({ asset }: Props) {
         <div className={cn("font-medium mt-1 text-sm", ltr && "font-mono")}>{value || "—"}</div>
       )}
       {editing && suggestions[field] && (
-        <button type="button" className="text-[11px] text-primary mt-1 underline text-start" onClick={() => {
+        <button type="button" className="text-xs text-primary mt-1 underline text-start" onClick={() => {
           setForm((p: any) => ({ ...p, [field]: suggestions[field] }));
           setSuggestions((p) => { const n = { ...p }; delete n[field]; return n; });
         }}>בפוליסה: {suggestions[field]} — החלף</button>
@@ -327,14 +327,14 @@ export function InsuranceDetailsPanel({ asset }: Props) {
         <div className="text-sm text-muted-foreground flex items-center gap-1">
           תאריך סיום / חידוש
           {fromPolicy.includes("end_date") && editing && (
-            <span className="text-[10px] text-primary flex items-center gap-0.5"><Sparkles className="w-3 h-3" /> מולא מהפוליסה</span>
+            <span className="text-xs text-primary flex items-center gap-0.5"><Sparkles className="w-3 h-3" /> מולא מהפוליסה</span>
           )}
         </div>
         {editing ? (
           <div className="flex flex-col items-end gap-1">
             <Input type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} className="w-44 text-left" dir="ltr" />
             {suggestions.end_date && (
-              <button type="button" className="text-[11px] text-primary underline" onClick={() => {
+              <button type="button" className="text-xs text-primary underline" onClick={() => {
                 setForm((p) => ({ ...p, end_date: suggestions.end_date }));
                 setSuggestions((p) => { const n = { ...p }; delete n.end_date; return n; });
               }}>בפוליסה: {new Date(suggestions.end_date).toLocaleDateString("en-GB")} — החלף</button>

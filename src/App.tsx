@@ -4,6 +4,8 @@ import { lazy, Suspense } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { UploadProgressCenter } from "@/components/UploadProgressCenter";
+import { SaveProgressBar } from "@/components/SaveProgressBar";
+import { ConfirmProvider } from "@/components/feedback/ConfirmDialog";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CompanyProvider } from "@/hooks/useCompany";
@@ -52,8 +54,9 @@ import { ThemeProvider } from "next-themes";
 const queryClient = new QueryClient();
 
 const PageLoader = () => (
-  <div className="min-h-screen flex items-center justify-center bg-background">
-    <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+  <div className="min-h-screen flex items-center justify-center bg-background" role="status" aria-busy="true">
+    <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin motion-reduce:animate-none" aria-hidden="true" />
+    <span className="sr-only">טוען…</span>
   </div>
 );
 
@@ -67,6 +70,8 @@ const App = () => (
       <Sonner />
       <PwaUpdatePrompt />
       <UploadProgressCenter />
+      <SaveProgressBar />
+      <ConfirmProvider>
       <BrowserRouter>
         <AuthProvider>
           <CompanyProvider>
@@ -117,6 +122,7 @@ const App = () => (
           </CompanyProvider>
         </AuthProvider>
       </BrowserRouter>
+      </ConfirmProvider>
     </TooltipProvider>
     </ThemeProvider>
   </QueryClientProvider>

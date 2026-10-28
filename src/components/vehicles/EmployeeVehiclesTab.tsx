@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { useConfirm } from "@/components/feedback/ConfirmDialog";
+import { IconButton } from "@/components/feedback/IconButton";
 import { useEmployeeAssets } from "@/hooks/useData";
 import { useAssetGroups } from "@/hooks/useAssetGroups";
 import {
@@ -24,6 +26,7 @@ interface Props {
 
 export function EmployeeVehiclesTab({ employeeId, canEdit }: Props) {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const { data: vehicles } = useEmployeeVehicles(employeeId);
   const { data: assets } = useEmployeeAssets(employeeId);
@@ -84,14 +87,15 @@ export function EmployeeVehiclesTab({ employeeId, canEdit }: Props) {
     }
   };
 
-  const removeVehicle = async (id: string) => {
-    if (!confirm("למחוק את הרכב?")) return;
-    try {
-      await deleteVehicle.mutateAsync(id);
-      toast({ title: "הרכב נמחק" });
-    } catch (e: any) {
-      toast({ title: "שגיאה במחיקה", description: e.message, variant: "destructive" });
-    }
+  const removeVehicle = async (id: string, plate: string) => {
+    const ok = await confirm({
+      title: "למחוק את הרכב?",
+      description: `הרכב ${plate} יוסר מתיק העובד.`,
+      confirmLabel: "מחק רכב",
+      destructive: true,
+      onConfirm: () => deleteVehicle.mutateAsync(id),
+    });
+    if (ok) toast({ title: "הרכב נמחק" });
   };
 
   return (
@@ -110,12 +114,12 @@ export function EmployeeVehiclesTab({ employeeId, canEdit }: Props) {
         <div className="bg-card border border-border rounded-xl p-4 space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <Label className="text-xs text-muted-foreground">מס' רכב פרטי</Label>
-              <Input value={plate} onChange={(e) => setPlate(e.target.value)} className="mt-1 text-left" dir="ltr" />
+              <Label htmlFor="emp-vehicle-plate" className="text-xs text-muted-foreground">מס' רכב פרטי</Label>
+              <Input id="emp-vehicle-plate" value={plate} onChange={(e) => setPlate(e.target.value)} className="mt-1 text-left" dir="ltr" />
             </div>
             <div>
-              <Label className="text-xs text-muted-foreground">הערות</Label>
-              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="mt-1" />
+              <Label htmlFor="emp-vehicle-notes" className="text-xs text-muted-foreground">הערות</Label>
+              <Textarea id="emp-vehicle-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="mt-1" />
             </div>
           </div>
           <div className="flex gap-2">
@@ -136,12 +140,12 @@ export function EmployeeVehiclesTab({ employeeId, canEdit }: Props) {
             {v.notes && <span className="text-xs text-muted-foreground">{v.notes}</span>}
             {canEdit && (
               <div className="ms-auto flex items-center gap-1">
-                <Button size="sm" variant="ghost" onClick={() => startEdit(v)} aria-label="ערוך רכב">
-                  <Pencil className="w-3.5 h-3.5" />
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => removeVehicle(v.id)} aria-label="מחק רכב">
-                  <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                </Button>
+                <IconButton label={`ערוך רכב ${v.license_plate}`} onClick={() => startEdit(v)}>
+                  <Pencil aria-hidden="true" />
+                </IconButton>
+                <IconButton label={`מחק רכב ${v.license_plate}`} onClick={() => { void removeVehicle(v.id, v.license_plate); }}>
+                  <Trash2 className="text-destructive" aria-hidden="true" />
+                </IconButton>
               </div>
             )}
           </div>

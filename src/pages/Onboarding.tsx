@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { UserPlus, Search, Send, UserRound, AlertCircle } from "lucide-react";
+import { UserPlus, Search, Send, UserRound, AlertCircle, ListChecks } from "lucide-react";
+import { EmptyState, ListSkeleton } from "@/components/feedback/StateView";
 import { NewOnboardingDialog } from "@/components/onboarding/NewOnboardingDialog";
 import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
 import { SendToOpsDialog } from "@/components/onboarding/SendToOpsDialog";
@@ -62,8 +63,10 @@ export default function Onboarding() {
 
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
           <input
+            type="search"
+            aria-label="חיפוש תהליכי קליטה לפי שם או מזהה עובד"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="חיפוש לפי שם או מזהה עובד"
@@ -74,6 +77,8 @@ export default function Onboarding() {
           {(["all", "draft", "sent", "in_progress", "done"] as const).map((s) => (
             <button
               key={s}
+              type="button"
+              aria-pressed={statusFilter === s}
               onClick={() => setStatusFilter(s)}
               className={`min-w-0 min-h-11 px-2.5 py-1.5 rounded-lg text-sm whitespace-nowrap border transition-colors ${
                 statusFilter === s ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"
@@ -86,7 +91,12 @@ export default function Onboarding() {
       </div>
 
       <div className="bg-card rounded-xl border border-border/50 shadow-card divide-y divide-border/50">
-        {isLoading && <div className="p-8 text-center text-muted-foreground text-sm">טוען...</div>}
+        {isLoading && (
+          <div role="status" aria-busy="true">
+            <span className="sr-only">טוען תהליכי קליטה…</span>
+            <ListSkeleton rows={3} />
+          </div>
+        )}
         {!isLoading && isError && (
           <div className="p-8 text-center space-y-3">
             <AlertCircle className="w-6 h-6 text-destructive mx-auto" />
@@ -98,7 +108,19 @@ export default function Onboarding() {
           </div>
         )}
         {!isLoading && !isError && filtered.length === 0 && (
-          <div className="p-10 text-center text-muted-foreground text-sm">אין תהליכי קליטה להצגה</div>
+          processes.length > 0 ? (
+            <EmptyState
+              title="אין תהליכי קליטה שתואמים לסינון"
+              description={[query.trim() && `חיפוש "${query.trim()}"`, statusFilter !== "all" && `סטטוס "${ONBOARDING_STATUS_LABEL[statusFilter]}"`].filter(Boolean).join(" ו")}
+              action={<Button size="sm" variant="outline" onClick={() => { setQuery(""); setStatusFilter("all"); }}>נקה סינון</Button>}
+            />
+          ) : (
+            <EmptyState
+              title="עדיין אין תהליכי קליטה"
+              description="פתחו תהליך קליטה לעובד חדש כדי לרכז את הצרכים, הציוד והגישות שלו."
+              action={<Button size="sm" className="gap-1.5" onClick={() => setDialogOpen(true)}><UserPlus className="w-4 h-4" />תהליך קליטה חדש</Button>}
+            />
+          )
         )}
         {filtered.map((p) => {
           const items = p.onboarding_items ?? [];
@@ -129,10 +151,22 @@ export default function Onboarding() {
                   {p.employees?.start_date ? new Date(p.employees.start_date).toLocaleDateString("en-GB") : "—"}
                 </p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="text-sm text-muted-foreground whitespace-nowrap">
                   {done}/{items.length} פריטים
                 </span>
+                <Button
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelected(p);
+                  }}
+                >
+                  <ListChecks className="w-3.5 h-3.5" />
+                  פתח צ'קליסט
+                  <span className="sr-only"> של {p.employees?.full_name}</span>
+                </Button>
                 {p.status === "draft" && (
                   <Button
                     size="sm"

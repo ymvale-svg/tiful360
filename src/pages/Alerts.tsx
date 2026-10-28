@@ -1,4 +1,6 @@
-import { Clock, AlertTriangle } from "lucide-react";
+import { Clock, AlertTriangle, OctagonAlert, Info, Package, User, Bell } from "lucide-react";
+import { StateView } from "@/components/feedback/StateView";
+import { daysUntil, relativeDay } from "@/lib/alertGroups";
 import { useAlerts } from "@/hooks/useData";
 import { ExportExcelButton } from "@/components/ExcelActionButtons";
 import { exportToExcel } from "@/lib/exportExcel";
@@ -9,16 +11,17 @@ const severityStyle: Record<string, string> = {
   info: "border-info/30 bg-info/5",
 };
 const severityBadge: Record<string, string> = {
-  critical: "bg-destructive text-destructive-foreground",
-  warning: "bg-warning text-warning-foreground",
-  info: "bg-info text-info-foreground",
+  critical: "bg-destructive/10 text-destructive",
+  warning: "bg-warning/15 text-warning",
+  info: "bg-info/10 text-info",
 };
+const severityIcon = { critical: OctagonAlert, warning: AlertTriangle, info: Info } as const;
 const severityLabel: Record<string, string> = {
   critical: "קריטי", warning: "אזהרה", info: "מידע",
 };
 
 export default function Alerts() {
-  const { data: alerts, isLoading } = useAlerts();
+  const { data: alerts, isLoading, error, refetch } = useAlerts();
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -51,35 +54,43 @@ export default function Alerts() {
         />
       </div>
 
-      {isLoading ? (
-        <div className="text-center py-12 text-muted-foreground">טוען...</div>
-      ) : (
-        <div className="space-y-3">
-          {(alerts ?? []).map((alert) => (
-            <div key={alert.id} className={`bg-card rounded-xl border p-4 flex items-center gap-4 ${severityStyle[alert.severity] ?? ""}`}>
-              <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-5 h-5 text-muted-foreground" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">{alert.title}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{alert.category}</p>
-              </div>
-              <div className="flex items-center gap-3 shrink-0">
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${severityBadge[alert.severity] ?? ""}`}>
-                  {severityLabel[alert.severity] ?? alert.severity}
-                </span>
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  {alert.target_date ? new Date(alert.target_date).toLocaleDateString("en-GB") : "—"}
-                </span>
-              </div>
-            </div>
-          ))}
-          {(!alerts || alerts.length === 0) && (
-            <div className="text-center py-12 text-muted-foreground">אין התראות פתוחות</div>
-          )}
-        </div>
-      )}
+      <StateView
+        loading={isLoading}
+        error={error}
+        onRetry={() => void refetch()}
+        label="התראות"
+        isEmpty={!alerts?.length}
+        empty={{ title: "אין התראות פתוחות", description: "תפוגות, ציוד ללא שיוך ועובדים בתהליך עזיבה יופיעו כאן.", icon: <Bell className="h-6 w-6" /> }}
+      >
+        <ul className="space-y-3">
+          {(alerts ?? []).map((alert) => {
+            const SevIcon = severityIcon[alert.severity as keyof typeof severityIcon] ?? Info;
+            const KindIcon = alert.related_asset_id ? Package : alert.related_employee_id ? User : AlertTriangle;
+            const days = alert.target_date ? daysUntil(alert.target_date) : null;
+            return (
+              <li key={alert.id} className={`bg-card rounded-xl border p-4 flex flex-wrap items-center gap-x-4 gap-y-2 ${severityStyle[alert.severity] ?? ""}`}>
+                <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0" aria-hidden="true">
+                  <KindIcon className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <div className="flex-1 min-w-[12rem]">
+                  <p className="text-sm font-medium">{alert.title}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{alert.category}</p>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md font-semibold ${severityBadge[alert.severity] ?? ""}`}>
+                    <SevIcon className="w-3 h-3" aria-hidden="true" />
+                    {severityLabel[alert.severity] ?? alert.severity}
+                  </span>
+                  <span className={`text-xs flex items-center gap-1 tabular-nums ${days !== null && days < 0 ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                    <Clock className="w-3 h-3" aria-hidden="true" />
+                    {alert.target_date ? `${new Date(alert.target_date).toLocaleDateString("he-IL")} · ${relativeDay(days!)}` : "ללא תאריך יעד"}
+                  </span>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </StateView>
     </div>
   );
 }

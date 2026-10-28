@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, FileSignature, Upload } from "lucide-react";
+import { CheckCircle2, FileSignature, Upload, ExternalLink } from "lucide-react";
 import type { OffboardingFormData } from "@/lib/pdf/types";
 import { SignaturePad, SignaturePadHandle } from "@/components/SignaturePad";
 import { buildOffboardingPdf } from "@/lib/pdf/lazy";
 import { uploadViaSignedToken } from "@/lib/signedFormUpload";
 import { useToast } from "@/hooks/use-toast";
+
+const CONDITION_LABEL: Record<string, string> = { good: "תקין", damaged: "לא תקין", missing: "חסר" };
 
 export default function SignOffboarding() {
   const { token } = useParams();
@@ -21,6 +23,11 @@ export default function SignOffboarding() {
   const sigRef = useRef<SignaturePadHandle>(null);
   const [sigUrl, setSigUrl] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  // Local copy of the PDF signed in this session. record.pdf_url is a private
+  // storage path (not a URL), so it cannot be linked from this public page.
+  const [signedCopyUrl, setSignedCopyUrl] = useState<string | null>(null);
+
+  useEffect(() => () => { if (signedCopyUrl) URL.revokeObjectURL(signedCopyUrl); }, [signedCopyUrl]);
 
   useEffect(() => {
     (async () => {
@@ -106,6 +113,7 @@ export default function SignOffboarding() {
       });
       if (error) throw error;
 
+      setSignedCopyUrl(URL.createObjectURL(pdfBlob));
       setDone(true);
     } catch (err: any) {
       toast({
@@ -139,15 +147,14 @@ export default function SignOffboarding() {
       >
         <CheckCircle2 className="w-16 h-16 text-green-500 mb-4" aria-hidden="true" />
         <h1 className="text-2xl font-bold mb-2">הטופס נחתם בהצלחה</h1>
-        <p className="text-muted-foreground">תודה. עותק נשמר בתיק שלך.</p>
-        {record.pdf_url && (
+        <p className="text-muted-foreground">תודה. הטופס החתום נשלח לחברה.</p>
+        {signedCopyUrl && (
           <a
-            href={record.pdf_url}
-            target="_blank"
-            rel="noreferrer"
+            href={signedCopyUrl}
+            download="טופס-עזיבה-חתום.pdf"
             className="mt-4 text-primary underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
           >
-            הורד PDF
+            הורד עותק PDF
           </a>
         )}
       </main>
@@ -160,7 +167,7 @@ export default function SignOffboarding() {
   };
 
   return (
-    <main className="min-h-screen bg-muted/30 p-6" dir="rtl">
+    <main className="min-h-screen bg-muted/30 p-4 sm:p-6" dir="rtl">
       <div className="max-w-4xl mx-auto space-y-4">
         <div className="bg-card border rounded-xl p-6">
           <h1 className="text-xl font-bold flex items-center gap-2 mb-1">
@@ -172,7 +179,58 @@ export default function SignOffboarding() {
           </p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-card overflow-hidden">
+        {/* Readable summary on every screen: a PDF inside an iframe renders blank on most phones. */}
+        <section aria-labelledby="offboarding-summary" className="bg-card border rounded-xl p-4 sm:p-6 space-y-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 id="offboarding-summary" className="text-base font-semibold">פרטי הטופס</h2>
+              <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+                <dt className="text-muted-foreground">עובד</dt><dd className="font-medium">{data.employee_name}</dd>
+                {data.employee_department && (<><dt className="text-muted-foreground">מחלקה</dt><dd>{data.employee_department}</dd></>)}
+                {data.company_name && (<><dt className="text-muted-foreground">חברה</dt><dd>{data.company_name}</dd></>)}
+                {data.end_date && (<><dt className="text-muted-foreground">תאריך סיום</dt><dd>{new Date(data.end_date).toLocaleDateString("en-GB")}</dd></>)}
+                <dt className="text-muted-foreground">טופס</dt><dd>#{data.form_index}</dd>
+              </dl>
+            </div>
+            <Button asChild variant="outline" className="gap-2" disabled={!previewUrl}>
+              <a
+                href={previewUrl ?? undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-disabled={!previewUrl || undefined}
+                onClick={(e) => { if (!previewUrl) e.preventDefault(); }}
+              >
+                <ExternalLink className="w-4 h-4" aria-hidden="true" />
+                {previewUrl ? "פתח את הטופס כ-PDF" : "מכין PDF…"}
+              </a>
+            </Button>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold mb-2">ציוד להחזרה ({data.assets?.length ?? 0})</h3>
+            <ul className="divide-y divide-border rounded-lg border">
+              {(data.assets ?? []).map((a) => (
+                <li key={a.asset_id} className="p-3 text-sm">
+                  <p className="font-medium">{a.asset_name}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {[a.category_name, a.asset_code && `מזהה ${a.asset_code}`, a.serial_number && `סידורי ${a.serial_number}`]
+                      .filter(Boolean).join(" · ")}
+                  </p>
+                  {(a.condition_at_return || a.notes) && (
+                    <p className="text-xs mt-1">
+                      {a.condition_at_return && <span>מצב: {CONDITION_LABEL[a.condition_at_return] ?? a.condition_at_return}</span>}
+                      {a.condition_at_return && a.notes && " · "}
+                      {a.notes}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        {/* Full PDF preview only where it actually renders (wide screens). */}
+        <div className="hidden lg:block bg-white rounded-xl shadow-card overflow-hidden">
           {previewUrl ? (
             <iframe
               src={previewUrl}

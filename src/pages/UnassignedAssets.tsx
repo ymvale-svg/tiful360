@@ -15,6 +15,7 @@ import { DOMAIN_META, DOMAIN_ORDER, getDomain, domainKeyToSlug, type DomainKey }
 import { cn } from "@/lib/utils";
 import { usePersistentFilter } from "@/hooks/usePersistentFilter";
 import { useToast } from "@/hooks/use-toast";
+import { EmptyState, ListSkeleton } from "@/components/feedback/StateView";
 
 const statusLabels: Record<string, string> = {
   in_use: "בשימוש", in_stock: "במלאי", in_repair: "בתיקון", lost: "אבד",
@@ -106,6 +107,18 @@ export default function UnassignedAssets() {
   );
   const selectedDomain: DomainKey | null = selectedAssets.length ? domainOf(selectedAssets[0]) : null;
 
+  // Every visible row is in the selected domain, so "select all" is always a valid multi-handover.
+  const allVisibleSelected = rows.length > 0 && rows.every((a: any) => selectedIds.includes(a.id));
+  const someVisibleSelected = rows.some((a: any) => selectedIds.includes(a.id));
+  const toggleSelectAll = (checked: boolean) => {
+    const visible = rows.map((a: any) => a.id);
+    setSelectedIds((prev) => checked
+      ? Array.from(new Set([...prev.filter((id) => rows.some((a: any) => a.id === id)), ...visible]))
+      : prev.filter((id) => !visible.includes(id)));
+  };
+  const filtersActive = !!q.trim() || categoryId !== "all" || groupId !== "all" || status !== "all";
+  const clearFilters = () => { setQ(""); setCategoryId("all"); setGroupId("all"); setStatus("all"); };
+
   const toggleSelect = (a: any, checked: boolean) => {
     if (!checked) {
       setSelectedIds((prev) => prev.filter((id) => id !== a.id));
@@ -138,7 +151,7 @@ export default function UnassignedAssets() {
       {/* Filters */}
       <div className="bg-card border border-border rounded-2xl p-3 flex flex-wrap items-center gap-2">
         <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-[220px]">
-          <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -157,7 +170,7 @@ export default function UnassignedAssets() {
             setSelectedIds([]);
           }}
         >
-          <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="דומיין" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[180px]" aria-label="דומיין"><SelectValue placeholder="דומיין" /></SelectTrigger>
           <SelectContent>
             {DOMAIN_ORDER.map((d) => (
               <SelectItem key={d} value={d}>{DOMAIN_META[d].title}</SelectItem>
@@ -166,7 +179,7 @@ export default function UnassignedAssets() {
         </Select>
 
         <Select value={categoryId} onValueChange={(v) => { setCategoryId(v); setGroupId("all"); }}>
-          <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="קטגוריה" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[180px]" aria-label="קטגוריה"><SelectValue placeholder="קטגוריה" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">כל הקטגוריות</SelectItem>
             {visibleCategories.map((c: any) => (
@@ -176,7 +189,7 @@ export default function UnassignedAssets() {
         </Select>
 
         <Select value={groupId} onValueChange={setGroupId}>
-          <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="תת-קטגוריה" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[180px]" aria-label="תת-קטגוריה"><SelectValue placeholder="תת-קטגוריה" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">כל תתי-הקטגוריות</SelectItem>
             {visibleGroups.map((g: any) => (
@@ -186,7 +199,7 @@ export default function UnassignedAssets() {
         </Select>
 
         <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="w-full sm:w-[140px]"><SelectValue placeholder="סטטוס" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-[140px]" aria-label="סטטוס"><SelectValue placeholder="סטטוס" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">כל הסטטוסים</SelectItem>
             {Object.entries(statusLabels).map(([k, v]) => (
@@ -196,7 +209,7 @@ export default function UnassignedAssets() {
         </Select>
 
         <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
-          <SelectTrigger className="w-[170px]"><SelectValue placeholder="מיון" /></SelectTrigger>
+          <SelectTrigger className="w-[170px]" aria-label="מיון"><SelectValue placeholder="מיון" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="created_desc">נוספו לאחרונה</SelectItem>
             <SelectItem value="created_asc">הוותיקים ביותר</SelectItem>
@@ -208,7 +221,7 @@ export default function UnassignedAssets() {
       </div>
 
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="text-sm text-muted-foreground">{rows.length} פריטים לא משויכים</div>
+        <div className="text-sm text-muted-foreground" aria-live="polite">{isLoading ? "" : `${rows.length} פריטים לא משויכים`}</div>
         {selectedAssets.length > 0 && (
           <div className="flex items-center gap-2 bg-primary/5 border border-primary/20 rounded-full px-3 py-1.5">
             <span className="text-sm font-medium">{selectedAssets.length} פריטים נבחרו</span>
@@ -222,21 +235,41 @@ export default function UnassignedAssets() {
               onClick={() => setSelectedIds([])}
               aria-label="נקה בחירה"
             >
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4" aria-hidden="true" />
             </Button>
           </div>
         )}
       </div>
 
       {isLoading ? (
-        <div className="p-8 text-center text-muted-foreground">טוען...</div>
+        <div role="status" aria-busy="true" className="bg-card border border-border rounded-2xl">
+          <span className="sr-only">טוען פריטים…</span>
+          <ListSkeleton rows={5} />
+        </div>
       ) : rows.length === 0 ? (
-        <div className="bg-card border border-border rounded-2xl p-12 text-center text-muted-foreground">
-          לא נמצאו פריטים לא משויכים בהתאם לסינון
+        <div className="bg-card border border-border rounded-2xl">
+          {filtersActive ? (
+            <EmptyState
+              title="לא נמצאו פריטים לא משויכים בהתאם לסינון"
+              action={<Button variant="outline" onClick={clearFilters}>נקה סינון</Button>}
+            />
+          ) : (
+            <EmptyState
+              title={`כל הפריטים ב${DOMAIN_META[domain].title} משויכים`}
+              description="אין פריטים שממתינים למסירה בדומיין הזה. אפשר לבחור דומיין אחר."
+            />
+          )}
         </div>
       ) : (
         <>
           {/* Mobile cards */}
+          <label className="flex min-h-11 items-center gap-2 px-1 text-sm sm:hidden">
+            <Checkbox
+              checked={allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false}
+              onCheckedChange={(c) => toggleSelectAll(c === true)}
+            />
+            בחר את כל {rows.length} הפריטים למסירה מרובה
+          </label>
           <div className="grid gap-3 sm:hidden">
             {rows.map((a: any) => (
               <div key={a.id} className="bg-card border border-border rounded-2xl p-3 space-y-2">
@@ -255,7 +288,7 @@ export default function UnassignedAssets() {
                     {catById.get(a.category_id)?.category_name} · {statusLabels[a.status] ?? a.status}
                   </div>
                 </button>
-                <Button size="touch" className="w-full gap-1.5" onClick={() => setHandoverAsset(a)}>
+                <Button size="touch" variant="outline" className="w-full gap-1.5" onClick={() => setHandoverAsset(a)}>
                   <FileSignature className="w-4 h-4" /> בצע מסירה
                 </Button>
               </div>
@@ -267,13 +300,19 @@ export default function UnassignedAssets() {
             <table className="w-full min-w-[44rem] text-sm">
               <thead className="bg-muted/40 text-muted-foreground text-xs">
                 <tr>
-                  <th className="px-3 py-2 w-10" aria-label="בחירה למסירה מרובה" />
-                  <th className="text-right font-medium px-4 py-2">מזהה</th>
-                  <th className="text-right font-medium px-4 py-2">שם פריט</th>
-                  <th className="text-right font-medium px-4 py-2">קטגוריה</th>
-                  <th className="text-right font-medium px-4 py-2">מס׳ סידורי</th>
-                  <th className="text-right font-medium px-4 py-2">סטטוס</th>
-                  <th className="px-4 py-2" />
+                  <th scope="col" className="px-3 py-2 w-10">
+                    <Checkbox
+                      checked={allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false}
+                      onCheckedChange={(c) => toggleSelectAll(c === true)}
+                      aria-label="בחר את כל הפריטים המוצגים למסירה מרובה"
+                    />
+                  </th>
+                  <th scope="col" className="text-right font-medium px-4 py-2">מזהה</th>
+                  <th scope="col" className="text-right font-medium px-4 py-2">שם פריט</th>
+                  <th scope="col" className="text-right font-medium px-4 py-2">קטגוריה</th>
+                  <th scope="col" className="text-right font-medium px-4 py-2">מס׳ סידורי</th>
+                  <th scope="col" className="text-right font-medium px-4 py-2">סטטוס</th>
+                  <th scope="col" className="px-4 py-2"><span className="sr-only">פעולות</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -305,7 +344,7 @@ export default function UnassignedAssets() {
                       </span>
                     </td>
                     <td className="px-4 py-2 text-left">
-                      <Button size="sm" className="gap-1.5" onClick={() => setHandoverAsset(a)}>
+                      <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setHandoverAsset(a)}>
                         <FileSignature className="w-4 h-4" /> בצע מסירה
                       </Button>
                     </td>

@@ -16,14 +16,20 @@ type Mode = "choose" | "password" | "forgot";
 
 export default function Login() {
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [mode, setMode] = useState<Mode>("choose");
+  const [searchParams] = useSearchParams();
+  // ?mode=forgot opens straight on "שכחתי סיסמה" (used by an expired reset link).
+  const [mode, setModeState] = useState<Mode>(() => (searchParams.get("mode") === "forgot" ? "forgot" : "choose"));
+  /** Inline error for the form on screen (password / forgot), shown next to it instead of a fleeting toast. */
+  const [formError, setFormError] = useState<string | null>(null);
+  const setMode = (m: Mode) => { setFormError(null); setModeState(m); };
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  /** Inline sign-in error (kept visible, unlike a toast — e.g. after a Google redirect). */
+  const [authError, setAuthError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
   /** Same-origin path to open after a successful sign-in (e.g. a signing link). */
@@ -51,8 +57,14 @@ export default function Login() {
       if (done || !hasSession) return;
       done = true;
       const ok = await verifyActiveEmployee("", null);
-      if (ok) navigate(afterLogin, { replace: true });
-      else done = false;
+      if (ok) {
+        navigate(afterLogin, { replace: true });
+        return;
+      }
+      // Same as the popup path: an unauthorized account must not stay signed in.
+      await supabase.auth.signOut();
+      setAuthError(UNAUTHORIZED_MESSAGE);
+      done = false;
     };
     supabase.auth.getSession().then(({ data }) => proceed(!!data.session));
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
@@ -64,6 +76,7 @@ export default function Login() {
 
 
   const handleGoogleLogin = async () => {
+    setAuthError(null);
     setGoogleLoading(true);
     // Managed Google sign-in returns to /login?next=..., which carries the return
     // path — no sessionStorage key here (a stale key would bounce the dashboard later).
@@ -82,6 +95,7 @@ export default function Login() {
         const ok = await verifyActiveEmployee(user.id, user.email);
         if (!ok) {
           await supabase.auth.signOut();
+          setAuthError(UNAUTHORIZED_MESSAGE);
           toast({
             title: "אין הרשאת גישה",
             description: UNAUTHORIZED_MESSAGE,
@@ -110,9 +124,12 @@ export default function Login() {
     e.preventDefault();
     const trimmedEmail = email.trim();
     if (!trimmedEmail || !password) {
-      toast({ title: "שגיאה", description: "יש להזין אימייל וסיסמה", variant: "destructive" });
+      setFormError(!trimmedEmail ? "יש להזין כתובת אימייל" : "יש להזין סיסמה");
+      document.getElementById(!trimmedEmail ? "login-email" : "login-password")?.focus();
       return;
     }
+    setAuthError(null);
+    setFormError(null);
     setEmailLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -125,21 +142,13 @@ export default function Login() {
         const ok = await verifyActiveEmployee(data.user.id, data.user.email);
         if (!ok) {
           await supabase.auth.signOut();
-          toast({
-            title: "אין הרשאת גישה",
-            description: UNAUTHORIZED_MESSAGE,
-            variant: "destructive",
-          });
+          setAuthError(UNAUTHORIZED_MESSAGE);
           return;
         }
       }
       navigate(afterLogin);
     } catch (error: any) {
-      toast({
-        title: "שגיאה בהתחברות",
-        description: translateAuthError(error),
-        variant: "destructive",
-      });
+      setFormError(translateAuthError(error));
     } finally {
       setEmailLoading(false);
     }
@@ -149,9 +158,11 @@ export default function Login() {
     e.preventDefault();
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
-      toast({ title: "שגיאה", description: "יש להזין כתובת אימייל", variant: "destructive" });
+      setFormError("יש להזין כתובת אימייל");
+      document.getElementById("forgot-email")?.focus();
       return;
     }
+    setFormError(null);
     setResetLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
@@ -165,11 +176,7 @@ export default function Login() {
       });
       setMode("password");
     } catch (error: any) {
-      toast({
-        title: "שגיאה בשליחת איפוס",
-        description: translateAuthError(error),
-        variant: "destructive",
-      });
+      setFormError(translateAuthError(error));
     } finally {
       setResetLoading(false);
     }
@@ -186,9 +193,18 @@ export default function Login() {
 
         <section aria-labelledby="login-heading" className="bg-card rounded-2xl border border-border shadow-card p-8">
           <h2 id="login-heading" className="text-lg font-semibold mb-2 text-center">כניסה למערכת</h2>
-          <p className="text-xs text-muted-foreground text-center mb-6">
+          <p className="text-sm text-muted-foreground text-center mb-6">
             הכניסה מיועדת למשתמשים שהוקמו מראש על ידי מנהל המערכת בלבד.
           </p>
+
+          {authError && (
+            <p
+              role="alert"
+              className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive text-center"
+            >
+              {authError}
+            </p>
+          )}
 
           {mode === "choose" && (
             <div className="space-y-3">
@@ -228,7 +244,7 @@ export default function Login() {
           )}
 
           {mode === "password" && (
-            <form onSubmit={handleEmailLogin} className="space-y-4">
+            <form onSubmit={handleEmailLogin} className="space-y-4" noValidate aria-describedby={formError ? "login-form-error" : undefined}>
               <div>
                 <label htmlFor="login-email" className="text-sm font-medium mb-1.5 block">אימייל</label>
                 <div className="relative">
@@ -241,8 +257,9 @@ export default function Login() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@example.com"
-                    className="w-full pr-10 pl-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+                    className="w-full min-h-11 pr-10 pl-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 transition-all"
                     required
+                    aria-invalid={formError && !email.trim() ? true : undefined}
                     dir="ltr"
                   />
                 </div>
@@ -259,14 +276,15 @@ export default function Login() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full pr-10 pl-10 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+                    className="w-full min-h-11 pr-10 pl-12 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 transition-all"
                     required
+                    aria-invalid={formError ? true : undefined}
                     dir="ltr"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                    className="absolute left-0 top-1/2 -translate-y-1/2 h-11 w-11 inline-flex items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
                     aria-label={showPassword ? "הסתר סיסמה" : "הצג סיסמה"}
                     aria-pressed={showPassword}
                   >
@@ -275,22 +293,28 @@ export default function Login() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={emailLoading} aria-busy={emailLoading}>
-                {emailLoading ? "מתחבר..." : "התחבר"}
+              {formError && (
+                <p id="login-form-error" role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  {formError}
+                </p>
+              )}
+
+              <Button type="submit" className="w-full min-h-11" loading={emailLoading} loadingText="מתחבר…">
+                התחבר
               </Button>
 
-              <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center justify-between gap-2 text-sm">
                 <button
                   type="button"
                   onClick={() => setMode("forgot")}
-                  className="text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                  className="min-h-11 text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded text-right"
                 >
                   שכחתי סיסמה / הגדרת סיסמה ראשונית
                 </button>
                 <button
                   type="button"
                   onClick={() => setMode("choose")}
-                  className="text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                  className="min-h-11 px-2 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
                 >
                   חזרה
                 </button>
@@ -299,8 +323,8 @@ export default function Login() {
           )}
 
           {mode === "forgot" && (
-            <form onSubmit={handleForgotPassword} className="space-y-4">
-              <p className="text-xs text-muted-foreground">
+            <form onSubmit={handleForgotPassword} className="space-y-4" noValidate aria-describedby={formError ? "forgot-form-error" : undefined}>
+              <p className="text-sm text-muted-foreground">
                 הזן את כתובת האימייל שלך ונשלח אליך קישור להגדרת סיסמה חדשה. שימושי גם כניסה ראשונה לבחירת סיסמה.
               </p>
               <div>
@@ -315,20 +339,26 @@ export default function Login() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@example.com"
-                    className="w-full pr-10 pl-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+                    className="w-full min-h-11 pr-10 pl-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 transition-all"
                     required
+                    aria-invalid={formError ? true : undefined}
                     dir="ltr"
                   />
                 </div>
               </div>
-              <Button type="submit" className="w-full" disabled={resetLoading} aria-busy={resetLoading}>
-                {resetLoading ? "שולח..." : "שלח קישור לאיפוס סיסמה"}
+              {formError && (
+                <p id="forgot-form-error" role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  {formError}
+                </p>
+              )}
+              <Button type="submit" className="w-full min-h-11" loading={resetLoading} loadingText="שולח…">
+                שלח קישור לאיפוס סיסמה
               </Button>
-              <div className="text-xs text-center">
+              <div className="text-sm text-center">
                 <button
                   type="button"
                   onClick={() => setMode("password")}
-                  className="text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                  className="min-h-11 px-2 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
                 >
                   חזרה לכניסה
                 </button>

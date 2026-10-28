@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Timer, Loader2 } from "lucide-react";
+import { Timer } from "lucide-react";
+import { StateView } from "@/components/feedback/StateView";
 import { TICKET_PRIORITIES, TICKET_SUBJECTS as BASE_SUBJECTS, defaultSlaHours, ONBOARDING_SUBJECT, OFFBOARDING_SUBJECT } from "@/lib/serviceTickets";
 
 const TICKET_SUBJECTS = [
@@ -13,17 +14,16 @@ const TICKET_SUBJECTS = [
   { value: ONBOARDING_SUBJECT, label: "קליטת עובד" },
   { value: OFFBOARDING_SUBJECT, label: "ניתוקים / סיום העסקה" },
 ];
-import { useSaveSlaSetting, useSlaSettings } from "@/hooks/useServiceTickets";
+import { useSaveSlaSettings, useSlaSettings } from "@/hooks/useServiceTickets";
 
 type Draft = Record<string, { hours: number; notify: boolean }>;
 
 const key = (subject: string, priority: string) => `${subject}|${priority}`;
 
 export function SlaSettingsCard() {
-  const { data: settings, isLoading } = useSlaSettings();
-  const saveSetting = useSaveSlaSetting();
+  const { data: settings, isLoading, error, refetch } = useSlaSettings();
+  const saveSettings = useSaveSlaSettings();
   const [draft, setDraft] = useState<Draft>({});
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const next: Draft = {};
@@ -42,26 +42,22 @@ export function SlaSettingsCard() {
   const update = (k: string, patch: Partial<{ hours: number; notify: boolean }>) =>
     setDraft((prev) => ({ ...prev, [k]: { ...prev[k], ...patch } }));
 
+  // All rows go in a single upsert: either every target is saved or none is, never a partial set.
   const save = async () => {
-    setSaving(true);
+    const rows = TICKET_SUBJECTS.flatMap((s) => TICKET_PRIORITIES.flatMap((p) => {
+      const d = draft[key(s.value, p.value)];
+      return d ? [{
+        subject_category: s.value,
+        priority: p.value,
+        target_hours: Math.max(1, Number(d.hours) || 1),
+        notify_on_breach: d.notify,
+      }] : [];
+    }));
     try {
-      for (const s of TICKET_SUBJECTS) {
-        for (const p of TICKET_PRIORITIES) {
-          const d = draft[key(s.value, p.value)];
-          if (!d) continue;
-          await saveSetting.mutateAsync({
-            subject_category: s.value,
-            priority: p.value,
-            target_hours: Math.max(1, Number(d.hours) || 1),
-            notify_on_breach: d.notify,
-          });
-        }
-      }
-      toast.success("זמני התקן נשמרו");
+      await saveSettings.mutateAsync(rows);
+      toast.success(`זמני התקן נשמרו (${rows.length} הגדרות)`);
     } catch (err: any) {
-      toast.error(err?.message ?? "שגיאה בשמירת זמני התקן");
-    } finally {
-      setSaving(false);
+      toast.error("זמני התקן לא נשמרו", { description: `${err?.message ?? "שגיאה לא ידועה"} — אף הגדרה לא שונתה, נסו שוב.` });
     }
   };
 
@@ -77,9 +73,7 @@ export function SlaSettingsCard() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {isLoading ? (
-          <p className="text-sm text-muted-foreground">טוען...</p>
-        ) : (
+        <StateView loading={isLoading} error={error} onRetry={() => { void refetch(); }} label="את זמני התקן">
           <>
             {TICKET_SUBJECTS.map((s) => (
               <div key={s.value} className="rounded-lg border border-border/60 p-3 space-y-3">
@@ -116,12 +110,11 @@ export function SlaSettingsCard() {
                 </div>
               </div>
             ))}
-            <Button onClick={save} disabled={saving} className="gap-2">
-              {saving && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />}
+            <Button onClick={save} loading={saveSettings.isPending} loadingText="שומר…" className="gap-2">
               שמור זמני תקן
             </Button>
           </>
-        )}
+        </StateView>
       </CardContent>
     </Card>
   );

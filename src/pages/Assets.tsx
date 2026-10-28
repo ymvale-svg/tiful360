@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Plus, Search, Zap, MoreHorizontal, Package, UserRound, FolderTree, FileSignature, Ticket } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -98,6 +98,87 @@ export default function Assets() {
   const goToAsset = (id: string, categoryId?: string) =>
     navigate(`/assets/${slugForCategory(categoryId)}/${id}`);
 
+  type ResultItem = { id: string; go: () => void; content: React.ReactNode };
+  const resultGroups: { key: string; label: string; icon: typeof Package; items: ResultItem[] }[] = [
+    {
+      key: "assets", label: "פריטים", icon: Package,
+      items: searchResults.assets.map((a: any) => ({
+        id: `gs-asset-${a.id}`,
+        go: () => goToAsset(a.id, a.category_id),
+        content: (
+          <>
+            <span className="font-mono text-xs text-muted-foreground shrink-0">{a.asset_code}</span>
+            <span className="flex-1 truncate font-medium">{a.asset_name}</span>
+            <span className="text-xs text-muted-foreground shrink-0">{a.asset_categories?.category_name}</span>
+            {a.employees?.full_name && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">{a.employees.full_name}</span>
+            )}
+          </>
+        ),
+      })),
+    },
+    {
+      key: "employees", label: "עובדים", icon: UserRound,
+      items: searchResults.employees.map((e: any) => ({
+        id: `gs-employee-${e.id}`,
+        go: () => navigate(`/employees/${e.id}?tab=assets`),
+        content: (
+          <>
+            <span className="font-mono text-xs text-muted-foreground shrink-0">{e.employee_code}</span>
+            <span className="flex-1 truncate font-medium">{e.full_name}</span>
+            <span className="text-xs text-muted-foreground shrink-0">{e.role ?? ""}</span>
+          </>
+        ),
+      })),
+    },
+    {
+      key: "categories", label: "קטגוריות", icon: FolderTree,
+      items: searchResults.categories.map((c: any) => ({
+        id: `gs-category-${c.id}`,
+        go: () => goToCategory(c.id),
+        content: (
+          <>
+            <span className="font-mono text-xs text-muted-foreground shrink-0">{c.prefix}</span>
+            <span className="flex-1 truncate font-medium">{c.category_name}</span>
+          </>
+        ),
+      })),
+    },
+  ];
+  const flatResults = resultGroups.flatMap((g) => g.items);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  useEffect(() => { setActiveIndex(-1); }, [globalSearch]);
+  const resultsOpen = searchFocused && globalSearch.length >= 2;
+
+  const pick = (item: ResultItem) => {
+    setGlobalSearch("");
+    setSearchFocused(false);
+    item.go();
+  };
+
+  const onSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!resultsOpen && (e.key === "ArrowDown" || e.key === "ArrowUp") && globalSearch.length >= 2) {
+      setSearchFocused(true);
+    }
+    if (!flatResults.length) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIndex((i) => (i + 1) % flatResults.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIndex((i) => (i <= 0 ? flatResults.length - 1 : i - 1));
+    } else if (e.key === "Enter" && resultsOpen) {
+      e.preventDefault();
+      pick(flatResults[activeIndex >= 0 ? activeIndex : 0]);
+    }
+  };
+
+  // Keep the highlighted option visible while moving with the arrows.
+  useEffect(() => {
+    const id = flatResults[activeIndex]?.id;
+    if (id) document.getElementById(id)?.scrollIntoView({ block: "nearest" });
+  }, [activeIndex]); // eslint-disable-line react-hooks/exhaustive-deps
+
 
   return (
     <div className="space-y-6 animate-fade-in" dir="rtl">
@@ -132,15 +213,21 @@ export default function Assets() {
                   <input
                     ref={searchInputRef}
                     type="search"
+                    role="combobox"
                     aria-label="חיפוש גלובלי"
+                    aria-autocomplete="list"
+                    aria-expanded={resultsOpen}
+                    aria-controls="global-search-results"
+                    aria-activedescendant={resultsOpen && flatResults[activeIndex] ? flatResults[activeIndex].id : undefined}
                     value={globalSearch}
-                    onChange={(e) => setGlobalSearch(e.target.value)}
+                    onChange={(e) => { setGlobalSearch(e.target.value); setSearchFocused(true); }}
+                    onKeyDown={onSearchKeyDown}
                     onFocus={() => setSearchFocused(true)}
-                    onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
+                    onBlur={() => setSearchFocused(false)}
                     placeholder="חיפוש פריט, עובד או קטגוריה (שם / קוד / מס׳ סידורי / מס׳ פוליסה)..."
                     className="bg-transparent text-base outline-none w-full placeholder:text-muted-foreground/70"
                   />
-                  <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded border border-border bg-muted/50 text-[10px] font-mono text-muted-foreground shrink-0">
+                  <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded border border-border bg-muted/50 text-xs font-mono text-muted-foreground shrink-0">
                     ⌘K
                   </kbd>
                   </div>
@@ -235,94 +322,47 @@ export default function Assets() {
                   </div>
                 </div>
 
-                {/* Grouped results dropdown */}
-                {searchFocused && globalSearch.length >= 2 && (
-                  <div className="absolute z-30 mt-2 w-full bg-card border border-border rounded-2xl shadow-2xl overflow-hidden max-h-[70vh] overflow-y-auto">
+                {/* Grouped results: a combobox listbox, operable with arrows / Enter / Esc. */}
+                {resultsOpen && (
+                  <div
+                    id="global-search-results"
+                    role="listbox"
+                    aria-label="תוצאות חיפוש"
+                    className="absolute z-30 mt-2 w-full bg-card border border-border rounded-2xl shadow-2xl overflow-hidden max-h-[70vh] overflow-y-auto"
+                  >
                     {!hasResults ? (
-                      <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                      <div role="presentation" className="px-4 py-8 text-center text-sm text-muted-foreground">
                         לא נמצאו תוצאות עבור "{globalSearch}"
                       </div>
                     ) : (
-                      <>
-                        {searchResults.assets.length > 0 && (
-                          <div>
-                            <div className="flex items-center gap-2 px-4 py-2 bg-muted/40 text-[0.8125rem] font-semibold text-muted-foreground uppercase tracking-wide">
-                              <Package className="w-3.5 h-3.5" />
-                              פריטים <span className="font-normal">({searchResults.assets.length})</span>
-                            </div>
-                            {searchResults.assets.map((a: any) => (
-                              <button
-                                key={a.id}
-                                onMouseDown={(e) => {
-                                  e.preventDefault();
-                                  setGlobalSearch("");
-                                  setSearchFocused(false);
-                                  goToAsset(a.id, a.category_id);
-                                }}
-                                className="w-full text-right px-4 py-2.5 hover:bg-muted/60 flex items-center gap-3 text-sm border-t border-border/50"
-                              >
-                                <span className="font-mono text-xs text-muted-foreground shrink-0">{a.asset_code}</span>
-                                <span className="flex-1 truncate font-medium">{a.asset_name}</span>
-                                <span className="text-xs text-muted-foreground shrink-0">
-                                  {a.asset_categories?.category_name}
-                                </span>
-                                {a.employees?.full_name && (
-                                  <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">
-                                    {a.employees.full_name}
-                                  </span>
+                      resultGroups.map((g) => g.items.length > 0 && (
+                        <div key={g.key} role="group" aria-labelledby={`gs-group-${g.key}`}>
+                          <div id={`gs-group-${g.key}`} className="flex items-center gap-2 px-4 py-2 bg-muted/40 text-[0.8125rem] font-semibold text-muted-foreground uppercase tracking-wide">
+                            <g.icon className="w-3.5 h-3.5" aria-hidden="true" />
+                            {g.label} <span className="font-normal">({g.items.length})</span>
+                          </div>
+                          {g.items.map((item) => {
+                            const active = flatResults[activeIndex]?.id === item.id;
+                            return (
+                              <div
+                                key={item.id}
+                                id={item.id}
+                                role="option"
+                                aria-selected={active}
+                                onMouseDown={(e) => e.preventDefault()}
+                                onMouseMove={() => setActiveIndex(flatResults.findIndex((r) => r.id === item.id))}
+                                onClick={() => pick(item)}
+                                className={cn(
+                                  "w-full text-right px-4 py-2.5 min-h-11 cursor-pointer flex items-center gap-3 text-sm border-t border-border/50",
+                                  active ? "bg-muted" : "hover:bg-muted/60",
                                 )}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                        {searchResults.employees.length > 0 && (
-                          <div>
-                            <div className="flex items-center gap-2 px-4 py-2 bg-muted/40 text-[0.8125rem] font-semibold text-muted-foreground uppercase tracking-wide">
-                              <UserRound className="w-3.5 h-3.5" />
-                              עובדים <span className="font-normal">({searchResults.employees.length})</span>
-                            </div>
-                            {searchResults.employees.map((e: any) => (
-                              <button
-                                key={e.id}
-                                onMouseDown={(ev) => {
-                                  ev.preventDefault();
-                                  setGlobalSearch("");
-                                  setSearchFocused(false);
-                                  navigate(`/employees/${e.id}?tab=assets`);
-                                }}
-                                className="w-full text-right px-4 py-2.5 hover:bg-muted/60 flex items-center gap-3 text-sm border-t border-border/50"
                               >
-                                <span className="font-mono text-xs text-muted-foreground shrink-0">{e.employee_code}</span>
-                                <span className="flex-1 truncate font-medium">{e.full_name}</span>
-                                <span className="text-xs text-muted-foreground shrink-0">{e.role ?? ""}</span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                        {searchResults.categories.length > 0 && (
-                          <div>
-                            <div className="flex items-center gap-2 px-4 py-2 bg-muted/40 text-[0.8125rem] font-semibold text-muted-foreground uppercase tracking-wide">
-                              <FolderTree className="w-3.5 h-3.5" />
-                              קטגוריות <span className="font-normal">({searchResults.categories.length})</span>
-                            </div>
-                            {searchResults.categories.map((c: any) => (
-                              <button
-                                key={c.id}
-                                onMouseDown={(ev) => {
-                                  ev.preventDefault();
-                                  setGlobalSearch("");
-                                  setSearchFocused(false);
-                                  goToCategory(c.id);
-                                }}
-                                className="w-full text-right px-4 py-2.5 hover:bg-muted/60 flex items-center gap-3 text-sm border-t border-border/50"
-                              >
-                                <span className="font-mono text-xs text-muted-foreground shrink-0">{c.prefix}</span>
-                                <span className="flex-1 truncate font-medium">{c.category_name}</span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </>
+                                {item.content}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))
                     )}
                   </div>
                 )}
