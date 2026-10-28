@@ -1,8 +1,8 @@
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowRight, Shield, Key, Clock, AlertTriangle, UserMinus,
   FileText, RefreshCw, Package, User, Mail, Phone, Calendar, Building2, IdCard,
-  Pencil, Plus, Trash2, Upload, Unlink, CalendarDays, MapPin, Lock, Car, ClipboardList,
+  Pencil, Plus, Unlink, Check, CircleAlert, Wrench, PackageCheck, CalendarDays, MapPin, Lock, Car, ClipboardList,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,6 +35,7 @@ import { EmployeeVehiclesTab } from "@/components/vehicles/EmployeeVehiclesTab";
 import { isVehicleAsset } from "@/lib/vehicleLinkedGroups";
 import { useEmployeeOnboardingProcess, ONBOARDING_STATUS_LABEL, daysUntil } from "@/hooks/useOnboarding";
 import { EmployeeOnboardingTab } from "@/components/onboarding/EmployeeOnboardingTab";
+import { useConfirm } from "@/components/feedback/ConfirmDialog";
 
 
 
@@ -57,6 +58,14 @@ const statusClasses: Record<string, string> = {
 const assetStatusLabels: Record<string, string> = {
   in_use: "בשימוש", in_stock: "במלאי", in_repair: "בתיקון", lost: "אבד",
 };
+// Each equipment status gets its own colour and icon, so "אבד" never looks like "בשימוש".
+const assetStatusStyle: Record<string, { cls: string; icon: typeof Check }> = {
+  in_use: { cls: "status-active", icon: Check },
+  in_stock: { cls: "status-inactive", icon: PackageCheck },
+  in_repair: { cls: "status-onboarding", icon: Wrench },
+  lost: { cls: "status-leaving", icon: CircleAlert },
+};
+const TAB_IDS = ["personal", "assets", "vehicles", "documents", "leave", "payslips", "history", "onboarding"];
 const accessStatusLabels: Record<string, string> = {
   active: "פעיל", suspended: "מושהה", blocked: "נחסם",
 };
@@ -79,10 +88,18 @@ function InfoRow({ icon: Icon, label, value, mono }: { icon: any; label: string;
 export default function EmployeeDetail() {
   const { id } = useParams();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState(() => {
-    const t = new URLSearchParams(window.location.search).get("tab");
-    return t && ["personal", "assets", "vehicles", "documents", "leave", "payslips", "history", "onboarding"].includes(t) ? t : "personal";
-  });
+  const confirm = useConfirm();
+  // The tab lives in ?tab= so links can open it and Back returns to the previous tab.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const activeTab = tabParam && TAB_IDS.includes(tabParam) ? tabParam : "personal";
+  const setActiveTab = (t: string, replace = false) => {
+    if (t === activeTab) return;
+    const next = new URLSearchParams(searchParams);
+    if (t === "personal") next.delete("tab"); else next.set("tab", t);
+    setSearchParams(next, { replace });
+  };
+  const [savedWorkDays, setSavedWorkDays] = useState(false);
   const [offboardingOpen, setOffboardingOpen] = useState(false);
   const [transferAsset, setTransferAsset] = useState<any>(null);
   const [editEmployeeOpen, setEditEmployeeOpen] = useState(false);
@@ -147,6 +164,12 @@ export default function EmployeeDetail() {
       toast({ title: "שגיאה בעדכון נוכחות", description: error.message, variant: "destructive" });
       return;
     }
+    if (patch.work_days) {
+      setSavedWorkDays(true);
+      window.setTimeout(() => setSavedWorkDays(false), 2500);
+    } else {
+      toast({ title: patch.tracks_attendance ? "העובד מסומן כמחתים נוכחות" : "העובד מסומן כלא מחתים נוכחות" });
+    }
     qc.invalidateQueries({ queryKey: ["employee", id] });
     qc.invalidateQueries({ queryKey: ["employees"] });
   };
@@ -167,7 +190,7 @@ export default function EmployeeDetail() {
 
   // Onboarding process of this employee — visible to HR, admins and operations/IT only.
   const canSeeOnboarding = isSuperAdmin || isAdmin || isHR || isOperations;
-  const { data: onboardingProcess } = useEmployeeOnboardingProcess(canSeeOnboarding ? id : undefined);
+  const { data: onboardingProcess, isLoading: onboardingLoading } = useEmployeeOnboardingProcess(canSeeOnboarding ? id : undefined);
   const showOnboarding = canSeeOnboarding && !!onboardingProcess;
   const onbItems = onboardingProcess?.onboarding_items ?? [];
   const onbDone = onbItems.filter((i) => i.status === "done").length;
@@ -180,18 +203,20 @@ export default function EmployeeDetail() {
 
   useEffect(() => {
     if (activeTab === "payslips" && !canSeePayslips) {
-      setActiveTab("personal");
+      setActiveTab("personal", true);
     }
-    if (activeTab === "onboarding" && !showOnboarding) {
-      setActiveTab("personal");
+    // Wait for the process query before dropping a deep-linked onboarding tab.
+    if (activeTab === "onboarding" && !showOnboarding && !onboardingLoading) {
+      setActiveTab("personal", true);
     }
-  }, [activeTab, canSeePayslips, showOnboarding]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, canSeePayslips, showOnboarding, onboardingLoading]);
 
   const stockAssets = (allAssets ?? []).filter((a: any) => !a.current_owner_id);
   const pickedAsset = stockAssets.find((a: any) => a.id === pickAssetId) ?? null;
 
   if (isLoading) {
-    return <div className="flex items-center justify-center p-12 text-muted-foreground">טוען...</div>;
+    return <div role="status" className="flex items-center justify-center p-12 text-muted-foreground">טוען את תיק העובד…</div>;
   }
 
   if (!employee) {
@@ -208,42 +233,49 @@ export default function EmployeeDetail() {
         <span className="text-foreground font-medium">{employee.full_name}</span>
       </div>
 
-      {/* Header */}
-      <div className="bg-card rounded-xl border border-border/50 shadow-card p-4 sm:p-6">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <div className="flex items-start sm:items-center gap-4 sm:gap-5 min-w-0">
-            <div className="w-16 h-16 shrink-0 rounded-xl bg-primary/10 flex items-center justify-center">
-              <span className="text-2xl font-bold text-primary">{initials}</span>
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold break-words">{employee.full_name}</h1>
-              <p className="text-sm text-muted-foreground mt-0.5">{employee.role} • {employee.department}</p>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
-                <span className={`status-badge ${statusClasses[employee.status] ?? ""}`}>
-                  {statusLabels[employee.status] ?? employee.status}
-                </span>
-                <span className="text-sm text-muted-foreground">ת.ז: {employee.id_number}</span>
-                <span className="text-sm text-muted-foreground">{employee.employee_code}</span>
-                {employee.birth_date && (
-                  <span className="text-sm text-muted-foreground">
-                    תאריך לידה: {new Date(employee.birth_date).toLocaleDateString("en-GB")}
-                  </span>
-                )}
-                <span className="text-sm text-muted-foreground">
-                  תחילת עבודה: {new Date(employee.start_date).toLocaleDateString("en-GB")}
-                </span>
-              </div>
-            </div>
-          </div>
+      {/* Header: name, role and actions stay visible while the tabs below scroll. */}
+      <div className="sticky top-16 z-20 -mx-3 sm:mx-0 bg-card/95 backdrop-blur-md border-y sm:border border-border/50 sm:rounded-xl shadow-card px-3 sm:px-4 py-2.5 flex items-center gap-3">
+        <div className="w-10 h-10 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center" aria-hidden="true">
+          <span className="text-base font-bold text-primary">{initials}</span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-lg sm:text-xl font-bold truncate">{employee.full_name}</h1>
+          <p className="text-sm text-muted-foreground truncate">
+            {[employee.role, employee.department].filter(Boolean).join(" • ")}
+            <span className={`status-badge ms-2 align-middle ${statusClasses[employee.status] ?? ""}`}>
+              {statusLabels[employee.status] ?? employee.status}
+            </span>
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button variant="outline" className="gap-2" aria-label="ערוך פרטי עובד" onClick={() => setEditEmployeeOpen(true)}>
+            <Pencil className="w-4 h-4" />
+            <span className="hidden sm:inline">ערוך</span>
+          </Button>
           {employee.status !== "leaving" && employee.status !== "inactive" && (
-            <Button variant="destructive" className="gap-2 h-11 w-full sm:w-auto shrink-0" onClick={() => setOffboardingOpen(true)}>
+            <Button variant="destructive" className="gap-2" aria-label="התנעת עזיבה" onClick={() => setOffboardingOpen(true)}>
               <UserMinus className="w-4 h-4" />
-              התנעת עזיבה
+              <span className="hidden sm:inline">התנעת עזיבה</span>
             </Button>
           )}
         </div>
+      </div>
 
-        <div className="grid grid-cols-3 gap-4 mt-6 pt-5 border-t border-border/50">
+      <div className="bg-card rounded-xl border border-border/50 shadow-card p-4 sm:p-6">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="text-sm text-muted-foreground">ת.ז: {employee.id_number}</span>
+          <span className="text-sm text-muted-foreground">{employee.employee_code}</span>
+          {employee.birth_date && (
+            <span className="text-sm text-muted-foreground">
+              תאריך לידה: {new Date(employee.birth_date).toLocaleDateString("en-GB")}
+            </span>
+          )}
+          <span className="text-sm text-muted-foreground">
+            תחילת עבודה: {new Date(employee.start_date).toLocaleDateString("en-GB")}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-border/50">
           <div className="text-center">
             <p className="text-2xl font-bold text-primary">{assets?.length ?? 0}</p>
             <p className="text-xs text-muted-foreground mt-1">פריטי ציוד</p>
@@ -283,7 +315,7 @@ export default function EmployeeDetail() {
       )}
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 bg-card border border-border rounded-lg p-1 w-fit max-w-full overflow-x-auto">
+      <nav aria-label="לשוניות תיק עובד" className="flex items-center gap-1 bg-card border border-border rounded-lg p-1 w-fit max-w-full overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -297,11 +329,11 @@ export default function EmployeeDetail() {
                 : "text-muted-foreground hover:text-foreground hover:bg-muted"
             )}
           >
-            <tab.icon className="w-4 h-4" />
+            <tab.icon className="w-4 h-4" aria-hidden="true" />
             {tab.label}
           </button>
         ))}
-      </div>
+      </nav>
 
       {/* Onboarding tab */}
       {activeTab === "onboarding" && showOnboarding && (
@@ -340,7 +372,15 @@ export default function EmployeeDetail() {
                     </p>
                     {asset.serial_number && <p className="text-xs text-muted-foreground">SN: {asset.serial_number}</p>}
                   </div>
-                  <span className="status-badge status-active">{assetStatusLabels[asset.status] ?? asset.status}</span>
+                  {(() => {
+                    const st = assetStatusStyle[asset.status] ?? { cls: "status-inactive", icon: Package };
+                    return (
+                      <span className={`status-badge shrink-0 ${st.cls}`}>
+                        <st.icon className="w-3 h-3" aria-hidden="true" />
+                        {assetStatusLabels[asset.status] ?? asset.status}
+                      </span>
+                    );
+                  })()}
                 </div>
 
                 {asset.expiry_date && (
@@ -358,15 +398,19 @@ export default function EmployeeDetail() {
                     variant="outline"
                     size="sm"
                     className="gap-1.5 text-xs"
-                    onClick={async (e) => {
+                    onClick={(e) => {
                       e.stopPropagation();
-                      if (!confirm(`לבטל את שיוך הפריט "${asset.asset_name}"?`)) return;
-                      try {
-                        await unassignAsset.mutateAsync(asset.id);
-                        toast({ title: "השיוך בוטל" });
-                      } catch (err: any) {
-                        toast({ title: "שגיאה", description: err.message, variant: "destructive" });
-                      }
+                      void confirm({
+                        title: `לבטל את שיוך "${asset.asset_name}"?`,
+                        description: `הפריט יוסר מ${employee.full_name} ויחזור למלאי.`,
+                        confirmLabel: "בטל שיוך",
+                        cancelLabel: "השאר משויך",
+                        destructive: true,
+                        onConfirm: async () => {
+                          await unassignAsset.mutateAsync(asset.id);
+                          toast({ title: "השיוך בוטל" });
+                        },
+                      });
                     }}
                   >
 
@@ -481,11 +525,17 @@ export default function EmployeeDetail() {
 
               {(employee as any).tracks_attendance !== false && (
                 <div>
-                  <p className="text-sm font-medium mb-1">ימי עבודה</p>
+                  <p className="text-sm font-medium mb-1 flex items-center gap-2" id="work-days-label">
+                    ימי עבודה
+                    <span role="status" aria-live="polite" className="text-xs font-normal text-success inline-flex items-center gap-1">
+                      {savedWorkDays && <><Check className="w-3.5 h-3.5" aria-hidden="true" />נשמר</>}
+                      {savingAttendance && <span className="text-muted-foreground">שומר…</span>}
+                    </span>
+                  </p>
                   <p className="text-xs text-muted-foreground mb-2">
                     ברירת מחדל: ראשון–חמישי. סמן את הימים שבהם העובד צפוי לעבוד.
                   </p>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2" role="group" aria-labelledby="work-days-label">
                     {[
                       { v: 0, l: "א׳" },
                       { v: 1, l: "ב׳" },
@@ -494,7 +544,8 @@ export default function EmployeeDetail() {
                       { v: 4, l: "ה׳" },
                       { v: 5, l: "ו׳" },
                       { v: 6, l: "ש׳" },
-                    ].map((d) => {
+                    ].map((d, i) => {
+                      const dayName = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"][i];
                       const wd: number[] = Array.isArray((employee as any).work_days) && (employee as any).work_days.length
                         ? (employee as any).work_days
                         : [0, 1, 2, 3, 4];
@@ -505,14 +556,17 @@ export default function EmployeeDetail() {
                           key={d.v}
                           disabled={!canEditRemotePunch || savingAttendance}
                           onClick={() => handleToggleWorkDay(d.v)}
+                          aria-pressed={checked}
+                          aria-label={`יום ${dayName}`}
                           className={cn(
-                            "px-3 py-1.5 rounded-md border text-sm transition-colors",
+                            "min-h-10 min-w-10 px-3 rounded-md border text-sm transition-colors inline-flex items-center justify-center gap-1",
                             checked
                               ? "bg-primary/10 border-primary/40 text-primary"
                               : "bg-card border-border text-muted-foreground hover:text-foreground",
                             (!canEditRemotePunch || savingAttendance) && "opacity-50 cursor-not-allowed",
                           )}
                         >
+                          {checked && <Check className="w-3.5 h-3.5" aria-hidden="true" />}
                           {d.l}
                         </button>
                       );

@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { EditSickLeaveDialog } from "@/components/EditSickLeaveDialog";
 import { buildGoogleCalendarUrl } from "@/lib/googleCalendar";
 import { EmployeeLink } from "@/components/EmployeeLink";
+import { useConfirm } from "@/components/feedback/ConfirmDialog";
 
 const TYPE_LABELS: Record<string, string> = {
   vacation: "חופשה", sick: "מחלה", reserve: "מילואים", personal: "יום אישי", other: "אחר",
@@ -32,6 +33,7 @@ export function LeaveRequestsList({ requests, showEmployee, allowCancel }: Props
   const cancel = useCancelLeaveRequest();
   const { toast } = useToast();
   const [editingSick, setEditingSick] = useState<any | null>(null);
+  const confirm = useConfirm();
 
   if (!requests || requests.length === 0) {
     return <p className="text-center text-sm text-muted-foreground py-6">אין בקשות</p>;
@@ -68,7 +70,7 @@ export function LeaveRequestsList({ requests, showEmployee, allowCancel }: Props
                 )}
               </p>
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                <Calendar className="w-3 h-3" />
+                <Calendar className="w-3 h-3" aria-hidden="true" />
                 {!r.end_date
                   ? `${fmt(r.start_date)} – ?`
                   : r.start_date === r.end_date
@@ -76,7 +78,7 @@ export function LeaveRequestsList({ requests, showEmployee, allowCancel }: Props
                     : `${fmt(r.start_date)} – ${fmt(r.end_date)}`}
               </div>
             </div>
-            <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium shrink-0 ${STATUS_CLASS[r.status]}`}>
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${STATUS_CLASS[r.status]}`}>
               {STATUS_LABELS[r.status]}
             </span>
           </div>
@@ -85,6 +87,7 @@ export function LeaveRequestsList({ requests, showEmployee, allowCancel }: Props
 
           <div className="flex items-center gap-2 flex-wrap">
             {r.status === "approved" && r.end_date && (
+              <Button asChild variant="outline" size="sm" className="gap-1">
               <a
                 href={buildGoogleCalendarUrl({
                   title: `${r.employee?.full_name ?? "עובד"} ${r.request_type === "sick" ? "במחלה" : "בחופש"}`,
@@ -95,26 +98,25 @@ export function LeaveRequestsList({ requests, showEmployee, allowCancel }: Props
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
-                  <CalendarPlus className="w-3 h-3" />
-                  הוסף ליומן
-                </Button>
+                <CalendarPlus className="w-3 h-3" aria-hidden="true" />
+                הוסף ליומן
               </a>
+              </Button>
             )}
             {r.attachment_url && (
-              <a href={r.attachment_url} target="_blank" rel="noopener noreferrer">
-                <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
-                  <Paperclip className="w-3 h-3" />
+              <Button asChild variant="outline" size="sm" className="gap-1">
+                <a href={r.attachment_url} target="_blank" rel="noopener noreferrer">
+                  <Paperclip className="w-3 h-3" aria-hidden="true" />
                   קובץ מצורף
-                </Button>
-              </a>
+                </a>
+              </Button>
             )}
 
             {canEditSick && (
               <Button
                 variant="outline"
                 size="sm"
-                className="h-7 text-xs gap-1"
+                className="gap-1"
                 onClick={() => setEditingSick(r)}
               >
                 <Pencil className="w-3 h-3" />
@@ -129,18 +131,24 @@ export function LeaveRequestsList({ requests, showEmployee, allowCancel }: Props
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 text-xs gap-1 text-destructive"
-                onClick={async () => {
-                  if (!confirm("לבטל את הבקשה?")) return;
-                  try {
-                    await cancel.mutateAsync(r.id);
-                    toast({ title: "הבקשה בוטלה" });
-                  } catch (e: any) {
-                    toast({ title: "שגיאה", description: e.message, variant: "destructive" });
-                  }
+                className="gap-1 text-destructive"
+                onClick={() => {
+                  void confirm({
+                    title: `לבטל את בקשת ה${TYPE_LABELS[r.request_type] ?? ""}?`,
+                    description: r.end_date && r.start_date !== r.end_date
+                      ? `הבקשה ל-${fmt(r.start_date)} – ${fmt(r.end_date)} תסומן כמבוטלת.`
+                      : `הבקשה ל-${fmt(r.start_date)} תסומן כמבוטלת.`,
+                    confirmLabel: "בטל בקשה",
+                    cancelLabel: "השאר",
+                    destructive: true,
+                    onConfirm: async () => {
+                      await cancel.mutateAsync(r.id);
+                      toast({ title: "הבקשה בוטלה" });
+                    },
+                  });
                 }}
               >
-                <X className="w-3 h-3" />
+                <X className="w-3 h-3" aria-hidden="true" />
                 בטל
               </Button>
             )}

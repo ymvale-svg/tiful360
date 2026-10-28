@@ -7,7 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { UserMinus, AlertTriangle, Shield, Download } from "lucide-react";
+import { UserMinus, AlertTriangle, Shield, Download, CheckCircle2 } from "lucide-react";
 import { useStartOffboarding } from "@/hooks/useOffboarding";
 import { useToast } from "@/hooks/use-toast";
 import { OffboardingFormsManager } from "@/components/OffboardingFormsManager";
@@ -102,6 +102,8 @@ export function OffboardingDialog({
   };
 
   const handleClose = () => {
+    // The atomic offboarding call is running; closing now would hide its result.
+    if (step === "processing") return;
     onOpenChange(false);
     setTimeout(() => setStep("confirm"), 300);
   };
@@ -138,8 +140,9 @@ export function OffboardingDialog({
 
               {/* End date */}
               <div>
-                <label className="text-sm font-medium mb-1.5 block">תאריך סיום עבודה</label>
+                <label htmlFor="offboarding-end-date" className="text-sm font-medium mb-1.5 block">תאריך סיום עבודה</label>
                 <input
+                  id="offboarding-end-date"
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
@@ -186,10 +189,10 @@ export function OffboardingDialog({
         )}
 
         {step === "processing" && (
-          <div className="py-12 text-center">
+          <div className="py-12 text-center" role="status" aria-live="polite">
             <div className="w-12 h-12 border-4 border-destructive border-t-transparent rounded-full animate-spin mx-auto mb-4" />
             <p className="font-medium">מפעיל פרוטוקול ניתוק...</p>
-            <p className="text-sm text-muted-foreground mt-1">משנה סטטוס, משהה הרשאות, יוצר קריאת IT</p>
+            <p className="text-sm text-muted-foreground mt-1">משנה סטטוס, משהה הרשאות, יוצר קריאת IT. החלון ייסגר רק לאחר שהתהליך יסתיים.</p>
           </div>
         )}
 
@@ -207,10 +210,10 @@ export function OffboardingDialog({
             </DialogHeader>
 
             <div className="space-y-4 mt-4">
-              <div className="bg-success/10 border border-success/30 rounded-lg p-3 text-xs space-y-1">
-                <p>✅ סטטוס העובד שונה ל"בתהליך עזיבה"</p>
-                <p>✅ {digitalAccess.length} הרשאות דיגיטליות הושהו</p>
-                <p>✅ נוצרה קריאת IT: <span className="font-mono font-bold">{ticketCode}</span></p>
+              <div className="bg-success/10 border border-success/30 rounded-lg p-3 text-sm space-y-1">
+                <p className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-success shrink-0" aria-hidden="true" />סטטוס העובד שונה ל"בתהליך עזיבה"</p>
+                <p className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-success shrink-0" aria-hidden="true" />{digitalAccess.length} הרשאות דיגיטליות הושהו</p>
+                <p className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-success shrink-0" aria-hidden="true" />נוצרה קריאת IT: <span className="font-mono font-bold">{ticketCode}</span></p>
               </div>
 
               <OffboardingFormsManager

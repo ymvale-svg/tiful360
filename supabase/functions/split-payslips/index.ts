@@ -201,9 +201,12 @@ Deno.serve(async (req) => {
     const admin = createClient(supabaseUrl, serviceKey);
 
     const body = await req.json();
-    const { company_id, period_year, period_month, pdf_base64, original_filename } = body;
+    // The PDF arrives either inline (pdf_base64, the original contract) or as a
+    // path the caller already uploaded to the payslips bucket (pdf_storage_path),
+    // which avoids base64-inflating a large file into the request body.
+    const { company_id, period_year, period_month, pdf_base64, pdf_storage_path, original_filename } = body;
 
-    if (!company_id || !period_year || !period_month || !pdf_base64) {
+    if (!company_id || !period_year || !period_month || (!pdf_base64 && !pdf_storage_path)) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -228,7 +231,25 @@ Deno.serve(async (req) => {
       }
     }
 
-    const binary = Uint8Array.from(atob(pdf_base64), (c) => c.charCodeAt(0));
+    let binary: Uint8Array;
+    if (pdf_storage_path) {
+      // Only an upload inside this company's folder may be read; the service
+      // role would otherwise let a caller pull another tenant's file.
+      const storagePath = String(pdf_storage_path);
+      if (!storagePath.startsWith(`${company_id}/`) || storagePath.includes('..')) {
+        return new Response(JSON.stringify({ error: 'Invalid storage path' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const { data: blob, error: dlErr } = await admin.storage.from('payslips').download(storagePath);
+      if (dlErr || !blob) throw dlErr ?? new Error('Uploaded PDF not found');
+      binary = new Uint8Array(await blob.arrayBuffer());
+      // The upload was only a transport for this request; the batch keeps its
+      // own _source_ copy below. Best effort — a leftover file is harmless.
+      admin.storage.from('payslips').remove([storagePath]).catch(() => {});
+    } else {
+      binary = Uint8Array.from(atob(pdf_base64), (c) => c.charCodeAt(0));
+    }
 
     // Extract text for ALL pages in one pass
     const pdfProxy = await getDocumentProxy(binary);

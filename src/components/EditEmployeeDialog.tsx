@@ -1,4 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { FormField, focusFirstInvalid } from "@/components/feedback/FormField";
+import { useDirtyGuard } from "@/components/feedback/useDirtyGuard";
+import { validateEmployeeFields } from "@/lib/employeeValidation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +61,9 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
   const [hebYearText, setHebYearText] = useState<string>("");
   const [hebDayText, setHebDayText] = useState<string>("");
   const [confirmRevertOpen, setConfirmRevertOpen] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const initialRef = useRef<string>("");
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (employee) {
@@ -88,8 +94,19 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
       });
       setHebYearText(employee.hebrew_birth_year ? formatHebrewYearGematriya(employee.hebrew_birth_year) : "");
       setHebDayText(employee.hebrew_birth_day ? formatHebrewDayGematriya(employee.hebrew_birth_day) : "");
+      setErrors({});
+      initialRef.current = "";
     }
   }, [employee, open]);
+
+  // Snapshot the loaded values once, so closing asks only after a real change.
+  useEffect(() => {
+    if (!initialRef.current && Object.keys(form).length) initialRef.current = JSON.stringify(form);
+  }, [form]);
+  const isDirty = !!initialRef.current && JSON.stringify(form) !== initialRef.current;
+  const saving = update.isPending || cancelOffboarding.isPending;
+  const guard = useDirtyGuard(isDirty, saving);
+  const close = guard(onOpenChange);
 
   const hebYearNum = useMemo(() => parseHebrewYearGematriya(hebYearText), [hebYearText]);
   const hebDayNum = useMemo(() => parseHebrewDayGematriya(hebDayText), [hebDayText]);
@@ -98,7 +115,24 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
   const hebDayInvalid = form.birthday_calendar_preference === "hebrew" && hebDayText.length > 0 && !hebDayNum;
 
 
-  const set = (k: string, v: any) => setForm((p: any) => ({ ...p, [k]: v }));
+  const set = (k: string, v: any) => {
+    setForm((p: any) => ({ ...p, [k]: v }));
+    if (errors[k]) setErrors((p) => { const n = { ...p }; delete n[k]; return n; });
+  };
+  const validateField = (k: string) => {
+    const msg = validateEmployeeFields(form)[k];
+    setErrors((p) => { const n = { ...p }; if (msg) n[k] = msg; else delete n[k]; return n; });
+  };
+  /** Checks every field; shows errors next to them and focuses the first one. */
+  const validateAll = () => {
+    const v = validateEmployeeFields(form);
+    setErrors(v);
+    if (Object.keys(v).length) {
+      requestAnimationFrame(() => focusFirstInvalid(contentRef.current));
+      return false;
+    }
+    return true;
+  };
 
   const managerOptions = useMemo(() => {
     const opts = (allEmployees ?? [])
@@ -210,6 +244,7 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
       toast({
         title: revertingOffboarding ? "העובד הוחזר לפעיל ופרוטוקול העזיבה בוטל" : "פרטי העובד נשמרו",
       });
+      initialRef.current = JSON.stringify(form);
       onOpenChange(false);
     } catch (err: any) {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
@@ -219,49 +254,40 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
   const hasAccount = !!employee?.linked_user_id;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent dir="rtl" className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={close}>
+      <DialogContent ref={contentRef} dir="rtl" className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>עריכת פרטי עובד</DialogTitle>
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-          <div>
-            <Label>שם מלא</Label>
-            <Input value={form.full_name ?? ""} onChange={(e) => set("full_name", e.target.value)} />
-          </div>
-          <div>
-            <Label>מספר עובד</Label>
-            <Input value={form.employee_code ?? ""} onChange={(e) => set("employee_code", e.target.value)} />
-          </div>
-          <div>
-            <Label>תעודת זהות</Label>
-            <Input value={form.id_number ?? ""} onChange={(e) => set("id_number", e.target.value)} />
-          </div>
-          <div>
-            <Label>מחלקה</Label>
-            <Input value={form.department ?? ""} onChange={(e) => set("department", e.target.value)} />
-          </div>
-          <div>
-            <Label>תפקיד</Label>
-            <Input value={form.role ?? ""} onChange={(e) => set("role", e.target.value)} />
-          </div>
-          <div>
-            <Label>אימייל</Label>
-            <Input type="email" value={form.email ?? ""} onChange={(e) => set("email", e.target.value)} />
-          </div>
-          <div>
-            <Label>טלפון</Label>
-            <Input value={form.phone ?? ""} onChange={(e) => set("phone", e.target.value)} />
-          </div>
-          <div>
-            <Label>תאריך לידה</Label>
-            <Input type="date" value={form.birth_date ?? ""} onChange={(e) => set("birth_date", e.target.value)} />
-          </div>
-          <div>
-            <Label>תאריך תחילת עבודה</Label>
-            <Input type="date" value={form.start_date ?? ""} onChange={(e) => set("start_date", e.target.value)} />
-          </div>
+          <FormField label="שם מלא" error={errors.full_name} required>
+            <Input value={form.full_name ?? ""} onChange={(e) => set("full_name", e.target.value)} onBlur={() => validateField("full_name")} />
+          </FormField>
+          <FormField label="מספר עובד" error={errors.employee_code} required>
+            <Input value={form.employee_code ?? ""} onChange={(e) => set("employee_code", e.target.value)} onBlur={() => validateField("employee_code")} />
+          </FormField>
+          <FormField label="תעודת זהות" error={errors.id_number} required>
+            <Input value={form.id_number ?? ""} onChange={(e) => set("id_number", e.target.value)} dir="ltr" inputMode="numeric" onBlur={() => validateField("id_number")} />
+          </FormField>
+          <FormField label="מחלקה" error={errors.department} required>
+            <Input value={form.department ?? ""} onChange={(e) => set("department", e.target.value)} onBlur={() => validateField("department")} />
+          </FormField>
+          <FormField label="תפקיד" error={errors.role} required>
+            <Input value={form.role ?? ""} onChange={(e) => set("role", e.target.value)} onBlur={() => validateField("role")} />
+          </FormField>
+          <FormField label="אימייל" error={errors.email}>
+            <Input type="email" value={form.email ?? ""} onChange={(e) => set("email", e.target.value)} dir="ltr" onBlur={() => validateField("email")} />
+          </FormField>
+          <FormField label="טלפון" error={errors.phone}>
+            <Input value={form.phone ?? ""} onChange={(e) => set("phone", e.target.value)} dir="ltr" onBlur={() => validateField("phone")} />
+          </FormField>
+          <FormField label="תאריך לידה" error={errors.birth_date}>
+            <Input type="date" value={form.birth_date ?? ""} onChange={(e) => set("birth_date", e.target.value)} onBlur={() => validateField("birth_date")} />
+          </FormField>
+          <FormField label="תאריך תחילת עבודה" error={errors.start_date} required>
+            <Input type="date" value={form.start_date ?? ""} onChange={(e) => set("start_date", e.target.value)} onBlur={() => validateField("start_date")} />
+          </FormField>
           <div>
             <Label htmlFor="employee-status">סטטוס</Label>
             <Select value={form.status} onValueChange={(v) => set("status", v)}>
@@ -326,8 +352,9 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
                 </p>
                 <div className="grid grid-cols-3 gap-2">
                   <div>
-                    <Label className="text-xs">יום (עברי)</Label>
+                    <Label htmlFor="edit-heb-day" className="text-xs">יום (עברי)</Label>
                     <Input
+                      id="edit-heb-day"
                       type="text"
                       inputMode="text"
                       value={hebDayText}
@@ -340,9 +367,9 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
                     )}
                   </div>
                   <div>
-                    <Label className="text-xs">חודש עברי</Label>
+                    <Label htmlFor="edit-heb-month" className="text-xs">חודש עברי</Label>
                     <Select value={form.hebrew_birth_month ? String(form.hebrew_birth_month) : ""} onValueChange={(v) => set("hebrew_birth_month", v)}>
-                      <SelectTrigger><SelectValue placeholder="חודש" /></SelectTrigger>
+                      <SelectTrigger id="edit-heb-month"><SelectValue placeholder="חודש" /></SelectTrigger>
                       <SelectContent>
                         {hebMonthOptions.map((m) => (
                           <SelectItem key={m.value} value={String(m.value)}>{m.label}</SelectItem>
@@ -351,8 +378,9 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-xs">שנה (עברית)</Label>
+                    <Label htmlFor="edit-heb-year" className="text-xs">שנה (עברית)</Label>
                     <Input
+                      id="edit-heb-year"
                       type="text"
                       inputMode="text"
                       value={hebYearText}
@@ -458,11 +486,11 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
 
           {form.tracks_attendance !== false && (
             <div>
-              <Label className="text-sm font-medium block mb-2">ימי עבודה</Label>
+              <p id="edit-work-days" className="text-sm font-medium mb-2">ימי עבודה</p>
               <p className="text-xs text-muted-foreground mb-2">
                 ברירת מחדל: ראשון–חמישי. סמן את הימים שבהם העובד צפוי לעבוד.
               </p>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2" role="group" aria-labelledby="edit-work-days">
                 {[
                   { v: 0, l: "א׳" },
                   { v: 1, l: "ב׳" },
@@ -476,7 +504,7 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
                   return (
                     <label
                       key={d.v}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border cursor-pointer text-sm transition-colors ${
+                      className={`flex items-center gap-1.5 min-h-10 px-3 rounded-md border cursor-pointer text-sm transition-colors ${
                         checked
                           ? "bg-primary/10 border-primary/40 text-primary"
                           : "bg-card border-border text-muted-foreground hover:text-foreground"
@@ -524,13 +552,18 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
         </div>
 
         <div className="flex gap-2 pt-4">
-          <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>ביטול</Button>
+          <Button variant="outline" className="flex-1" onClick={() => close(false)} disabled={saving}>ביטול</Button>
           <Button
             className="flex-1"
-            disabled={update.isPending || cancelOffboarding.isPending}
-            onClick={() => (isLeavingToActive(employee, form.status) ? setConfirmRevertOpen(true) : handleSave())}
+            loading={saving}
+            loadingText="שומר…"
+            onClick={() => {
+              if (!validateAll()) return;
+              if (isLeavingToActive(employee, form.status)) setConfirmRevertOpen(true);
+              else void handleSave();
+            }}
           >
-            {update.isPending || cancelOffboarding.isPending ? "שומר..." : "שמור"}
+            שמור
           </Button>
         </div>
       </DialogContent>

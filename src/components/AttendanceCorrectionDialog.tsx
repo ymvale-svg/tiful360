@@ -67,7 +67,7 @@ export function AttendanceCorrectionDialog({ open, onClose, employeeId, managerI
         </DialogHeader>
         {!tracksAttendance ? (
           <div className="py-6 text-center space-y-3">
-            <AlertCircle className="w-10 h-10 text-muted-foreground mx-auto" />
+            <AlertCircle className="w-10 h-10 text-muted-foreground mx-auto" aria-hidden="true" />
             <p className="text-sm font-medium">עובד זה אינו מחתים נוכחות</p>
             <p className="text-xs text-muted-foreground">
               לא ניתן לשלוח בקשת תיקון. ניתן לעדכן את ההגדרה בתיק העובד.
@@ -80,36 +80,36 @@ export function AttendanceCorrectionDialog({ open, onClose, employeeId, managerI
           <>
             <div className="space-y-4">
               <div>
-                <Label>תאריך</Label>
-                <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+                <Label htmlFor="corr-date">תאריך</Label>
+                <Input id="corr-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>כניסה מקורית</Label>
-                  <Input type="time" value={origIn} onChange={(e) => setOrigIn(e.target.value)} />
+                  <Label htmlFor="corr-orig-in">כניסה מקורית</Label>
+                  <Input id="corr-orig-in" type="time" value={origIn} onChange={(e) => setOrigIn(e.target.value)} />
                 </div>
                 <div>
-                  <Label>יציאה מקורית</Label>
-                  <Input type="time" value={origOut} onChange={(e) => setOrigOut(e.target.value)} />
+                  <Label htmlFor="corr-orig-out">יציאה מקורית</Label>
+                  <Input id="corr-orig-out" type="time" value={origOut} onChange={(e) => setOrigOut(e.target.value)} />
                 </div>
                 <div>
-                  <Label>כניסה מבוקשת</Label>
-                  <Input type="time" value={reqIn} onChange={(e) => setReqIn(e.target.value)} />
+                  <Label htmlFor="corr-req-in">כניסה מבוקשת</Label>
+                  <Input id="corr-req-in" type="time" value={reqIn} onChange={(e) => setReqIn(e.target.value)} />
                 </div>
                 <div>
-                  <Label>יציאה מבוקשת</Label>
-                  <Input type="time" value={reqOut} onChange={(e) => setReqOut(e.target.value)} />
+                  <Label htmlFor="corr-req-out">יציאה מבוקשת</Label>
+                  <Input id="corr-req-out" type="time" value={reqOut} onChange={(e) => setReqOut(e.target.value)} />
                 </div>
               </div>
               <div>
-                <Label>סיבה</Label>
-                <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="תאר/י בקצרה את הסיבה לתיקון" />
+                <Label htmlFor="corr-reason">סיבה</Label>
+                <Textarea id="corr-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="תאר/י בקצרה את הסיבה לתיקון" />
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={onClose}>ביטול</Button>
-              <Button onClick={submit} disabled={create.isPending}>
-                {create.isPending ? "שולח..." : "שלח בקשה"}
+              <Button onClick={() => { void submit(); }} loading={create.isPending} loadingText="שולח…">
+                שלח בקשה
               </Button>
             </DialogFooter>
           </>

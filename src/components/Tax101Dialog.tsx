@@ -212,7 +212,7 @@ const emptyForm = (employee?: any): Tax101FormData => {
 };
 
 const PrefilledBadge = () => (
-  <Badge variant="secondary" className="text-[10px] h-4 px-1.5 font-normal opacity-70">
+  <Badge variant="secondary" className="text-xs h-5 px-1.5 font-normal opacity-70">
     מולא מהפרופיל
   </Badge>
 );
@@ -459,7 +459,7 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
           {STEPS.map((label, i) => (
             <div key={i} className="flex-1">
               <div className={`h-1.5 rounded-full transition-colors ${i <= step ? "bg-primary" : "bg-muted"}`} />
-              <p className={`text-[10px] mt-1 text-center ${i === step ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
+              <p className={`text-xs mt-1 text-center ${i === step ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
                 {label}
               </p>
             </div>
@@ -483,8 +483,8 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                 <Input value={data.id_number} onChange={(e) => update("id_number", e.target.value)} maxLength={9} dir="ltr" />
               </div>
               <div className="space-y-1.5">
-                <Label>מספר דרכון <span className="text-muted-foreground text-xs">(למי שאין מס' זהות)</span></Label>
-                <Input value={data.passport_number} onChange={(e) => update("passport_number", e.target.value)} dir="ltr" />
+                <Label htmlFor="t101-passport_number">מספר דרכון <span className="text-muted-foreground text-xs">(למי שאין מס' זהות)</span></Label>
+                <Input id="t101-passport_number" value={data.passport_number} onChange={(e) => update("passport_number", e.target.value)} dir="ltr" />
               </div>
               <div className="space-y-1.5">
                 <Label className="flex items-center gap-2">מין {employee?.gender && <PrefilledBadge />}</Label>
@@ -511,8 +511,8 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                 <Input value={data.phone} onChange={(e) => update("phone", e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label>טלפון נייד</Label>
-                <Input value={data.mobile_phone} onChange={(e) => update("mobile_phone", e.target.value)} />
+                <Label htmlFor="t101-mobile_phone">טלפון נייד</Label>
+                <Input id="t101-mobile_phone" value={data.mobile_phone} onChange={(e) => update("mobile_phone", e.target.value)} />
               </div>
               <div className="md:col-span-2 space-y-1.5">
                 <Label className="flex items-center gap-2">אימייל {employee?.email && <PrefilledBadge />}</Label>
@@ -527,32 +527,32 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
               <h3 className="text-sm font-semibold text-muted-foreground">כתובת מגורים</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="md:col-span-2 space-y-1.5">
-                  <Label>רחוב</Label>
-                  <Input value={data.street} onChange={(e) => update("street", e.target.value)} />
+                  <Label htmlFor="t101-street">רחוב</Label>
+                  <Input id="t101-street" value={data.street} onChange={(e) => update("street", e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>מספר בית</Label>
-                  <Input value={data.house_number} onChange={(e) => update("house_number", e.target.value)} />
+                  <Label htmlFor="t101-house_number">מספר בית</Label>
+                  <Input id="t101-house_number" value={data.house_number} onChange={(e) => update("house_number", e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>עיר</Label>
-                  <Input value={data.city} onChange={(e) => update("city", e.target.value)} />
+                  <Label htmlFor="t101-city">עיר</Label>
+                  <Input id="t101-city" value={data.city} onChange={(e) => update("city", e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>מיקוד</Label>
-                  <Input value={data.postal_code} onChange={(e) => update("postal_code", e.target.value)} />
+                  <Label htmlFor="t101-postal_code">מיקוד</Label>
+                  <Input id="t101-postal_code" value={data.postal_code} onChange={(e) => update("postal_code", e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>ת.ד.</Label>
-                  <Input value={data.po_box} onChange={(e) => update("po_box", e.target.value)} />
+                  <Label htmlFor="t101-po_box">ת.ד.</Label>
+                  <Input id="t101-po_box" value={data.po_box} onChange={(e) => update("po_box", e.target.value)} />
                 </div>
               </div>
 
               <h3 className="text-sm font-semibold text-muted-foreground pt-2">מצב משפחתי</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label>מצב משפחתי</Label>
-                  <select className="w-full h-10 px-3 rounded-md bg-background border border-input" value={data.marital_status} onChange={(e) => update("marital_status", e.target.value as any)}>
+                  <Label htmlFor="t101-marital_status">מצב משפחתי</Label>
+                  <select id="t101-marital_status" className="w-full h-10 px-3 rounded-md bg-background border border-input" value={data.marital_status} onChange={(e) => update("marital_status", e.target.value as any)}>
                     <option value="">בחר...</option>
                     <option value="single">רווק/ה</option>
                     <option value="married">נשוי/אה</option>
@@ -570,7 +570,7 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
               </div>
 
               <div className="space-y-2 p-3 bg-muted/30 rounded-lg">
-                <Label>חבר/ה בקופת חולים</Label>
+                <p className="text-sm font-medium leading-none">חבר/ה בקופת חולים</p>
                 <div className="flex items-center gap-6">
                   <label className="flex items-center gap-2 text-sm cursor-pointer">
                     <input
@@ -610,7 +610,7 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
               </div>
 
               <div className="space-y-2 p-3 bg-muted/30 rounded-lg">
-                <Label>חבר קיבוץ / מושב שיתופי</Label>
+                <p className="text-sm font-medium leading-none">חבר קיבוץ / מושב שיתופי</p>
                 <div className="flex flex-col gap-2">
                   <label className="flex items-center gap-2 text-sm cursor-pointer">
                     <input
@@ -647,28 +647,28 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                   <h4 className="text-sm font-semibold">פרטים על בן/בת הזוג</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <Label>שם משפחה</Label>
-                      <Input value={data.spouse_last_name} onChange={(e) => update("spouse_last_name", e.target.value)} />
+                      <Label htmlFor="t101-spouse_last_name">שם משפחה</Label>
+                      <Input id="t101-spouse_last_name" value={data.spouse_last_name} onChange={(e) => update("spouse_last_name", e.target.value)} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label>שם פרטי</Label>
-                      <Input value={data.spouse_first_name} onChange={(e) => update("spouse_first_name", e.target.value)} />
+                      <Label htmlFor="t101-spouse_first_name">שם פרטי</Label>
+                      <Input id="t101-spouse_first_name" value={data.spouse_first_name} onChange={(e) => update("spouse_first_name", e.target.value)} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label>מספר זהות (9 ספרות)</Label>
-                      <Input value={data.spouse_id} onChange={(e) => update("spouse_id", e.target.value)} dir="ltr" />
+                      <Label htmlFor="t101-spouse_id">מספר זהות (9 ספרות)</Label>
+                      <Input id="t101-spouse_id" value={data.spouse_id} onChange={(e) => update("spouse_id", e.target.value)} dir="ltr" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label>מספר דרכון <span className="text-muted-foreground text-xs">(למי שאין מס' זהות)</span></Label>
-                      <Input value={data.spouse_passport} onChange={(e) => update("spouse_passport", e.target.value)} dir="ltr" />
+                      <Label htmlFor="t101-spouse_passport">מספר דרכון <span className="text-muted-foreground text-xs">(למי שאין מס' זהות)</span></Label>
+                      <Input id="t101-spouse_passport" value={data.spouse_passport} onChange={(e) => update("spouse_passport", e.target.value)} dir="ltr" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label>תאריך לידה</Label>
-                      <Input type="date" value={data.spouse_birth_date} onChange={(e) => update("spouse_birth_date", e.target.value)} />
+                      <Label htmlFor="t101-spouse_birth_date">תאריך לידה</Label>
+                      <Input id="t101-spouse_birth_date" type="date" value={data.spouse_birth_date} onChange={(e) => update("spouse_birth_date", e.target.value)} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label>תאריך עליה</Label>
-                      <Input type="date" value={data.spouse_aliyah_date} onChange={(e) => update("spouse_aliyah_date", e.target.value)} />
+                      <Label htmlFor="t101-spouse_aliyah_date">תאריך עליה</Label>
+                      <Input id="t101-spouse_aliyah_date" type="date" value={data.spouse_aliyah_date} onChange={(e) => update("spouse_aliyah_date", e.target.value)} />
                     </div>
                   </div>
 
@@ -779,7 +779,7 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                         </label>
                       </div>
                       <div className="md:col-span-1">
-                        <Button size="icon" variant="ghost" onClick={() => removeDependent(i)}>
+                        <Button size="icon" variant="ghost" aria-label={`הסר ילד ${i + 1}`} onClick={() => removeDependent(i)}>
                           <Trash2 className="w-4 h-4 text-destructive" />
                         </Button>
                       </div>
@@ -795,8 +795,8 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label>ד. סוג ההכנסה ממעסיק זה</Label>
-                  <select className="w-full h-10 px-3 rounded-md bg-background border border-input" value={data.income_type} onChange={(e) => update("income_type", e.target.value as any)}>
+                  <Label htmlFor="t101-income_type">ד. סוג ההכנסה ממעסיק זה</Label>
+                  <select id="t101-income_type" className="w-full h-10 px-3 rounded-md bg-background border border-input" value={data.income_type} onChange={(e) => update("income_type", e.target.value as any)}>
                     <option value="">בחר…</option>
                     <option value="monthly">(2) משכורת חודש</option>
                     <option value="monthly_additional">(3) משכורת בעד משרה נוספת</option>
@@ -1050,8 +1050,8 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
               </div>
 
               <div className="space-y-1.5">
-                <Label>הערות נוספות</Label>
-                <Textarea value={data.notes} onChange={(e) => update("notes", e.target.value)} rows={2} />
+                <Label htmlFor="t101-notes">הערות נוספות</Label>
+                <Textarea id="t101-notes" value={data.notes} onChange={(e) => update("notes", e.target.value)} rows={2} />
               </div>
             </div>
           )}
@@ -1119,7 +1119,7 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                           />
                         </div>
                         <div className="md:col-span-1">
-                          <Button size="icon" variant="ghost" onClick={() => removeEmployer(i)}>
+                          <Button size="icon" variant="ghost" aria-label={`הסר מעסיק ${i + 1}`} onClick={() => removeEmployer(i)}>
                             <Trash2 className="w-4 h-4 text-destructive" />
                           </Button>
                         </div>
@@ -1158,7 +1158,7 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
               <p className="text-xs text-muted-foreground">תאריך חתימה: {today}</p>
 
               <div className="border border-border rounded-lg overflow-hidden" style={{ maxHeight: 400, overflowY: "auto" }}>
-                <p className="text-[10px] text-muted-foreground p-2 bg-muted/40">תצוגה מקדימה — תופיע ב-PDF המוגש</p>
+                <p className="text-xs text-muted-foreground p-2 bg-muted/40">תצוגה מקדימה — תופיע ב-PDF המוגש</p>
                 <Tax101Preview ref={previewRef} data={data} taxYear={taxYear} signatureRef={sigRef} employerInfo={employerInfo} />
               </div>
             </div>

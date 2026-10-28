@@ -1,7 +1,7 @@
 import { RowContextMenu, copyAction, openInNewTab } from "@/components/context/RowContextMenu";
 import { useState, useMemo, useEffect } from "react";
 import { usePersistentFilter } from "@/hooks/usePersistentFilter";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Search, Plus, UserMinus, Mail, Send, ShieldCheck, ShieldAlert, UserCheck, UserX } from "lucide-react";
 import { ExportExcelButton, ImportExcelButton } from "@/components/ExcelActionButtons";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { undoToast } from "@/components/feedback/undoToast";
+import { EmptyState, StateView } from "@/components/feedback/StateView";
 
 type EmployeeStatus = "active" | "onboarding" | "leaving" | "inactive";
 
@@ -66,7 +68,7 @@ async function inviteEmployees(payload: {
 }
 
 export default function Employees() {
-  const { data: employees, isLoading } = useEmployees();
+  const { data: employees, isLoading, error: employeesError, refetch: refetchEmployees } = useEmployees();
   const { activeCompanyId } = useCompany();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -119,6 +121,26 @@ export default function Employees() {
     return matchSearch && matchStatus;
   });
 
+  const hasFilters = !!search || statusFilter !== "all";
+  const clearFilters = () => { setSearch(""); setStatusFilter("all"); };
+  const filterSummary = [
+    search && `חיפוש "${search}"`,
+    statusFilter !== "all" && `סטטוס "${statusLabels[statusFilter]}"`,
+  ].filter(Boolean).join(" ו");
+  const emptyState = hasFilters && (employees ?? []).length > 0 ? (
+    <EmptyState
+      title="אין עובדים שתואמים לסינון"
+      description={`מסונן לפי ${filterSummary}. ${(employees ?? []).length} עובדים רשומים בסך הכל.`}
+      action={<Button variant="outline" size="sm" onClick={clearFilters}>נקה סינון</Button>}
+    />
+  ) : (
+    <EmptyState
+      title="עדיין אין עובדים"
+      description="הוסיפו עובד חדש או ייבאו רשימה מאקסל."
+      action={<Button size="sm" className="gap-2" onClick={() => setAddOpen(true)}><Plus className="w-4 h-4" />עובד חדש</Button>}
+    />
+  );
+
   const inviteMutation = useMutation({
     mutationFn: inviteEmployees,
     onSuccess: (data) => {
@@ -168,13 +190,20 @@ export default function Employees() {
   }, [employees]);
 
   const handleManagerChange = async (employeeId: string, newManagerId: string) => {
+    const previous = fullById.get(employeeId)?.direct_manager_id ?? null;
+    const next = newManagerId === "__none__" ? null : newManagerId;
+    if (previous === next) return;
     try {
-      await updateEmployee.mutateAsync({
-        id: employeeId,
-        direct_manager_id: newManagerId === "__none__" ? null : newManagerId,
-      });
-      toast({ title: "מנהל ישיר עודכן" });
+      await updateEmployee.mutateAsync({ id: employeeId, direct_manager_id: next });
       queryClient.invalidateQueries({ queryKey: ["employees-full"] });
+      const empName = empById.get(employeeId)?.full_name ?? "העובד";
+      const mgrName = next ? empById.get(next)?.full_name ?? "המנהל שנבחר" : null;
+      undoToast(mgrName ? `${mgrName} הוגדר כמנהל הישיר של ${empName}` : `הוסר המנהל הישיר של ${empName}`, {
+        onUndo: async () => {
+          await updateEmployee.mutateAsync({ id: employeeId, direct_manager_id: previous });
+          queryClient.invalidateQueries({ queryKey: ["employees-full"] });
+        },
+      });
     } catch (e: any) {
       toast({ title: "שגיאה בעדכון", description: e.message, variant: "destructive" });
     }
@@ -308,20 +337,19 @@ export default function Employees() {
 
             {/* Mobile: one card per employee with the identifying fields. */}
             <div className="sm:hidden space-y-2">
-              {isLoading ? (
-                <div className="p-8 text-center text-muted-foreground">טוען...</div>
+              {isLoading || employeesError ? (
+                <StateView loading={isLoading} error={employeesError} onRetry={() => refetchEmployees()} label="עובדים">{null}</StateView>
               ) : filtered.length === 0 ? (
-                <div className="p-8 text-center text-muted-foreground">לא נמצאו עובדים</div>
+                <div className="bg-card rounded-xl border border-border/50">{emptyState}</div>
               ) : (
                 filtered.map((emp) => {
                   const full = fullById.get(emp.id);
                   const canInvite = canManageUsers && !!full?.email && !full?.linked_user_id;
                   return (
                     <div key={emp.id} className="bg-card rounded-xl border border-border/50 shadow-card p-3">
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/employees/${emp.id}`)}
-                        className="w-full text-right flex items-start justify-between gap-3 min-h-11"
+                      <Link
+                        to={`/employees/${emp.id}`}
+                        className="w-full text-right flex items-start justify-between gap-3 min-h-11 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         <span className="min-w-0">
                           <span className="block font-semibold text-base break-words">{emp.full_name}</span>
@@ -333,7 +361,7 @@ export default function Employees() {
                         <span className={`status-badge shrink-0 ${statusClasses[emp.status as EmployeeStatus] ?? "status-inactive"}`}>
                           {statusLabels[emp.status as EmployeeStatus] ?? emp.status}
                         </span>
-                      </button>
+                      </Link>
                       {canInvite && (
                         <Button
                           size="touch"
@@ -354,8 +382,8 @@ export default function Employees() {
 
             {/* Table */}
             <div className="hidden sm:block bg-card rounded-xl border border-border/50 shadow-card overflow-auto">
-              {isLoading ? (
-                <div className="p-8 text-center text-muted-foreground">טוען...</div>
+              {isLoading || employeesError ? (
+                <StateView loading={isLoading} error={employeesError} onRetry={() => refetchEmployees()} label="עובדים">{null}</StateView>
               ) : (
                 <table className="data-table data-table-lg">
                   <thead>
@@ -410,7 +438,15 @@ export default function Employees() {
                             </td>
                           )}
                           <td className="font-mono text-xs text-muted-foreground">{emp.employee_code}</td>
-                          <td className="font-medium">{emp.full_name}</td>
+                          <td className="font-medium">
+                            <Link
+                              to={`/employees/${emp.id}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="hover:underline underline-offset-4 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              {emp.full_name}
+                            </Link>
+                          </td>
                           <td>{emp.role}</td>
                           <td>{emp.department}</td>
                           <td onClick={(e) => e.stopPropagation()} className="min-w-[200px]">
@@ -421,14 +457,14 @@ export default function Employees() {
                               placeholder="ללא מנהל"
                               searchPlaceholder="חיפוש מנהל..."
                               emptyText="לא נמצאו עובדים"
-                              className="h-8 text-xs"
+                              className="text-sm"
                             />
                           </td>
                           {canManageUsers && (
                             <td onClick={(e) => e.stopPropagation()}>
                               {hasAccount ? (
                                 <Badge variant="outline" className="gap-1 text-[0.8125rem] bg-success/10 text-success border-success/20">
-                                  <ShieldCheck className="w-3 h-3" />
+                                  <ShieldCheck className="w-3 h-3" aria-hidden="true" />
                                   פעיל
                                 </Badge>
                               ) : hasEmail ? (
@@ -457,9 +493,15 @@ export default function Employees() {
                           )}
                           <td>
                             {inContacts ? (
-                              <UserCheck className="w-4 h-4 text-success" />
+                              <span className="inline-flex items-center gap-1 text-[0.8125rem] text-success">
+                                <UserCheck className="w-4 h-4" aria-hidden="true" />
+                                מוצג
+                              </span>
                             ) : (
-                              <UserX className="w-4 h-4 text-muted-foreground" />
+                              <span className="inline-flex items-center gap-1 text-[0.8125rem] text-muted-foreground">
+                                <UserX className="w-4 h-4" aria-hidden="true" />
+                                מוסתר
+                              </span>
                             )}
                           </td>
                           <td>
@@ -473,7 +515,7 @@ export default function Employees() {
                       );
                     })}
                     {filtered.length === 0 && (
-                      <tr><td colSpan={canManageUsers ? 9 : 7} className="text-center py-8 text-muted-foreground">לא נמצאו עובדים</td></tr>
+                      <tr><td colSpan={canManageUsers ? 9 : 7} className="p-0">{emptyState}</td></tr>
                     )}
                   </tbody>
                 </table>

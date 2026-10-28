@@ -19,6 +19,8 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Check, X, Clock4, AlertTriangle, UserPlus2, ArrowRight, ArrowLeft, Pencil, HelpCircle } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useConfirm } from "@/components/feedback/ConfirmDialog";
+import { undoToast } from "@/components/feedback/undoToast";
 
 import { AttendanceFlowIndicator } from "./AttendanceFlowIndicator";
 import { AttendanceSettingsSection } from "./AttendanceSettingsSection";
@@ -115,18 +117,18 @@ export function AttendanceClockTab() {
               />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground">חודש</label>
+              <label htmlFor="clock-month" className="text-xs text-muted-foreground">חודש</label>
               <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id="clock-month"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {MONTHS.map((m, i) => <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <label className="text-xs text-muted-foreground">שנה</label>
+              <label htmlFor="clock-year" className="text-xs text-muted-foreground">שנה</label>
               <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id="clock-year"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {[now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map(y => (
                     <SelectItem key={y} value={String(y)}>{y}</SelectItem>
@@ -174,6 +176,7 @@ function OrphansPanel({ punches, employees }: { punches: AttendancePunch[]; empl
   const assign = useAssignPunchEmployee();
   const update = useUpdatePunchStatus();
   const { toast } = useToast();
+  const confirm = useConfirm();
   const opts = useMemo(
     () => employees.map((e: any) => ({ value: e.id, label: `${e.full_name}${e.employee_code ? ` (${e.employee_code})` : ""}` })),
     [employees],
@@ -189,25 +192,39 @@ function OrphansPanel({ punches, employees }: { punches: AttendancePunch[]; empl
       </CardHeader>
       <CardContent>
         {(() => {
-          const handleAssign = async (p: AttendancePunch, v: string) => {
+          const handleAssign = (p: AttendancePunch, v: string) => {
             if (!v) return;
-            try {
-              const res: any = await assign.mutateAsync({ punchId: p.id, employeeId: v });
-              const count = res?.count ?? 1;
-              toast({
-                title: count > 1 ? `שויכו ${count} פעימות` : "הפעימה שויכה",
-                description: count > 1 && res?.code
-                  ? `כל הפעימות עם קוד ${res.code} שויכו אוטומטית, והקוד נשמר על העובד להמשך.`
-                  : undefined,
-              });
-            } catch (e: any) {
-              toast({ title: "שגיאה", description: e.message, variant: "destructive" });
-            }
+            const code = (p.employee_code_raw ?? "").trim();
+            // Assigning links every unassigned punch with this clock code and saves the code on
+            // the employee, so say how far it reaches before doing it.
+            const sameCode = code ? punches.filter((x) => (x.employee_code_raw ?? "").trim() === code).length : 1;
+            const emp = employees.find((e: any) => e.id === v);
+            void confirm({
+              title: `לשייך ל${emp?.full_name ?? "העובד שנבחר"}?`,
+              description: code
+                ? `${sameCode > 1 ? `כל ${sameCode} הפעימות` : "הפעימה"} עם קוד השעון ${code} ישויכו לעובד, והקוד יישמר כמספר העובד שלו כך שהחתמות עתידיות ישויכו אוטומטית.`
+                : "הפעימה תשויך לעובד.",
+              confirmLabel: sameCode > 1 ? `שייך ${sameCode} פעימות` : "שייך פעימה",
+              onConfirm: async () => {
+                const res: any = await assign.mutateAsync({ punchId: p.id, employeeId: v });
+                const count = res?.count ?? 1;
+                toast({
+                  title: count > 1 ? `שויכו ${count} פעימות` : "הפעימה שויכה",
+                  description: count > 1 && res?.code
+                    ? `כל הפעימות עם קוד ${res.code} שויכו אוטומטית, והקוד נשמר על העובד להמשך.`
+                    : undefined,
+                });
+              },
+            });
           };
           const handleReject = async (p: AttendancePunch) => {
+            const previous = p.status;
             try {
               await update.mutateAsync({ ids: [p.id], status: "rejected" });
-              toast({ title: "הפעימה נדחתה", description: "הוסרה מרשימת הפעימות הלא משויכות." });
+              undoToast("הפעימה נדחתה", {
+                description: `${formatDate(p.punch_at)} ${formatTime(p.punch_at)} — הוסרה מרשימת הפעימות הלא משויכות.`,
+                onUndo: () => update.mutateAsync({ ids: [p.id], status: previous }),
+              });
             } catch (e: any) {
               toast({ title: "שגיאה בדחייה", description: e?.message ?? String(e), variant: "destructive" });
             }
@@ -245,8 +262,8 @@ function OrphansPanel({ punches, employees }: { punches: AttendancePunch[]; empl
                             size="sm"
                             variant="outline"
                             className="text-destructive border-destructive/40 hover:bg-destructive hover:text-destructive-foreground"
-                            disabled={update.isPending}
                             onClick={() => handleReject(p)}
+                            aria-label={`דחה פעימה מ-${formatDate(p.punch_at)} ${formatTime(p.punch_at)}`}
                           >
                             <X className="w-4 h-4 ml-1" /> דחה
                           </Button>
@@ -278,7 +295,6 @@ function OrphansPanel({ punches, employees }: { punches: AttendancePunch[]; empl
                       size="sm"
                       variant="outline"
                       className="w-full text-destructive border-destructive/40 hover:bg-destructive hover:text-destructive-foreground"
-                      disabled={update.isPending}
                       onClick={() => handleReject(p)}
                     >
                       <X className="w-4 h-4 ml-1" /> דחה פעימה
@@ -532,19 +548,21 @@ function PunchChip({ punch }: { punch: AttendancePunch }) {
       <PopoverTrigger asChild>
         <button
           type="button"
-          className={`px-2 py-0.5 rounded text-xs font-mono inline-flex items-center gap-1 transition-colors ${color}`}
+          className={`min-h-9 px-2 py-1 rounded text-xs font-mono inline-flex items-center gap-1 transition-colors ${color}`}
           title="לחץ לעריכה"
+          aria-label={`${DIR_LABEL[punch.direction] ?? "החתמה"} ב-${formatTime(punch.punch_at)}${wasEdited ? ", נערך ידנית" : ""} — עריכה`}
         >
           <DirIcon className="w-3 h-3" aria-hidden="true" />
           <span>{formatTime(punch.punch_at)}</span>
-          {wasEdited && <Pencil className="w-2.5 h-2.5 opacity-60" aria-label="נערך ידנית" />}
+          {wasEdited && <Pencil className="w-3 h-3 opacity-60" aria-hidden="true" />}
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-72 max-w-[calc(100vw-2rem)] p-3" align="start" dir="rtl">
         <div className="space-y-3">
           <div>
-            <label className="text-sm text-muted-foreground block mb-1">שעה</label>
+            <label htmlFor={`punch-time-${punch.id}`} className="text-sm text-muted-foreground block mb-1">שעה</label>
             <Input
+              id={`punch-time-${punch.id}`}
               type="time"
               value={timeVal}
               onChange={(e) => setTimeVal(e.target.value)}
@@ -554,8 +572,8 @@ function PunchChip({ punch }: { punch: AttendancePunch }) {
             />
           </div>
           <div>
-            <label className="text-sm text-muted-foreground block mb-1.5">כיוון</label>
-            <div className="grid grid-cols-3 gap-1">
+            <p id={`punch-dir-${punch.id}`} className="text-sm text-muted-foreground mb-1.5">כיוון</p>
+            <div className="grid grid-cols-3 gap-1" role="group" aria-labelledby={`punch-dir-${punch.id}`}>
               {([
                 { v: "in" as const, label: "כניסה", Icon: ArrowRight, active: "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40" },
                 { v: "out" as const, label: "יציאה", Icon: ArrowLeft, active: "bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/40" },
@@ -580,8 +598,8 @@ function PunchChip({ punch }: { punch: AttendancePunch }) {
             <Button size="touch" variant="ghost" onClick={() => setOpen(false)} disabled={saving}>
               <X className="w-3.5 h-3.5 ml-1" /> ביטול
             </Button>
-            <Button size="touch" onClick={save} disabled={saving}>
-              <Check className="w-3.5 h-3.5 ml-1" /> {saving ? "שומר..." : "שמירה"}
+            <Button size="touch" onClick={() => { void save(); }} loading={saving} loadingText="שומר…">
+              <Check className="w-3.5 h-3.5 ml-1" /> שמירה
             </Button>
           </div>
         </div>

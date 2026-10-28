@@ -1,27 +1,27 @@
-import { useState, useEffect } from "react";
+import { Fragment, useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
-import { Wallet, FileText, Stethoscope, Calendar, Clock4, Upload, LayoutDashboard, FolderOpen, UserSearch, Settings as SettingsIcon, Save, Mail, Paperclip, AlertCircle, ClipboardList, UserPlus, MapPin, ChevronRight, FileDown } from "lucide-react";
+import { Wallet, FileText, Stethoscope, Calendar, Clock4, Upload, LayoutDashboard, FolderOpen, Settings as SettingsIcon, Save, Mail, Paperclip, AlertCircle, ClipboardList, UserPlus, MapPin, ChevronRight, FileDown, ExternalLink, CheckCircle2, Loader2, XCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { PayslipsUploadDialog } from "@/components/PayslipsUploadDialog";
 import { getPayslipSignedUrl, usePayslipBatches, useUnmatchedPayslips, useBatchPayslips, useDeletePayslip, useDeleteBatch } from "@/hooks/usePayslips";
 import { Trash2 } from "lucide-react";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { useConfirm } from "@/components/feedback/ConfirmDialog";
 import { useEmployees } from "@/hooks/useData";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { EmployeePayslipsTab } from "@/components/EmployeePayslipsTab";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Tax101AdminTab } from "@/components/payroll/Tax101AdminTab";
 import { AttendanceClockTab } from "@/components/payroll/AttendanceClockTab";
 import { MonthlyAttendanceReview } from "@/components/payroll/MonthlyAttendanceReview";
 import { MichpalExportCard } from "@/components/payroll/MichpalExportCard";
+import { IconButton } from "@/components/feedback/IconButton";
+import { StateView } from "@/components/feedback/StateView";
+import { FormField } from "@/components/feedback/FormField";
+import { Input } from "@/components/ui/input";
 import { PayslipAssignConfirmDialog, type PendingPayslipAssign } from "@/components/payroll/PayslipAssignConfirmDialog";
 
 const MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
@@ -45,9 +45,32 @@ const HUB_TILES: HubTile[] = [
   { key: "map", label: "מפת נוכחות חיה", description: "מיקומי GPS של עובדים שהחתימו היום", icon: MapPin, to: "/attendance-map", roles: ["admin", "super_admin", "payroll", "hr", "direct_manager"] },
   { key: "tax101", label: "טפסי עובדים", description: "ניהול טפסי 101 ואישורים", icon: FileText },
   { key: "batches", label: "ניהול תלושים", description: "העלאת אצוות תלושים ושיוך אוטומטי", icon: FolderOpen, roles: ["admin", "super_admin", "payroll"] },
-  { key: "employee", label: "תלושי עובד", description: "חיפוש וצפייה בתלושים של עובד מסוים", icon: UserSearch, roles: ["admin", "super_admin", "payroll"] },
   { key: "settings", label: "הגדרות שכר", description: "כתובות דיווח, דוחות אוטומטיים והרצה ידנית", icon: SettingsIcon, roles: ["admin", "super_admin", "payroll", "hr"] },
 ];
+
+/** Batch status in Hebrew with an icon, so it never reads as a raw DB value or colour only. */
+function BatchStatusBadge({ batch }: { batch: any }) {
+  const base = "inline-flex items-center gap-1 text-[0.8125rem] px-2 py-0.5 rounded-full whitespace-nowrap";
+  if (batch.status === "done" && Number(batch.failed_count ?? 0) > 0) {
+    return <span className={`${base} bg-warning/10 text-warning`}><AlertCircle className="w-3.5 h-3.5" aria-hidden="true" />הושלם עם שגיאות</span>;
+  }
+  if (batch.status === "done") {
+    return <span className={`${base} bg-success/10 text-success`}><CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />הושלם</span>;
+  }
+  if (batch.status === "processing") {
+    return <span className={`${base} bg-info/10 text-info`}><Loader2 className="w-3.5 h-3.5 animate-spin motion-reduce:animate-none" aria-hidden="true" />בעיבוד</span>;
+  }
+  if (batch.status === "failed") {
+    return <span className={`${base} bg-destructive/10 text-destructive`}><XCircle className="w-3.5 h-3.5" aria-hidden="true" />נכשל</span>;
+  }
+  return <span className={`${base} bg-muted`}>{batch.status ?? "—"}</span>;
+}
+
+/** Hebrew error for a comma-separated list of addresses, or null when every address looks valid. */
+function emailListError(value: string): string | null {
+  const invalid = value.split(",").map((s) => s.trim()).filter(Boolean).filter((e) => !/^\S+@\S+\.\S+$/.test(e));
+  return invalid.length ? `כתובות לא תקינות: ${invalid.join(", ")}` : null;
+}
 
 export default function Payroll() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -89,16 +112,22 @@ export default function Payroll() {
                 <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
                   <tile.icon className="w-7 h-7" />
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <h2 className="font-semibold text-base leading-tight">{tile.label}</h2>
                   <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{tile.description}</p>
+                  {tile.to && (
+                    <span className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary">
+                      <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
+                      פתיחה במסך נפרד
+                    </span>
+                  )}
                 </div>
               </>
             );
             const cls =
               "group text-right bg-card rounded-xl border border-border/50 shadow-card p-5 min-h-[132px] flex items-start gap-4 hover:border-primary/40 hover:shadow-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
             return tile.to ? (
-              <Link key={tile.key} to={tile.to} className={cls}>
+              <Link key={tile.key} to={tile.to} className={`${cls} border-dashed`}>
                 {inner}
               </Link>
             ) : (
@@ -126,7 +155,6 @@ export default function Payroll() {
           {active.key === "attendance" && <AttendanceClockTab />}
           {active.key === "tax101" && <Tax101AdminTab />}
           {active.key === "batches" && <BatchesManagementTab />}
-          {active.key === "employee" && <EmployeeLookupTab />}
           {active.key === "settings" && <PayrollSettingsTab />}
         </div>
       )}
@@ -145,6 +173,9 @@ function PayrollSettingsTab() {
   const [payrollEmails, setPayrollEmails] = useState("");
   const [hrEmails, setHrEmails] = useState("");
   const [loaded, setLoaded] = useState(false);
+  const [hrError, setHrError] = useState<string | null>(null);
+  const [payrollError, setPayrollError] = useState<string | null>(null);
+  const [sendingReport, setSendingReport] = useState<string | null>(null);
 
   const { data: companyFull } = useQuery({
     queryKey: ["company-full", activeCompanyId],
@@ -167,8 +198,11 @@ function PayrollSettingsTab() {
   const saveEmails = async (column: "payroll_emails" | "hr_emails", value: string) => {
     if (!activeCompanyId) throw new Error("לא נבחרה חברה");
     const emailsList = value.split(",").map((s) => s.trim()).filter(Boolean);
-    const invalid = emailsList.filter((e) => !/^\S+@\S+\.\S+$/.test(e));
-    if (invalid.length > 0) throw new Error(`כתובות לא תקינות: ${invalid.join(", ")}`);
+    const invalidMsg = emailListError(value);
+    if (invalidMsg) {
+      (column === "hr_emails" ? setHrError : setPayrollError)(invalidMsg);
+      throw new Error(invalidMsg);
+    }
     const { error } = await supabase.rpc("set_company_routing_emails", {
       _company_id: activeCompanyId,
       _column: column,
@@ -200,7 +234,9 @@ function PayrollSettingsTab() {
   }
 
   const runReport = async (fn: "send-hr-daily-missing" | "send-hr-weekly-gaps" | "send-unmatched-weekly" | "send-payroll-monthly-gaps") => {
-    if (!activeCompanyId) return;
+    // One run per report at a time: a second click would mail the same report twice.
+    if (!activeCompanyId || sendingReport === fn) return;
+    setSendingReport(fn);
     try {
       const { data, error } = await supabase.functions.invoke(fn, {
         body: { company_id: activeCompanyId },
@@ -212,6 +248,8 @@ function PayrollSettingsTab() {
       });
     } catch (e: any) {
       toast({ title: "שגיאה בשליחת הדוח", description: e.message, variant: "destructive" });
+    } finally {
+      setSendingReport(null);
     }
   };
 
@@ -223,19 +261,22 @@ function PayrollSettingsTab() {
           <h3 className="font-semibold">כתובות אימייל משאבי אנוש</h3>
         </div>
         <div>
-          <label htmlFor="hr-emails" className="text-sm font-medium mb-1.5 block">כתובות אימייל</label>
-          <input
-            id="hr-emails"
-            type="text"
-            value={hrEmails}
-            onChange={(e) => setHrEmails(e.target.value)}
-            placeholder="hr@company.com"
-            className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 font-mono"
-            dir="ltr"
-          />
-          <p className="text-[0.8125rem] text-muted-foreground mt-1">
-            הדוחות היומי והשבועי של החתמות נוכחות יישלחו לכתובות אלו בלבד. משאבי אנוש וחשבות שכר הם משתמשים נפרדים.
-          </p>
+          <FormField
+            label="כתובות אימייל"
+            error={hrError}
+            hint={<>הדוחות היומי והשבועי של החתמות נוכחות יישלחו לכתובות אלו בלבד. משאבי אנוש וחשבות שכר הם משתמשים נפרדים. אפשר להזין כמה כתובות מופרדות בפסיק.</>}
+          >
+            <Input
+              id="hr-emails"
+              type="text"
+              value={hrEmails}
+              onChange={(e) => { setHrEmails(e.target.value); if (hrError) setHrError(null); }}
+              onBlur={() => setHrError(emailListError(hrEmails))}
+              placeholder="hr@company.com"
+              className="font-mono"
+              dir="ltr"
+            />
+          </FormField>
 
         </div>
         <Button className="gap-1.5" onClick={() => updateHrMutation.mutate()} disabled={updateHrMutation.isPending}>
@@ -250,19 +291,22 @@ function PayrollSettingsTab() {
           <h3 className="font-semibold">כתובות אימייל חשבות שכר</h3>
         </div>
         <div>
-          <label htmlFor="payroll-emails" className="text-sm font-medium mb-1.5 block">כתובות אימייל</label>
-          <input
-            id="payroll-emails"
-            type="text"
-            value={payrollEmails}
-            onChange={(e) => setPayrollEmails(e.target.value)}
-            placeholder="payroll@company.com"
-            className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 font-mono"
-            dir="ltr"
-          />
-          <p className="text-[0.8125rem] text-muted-foreground mt-1">
-            אישורי חופשה/מחלה, טפסי 101, הדוח השבועי של החתמות ללא שיוך והדוח החודשי של כלל החוסרים יישלחו לכתובות אלו.
-          </p>
+          <FormField
+            label="כתובות אימייל"
+            error={payrollError}
+            hint={<>אישורי חופשה/מחלה, טפסי 101, הדוח השבועי של החתמות ללא שיוך והדוח החודשי של כלל החוסרים יישלחו לכתובות אלו. אפשר להזין כמה כתובות מופרדות בפסיק.</>}
+          >
+            <Input
+              id="payroll-emails"
+              type="text"
+              value={payrollEmails}
+              onChange={(e) => { setPayrollEmails(e.target.value); if (payrollError) setPayrollError(null); }}
+              onBlur={() => setPayrollError(emailListError(payrollEmails))}
+              placeholder="payroll@company.com"
+              className="font-mono"
+              dir="ltr"
+            />
+          </FormField>
 
         </div>
         <Button className="gap-1.5" onClick={() => updatePayrollMutation.mutate()} disabled={updatePayrollMutation.isPending}>
@@ -283,19 +327,19 @@ function PayrollSettingsTab() {
           <li><strong>לחשבות שכר</strong> — 1 בכל חודש בבוקר: קובץ Excel של כלל חוסרי ההחתמה של החודש הקודם.</li>
         </ul>
         <div className="flex flex-wrap gap-2 pt-2">
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => runReport("send-hr-daily-missing")}>
+          <Button variant="outline" size="sm" className="gap-1.5" loading={sendingReport === "send-hr-daily-missing"} loadingText="שולח…" onClick={() => runReport("send-hr-daily-missing")}>
             <Mail className="w-4 h-4" />
             שלח דוח יומי עכשיו
           </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => runReport("send-hr-weekly-gaps")}>
+          <Button variant="outline" size="sm" className="gap-1.5" loading={sendingReport === "send-hr-weekly-gaps"} loadingText="שולח…" onClick={() => runReport("send-hr-weekly-gaps")}>
             <FileText className="w-4 h-4" />
             שלח דוח שבועי (אקסל) עכשיו
           </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => runReport("send-unmatched-weekly")}>
+          <Button variant="outline" size="sm" className="gap-1.5" loading={sendingReport === "send-unmatched-weekly"} loadingText="שולח…" onClick={() => runReport("send-unmatched-weekly")}>
             <AlertCircle className="w-4 h-4" />
             שלח דוח החתמות ללא שיוך
           </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => runReport("send-payroll-monthly-gaps")}>
+          <Button variant="outline" size="sm" className="gap-1.5" loading={sendingReport === "send-payroll-monthly-gaps"} loadingText="שולח…" onClick={() => runReport("send-payroll-monthly-gaps")}>
             <FileText className="w-4 h-4" />
             שלח דוח חודשי לחשבות שכר
           </Button>
@@ -313,20 +357,22 @@ function OverviewTab() {
   const { activeCompanyId } = useCompany();
   const [uploadOpen, setUploadOpen] = useState(false);
 
-  const { data: monthBatches = [] } = useQuery({
+  const batchesQuery = useQuery({
     queryKey: ["payroll-batches-recent", activeCompanyId],
     queryFn: async () => {
       if (!activeCompanyId) return [];
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("payslip_batches")
         .select("*")
         .eq("company_id", activeCompanyId)
         .order("created_at", { ascending: false })
         .limit(6);
+      if (error) throw error;
       return data ?? [];
     },
     enabled: !!activeCompanyId,
   });
+  const monthBatches = batchesQuery.data ?? [];
 
   const { data: sickRequests = [] } = useQuery({
     queryKey: ["payroll-sick", activeCompanyId],
@@ -393,18 +439,26 @@ function OverviewTab() {
               <Upload className="w-4 h-4" />
               העלאת אצוות תלושים
             </Button>
-            <Link to="/payroll?tab=batches" className="text-xs text-primary hover:underline">לניהול תלושים →</Link>
+            <Link to="/payroll?tab=batches" className="inline-flex min-h-10 items-center text-sm text-primary hover:underline">לניהול תלושים ←</Link>
           </div>
         </div>
-        {monthBatches.length === 0 ? (
-          <div className="p-8 text-center text-sm text-muted-foreground space-y-3">
-            <p>טרם הועלו אצוות תלושים</p>
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setUploadOpen(true)}>
-              <Upload className="w-4 h-4" />
-              העלה אצווה ראשונה
-            </Button>
-          </div>
-        ) : (
+        <StateView
+          loading={batchesQuery.isLoading}
+          error={batchesQuery.error}
+          onRetry={() => batchesQuery.refetch()}
+          label="אצוות תלושים"
+          isEmpty={monthBatches.length === 0}
+          empty={{
+            title: "טרם הועלו אצוות תלושים",
+            description: "העלו את קובץ ה-PDF המאוחד של החודש, והמערכת תפצל אותו לעובדים.",
+            action: (
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setUploadOpen(true)}>
+                <Upload className="w-4 h-4" />
+                העלה אצווה ראשונה
+              </Button>
+            ),
+          }}
+        >
           <table className="data-table">
             <thead>
               <tr><th>תקופה</th><th>קובץ</th><th>סה"כ</th><th>זוהו</th><th>לא זוהו</th><th>סטטוס</th></tr>
@@ -417,12 +471,12 @@ function OverviewTab() {
                   <td className="font-mono">{b.total_pages}</td>
                   <td className="font-mono text-success">{b.matched_count}</td>
                   <td className="font-mono text-warning">{b.unmatched_count}</td>
-                  <td><span className="text-[0.8125rem] px-2 py-0.5 rounded-full bg-muted">{b.status}</span></td>
+                  <td><BatchStatusBadge batch={b} /></td>
                 </tr>
               ))}
             </tbody>
           </table>
-        )}
+        </StateView>
       </section>
 
       <PayslipsUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} />
@@ -446,12 +500,12 @@ function OverviewTab() {
                     {r.total_days} ימים • {new Date(r.start_date).toLocaleDateString("en-GB")} – {new Date(r.end_date).toLocaleDateString("en-GB")}
                   </p>
                   {r.attachment_url && (
-                    <a href={r.attachment_url} target="_blank" rel="noopener noreferrer" className="inline-block">
-                      <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
-                        <Paperclip className="w-3 h-3" />
+                    <Button asChild variant="outline" size="sm" className="gap-1">
+                      <a href={r.attachment_url} target="_blank" rel="noopener noreferrer">
+                        <Paperclip className="w-3 h-3" aria-hidden="true" />
                         אישור מחלה
-                      </Button>
-                    </a>
+                      </a>
+                    </Button>
                   )}
                 </div>
               ))}
@@ -477,12 +531,12 @@ function OverviewTab() {
                     {TYPE_LABELS_PAYROLL[r.request_type] ?? r.request_type} • {r.total_days} ימים • {new Date(r.start_date).toLocaleDateString("en-GB")} – {new Date(r.end_date).toLocaleDateString("en-GB")}
                   </p>
                   {r.attachment_url && (
-                    <a href={r.attachment_url} target="_blank" rel="noopener noreferrer" className="inline-block">
-                      <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
-                        <Paperclip className="w-3 h-3" />
+                    <Button asChild variant="outline" size="sm" className="gap-1">
+                      <a href={r.attachment_url} target="_blank" rel="noopener noreferrer">
+                        <Paperclip className="w-3 h-3" aria-hidden="true" />
                         קובץ מצורף
-                      </Button>
-                    </a>
+                      </a>
+                    </Button>
                   )}
                 </div>
               ))}
@@ -529,8 +583,8 @@ function BatchesManagementTab() {
   const [yearFilter, setYearFilter] = useState<string>("all");
   const [monthFilter, setMonthFilter] = useState<string>("all");
   const [expandedBatchId, setExpandedBatchId] = useState<string | null>(null);
-  const [deleteBatchTarget, setDeleteBatchTarget] = useState<any | null>(null);
-  const { data: batches, isLoading } = usePayslipBatches();
+  const confirm = useConfirm();
+  const { data: batches, isLoading, error: batchesError, refetch: refetchBatches } = usePayslipBatches();
   const deleteBatch = useDeleteBatch();
   const { toast } = useToast();
 
@@ -564,6 +618,7 @@ function BatchesManagementTab() {
 
         <div className="flex items-center gap-2 mb-3 flex-wrap">
           <select
+            aria-label="סינון לפי שנה"
             value={yearFilter}
             onChange={(e) => setYearFilter(e.target.value)}
             className="px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
@@ -572,6 +627,7 @@ function BatchesManagementTab() {
             {years.map((y: any) => <option key={y} value={y}>{y}</option>)}
           </select>
           <select
+            aria-label="סינון לפי חודש"
             value={monthFilter}
             onChange={(e) => setMonthFilter(e.target.value)}
             className="px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
@@ -597,38 +653,68 @@ function BatchesManagementTab() {
               </tr>
             </thead>
             <tbody>
-              {isLoading && <tr><td colSpan={9} className="text-center py-6 text-muted-foreground">טוען...</td></tr>}
-              {!isLoading && filtered.length === 0 && (
-                <tr><td colSpan={9} className="text-center py-6 text-muted-foreground">אין אצוות להצגה</td></tr>
+              {(isLoading || batchesError || filtered.length === 0) && (
+                <tr>
+                  <td colSpan={9} className="p-0">
+                    <StateView
+                      loading={isLoading}
+                      error={batchesError}
+                      onRetry={() => refetchBatches()}
+                      label="אצוות תלושים"
+                      isEmpty={filtered.length === 0}
+                      empty={(batches ?? []).length > 0 ? {
+                        title: "אין אצוות בתקופה שנבחרה",
+                        description: "שנו את השנה או החודש כדי לראות אצוות אחרות.",
+                        action: <Button size="sm" variant="outline" onClick={() => { setYearFilter("all"); setMonthFilter("all"); }}>נקה סינון</Button>,
+                      } : {
+                        title: "טרם הועלו אצוות תלושים",
+                        action: <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setUploadOpen(true)}><Upload className="w-4 h-4" />העלאת אצוות תלושים</Button>,
+                      }}
+                    >
+                      {null}
+                    </StateView>
+                  </td>
+                </tr>
               )}
               {filtered.map((b: any) => (
-                <>
-                  <tr key={b.id}>
+                <Fragment key={b.id}>
+                  <tr>
                     <td className="font-medium">{MONTHS[b.period_month - 1]} {b.period_year}</td>
                     <td className="text-xs text-muted-foreground">{b.original_filename ?? "—"}</td>
                     <td className="font-mono">{b.total_pages}</td>
                     <td className="font-mono text-success">{b.matched_count}</td>
                     <td className="font-mono text-warning">{b.unmatched_count}</td>
                     <td className="font-mono text-destructive">{b.failed_count}</td>
-                    <td><span className="text-[0.8125rem] px-2 py-0.5 rounded-full bg-muted">{b.status}</span></td>
+                    <td><BatchStatusBadge batch={b} /></td>
                     <td className="text-xs text-muted-foreground">{new Date(b.created_at).toLocaleDateString("en-GB")}</td>
                     <td>
                       <div className="flex items-center gap-2 justify-end">
-                        <button
-                          onClick={() => setExpandedBatchId(expandedBatchId === b.id ? null : b.id)}
-                          className="text-xs text-primary hover:underline"
-                        >
-                          {expandedBatchId === b.id ? "סגור" : "ניהול"}
-                        </button>
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                          title="מחק אצווה"
-                          onClick={() => setDeleteBatchTarget(b)}
+                          className="text-primary"
+                          aria-expanded={expandedBatchId === b.id}
+                          aria-label={`${expandedBatchId === b.id ? "סגור" : "ניהול"} אצווה ${MONTHS[b.period_month - 1]} ${b.period_year}`}
+                          onClick={() => setExpandedBatchId(expandedBatchId === b.id ? null : b.id)}
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          {expandedBatchId === b.id ? "סגור" : "ניהול"}
                         </Button>
+                        <IconButton
+                          label={`מחק אצווה ${MONTHS[b.period_month - 1]} ${b.period_year}`}
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => void confirm({
+                            title: "למחוק את האצווה?",
+                            description: `האצווה של ${MONTHS[b.period_month - 1]} ${b.period_year} (${b.total_pages} עמודים) וכל התלושים שלה יימחקו לצמיתות. פעולה זו לא ניתנת לביטול.`,
+                            confirmLabel: "מחק אצווה",
+                            destructive: true,
+                            onConfirm: async () => {
+                              await deleteBatch.mutateAsync(b.id);
+                              toast({ title: "האצווה נמחקה" });
+                            },
+                          })}
+                        >
+                          <Trash2 />
+                        </IconButton>
                       </div>
                     </td>
                   </tr>
@@ -639,7 +725,7 @@ function BatchesManagementTab() {
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -648,33 +734,6 @@ function BatchesManagementTab() {
 
       <PayslipsUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} />
 
-      <AlertDialog open={!!deleteBatchTarget} onOpenChange={(o) => !o && setDeleteBatchTarget(null)}>
-        <AlertDialogContent dir="rtl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>למחוק את האצווה?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteBatchTarget && `האצווה של ${MONTHS[deleteBatchTarget.period_month - 1]} ${deleteBatchTarget.period_year} (${deleteBatchTarget.total_pages} עמודים) וכל התלושים שלה יימחקו לצמיתות. פעולה זו לא ניתנת לביטול.`}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>ביטול</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={async () => {
-                try {
-                  await deleteBatch.mutateAsync(deleteBatchTarget.id);
-                  toast({ title: "האצווה נמחקה" });
-                  setDeleteBatchTarget(null);
-                } catch (e: any) {
-                  toast({ title: "שגיאה במחיקה", description: e.message, variant: "destructive" });
-                }
-              }}
-            >
-              מחק
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
@@ -688,7 +747,7 @@ function BatchPayslipsList({ batch }: { batch: any }) {
   const { data: employees = [] } = useEmployees();
   const deletePayslip = useDeletePayslip();
   const { toast } = useToast();
-  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+  const confirm = useConfirm();
   const [openingSource, setOpeningSource] = useState(false);
 
   const employeeOptions = (employees ?? []).map((e: any) => ({
@@ -726,14 +785,14 @@ function BatchPayslipsList({ batch }: { batch: any }) {
     }
   };
 
-  if (isLoading) return <div className="p-4 text-center text-sm text-muted-foreground">טוען...</div>;
+  if (isLoading) return <div className="p-4 text-center text-sm text-muted-foreground" role="status">טוען את תלושי האצווה…</div>;
 
   return (
     <div className="p-4 space-y-2">
       <div className="flex items-center justify-between gap-3 mb-2">
         <p className="text-sm font-medium">תלושי האצווה ({savedPayslips.length})</p>
         {sourcePdfPath && (
-          <Button size="sm" variant="outline" className="h-8 gap-1.5" disabled={openingSource} onClick={() => openSourcePdf()}>
+          <Button size="sm" variant="outline" className="gap-1.5" loading={openingSource} onClick={() => openSourcePdf()}>
             <FileText className="w-3.5 h-3.5" />
             פתח PDF מקור
           </Button>
@@ -782,151 +841,28 @@ function BatchPayslipsList({ batch }: { batch: any }) {
                 />
               </div>
             )}
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-11 w-11 sm:h-8 sm:w-8 p-0 text-destructive hover:text-destructive"
-              title="מחק תלוש"
-              aria-label="מחק תלוש"
-              onClick={() => setDeleteTarget(p)}
+            <IconButton
+              label={`מחק תלוש ${isMatched ? p.employee?.full_name ?? "" : p.employee_name_detected ?? ""}`.trim()}
+              className="text-destructive hover:text-destructive"
+              onClick={() => void confirm({
+                title: "למחוק את התלוש?",
+                description: "התלוש יימחק לצמיתות מהמערכת ומאחסון הקבצים. פעולה זו לא ניתנת לביטול.",
+                confirmLabel: "מחק תלוש",
+                destructive: true,
+                onConfirm: async () => {
+                  await deletePayslip.mutateAsync(p.id);
+                  toast({ title: "התלוש נמחק" });
+                },
+              })}
             >
-              <Trash2 className="w-4 h-4" />
-            </Button>
+              <Trash2 />
+            </IconButton>
           </div>
         );
       })}
 
       <PayslipAssignConfirmDialog pending={pendingAssign} onClose={() => setPendingAssign(null)} />
 
-      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
-        <AlertDialogContent dir="rtl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>למחוק את התלוש?</AlertDialogTitle>
-            <AlertDialogDescription>
-              התלוש יימחק לצמיתות מהמערכת ומאחסון הקבצים. פעולה זו לא ניתנת לביטול.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>ביטול</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={async () => {
-                try {
-                  await deletePayslip.mutateAsync(deleteTarget.id);
-                  toast({ title: "התלוש נמחק" });
-                  setDeleteTarget(null);
-                } catch (e: any) {
-                  toast({ title: "שגיאה", description: e.message, variant: "destructive" });
-                }
-              }}
-            >
-              מחק
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
-  );
-}
-
-// ============================
-// Unmatched Payslips inline list
-// ============================
-function UnmatchedPayslipsList({ batchId }: { batchId: string }) {
-  const { data: unmatched, isLoading } = useUnmatchedPayslips(batchId);
-  const { data: employees = [] } = useEmployees();
-
-  const employeeOptions = (employees ?? []).map((e: any) => ({
-    value: e.id,
-    label: `${e.full_name} (${e.id_number})`,
-  }));
-
-  const [pendingAssign, setPendingAssign] = useState<PendingPayslipAssign | null>(null);
-  // Picking an employee only opens a confirmation; nothing is saved until confirmed.
-  const handleAssign = (payslip: any, employeeId: string) => {
-    if (!employeeId) return;
-    const emp = (employees ?? []).find((e: any) => e.id === employeeId);
-    setPendingAssign({ payslip, employeeId, employeeName: emp?.full_name ?? "העובד שנבחר" });
-  };
-
-  if (isLoading) return <div className="p-4 text-center text-sm text-muted-foreground">טוען...</div>;
-  if (!unmatched || unmatched.length === 0) {
-    return <div className="p-4 text-center text-sm text-muted-foreground">אין תלושים לא משויכים</div>;
-  }
-
-  return (
-    <div className="p-4 space-y-2">
-      <p className="text-sm font-medium mb-2">תלושים לא משויכים ({unmatched.length})</p>
-      {unmatched.map((p) => (
-        <div key={p.id} className="flex flex-col sm:flex-row sm:items-center gap-3 bg-background p-2.5 rounded-lg border border-border/40">
-          <div className="flex-1 min-w-0 text-sm">
-            <p className="font-medium">{p.employee_name_detected ?? "לא זוהה שם"}</p>
-            <p className="text-xs text-muted-foreground">
-              ת.ז.: <span className="font-mono">{p.id_number_detected ?? "—"}</span>
-            </p>
-          </div>
-          <div className="w-full sm:w-72">
-            <SearchableSelect
-              options={employeeOptions}
-              value=""
-              onChange={(v) => handleAssign(p, v)}
-              placeholder="בחר עובד לשיוך..."
-            />
-          </div>
-        </div>
-      ))}
-      <PayslipAssignConfirmDialog pending={pendingAssign} onClose={() => setPendingAssign(null)} />
-    </div>
-  );
-}
-
-// ============================
-// Employee Lookup Tab
-// ============================
-function EmployeeLookupTab() {
-  const { activeCompanyId } = useCompany();
-  const { data: employees = [] } = useEmployees();
-  const { isAdmin, isSuperAdmin, isPayroll, isHR, user } = useAuth();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const employeeId = searchParams.get("employee") ?? "";
-
-  const setEmployeeId = (id: string) => {
-    const next = new URLSearchParams(searchParams);
-    if (id) next.set("employee", id); else next.delete("employee");
-    setSearchParams(next, { replace: true });
-  };
-
-  if (!activeCompanyId) {
-    return <div className="text-center py-8 text-muted-foreground">לא נבחרה חברה</div>;
-  }
-
-  const employeeOptions = (employees ?? []).map((e: any) => ({
-    value: e.id,
-    label: `${e.full_name} • ${e.department}`,
-  }));
-  const selected = (employees ?? []).find((e: any) => e.id === employeeId);
-
-  return (
-    <div className="space-y-4">
-      <div className="bg-card rounded-xl border border-border/50 shadow-card p-4">
-        <label className="text-sm font-medium mb-2 block">בחר עובד</label>
-        <div className="max-w-md">
-          <SearchableSelect
-            options={employeeOptions}
-            value={employeeId}
-            onChange={setEmployeeId}
-            placeholder="חפש עובד..."
-          />
-        </div>
-      </div>
-
-      {selected ? (
-        <EmployeePayslipsTab employeeId={selected.id} employee={selected} canSeeSalary={isSuperAdmin || isAdmin || isPayroll || isHR} isSelf={(selected as any).linked_user_id === user?.id} auditContext="מסך חשבות שכר" />
-      ) : (
-        <div className="bg-card rounded-xl border border-border/50 shadow-card p-12 text-center text-sm text-muted-foreground">
-          בחר עובד כדי לראות את תלושי השכר שלו
-        </div>
-      )}
     </div>
   );
 }

@@ -1,9 +1,12 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useMemo } from "react";
+import { runBatch } from "@/lib/batchProgress";
+import { FileDrop } from "@/components/feedback/FileDrop";
+import { useDirtyGuard } from "@/components/feedback/useDirtyGuard";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, Download, Mail } from "lucide-react";
+import { FileSpreadsheet, AlertCircle, AlertTriangle, CheckCircle, Download, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
@@ -37,6 +40,8 @@ interface ParsedEmployee {
   _resolved_manager_id?: string | null;
   _manager_warning?: string;
   _row_errors?: string[];
+  /** 1-based row number in the file, kept when filtering so errors point at the right line. */
+  _row?: number;
 }
 
 interface ImportResult {
@@ -119,7 +124,7 @@ export function ImportExcelDialog({ open, onOpenChange, mode }: Props) {
   const [importing, setImporting] = useState(false);
   const [autoInvite, setAutoInvite] = useState(true);
   const [result, setResult] = useState<ImportResult | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [onlyErrors, setOnlyErrors] = useState(false);
   const { toast } = useToast();
   const { activeCompanyId } = useCompany();
   const { isOperations, isAdmin, isSuperAdmin } = useAuth();
@@ -130,7 +135,15 @@ export function ImportExcelDialog({ open, onOpenChange, mode }: Props) {
     setRows([]);
     setFileName("");
     setResult(null);
+    setOnlyErrors(false);
   };
+
+  // A parsed file not yet imported counts as unsaved; closing mid-import is blocked.
+  const guard = useDirtyGuard(rows.length > 0 && !result, importing);
+  const close = guard((o: boolean) => { if (!o) reset(); onOpenChange(o); });
+  const validRows = rows.filter((r) => !r._row_errors?.length);
+  const errorRows = rows.length - validRows.length;
+  const shownRows = onlyErrors ? rows.filter((r) => r._row_errors?.length) : rows;
 
   // Build manager lookup index from existing employees
   const managerIndex = useMemo(() => {
@@ -143,8 +156,7 @@ export function ImportExcelDialog({ open, onOpenChange, mode }: Props) {
     return { byName, byCode };
   }, [existingEmployees]);
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleFile = (file: File | undefined) => {
     if (!file) return;
     setFileName(file.name);
     setResult(null);
@@ -185,8 +197,14 @@ export function ImportExcelDialog({ open, onOpenChange, mode }: Props) {
       }).filter((r) => r.full_name && r.id_number);
 
       // Resolve managers (lookup against existing employees)
-      const enriched = parsed.map((r) => {
+      const enriched = parsed.map((r, idx) => {
         const errs: string[] = [];
+        const missing = [
+          !r.employee_code && "מזהה עובד",
+          !r.role && "תפקיד",
+          !r.department && "מחלקה",
+        ].filter(Boolean);
+        if (missing.length) errs.push(`חסר: ${missing.join(", ")}`);
         if (!r.email) errs.push("חסר דוא\"ל");
         else if (!isValidEmail(r.email)) errs.push("דוא\"ל לא תקין");
 
@@ -201,7 +219,7 @@ export function ImportExcelDialog({ open, onOpenChange, mode }: Props) {
           resolved = managerIndex.byCode.get(key) ?? managerIndex.byName.get(key) ?? null;
           if (!resolved) warning = `מנהל "${r.direct_manager}" לא נמצא — ינסה שוב לאחר ייבוא`;
         }
-        return { ...r, _resolved_manager_id: resolved, _manager_warning: warning, _row_errors: errs };
+        return { ...r, _resolved_manager_id: resolved, _manager_warning: warning, _row_errors: errs, _row: idx + 1 };
       });
 
       setRows(enriched);
@@ -217,7 +235,7 @@ export function ImportExcelDialog({ open, onOpenChange, mode }: Props) {
   };
 
   const handleImport = async () => {
-    if (!activeCompanyId || rows.length === 0) return;
+    if (!activeCompanyId || validRows.length === 0) return;
     setImporting(true);
     const errors: string[] = [];
     let success = 0;
@@ -226,18 +244,13 @@ export function ImportExcelDialog({ open, onOpenChange, mode }: Props) {
     const namesInFile = new Map<string, string>(); // lowercase name -> employee id
     const codesInFile = new Map<string, string>();
 
-    // Pass 1: insert employees
-    for (let i = 0; i < rows.length; i++) {
-      const row = rows[i];
-      if (row._row_errors && row._row_errors.length > 0) {
-        errors.push(`שורה ${i + 1} (${row.full_name}): ${row._row_errors.join(", ")}`);
-        continue;
-      }
-      if (!row.employee_code || !row.full_name || !row.id_number || !row.role || !row.department) {
-        errors.push(`שורה ${i + 1}: חסרים שדות חובה (${row.full_name || "ללא שם"})`);
-        continue;
-      }
+    // Rows with errors were shown in the preview and are skipped; list them again in the result.
+    for (const row of rows) {
+      if (row._row_errors?.length) errors.push(`שורה ${row._row} (${row.full_name}): ${row._row_errors.join(", ")}`);
+    }
 
+    // Pass 1: insert employees, with a "שורה i מתוך N" counter in the progress center
+    const batch = await runBatch(validRows, async (row) => {
       const { data, error } = await supabase.from("employees").insert({
         employee_code: row.employee_code,
         full_name: row.full_name,
@@ -253,15 +266,15 @@ export function ImportExcelDialog({ open, onOpenChange, mode }: Props) {
         direct_manager_id: row._resolved_manager_id || null,
         exclude_from_contacts: !!row.exclude_from_contacts,
       } as any).select("id").single();
-
-      if (error) {
-        errors.push(`שורה ${i + 1} (${row.full_name}): ${error.message}`);
-      } else if (data) {
-        success++;
-        inserted.push({ id: data.id, email: row.email || "", full_name: row.full_name, row });
-        namesInFile.set(row.full_name.trim().toLowerCase(), data.id);
-        codesInFile.set(row.employee_code.trim().toLowerCase(), data.id);
-      }
+      if (error) throw error;
+      if (!data) throw new Error("השורה לא נשמרה");
+      success++;
+      inserted.push({ id: data.id, email: row.email || "", full_name: row.full_name, row });
+      namesInFile.set(row.full_name.trim().toLowerCase(), data.id);
+      codesInFile.set(row.employee_code.trim().toLowerCase(), data.id);
+    }, { name: "ייבוא עובדים מאקסל", unit: "שורה" });
+    for (const f of batch.failed) {
+      errors.push(`שורה ${f.item._row} (${f.item.full_name}): ${f.error}`);
     }
 
     // Pass 2: resolve managers that were in the same file
@@ -315,6 +328,7 @@ export function ImportExcelDialog({ open, onOpenChange, mode }: Props) {
 
     setResult({ success, failed: errors.length, invited, inviteFailed, errors });
     setImporting(false);
+    setOnlyErrors(false);
     queryClient.invalidateQueries({ queryKey: ["employees"] });
     queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
 
@@ -351,7 +365,7 @@ export function ImportExcelDialog({ open, onOpenChange, mode }: Props) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }}>
+    <Dialog open={open} onOpenChange={close}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -372,42 +386,45 @@ export function ImportExcelDialog({ open, onOpenChange, mode }: Props) {
             </Button>
           </div>
 
-          <div
-            className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
-            onClick={() => fileRef.current?.click()}
-          >
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              className="hidden"
-              onChange={handleFile}
-            />
-            <Upload className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-            {fileName ? (
-              <p className="text-sm font-medium text-foreground">{fileName}</p>
-            ) : (
-              <p className="text-sm text-muted-foreground">לחץ להעלאת קובץ או גרור לכאן</p>
-            )}
-            <p className="text-xs text-muted-foreground mt-1">xlsx, xls, csv</p>
-          </div>
+          <FileDrop
+            accept=".xlsx,.xls,.csv"
+            disabled={importing}
+            onFiles={(files) => handleFile(files[0])}
+            title={fileName || "גררו קובץ אקסל לכאן או לחצו לבחירה"}
+            hint={fileName ? "לחצו או גררו קובץ אחר כדי להחליף" : "xlsx, xls, csv"}
+          />
 
           {rows.length > 0 && !result && (
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">
-                  נמצאו <span className="text-primary font-bold">{rows.length}</span> שורות
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-medium" role="status">
+                  <span className="text-success font-bold">{validRows.length} תקינים</span>
+                  {" / "}
+                  <span className={errorRows ? "text-destructive font-bold" : "text-muted-foreground"}>{errorRows} עם שגיאות</span>
                 </p>
-                {mode === "employees" && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="w-4 h-4 text-muted-foreground" />
-                    <span>שלח הזמנות אוטומטית</span>
-                    <Switch checked={autoInvite} onCheckedChange={setAutoInvite} />
-                  </div>
+                {errorRows > 0 && (
+                  <Button
+                    variant={onlyErrors ? "default" : "outline"}
+                    size="sm"
+                    aria-pressed={onlyErrors}
+                    onClick={() => setOnlyErrors((v) => !v)}
+                  >
+                    {onlyErrors ? "הצג את כל השורות" : `הצג רק שורות עם שגיאות (${errorRows})`}
+                  </Button>
                 )}
               </div>
+              {mode === "employees" && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Mail className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                  <label htmlFor="import-auto-invite">שלח הזמנות אוטומטית</label>
+                  <Switch id="import-auto-invite" checked={autoInvite} onCheckedChange={setAutoInvite} />
+                </div>
+              )}
+              {errorRows > 0 && (
+                <p className="text-xs text-muted-foreground">שורות עם שגיאות לא ייובאו. תקנו אותן בקובץ והעלו אותו שוב, או ייבאו עכשיו רק את השורות התקינות.</p>
+              )}
 
-              <div className="max-h-56 overflow-auto border border-border rounded-lg">
+              <div className="max-h-72 overflow-auto border border-border rounded-lg">
                 <table className="w-full text-xs">
                   <thead className="bg-muted sticky top-0">
                     <tr>
@@ -420,28 +437,40 @@ export function ImportExcelDialog({ open, onOpenChange, mode }: Props) {
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.slice(0, 20).map((r, i) => {
+                    {shownRows.map((r) => {
                       const hasErr = (r._row_errors?.length ?? 0) > 0;
                       return (
-                        <tr key={i} className={`border-t border-border ${hasErr ? "bg-destructive/5" : ""}`}>
-                          <td className="p-2 text-muted-foreground">{i + 1}</td>
+                        <tr key={r._row} className={`border-t border-border ${hasErr ? "bg-destructive/5" : ""}`}>
+                          <td className="p-2 text-muted-foreground">{r._row}</td>
                           <td className="p-2">{r.full_name}</td>
-                          <td className="p-2 font-mono text-[10px]" dir="ltr">{r.email || "—"}</td>
+                          <td className="p-2 font-mono text-xs" dir="ltr">{r.email || "—"}</td>
                           <td className="p-2">
                             {r.direct_manager ? (
                               r._resolved_manager_id ? (
-                                <span className="text-success">✓ {r.direct_manager}</span>
+                                <span className="inline-flex items-center gap-1 text-success">
+                                  <CheckCircle className="w-3.5 h-3.5 shrink-0" aria-label="נמצא" />
+                                  {r.direct_manager}
+                                </span>
                               ) : (
-                                <span className="text-warning text-[10px]">⚠ {r.direct_manager}</span>
+                                <span className="inline-flex items-center gap-1 text-warning text-xs" title={r._manager_warning}>
+                                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" aria-label="לא נמצא" />
+                                  {r.direct_manager}
+                                </span>
                               )
                             ) : "—"}
                           </td>
                           <td className="p-2">{r.system_role}</td>
                           <td className="p-2">
                             {hasErr ? (
-                              <span className="text-destructive text-[10px]">{r._row_errors!.join(", ")}</span>
+                              <span className="inline-flex items-start gap-1 text-destructive text-xs">
+                                <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" aria-hidden="true" />
+                                {r._row_errors!.join(", ")}
+                              </span>
                             ) : (
-                              <span className="text-success text-[10px]">תקין</span>
+                              <span className="inline-flex items-center gap-1 text-success text-xs">
+                                <CheckCircle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                                תקין
+                              </span>
                             )}
                           </td>
                         </tr>
@@ -449,15 +478,12 @@ export function ImportExcelDialog({ open, onOpenChange, mode }: Props) {
                     })}
                   </tbody>
                 </table>
-                {rows.length > 20 && (
-                  <p className="text-xs text-muted-foreground text-center py-2">
-                    ועוד {rows.length - 20} שורות...
-                  </p>
-                )}
               </div>
 
-              <Button className="w-full gap-2" onClick={handleImport} disabled={importing}>
-                {importing ? "מייבא..." : `ייבא ${rows.length} עובדים${autoInvite ? " + שלח הזמנות" : ""}`}
+              <Button className="w-full gap-2" onClick={handleImport} disabled={validRows.length === 0} loading={importing} loadingText="מייבא… אפשר לעקוב בסרגל ההתקדמות">
+                {validRows.length === 0
+                  ? "אין שורות תקינות לייבוא"
+                  : `ייבא ${validRows.length} עובדים תקינים${autoInvite && mode === "employees" ? " + שלח הזמנות" : ""}`}
               </Button>
             </div>
           )}
@@ -465,7 +491,7 @@ export function ImportExcelDialog({ open, onOpenChange, mode }: Props) {
           {result && (
             <div className="space-y-3">
               <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
-                <CheckCircle className="w-8 h-8 text-success flex-shrink-0" />
+                <CheckCircle className="w-8 h-8 text-success flex-shrink-0" aria-hidden="true" />
                 <div className="flex-1">
                   <p className="font-medium">{result.success} עובדים יובאו בהצלחה</p>
                   {result.invited > 0 && (
@@ -481,7 +507,8 @@ export function ImportExcelDialog({ open, onOpenChange, mode }: Props) {
               </div>
 
               {result.errors.length > 0 && (
-                <div className="max-h-40 overflow-auto border border-destructive/20 rounded-lg p-3 space-y-1">
+                <div className="max-h-56 overflow-auto border border-destructive/20 rounded-lg p-3 space-y-1">
+                  <p className="text-sm font-medium text-destructive mb-1">שורות שלא יובאו ושגיאות ({result.errors.length})</p>
                   {result.errors.map((err, i) => (
                     <p key={i} className="text-xs text-destructive flex items-start gap-1">
                       <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
@@ -491,7 +518,7 @@ export function ImportExcelDialog({ open, onOpenChange, mode }: Props) {
                 </div>
               )}
 
-              <Button variant="outline" className="w-full" onClick={() => { reset(); onOpenChange(false); }}>
+              <Button variant="outline" className="w-full" onClick={() => close(false)}>
                 סגור
               </Button>
             </div>

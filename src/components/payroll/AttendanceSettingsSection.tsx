@@ -10,6 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Trash2, Plus, CalendarDays, Settings, ChevronDown, ChevronUp } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { IconButton } from "@/components/feedback/IconButton";
+import { useConfirm } from "@/components/feedback/ConfirmDialog";
 
 export function AttendanceSettingsSection() {
   const { activeCompanyId } = useCompany();
@@ -18,6 +20,7 @@ export function AttendanceSettingsSection() {
   const [newDate, setNewDate] = useState("");
   const [newName, setNewName] = useState("");
   const [holidaysOpen, setHolidaysOpen] = useState(false);
+  const confirm = useConfirm();
 
   const { data: company } = useQuery({
     queryKey: ["company-settings", activeCompanyId],
@@ -129,14 +132,14 @@ export function AttendanceSettingsSection() {
           </p>
           <div className="flex flex-wrap items-end gap-2 mb-4">
             <div>
-              <Label className="text-xs">תאריך</Label>
-              <Input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} className="w-40" />
+              <Label htmlFor="holiday-date" className="text-xs">תאריך</Label>
+              <Input id="holiday-date" type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} className="w-40" />
             </div>
             <div className="flex-1 min-w-[200px]">
-              <Label className="text-xs">שם החג</Label>
-              <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="לדוג׳ ל״ג בעומר" />
+              <Label htmlFor="holiday-name" className="text-xs">שם החג</Label>
+              <Input id="holiday-name" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="לדוג׳ ל״ג בעומר" />
             </div>
-            <Button size="sm" onClick={() => addHoliday.mutate()} disabled={addHoliday.isPending}>
+            <Button onClick={() => addHoliday.mutate()} loading={addHoliday.isPending} loadingText="מוסיף…">
               <Plus className="w-4 h-4 ml-1" />הוסף
             </Button>
           </div>
@@ -150,7 +153,7 @@ export function AttendanceSettingsSection() {
             return (
               <Collapsible open={holidaysOpen} onOpenChange={setHolidaysOpen}>
                 <CollapsibleTrigger asChild>
-                  <button className="w-full flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors text-sm">
+                  <button type="button" className="w-full flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors text-sm">
                     <span className="flex items-center gap-2">
                       <CalendarDays className="w-4 h-4 text-muted-foreground" />
                       <span className="font-medium">חגים קרובים</span>
@@ -166,7 +169,7 @@ export function AttendanceSettingsSection() {
                         <tr>
                           <th className="p-2 text-right">תאריך</th>
                           <th className="p-2 text-right">שם</th>
-                          <th className="p-2 text-right w-12"></th>
+                          <th className="p-2 text-right w-12"><span className="sr-only">פעולות</span></th>
                         </tr>
                       </thead>
                       <tbody>
@@ -175,10 +178,24 @@ export function AttendanceSettingsSection() {
                             <td className="p-2 font-mono">{new Date(h.holiday_date).toLocaleDateString("en-GB")}</td>
                             <td className="p-2">{h.name}</td>
                             <td className="p-2">
-                              <Button size="icon" variant="ghost"
-                                onClick={() => removeHoliday.mutate(h.id)}>
-                                <Trash2 className="w-4 h-4 text-destructive" />
-                              </Button>
+                              <IconButton
+                                label={`מחק את ${h.name}`}
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => {
+                                  void confirm({
+                                    title: `למחוק את "${h.name}"?`,
+                                    description: `${new Date(h.holiday_date).toLocaleDateString("en-GB")} ייחשב שוב כיום עבודה רגיל, והיעדרות בו תופיע כפער החתמה בדוח.`,
+                                    confirmLabel: "מחק חג",
+                                    destructive: true,
+                                    onConfirm: async () => {
+                                      await removeHoliday.mutateAsync(h.id);
+                                      toast({ title: "החג נמחק" });
+                                    },
+                                  });
+                                }}
+                              >
+                                <Trash2 />
+                              </IconButton>
                             </td>
                           </tr>
                         ))}

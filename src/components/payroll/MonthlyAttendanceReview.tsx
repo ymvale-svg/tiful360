@@ -1,4 +1,5 @@
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { useConfirm } from "@/components/feedback/ConfirmDialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
@@ -50,6 +51,38 @@ export function MonthlyAttendanceReview() {
   const [onlyGaps, setOnlyGaps] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
+  const confirm = useConfirm();
+  // Day rows ("empId|day") whose time inputs were edited but not saved yet.
+  const [dirtyRows, setDirtyRows] = useState<Set<string>>(new Set());
+  const markDirty = useCallback((key: string, isDirty: boolean) => {
+    setDirtyRows((prev) => {
+      if (prev.has(key) === isDirty) return prev;
+      const next = new Set(prev);
+      if (isDirty) next.add(key); else next.delete(key);
+      return next;
+    });
+  }, []);
+  /** Asks before an action that would drop unsaved time edits (collapse, other employee, month). */
+  const confirmDiscard = async () => {
+    if (!dirtyRows.size) return true;
+    const ok = await confirm({
+      title: "לבטל שעות שלא נשמרו?",
+      description: dirtyRows.size === 1 ? "ביום אחד הוזנו שעות שלא נשמרו." : `ב-${dirtyRows.size} ימים הוזנו שעות שלא נשמרו.`,
+      confirmLabel: "בטל את השינויים",
+      cancelLabel: "המשך לערוך",
+      destructive: true,
+    });
+    // Rows that unmount (collapse, other month, filtered out) drop their own dirty flag.
+    return ok;
+  };
+  const toggleOpen = async (id: string) => {
+    if (!(await confirmDiscard())) return;
+    setOpen((cur) => (cur === id ? null : id));
+  };
+  const changeMonth = async (v: string) => {
+    if (v === month || !(await confirmDiscard())) return;
+    setMonth(v);
+  };
 
   const [y, m] = month.split("-").map(Number);
   const from = `${month}-01`;
@@ -172,8 +205,14 @@ export function MonthlyAttendanceReview() {
       }
     }, "השעה נשמרה");
 
-  const markAbsence = (emp: any, day: string, type: string) =>
-    run(async () => {
+  const markAbsence = async (emp: any, day: string, type: string) => {
+    const ok = await confirm({
+      title: `לסמן ${LEAVE_TYPE_LABEL[type]} ל${emp.full_name}?`,
+      description: `תירשם היעדרות מאושרת מסוג ${LEAVE_TYPE_LABEL[type]} ביום ${dow(day)} ${fmtDate(day)}, והיום לא ייחשב עוד כחוסר החתמה.`,
+      confirmLabel: `סמן ${LEAVE_TYPE_LABEL[type]}`,
+    });
+    if (!ok) return;
+    return run(async () => {
       const { error } = await supabase.from("leave_requests").insert({
         company_id: activeCompanyId!, employee_id: emp.id, request_type: type as any,
         start_date: day, end_date: day, total_days: 1, status: "approved",
@@ -181,18 +220,38 @@ export function MonthlyAttendanceReview() {
       } as any);
       if (error) throw error;
     }, `סומן: ${LEAVE_TYPE_LABEL[type]}`);
+  };
 
-  const review = (ids: string[], approve: boolean) =>
-    run(async () => {
+  const review = async (ids: string[], approve: boolean, confirmFirst = false) => {
+    if (confirmFirst) {
+      const ok = await confirm({
+        title: approve ? `לאשר ${ids.length} בקשות תיקון?` : `לדחות ${ids.length} בקשות תיקון?`,
+        description: approve
+          ? "השעות המבוקשות יוחלו על דוח הנוכחות."
+          : "הבקשות יסומנו כנדחו והשעות המקוריות יישארו בדוח.",
+        confirmLabel: approve ? "אשר הכול" : "דחה הכול",
+        destructive: !approve,
+      });
+      if (!ok) return;
+    }
+    return run(async () => {
       const { data: { user } } = await supabase.auth.getUser();
       const { error } = await supabase.from("attendance_corrections").update({
         status: approve ? "approved" : "rejected", reviewed_by: user?.id ?? null, reviewed_at: new Date().toISOString(),
       }).in("id", ids);
       if (error) throw error;
     }, approve ? "הבקשות אושרו" : "הבקשות נדחו");
+  };
 
-  const sendEmail = (ids: string[]) =>
-    run(async () => {
+  const sendEmail = async (ids: string[]) => {
+    const names = (employees as any[]).filter((e) => ids.includes(e.id)).map((e) => e.full_name);
+    const ok = await confirm({
+      title: ids.length === 1 ? `לשלוח את דוח הנוכחות ל${names[0] ?? "העובד"}?` : `לשלוח את דוח הנוכחות ל-${ids.length} עובדים?`,
+      description: `יישלח מייל עם החוסרים של ${month.split("-").reverse().join("/")}, והדוח יסומן "נשלח לעובד".`,
+      confirmLabel: ids.length === 1 ? "שלח מייל" : `שלח ${ids.length} מיילים`,
+    });
+    if (!ok) return;
+    return run(async () => {
       const { data, error } = await supabase.functions.invoke("send-attendance-gaps", {
         body: { company_id: activeCompanyId, from, to, employee_ids: ids },
       });
@@ -200,7 +259,8 @@ export function MonthlyAttendanceReview() {
       if ((data as any)?.error) throw new Error((data as any).error);
       const notApproved = ids.filter((id) => reportOf(id)?.status !== "approved");
       if (notApproved.length) await upsertReports(notApproved, { status: "sent", sent_at: new Date().toISOString() });
-    }, "הדוח נשלח במייל");
+    }, ids.length === 1 ? "הדוח נשלח במייל" : `הדוח נשלח ל-${ids.length} עובדים`);
+  };
 
   const exportPdf = (ids: string[]) => {
     const w = window.open("", "_blank");
@@ -237,11 +297,11 @@ export function MonthlyAttendanceReview() {
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
         <CardTitle className="text-base">דוח נוכחות חודשי – בדיקה ותיקון</CardTitle>
         <div className="flex flex-wrap items-center gap-2">
-          <Select value={month} onValueChange={setMonth}>
-            <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+          <Select value={month} onValueChange={(v) => { void changeMonth(v); }}>
+            <SelectTrigger className="w-36" aria-label="חודש הדוח"><SelectValue /></SelectTrigger>
             <SelectContent>{monthOptions().map((o) => <SelectItem key={o} value={o}>{o.split("-").reverse().join("/")}</SelectItem>)}</SelectContent>
           </Select>
-          <Button size="sm" variant="outline" disabled={!selIds.length || busy} onClick={() => sendEmail(selIds)}>
+          <Button size="sm" variant="outline" disabled={!selIds.length || busy} onClick={() => { void sendEmail(selIds); }}>
             <Mail className="w-4 h-4 ml-1" />שלח במייל למסומנים ({selIds.length})
           </Button>
           <Button size="sm" variant="outline" onClick={() => exportPdf(selIds.length ? selIds : allIds)}>
@@ -272,12 +332,22 @@ export function MonthlyAttendanceReview() {
               const shown = onlyGaps ? rows.filter((r) => isGapDay(r) || pend.some((c) => c.correction_date === r.day)) : rows;
               return (
                 <Fragment key={e.id}>
-                  <tr className={cn("border-t cursor-pointer hover:bg-muted/30", isOpen && "bg-muted/40")} onClick={() => setOpen(isOpen ? null : e.id)}>
+                  <tr className={cn("border-t cursor-pointer hover:bg-muted/30", isOpen && "bg-muted/40")} onClick={() => { void toggleOpen(e.id); }}>
                     <td className="p-2" onClick={(ev) => ev.stopPropagation()}>
                       <Checkbox aria-label={`סמן ${e.full_name}`} checked={selected.has(e.id)} onCheckedChange={() => toggle(e.id)} />
                     </td>
                     <td className="p-2 font-medium">
-                      {isOpen ? <ChevronDown className="inline w-4 h-4 ml-1" /> : <ChevronLeft className="inline w-4 h-4 ml-1" />}{e.full_name}
+                      <button
+                        type="button"
+                        aria-expanded={isOpen}
+                        aria-controls={`mar-days-${e.id}`}
+                        onClick={(ev) => { ev.stopPropagation(); void toggleOpen(e.id); }}
+                        className="inline-flex items-center gap-1 min-h-10 text-right rounded-md hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        {isOpen ? <ChevronDown className="w-4 h-4" aria-hidden="true" /> : <ChevronLeft className="w-4 h-4" aria-hidden="true" />}
+                        {e.full_name}
+                        <span className="sr-only">{isOpen ? " — סגור פירוט ימים" : " — הצג פירוט ימים"}</span>
+                      </button>
                     </td>
                     <td className="p-2">{e.employee_code ?? "—"}</td>
                     <td className="p-2">{gaps ? <Badge variant="destructive">{gaps}</Badge> : <Badge variant="secondary">0</Badge>}</td>
@@ -286,18 +356,18 @@ export function MonthlyAttendanceReview() {
                     <td className="p-2"><ReportStatus status={pend.length && reportOf(e.id)?.status !== "approved" ? "pending" : reportOf(e.id)?.status} /></td>
                   </tr>
                   {isOpen && (
-                    <tr><td colSpan={7} className="p-3 bg-muted/20">
+                    <tr id={`mar-days-${e.id}`}><td colSpan={7} className="p-3 bg-muted/20">
                       <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <label className="flex items-center gap-1 text-sm"><Checkbox checked={onlyGaps} onCheckedChange={(v) => setOnlyGaps(!!v)} />רק חוסרים</label>
-                        <Button size="sm" variant="outline" disabled={busy} onClick={() => sendEmail([e.id])}><Mail className="w-4 h-4 ml-1" />שלח לעובד במייל</Button>
+                        <label className="flex items-center gap-1 text-sm min-h-10"><Checkbox checked={onlyGaps} onCheckedChange={async (v) => { if (await confirmDiscard()) setOnlyGaps(!!v); }} />רק חוסרים</label>
+                        <Button size="sm" variant="outline" disabled={busy} onClick={() => { void sendEmail([e.id]); }}><Mail className="w-4 h-4 ml-1" />שלח לעובד במייל</Button>
                         <Button size="sm" variant="outline" onClick={() => exportPdf([e.id])}><FileDown className="w-4 h-4 ml-1" />PDF</Button>
                         {canApprove && reportOf(e.id)?.status !== "approved" && (
                           <Button size="sm" variant="secondary" disabled={busy || pend.length > 0} title={pend.length ? "יש בקשות תיקון ממתינות" : undefined}
                             onClick={() => approveReports([e.id])}><Check className="w-4 h-4 ml-1" />אשר דוח</Button>
                         )}
                         {canApprove && pend.length > 0 && <>
-                          <Button size="sm" disabled={busy} onClick={() => review(pend.map((c) => c.id), true)}><Check className="w-4 h-4 ml-1" />אשר את כל הבקשות</Button>
-                          <Button size="sm" variant="outline" disabled={busy} onClick={() => review(pend.map((c) => c.id), false)}><X className="w-4 h-4 ml-1" />דחה הכול</Button>
+                          <Button size="sm" disabled={busy} onClick={() => { void review(pend.map((c) => c.id), true, true); }}><Check className="w-4 h-4 ml-1" />אשר את כל הבקשות</Button>
+                          <Button size="sm" variant="outline" disabled={busy} onClick={() => { void review(pend.map((c) => c.id), false, true); }}><X className="w-4 h-4 ml-1" />דחה הכול</Button>
                         </>}
                       </div>
                       <div className="overflow-x-auto">
@@ -307,7 +377,7 @@ export function MonthlyAttendanceReview() {
                         <tbody>
                           {shown.map((r) => (
                             <DayRow key={r.day} r={r} emp={e} pending={pend.filter((c) => c.correction_date === r.day)}
-                              busy={busy} canApprove={canApprove} onTime={setTime} onAbsence={markAbsence} onReview={review} />
+                              busy={busy} canApprove={canApprove} onTime={setTime} onAbsence={markAbsence} onReview={review} onDirty={markDirty} />
                           ))}
                           {!shown.length && <tr><td colSpan={6} className="p-3 text-center text-muted-foreground">אין חוסרים החודש</td></tr>}
                         </tbody>
@@ -334,11 +404,14 @@ function ReportStatus({ status }: { status?: string }) {
   return <Badge variant={status === "approved" ? "default" : "secondary"}>{STATUS_LABEL[status] ?? status}</Badge>;
 }
 
-function DayRow({ r, emp, pending, busy, canApprove, onTime, onAbsence, onReview }: any) {
+function DayRow({ r, emp, pending, busy, canApprove, onTime, onAbsence, onReview, onDirty }: any) {
   const [inT, setInT] = useState(fmtTime(r.inPunch?.punch_at));
   const [outT, setOutT] = useState(fmtTime(r.outPunch?.punch_at));
   const gap = isGapDay(r);
   const changed = inT !== fmtTime(r.inPunch?.punch_at) || outT !== fmtTime(r.outPunch?.punch_at);
+  const dirtyKey = `${emp.id}|${r.day}`;
+  useEffect(() => { onDirty?.(dirtyKey, changed); }, [changed, dirtyKey, onDirty]);
+  useEffect(() => () => onDirty?.(dirtyKey, false), [dirtyKey, onDirty]);
   const save = async () => {
     if (inT && inT !== fmtTime(r.inPunch?.punch_at)) await onTime(emp, r.day, "in", r.inPunch, inT);
     if (outT && outT !== fmtTime(r.outPunch?.punch_at)) await onTime(emp, r.day, "out", r.outPunch, outT);
@@ -347,8 +420,8 @@ function DayRow({ r, emp, pending, busy, canApprove, onTime, onAbsence, onReview
     <>
       <tr className={cn("border-t", gap && "bg-destructive/15")}>
         <td className="p-1">{fmtDate(r.day)}</td><td className="p-1">{dow(r.day)}</td>
-        <td className="p-1"><Input type="time" className="h-10 w-32" value={inT} onChange={(e) => setInT(e.target.value)} aria-label="כניסה" /></td>
-        <td className="p-1"><Input type="time" className="h-10 w-32" value={outT} onChange={(e) => setOutT(e.target.value)} aria-label="יציאה" /></td>
+        <td className="p-1"><Input type="time" className="h-10 w-32" value={inT} onChange={(e) => setInT(e.target.value)} aria-label={`כניסה ${fmtDate(r.day)}`} /></td>
+        <td className="p-1"><Input type="time" className="h-10 w-32" value={outT} onChange={(e) => setOutT(e.target.value)} aria-label={`יציאה ${fmtDate(r.day)}`} /></td>
         <td className="p-1">
           {r.leave ? <Badge variant="secondary">{r.leave}</Badge>
             : r.status === "missing" ? <span className="text-destructive font-medium">לא החתים</span>
@@ -359,8 +432,8 @@ function DayRow({ r, emp, pending, busy, canApprove, onTime, onAbsence, onReview
           <div className="flex items-center gap-1">
             {changed && <Button size="sm" disabled={busy} onClick={save}><Save className="w-4 h-4 ml-1" />שמור</Button>}
             {gap && (
-              <Select onValueChange={(v) => onAbsence(emp, r.day, v)}>
-                <SelectTrigger className="h-10 w-36"><SelectValue placeholder="סמן היעדרות" /></SelectTrigger>
+              <Select value="" onValueChange={(v) => { void onAbsence(emp, r.day, v); }}>
+                <SelectTrigger className="h-10 w-36" aria-label={`סמן היעדרות ב-${fmtDate(r.day)}`}><SelectValue placeholder="סמן היעדרות" /></SelectTrigger>
                 <SelectContent>{ABSENCE_TYPES.map((t) => <SelectItem key={t} value={t}>{LEAVE_TYPE_LABEL[t]}</SelectItem>)}</SelectContent>
               </Select>
             )}

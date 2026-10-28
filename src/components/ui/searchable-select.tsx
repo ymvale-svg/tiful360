@@ -20,6 +20,14 @@ interface Props {
   dir?: "rtl" | "ltr";
   allowCreate?: boolean;
   createLabel?: (q: string) => string;
+  disabled?: boolean;
+  /** Forwarded to the trigger so a Label/FormField can name and describe it. */
+  id?: string;
+  "aria-label"?: string;
+  "aria-labelledby"?: string;
+  "aria-describedby"?: string;
+  "aria-invalid"?: boolean | "true" | "false";
+  "aria-required"?: boolean;
 }
 
 export function SearchableSelect({
@@ -34,6 +42,9 @@ export function SearchableSelect({
   dir = "rtl",
   allowCreate = false,
   createLabel = (q) => `הוסף "${q}"`,
+  disabled,
+  id,
+  ...aria
 }: Props) {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
@@ -50,9 +61,14 @@ export function SearchableSelect({
       <PopoverTrigger asChild>
         <button
           type="button"
+          id={id}
+          disabled={disabled}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          {...aria}
           className={cn(
-            "w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 transition-all flex items-center justify-between gap-2",
-            error ? "ring-2 ring-destructive/50 focus:ring-destructive/50" : "focus:ring-primary/30",
+            "w-full min-h-10 px-3 py-2 bg-muted disabled:opacity-50 disabled:pointer-events-none rounded-lg text-sm outline-none focus:ring-2 transition-all flex items-center justify-between gap-2",
+            error || aria["aria-invalid"] === true || aria["aria-invalid"] === "true" ? "ring-2 ring-destructive/50 focus:ring-destructive/50" : "focus:ring-primary/30",
             className,
           )}
           dir={dir}

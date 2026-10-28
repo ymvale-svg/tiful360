@@ -131,8 +131,9 @@ export function CreateTax101BatchDialog({ open, onOpenChange }: Props) {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>שנת מס</Label>
+              <Label htmlFor="t101-batch-year">שנת מס</Label>
               <Input
+                id="t101-batch-year"
                 type="number"
                 value={taxYear}
                 onChange={(e) => setTaxYear(Number(e.target.value))}
@@ -141,8 +142,9 @@ export function CreateTax101BatchDialog({ open, onOpenChange }: Props) {
               />
             </div>
             <div className="space-y-1.5">
-              <Label>סינון מחלקה</Label>
+              <Label htmlFor="t101-batch-dept">סינון מחלקה</Label>
               <select
+                id="t101-batch-dept"
                 className="w-full h-10 px-3 rounded-md bg-background border border-input text-sm"
                 value={departmentFilter}
                 onChange={(e) => setDepartmentFilter(e.target.value)}

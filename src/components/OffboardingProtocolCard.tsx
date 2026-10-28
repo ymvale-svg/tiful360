@@ -132,10 +132,10 @@ export function OffboardingProtocolCard({ employee }: Props) {
               <li key={i} className="flex items-center gap-2 border-b border-border/40 last:border-0 pb-1">
                 <span className="font-medium">{a.asset_name}</span>
                 <span className="text-muted-foreground">{a.asset_code}</span>
-                <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground text-[10px]">
+                <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground text-xs">
                   {a.category}
                 </span>
-                <span className="text-[10px] text-muted-foreground">
+                <span className="text-xs text-muted-foreground">
                   {a.domain === "digital" ? "גישה דיגיטלית הושהתה" : "הוחזר למלאי"}
                 </span>
               </li>
@@ -157,7 +157,7 @@ export function OffboardingProtocolCard({ employee }: Props) {
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="text-muted-foreground text-[10px]">
+                <tr className="text-muted-foreground text-xs">
                   <th className="text-right font-medium pb-1">משאב</th>
                   <th className="text-right font-medium pb-1">קטגוריה</th>
                   <th className="text-right font-medium pb-1">מועד הזנה</th>
