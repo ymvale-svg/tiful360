@@ -27,6 +27,8 @@ import { showFieldRow } from "@/lib/builtinFields";
 import { useProtocolTemplates } from "@/hooks/useProtocolTemplates";
 import { getDomain } from "@/lib/assetDomains";
 import { isVehicleLinkedGroup } from "@/lib/vehicleLinkedGroups";
+import { useDirtyGuard } from "@/components/feedback/useDirtyGuard";
+import { IconButton } from "@/components/feedback/IconButton";
 
 
 const INSURANCE_TYPES = ["רכב", "דירקטורים", "צד ג׳", "קבלני"];
@@ -72,6 +74,9 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
     expiry_date: "", notes: "", notification_days_before: "" as string,
   });
   const [customFields, setCustomFields] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  // Snapshot of the saved values, to tell whether the edit form has unsaved changes.
+  const [baseline, setBaseline] = useState("");
 
   const { data: catFieldsRaw } = useCategoryFields(form.category_id);
   const { data: assetGroups } = useAssetGroups();
@@ -107,7 +112,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
 
   /** Load the form from the saved asset (used on open and on "ביטול"). */
   const resetFromAsset = (a: Asset) => {
-    setForm({
+    const next = {
       asset_name: a.asset_name,
       category_id: a.category_id,
       group_id: (a as any).group_id ?? "",
@@ -121,12 +126,15 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
       expiry_date: a.expiry_date ?? "",
       notes: a.notes ?? "",
       notification_days_before: (a as any).notification_days_before == null ? "" : String((a as any).notification_days_before),
-    });
+    };
+    setForm(next);
     // Load existing custom_fields as strings
     const cf: Record<string, string> = {};
     const raw = (a as any).custom_fields ?? {};
     Object.keys(raw).forEach((k) => { cf[k] = raw[k] == null ? "" : String(raw[k]); });
     setCustomFields(cf);
+    setBaseline(JSON.stringify([next, cf]));
+    setErrors({});
     setMode("view");
   };
 
@@ -135,6 +143,24 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
   useEffect(() => {
     if (open && asset) resetFromAsset(asset);
   }, [asset?.id, open]);
+
+  // Owner changes happen in the handover protocol; when it completes, pick up the new owner
+  // so a later "שמור שינויים" never writes the previous owner back.
+  useEffect(() => {
+    if (!asset) return;
+    const owner = asset.current_owner_id ?? "";
+    const site = (asset as any).assigned_site_id ?? "";
+    const container = (asset as any).container_id ?? "";
+    const status = asset.status;
+    setForm((prev) => ({ ...prev, current_owner_id: owner, assigned_site_id: site, container_id: container, status }));
+    setBaseline((prev) => {
+      if (!prev) return prev;
+      try {
+        const [f, cf] = JSON.parse(prev);
+        return JSON.stringify([{ ...f, current_owner_id: owner, assigned_site_id: site, container_id: container, status }, cf]);
+      } catch { return prev; }
+    });
+  }, [asset?.current_owner_id, (asset as any)?.assigned_site_id, (asset as any)?.container_id, asset?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // History of past owners — derived from signed handover forms for this asset
   const { data: handoverHistory } = useQuery({
@@ -192,8 +218,35 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
   const { data: sites } = useSites();
   const { data: containers } = useSiteContainers(form.assigned_site_id || null);
 
+  const isDirty = mode === "edit" && baseline !== "" && JSON.stringify([form, customFields]) !== baseline;
+  const guard = useDirtyGuard(isDirty, mutation.isPending);
+  /** "ביטול" in edit mode: ask before dropping changes, then return to the saved values. */
+  const cancelEdit = guard((o) => { if (!o && asset) resetFromAsset(asset); });
+
+  /** Same required-field checks as AddAssetDialog. */
+  const validate = () => {
+    const e: Record<string, string> = {};
+    if (!form.asset_name.trim()) e.asset_name = "שדה חובה";
+    if (!form.category_id) e.category_id = "נא לבחור קטגוריה";
+    if (categoryGroups.length > 0 && !form.group_id) e.group_id = "נא לבחור תת-קטגוריה";
+    (catFields ?? []).forEach((cf: any) => {
+      if (cf.is_required && !String(customFields[cf.field_name] ?? "").trim()) e[`cf_${cf.field_name}`] = `${cf.field_name}: שדה חובה`;
+    });
+    setErrors(e);
+    if (Object.keys(e).length) {
+      setTimeout(() => {
+        const el = document.querySelector<HTMLElement>('[data-edit-asset] [aria-invalid="true"], [data-edit-asset] [data-invalid="true"] button');
+        el?.focus();
+        el?.scrollIntoView({ block: "center", behavior: "smooth" });
+      }, 0);
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = async () => {
     if (!asset) return;
+    if (!validate()) return;
     try {
       // Strip empty custom field values
       const cleanCustom: Record<string, string> = {};
@@ -202,7 +255,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
       });
       await mutation.mutateAsync({
         id: asset.id,
-        asset_name: form.asset_name,
+        asset_name: form.asset_name.trim(),
         category_id: form.category_id,
         group_id: form.group_id || null,
         serial_number: form.serial_number || null,
@@ -218,6 +271,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
         notification_days_before: form.notification_days_before.trim() === "" ? null : Number(form.notification_days_before),
       } as any);
       toast({ title: "פריט עודכן בהצלחה" });
+      setBaseline(JSON.stringify([form, customFields]));
       setMode("view");
     } catch (err: any) {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
@@ -243,8 +297,8 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
   const conditionLabels: Record<string, string> = { new: "חדש", good: "תקין", fair: "בינוני" };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" dir="rtl">
+    <Dialog open={open} onOpenChange={guard(onOpenChange)}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" dir="rtl" data-edit-asset="">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between gap-2">
             <span className="flex items-center gap-2">
@@ -254,7 +308,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                 : (isView ? "פרטי פריט ציוד" : "עריכת פריט ציוד")}
             </span>
             {isView && (
-              <Button size="sm" variant="outline" className="gap-1.5 h-8" onClick={() => setMode("edit")}>
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setMode("edit")}>
                 <Pencil className="w-3.5 h-3.5" />
                 ערוך
               </Button>
@@ -265,37 +319,47 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
 
         <div className="space-y-3 mt-4">
           <div>
-            <label className="text-sm font-medium mb-1 block">
+            <label htmlFor="edit-asset-name" className="text-sm font-medium mb-1 block">
               {selectedCategory?.prefix === "CINS" ? "שם הפוליסה" : "שם פריט"}
+              {!isView && <span className="text-destructive mr-1" aria-hidden="true">*</span>}
             </label>
             {isView ? (
               <div className={readCls}>{display(form.asset_name)}</div>
             ) : (
-              <input
-                value={form.asset_name}
-                onChange={(e) => setForm({ ...form, asset_name: e.target.value })}
-                className={inputCls}
-              />
+              <>
+                <input
+                  id="edit-asset-name"
+                  aria-required="true"
+                  aria-invalid={errors.asset_name ? true : undefined}
+                  aria-describedby={errors.asset_name ? "edit-asset-name-error" : undefined}
+                  value={form.asset_name}
+                  onChange={(e) => { setForm({ ...form, asset_name: e.target.value }); setErrors(({ asset_name: _, ...rest }) => rest); }}
+                  className={cn(inputCls, errors.asset_name && "ring-2 ring-destructive/50")}
+                />
+                {errors.asset_name && <p id="edit-asset-name-error" role="alert" className="text-xs text-destructive mt-1">{errors.asset_name}</p>}
+              </>
             )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-sm font-medium mb-1 block">קטגוריה</label>
+            <div role="group" aria-labelledby="edit-asset-category-label" data-invalid={errors.category_id ? "true" : undefined}>
+              <label id="edit-asset-category-label" className="text-sm font-medium mb-1 block">קטגוריה</label>
               {isView ? (
                 <div className={readCls}>{display(categoryName)}</div>
               ) : (
                 <SearchableSelect
                   value={form.category_id}
-                  onChange={(v) => setForm({ ...form, category_id: v })}
+                  onChange={(v) => setForm({ ...form, category_id: v, group_id: "" })}
                   options={(categories ?? []).map(c => ({ value: c.id, label: c.category_name }))}
                   placeholder="בחר..."
+                  error={!!errors.category_id}
                 />
               )}
+              {!isView && errors.category_id && <p role="alert" className="text-xs text-destructive mt-1">{errors.category_id}</p>}
             </div>
             {(categoryGroups.length > 0 || (!isView && form.category_id)) && (
-              <div>
-                <label className="text-sm font-medium mb-1 block">תת-קטגוריה</label>
+              <div role="group" aria-labelledby="edit-asset-group-label" data-invalid={errors.group_id ? "true" : undefined}>
+                <label id="edit-asset-group-label" className="text-sm font-medium mb-1 block">תת-קטגוריה</label>
                 {isView ? (
                   <div className={readCls}>{display(categoryGroups.find(g => g.id === form.group_id)?.name)}</div>
                 ) : (
@@ -305,8 +369,10 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                     defaultOwnerRole={(selectedCategory as any)?.default_owner_role ?? null}
                     value={form.group_id}
                     onChange={(v) => setForm({ ...form, group_id: v })}
+                    error={!!errors.group_id}
                   />
                 )}
+                {!isView && errors.group_id && <p role="alert" className="text-xs text-destructive mt-1">{errors.group_id}</p>}
               </div>
             )}
             {(selectedCategory as any)?.is_assignable !== false && showField("condition", form.condition, !isView) && (
@@ -354,20 +420,19 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
               <div className={cn("grid gap-3", isInsurance ? "grid-cols-1" : "grid-cols-2")}>
                 {isInsurance ? null : isAssignable ? (
                   <div>
-                    <label className="text-sm font-medium mb-1 block">שיוך לעובד</label>
-                    {isView ? (
-                      <div className={readCls}>{ownerName ? ownerName : <span className="text-muted-foreground">ללא שיוך לעובד</span>}</div>
-                    ) : (
-                      <SearchableSelect
-                        value={form.current_owner_id}
-                        onChange={(v) => setForm({ ...form, current_owner_id: v, ...(v ? { assigned_site_id: "", container_id: "" } : {}) })}
-                        options={[
-                          { value: "", label: "ללא שיוך לעובד" },
-                          ...(employees ?? [])
-                            .filter((e: any) => e.status === "active" || e.status === "onboarding")
-                            .map((e: any) => ({ value: e.id, label: `${e.full_name} (${e.employee_code})` })),
-                        ]}
-                      />
+                    <span className="text-sm font-medium mb-1 block">שיוך לעובד</span>
+                    <div className={readCls}>{ownerName ? ownerName : <span className="text-muted-foreground">ללא שיוך לעובד</span>}</div>
+                    {/* Changing the owner always goes through the handover protocol, so it is signed and logged. */}
+                    {!isView && (
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="h-auto min-h-9 px-0 text-xs"
+                        onClick={() => setHandoverOpen(true)}
+                      >
+                        <FileSignature className="w-3.5 h-3.5" aria-hidden="true" />
+                        {form.current_owner_id ? "העברה לעובד אחר — בפרוטוקול מסירה" : "שיוך לעובד — בפרוטוקול מסירה"}
+                      </Button>
                     )}
                   </div>
                 ) : (
@@ -380,13 +445,14 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                 )}
                 {selectedCategory?.prefix !== "CAR" && showField("expiry_date", form.expiry_date, !isView) && (
                   <div>
-                    <label className="text-sm font-medium mb-1 block">
+                    <label htmlFor="edit-asset-expiry" className="text-sm font-medium mb-1 block">
                       {isInsurance ? "תוקף עד" : "תאריך תפוגה"}
                     </label>
                     {isView ? (
                       <div className={readCls} dir="ltr">{form.expiry_date ? new Date(form.expiry_date).toLocaleDateString("en-GB") : display(null)}</div>
                     ) : (
                       <input
+                        id="edit-asset-expiry"
                         type="date"
                         value={form.expiry_date}
                         onChange={(e) => setForm({ ...form, expiry_date: e.target.value })}
@@ -420,7 +486,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                   {form.assigned_site_id && (
                     <button
                       type="button"
-                      className="text-xs text-destructive hover:underline mt-1"
+                      className="min-h-9 text-xs text-destructive hover:underline mt-1"
                       onClick={() => setForm({ ...form, assigned_site_id: "", container_id: "" })}
                     >
                       הסר שיוך לאתר
@@ -442,7 +508,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
 
           {showField("notification_days_before", form.notification_days_before, !isView) && (
           <div>
-            <label className="text-sm font-medium mb-1 block">
+            <label htmlFor="edit-asset-notify-days" className="text-sm font-medium mb-1 block">
               התראת מייל מראש (ימים לפני תפוגה)
             </label>
             {isView ? (
@@ -452,6 +518,8 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
             ) : (
               <>
                 <input
+                  id="edit-asset-notify-days"
+                  aria-describedby="edit-asset-notify-days-hint"
                   type="number"
                   min={0}
                   max={365}
@@ -461,7 +529,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                   className={inputCls}
                   dir="ltr"
                 />
-                <p className="text-xs text-muted-foreground mt-1">
+                <p id="edit-asset-notify-days-hint" className="text-xs text-muted-foreground mt-1">
                   השאר ריק כדי להשתמש בברירת המחדל של הקטגוריה.
                 </p>
               </>
@@ -520,7 +588,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                             <span className="text-muted-foreground font-mono">({p.employee_code})</span>
                           )}
                           {p.isCurrent && (
-                            <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px]">
+                            <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-xs">
                               נוכחי
                             </span>
                           )}
@@ -532,14 +600,14 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                         </div>
                       </div>
                       {p.document_url && (
-                        <button
+                        <IconButton
                           type="button"
+                          label={`צפה בטופס המסירה של ${p.employee_name}`}
                           onClick={() => void openHandoverFile(p.document_url!)}
-                          className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground shrink-0"
-                          title="צפה בטופס"
+                          className="shrink-0 text-muted-foreground hover:text-foreground"
                         >
-                          <FileText className="w-4 h-4" />
-                        </button>
+                          <FileText aria-hidden="true" />
+                        </IconButton>
                       )}
                     </li>
                   ))}
@@ -562,11 +630,12 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
           <AssetDocumentsSection assetId={asset.id} />
 
           <div>
-            <label className="text-sm font-medium mb-1 block">הערות</label>
+            <label htmlFor="edit-asset-notes" className="text-sm font-medium mb-1 block">הערות</label>
             {isView ? (
               <div className={`${readCls} whitespace-pre-wrap`}>{display(form.notes)}</div>
             ) : (
               <textarea
+                id="edit-asset-notes"
                 value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
                 rows={2}
@@ -574,6 +643,13 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
               />
             )}
           </div>
+
+          {!isView && Object.keys(errors).length > 0 && (
+            <p role="alert" className="text-sm text-destructive">
+              {Object.keys(errors).length === 1 ? "יש שדה אחד לתיקון." : `יש ${Object.keys(errors).length} שדות לתיקון.`}
+              {Object.entries(errors).filter(([k]) => k.startsWith("cf_")).map(([k, v]) => <span key={k} className="block text-xs">{v}</span>)}
+            </p>
+          )}
 
           <div className="flex gap-3 pt-3">
             {isView ? (
@@ -586,7 +662,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
               </>
             ) : (
               <>
-                <Button variant="outline" className="flex-1" onClick={() => resetFromAsset(asset)}>ביטול</Button>
+                <Button variant="outline" className="flex-1" onClick={() => cancelEdit(false)} disabled={mutation.isPending}>ביטול</Button>
                 <Button className="flex-1" onClick={handleSubmit} disabled={mutation.isPending}>
                   {mutation.isPending ? "שומר..." : "שמור שינויים"}
                 </Button>

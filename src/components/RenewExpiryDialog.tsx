@@ -200,14 +200,14 @@ export function RenewExpiryDialog({ open, onOpenChange, item }: Props) {
             )}
             {!item.is_assignable && (
               <div className="text-xs">
-                <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px]">נכס מוסדי</span>
+                <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-xs">נכס מוסדי</span>
               </div>
             )}
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-1 block">תאריך תוקף חדש</label>
-            <input
+            <label htmlFor="renewexpir-f1" className="text-sm font-medium mb-1 block">תאריך תוקף חדש</label>
+            <input id="renewexpir-f1"
               type="date"
               value={newDate}
               onChange={(e) => setNewDate(e.target.value)}
@@ -218,11 +218,11 @@ export function RenewExpiryDialog({ open, onOpenChange, item }: Props) {
 
           {item.source_type === "document" && (
             <div>
-              <label className="text-sm font-medium mb-1 block flex items-center gap-1.5">
+              <label htmlFor="renewexpir-f2" className="text-sm font-medium mb-1 block flex items-center gap-1.5">
                 <Upload className="w-3.5 h-3.5" />
                 החלף קובץ (אופציונלי)
               </label>
-              <input
+              <input id="renewexpir-f2"
                 type="file"
                 onChange={(e) => setReplaceFile(e.target.files?.[0] ?? null)}
                 className="w-full text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:bg-primary file:text-primary-foreground"
@@ -232,8 +232,8 @@ export function RenewExpiryDialog({ open, onOpenChange, item }: Props) {
           )}
 
           <div>
-            <label className="text-sm font-medium mb-1 block">הערות (אופציונלי)</label>
-            <textarea
+            <label htmlFor="renewexpir-f3" className="text-sm font-medium mb-1 block">הערות (אופציונלי)</label>
+            <textarea id="renewexpir-f3"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}

@@ -72,7 +72,7 @@ export function CategoriesGrid({ onSelectCategory }: Props) {
                 {(s.expired > 0 || s.expiringSoon > 0) && (
                   <span
                     className={cn(
-                      "absolute top-2 left-2 flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full",
+                      "absolute top-2 left-2 flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-full",
                       s.expired > 0
                         ? "bg-destructive/15 text-destructive"
                         : "bg-warning/15 text-warning"
@@ -90,7 +90,7 @@ export function CategoriesGrid({ onSelectCategory }: Props) {
                   <Icon className="w-10 h-10" strokeWidth={1.75} />
                 </div>
                 <div className="text-sm font-semibold text-center line-clamp-2 leading-tight">{cat.category_name}</div>
-                <div className="text-[11px] text-muted-foreground">{s.count} פריטים</div>
+                <div className="text-xs text-muted-foreground">{s.count} פריטים</div>
               </button>
             );
           })}
@@ -120,7 +120,7 @@ export function CategoriesGrid({ onSelectCategory }: Props) {
       <Icon className="w-4 h-4" />
       <span>{label}</span>
       <span className={cn(
-        "text-[11px] px-1.5 py-0.5 rounded-full",
+        "text-xs px-1.5 py-0.5 rounded-full",
         filter === key ? "bg-primary-foreground/20" : "bg-muted"
       )}>{count}</span>
     </button>

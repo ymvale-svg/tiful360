@@ -100,9 +100,9 @@ export function QuickAddSubscriptionDialog({ open, onOpenChange, employeeId, emp
 
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label>סוג המנוי</Label>
-            <select
-              className="w-full h-9 px-2 rounded-md border border-input bg-background text-sm"
+            <Label htmlFor="qa-sub-group">סוג המנוי</Label>
+            <select id="qa-sub-group"
+              className="w-full h-10 px-2 rounded-md border border-input bg-background text-sm"
               value={groupId}
               onChange={(e) => setGroupId(e.target.value)}
             >
@@ -115,19 +115,19 @@ export function QuickAddSubscriptionDialog({ open, onOpenChange, employeeId, emp
 
           {isCard && (
             <div className="space-y-1.5">
-              <Label>מס' כרטיס</Label>
-              <Input value={cardNumber} onChange={(e) => setCardNumber(e.target.value)} placeholder="מספר כרטיס תדלוק" />
+              <Label htmlFor="qa-sub-card">מס' כרטיס</Label>
+              <Input id="qa-sub-card" value={cardNumber} onChange={(e) => setCardNumber(e.target.value)} placeholder="מספר כרטיס תדלוק" />
             </div>
           )}
 
           <div className="space-y-1.5">
-            <Label>תאריך התחלה</Label>
-            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <Label htmlFor="qa-sub-start">תאריך התחלה</Label>
+            <Input id="qa-sub-start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           </div>
 
           <div className="space-y-1.5">
-            <Label>הערות</Label>
-            <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="אופציונלי" />
+            <Label htmlFor="qa-sub-notes">הערות</Label>
+            <Input id="qa-sub-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="אופציונלי" />
           </div>
         </div>
 

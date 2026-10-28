@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAssets, useAssetCategories, useEmployees } from "@/hooks/useData";
 import { getCategoryIcon, getCategoryColor } from "@/lib/categoryIcons";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronLeft, ChevronRight, Pencil, FileSignature, UserMinus, Trash2, User, Building2, History, MapPin, Clock3, Ban, PlayCircle } from "lucide-react";
 import { useSites } from "@/hooks/useSites";
 import { useSiteContainers } from "@/hooks/useSiteContainers";
@@ -29,10 +30,9 @@ import { useAssetGroups } from "@/hooks/useAssetGroups";
 import { useDeleteAsset, useUpdateAsset } from "@/hooks/useMutations";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { useConfirm } from "@/components/feedback/ConfirmDialog";
+import { IconButton } from "@/components/feedback/IconButton";
+import { useAuth } from "@/hooks/useAuth";
 import { formatDraftTime, type HandoverDraft } from "@/lib/handoverDraft";
 import { useAssetHandoverDrafts } from "@/hooks/useHandoverDrafts";
 import type { ProtocolDirection } from "@/lib/pdf/types";
@@ -52,7 +52,7 @@ interface Props {
 }
 
 export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategories }: Props) {
-  const { data: assets } = useAssets();
+  const { data: assets, isLoading: assetsLoading } = useAssets();
   const { data: handoverForms } = useAssetHandoverForms(assetId);
   const { data: handoverDrafts = [] } = useAssetHandoverDrafts(assetId);
 
@@ -64,19 +64,18 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
   const updateAsset = useUpdateAsset();
   const { toast } = useToast();
   const qc = useQueryClient();
+  const confirm = useConfirm();
+  const { user } = useAuth();
 
   const [editOpen, setEditOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
-  const [unassignConfirm, setUnassignConfirm] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState(false);
-  const [inactiveConfirm, setInactiveConfirm] = useState(false);
   const [resumeDirection, setResumeDirection] = useState<ProtocolDirection>("handover");
 
   const asset = (assets ?? []).find((a: any) => a.id === assetId) as any;
   const category = (categories ?? []).find((c: any) => c.id === categoryId) as any;
 
   // History from activity_log
-  const { data: history } = useQuery({
+  const { data: history, isLoading: historyLoading, error: historyError, refetch: refetchHistory } = useQuery({
     queryKey: ["asset-history", assetId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -91,6 +90,20 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
     },
     enabled: !!assetId,
   });
+
+  // Called before the early return below so the hook order never changes while the asset loads.
+  const { data: siteContainers } = useSiteContainers(asset?.assigned_site_id ?? null);
+
+  if (!asset && assetsLoading) {
+    return (
+      <div role="status" aria-busy="true" className="space-y-4">
+        <span className="sr-only">טוען את פרטי הפריט…</span>
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-20 w-full rounded-2xl" />
+        <Skeleton className="h-64 w-full rounded-xl" />
+      </div>
+    );
+  }
 
   if (!asset) {
     return (
@@ -131,27 +144,50 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
   const assignedSite = asset.assigned_site_id
     ? (sites ?? []).find((s) => s.id === asset.assigned_site_id) ?? null
     : null;
-  const { data: siteContainers } = useSiteContainers(asset.assigned_site_id ?? null);
   const assignedContainer = asset.container_id
     ? (siteContainers ?? []).find((c) => c.id === asset.container_id) ?? null
     : null;
 
-  const handleUnassign = async () => {
-    const { error } = await supabase
-      .from("assets")
-      .update({ current_owner_id: null, assigned_site_id: null, container_id: null, status: "in_stock" } as any)
-      .eq("id", assetId);
-    if (error) {
-      toast({ title: "שגיאה בביטול שיוך", description: error.message, variant: "destructive" });
-      return;
-    }
-    toast({ title: "השיוך בוטל", description: `${asset.asset_name} הוחזר למלאי` });
-    qc.invalidateQueries({ queryKey: ["assets"] });
-    setUnassignConfirm(false);
-  };
+  // Each confirm runs its action inside the dialog, which stays open with a spinner until it settles
+  // and shows the error in place on failure.
+  const handleUnassign = () => confirm({
+    title: "ביטול שיוך",
+    description: <>לבטל את השיוך של <strong>{asset.asset_name}</strong>? הפריט יחזור למלאי.</>,
+    confirmLabel: "בטל שיוך",
+    cancelLabel: "חזרה",
+    onConfirm: async () => {
+      const previousOwner = owner?.full_name ?? assignedSite?.name ?? "";
+      const { error } = await supabase
+        .from("assets")
+        .update({ current_owner_id: null, assigned_site_id: null, container_id: null, status: "in_stock" } as any)
+        .eq("id", assetId);
+      if (error) throw new Error(error.message);
+      try {
+        await supabase.from("activity_log").insert({
+          company_id: asset.company_id,
+          employee_id: asset.current_owner_id ?? null,
+          action: `החזרת ציוד למלאי: ${asset.asset_name ?? ""}`,
+          details: previousOwner ? `השיוך ל${previousOwner} בוטל והפריט הוחזר למלאי` : "השיוך בוטל והפריט הוחזר למלאי",
+          entity_type: "asset",
+          entity_id: assetId,
+          performed_by: user?.id,
+        } as any);
+      } catch (e) {
+        console.warn("activity_log insert (unassign) failed:", e);
+      }
+      toast({ title: "השיוך בוטל", description: `${asset.asset_name} הוחזר למלאי` });
+      qc.invalidateQueries({ queryKey: ["assets"] });
+      qc.invalidateQueries({ queryKey: ["asset-history", assetId] });
+    },
+  });
 
-  const handleToggleInactive = async () => {
-    try {
+  const handleToggleInactive = () => confirm({
+    title: isInactive ? "הפעלה מחדש" : "סימון כלא פעיל",
+    description: isInactive
+      ? <>להפעיל מחדש את <strong>{asset.asset_name}</strong>? התראות תפוגה יחודשו.</>
+      : <>לסמן את <strong>{asset.asset_name}</strong> כלא פעיל? הפוליסה תישאר בתיק לצורך תיעוד, אך לא יישלחו עליה התראות תפוגה.</>,
+    confirmLabel: isInactive ? "הפעל מחדש" : "סמן כלא פעיל",
+    onConfirm: async () => {
       await updateAsset.mutateAsync({ id: assetId, status: isInactive ? "in_use" : "inactive" });
       await supabase.from("activity_log").insert({
         action: isInactive ? "asset_reactivated" : "asset_deactivated",
@@ -159,23 +195,24 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
         entity_type: "asset",
         entity_id: assetId,
         company_id: asset.company_id,
+        performed_by: user?.id,
       } as any);
       toast({ title: isInactive ? "הפריט הופעל מחדש" : "הפריט סומן כלא פעיל" });
       qc.invalidateQueries({ queryKey: ["asset-history", assetId] });
-      setInactiveConfirm(false);
-    } catch (err: any) {
-      toast({ title: "שגיאה בעדכון סטטוס", description: err.message, variant: "destructive" });
-    }
-  };
+    },
+  });
 
   const handleDelete = async () => {
-    try {
-      await deleteMutation.mutateAsync(assetId);
-      toast({ title: "פריט נמחק" });
-      onBack();
-    } catch (err: any) {
-      toast({ title: "שגיאה במחיקה", description: err.message, variant: "destructive" });
-    }
+    const ok = await confirm({
+      title: "מחיקת פריט",
+      description: <>למחוק את <strong>{asset.asset_name}</strong>? פעולה זו אינה ניתנת לביטול.</>,
+      confirmLabel: "מחק פריט",
+      destructive: true,
+      onConfirm: () => deleteMutation.mutateAsync(assetId),
+    });
+    if (!ok) return;
+    toast({ title: "הפריט נמחק" });
+    onBack();
   };
 
   return (
@@ -225,7 +262,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
                       : ""
                   }
                 >
-                  <span className={cn("w-2 h-2 rounded-full", allValid ? "bg-green-500" : "bg-red-500")} />
+                  <span aria-hidden="true" className={cn("w-2 h-2 rounded-full", allValid ? "bg-green-500" : "bg-red-500")} />
                   {allValid ? "בתוקף" : "לא בתוקף"}
                 </span>
               )}
@@ -239,7 +276,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
             <p className="text-xs font-mono text-muted-foreground">{asset.asset_code}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {isAssignable && !asset.current_owner_id && !asset.assigned_site_id && (
             <Button onClick={() => { setResumeDirection("handover"); setAssignOpen(true); }} className="gap-2">
               <FileSignature className="w-4 h-4" />
@@ -252,14 +289,14 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
                 <FileSignature className="w-4 h-4" />
                 העברה
               </Button>
-              <Button variant="outline" onClick={() => setUnassignConfirm(true)} className="gap-2">
+              <Button variant="outline" onClick={() => { void handleUnassign(); }} className="gap-2">
                 <UserMinus className="w-4 h-4" />
                 ביטול שיוך
               </Button>
             </>
           )}
           {domain === "insurance" && (
-            <Button variant="outline" onClick={() => setInactiveConfirm(true)} className="gap-2">
+            <Button variant="outline" onClick={() => { void handleToggleInactive(); }} className="gap-2">
               {isInactive ? <PlayCircle className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
               {isInactive ? "הפעל מחדש" : "סמן כלא פעיל"}
             </Button>
@@ -268,9 +305,9 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
             <Pencil className="w-4 h-4" />
             ערוך
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => setDeleteConfirm(true)} title="מחק">
-            <Trash2 className="w-4 h-4 text-destructive" />
-          </Button>
+          <IconButton label="מחק פריט" onClick={() => { void handleDelete(); }}>
+            <Trash2 className="text-destructive" aria-hidden="true" />
+          </IconButton>
         </div>
       </div>
 
@@ -454,7 +491,14 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
                 <History className="w-4 h-4" />
                 היסטוריית הקצאות
               </h2>
-              {!history || history.length === 0 ? (
+              {historyLoading ? (
+                <p role="status" className="text-xs text-muted-foreground">טוען היסטוריה…</p>
+              ) : historyError ? (
+                <div role="alert" className="space-y-2 text-xs">
+                  <p className="text-destructive">לא הצלחנו לטעון את ההיסטוריה.</p>
+                  <Button variant="outline" size="sm" onClick={() => { void refetchHistory(); }}>נסה שוב</Button>
+                </div>
+              ) : !history || history.length === 0 ? (
                 <p className="text-xs text-muted-foreground">אין היסטוריה רשומה</p>
               ) : (
                 <ul className="space-y-2">
@@ -482,57 +526,6 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
       <EditAssetDialog open={editOpen} onOpenChange={setEditOpen} asset={asset} />
       <HandoverFlow open={assignOpen} onOpenChange={setAssignOpen} asset={asset} direction={resumeDirection} />
 
-      <AlertDialog open={unassignConfirm} onOpenChange={setUnassignConfirm}>
-        <AlertDialogContent dir="rtl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>ביטול שיוך</AlertDialogTitle>
-            <AlertDialogDescription>
-              האם לבטל את השיוך של <strong>{asset.asset_name}</strong>?
-              הפריט יחזור למלאי.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>חזרה</AlertDialogCancel>
-            <AlertDialogAction onClick={handleUnassign}>בטל שיוך</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={inactiveConfirm} onOpenChange={setInactiveConfirm}>
-        <AlertDialogContent dir="rtl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{isInactive ? "הפעלה מחדש" : "סימון כלא פעיל"}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {isInactive
-                ? <>להפעיל מחדש את <strong>{asset.asset_name}</strong>? התראות תפוגה יחודשו.</>
-                : <>לסמן את <strong>{asset.asset_name}</strong> כלא פעיל? הפוליסה תישאר בתיק לצורך תיעוד, אך לא יישלחו עליה התראות תפוגה.</>}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>ביטול</AlertDialogCancel>
-            <AlertDialogAction onClick={handleToggleInactive}>
-              {isInactive ? "הפעל מחדש" : "סמן כלא פעיל"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={deleteConfirm} onOpenChange={setDeleteConfirm}>
-        <AlertDialogContent dir="rtl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>מחיקת פריט</AlertDialogTitle>
-            <AlertDialogDescription>
-              למחוק את <strong>{asset.asset_name}</strong>? פעולה זו אינה ניתנת לביטול.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>ביטול</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={handleDelete}>
-              מחק
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

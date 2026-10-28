@@ -53,11 +53,12 @@ export function SignLinkDialog({ open, onOpenChange, links, employeeName, emailS
             <div key={url} className="space-y-2">
               {links.length > 1 && <div className="text-xs text-muted-foreground">טופס {i + 1}</div>}
               <div className="flex gap-2">
-                <Input readOnly value={url} dir="ltr" className="text-xs" onFocus={(e) => e.currentTarget.select()} />
-                <Button type="button" variant="outline" size="icon" onClick={() => copy(url, i)}>
-                  {copied === i ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                <Input readOnly value={url} dir="ltr" className="text-xs" aria-label={links.length > 1 ? `קישור לחתימה — טופס ${i + 1}` : "קישור לחתימה"} onFocus={(e) => e.currentTarget.select()} />
+                <Button type="button" variant="outline" size="icon" onClick={() => copy(url, i)} aria-label={copied === i ? "הקישור הועתק" : "העתק קישור"} title="העתק קישור">
+                  {copied === i ? <Check className="w-4 h-4 text-green-600" aria-hidden="true" /> : <Copy className="w-4 h-4" aria-hidden="true" />}
                 </Button>
               </div>
+              <span role="status" className="sr-only">{copied === i ? "הקישור הועתק" : ""}</span>
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"

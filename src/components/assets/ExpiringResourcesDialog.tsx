@@ -9,14 +9,16 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   targets: ExpiringResourceTarget[];
+  /** Defaults to the 30-day list title. */
+  title?: string;
 }
 
-export function ExpiringResourcesDialog({ open, onOpenChange, targets }: Props) {
+export function ExpiringResourcesDialog({ open, onOpenChange, targets, title = "משאבים שתוקפם פג תוך 30 יום" }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent dir="rtl" className="w-[calc(100%-2rem)] max-w-2xl max-h-[85dvh] overflow-hidden">
         <DialogHeader className="pl-8 text-right">
-          <DialogTitle className="tracking-normal">משאבים שתוקפם פג תוך 30 יום</DialogTitle>
+          <DialogTitle className="tracking-normal">{title}</DialogTitle>
           <DialogDescription>{targets.length} משאבים</DialogDescription>
         </DialogHeader>
         <ul className="divide-y divide-border overflow-y-auto max-h-[60dvh]" aria-label="משאבים קרובים לפקיעת תוקף">

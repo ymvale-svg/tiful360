@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { useConfirm } from "@/components/feedback/ConfirmDialog";
 import {
   SUBSCRIPTION_PROVIDERS,
   SUBSCRIPTION_STATUS_LABELS,
@@ -34,6 +35,7 @@ export function VehicleSubscriptionDialog({
   const { toast } = useToast();
   const save = useSaveVehicleSubscription();
   const remove = useDeleteVehicleSubscription();
+  const confirm = useConfirm();
   const [provider, setProvider] = useState<string>(SUBSCRIPTION_PROVIDERS[0]);
   const [customProvider, setCustomProvider] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -88,8 +90,9 @@ export function VehicleSubscriptionDialog({
 
         <div className="space-y-3">
           <div>
-            <Label className="text-xs text-muted-foreground">ספק</Label>
+            <Label htmlFor="vsub-provider" className="text-xs text-muted-foreground">ספק</Label>
             <select
+              id="vsub-provider"
               value={provider}
               onChange={(e) => setProvider(e.target.value)}
               className="w-full mt-1 h-10 px-2 rounded-md border border-input bg-background text-sm"
@@ -97,10 +100,11 @@ export function VehicleSubscriptionDialog({
               {SUBSCRIPTION_PROVIDERS.map((p) => (
                 <option key={p} value={p}>{p}</option>
               ))}
-              <option value={CUSTOM}>➕ ספק / כביש אגרה אחר…</option>
+              <option value={CUSTOM}>+ ספק / כביש אגרה אחר…</option>
             </select>
             {provider === CUSTOM && (
               <Input
+                aria-label="שם ספק או כביש אגרה חדש"
                 value={customProvider}
                 onChange={(e) => setCustomProvider(e.target.value)}
                 placeholder="הקלד שם ספק או כביש אגרה חדש"
@@ -111,13 +115,14 @@ export function VehicleSubscriptionDialog({
           </div>
 
           <div>
-            <Label className="text-xs text-muted-foreground">תאריך התחלה</Label>
-            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="mt-1 text-left" dir="ltr" />
+            <Label htmlFor="vsub-start" className="text-xs text-muted-foreground">תאריך התחלה</Label>
+            <Input id="vsub-start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="mt-1 text-left" dir="ltr" />
           </div>
 
           <div>
-            <Label className="text-xs text-muted-foreground">סטטוס</Label>
+            <Label htmlFor="vsub-status" className="text-xs text-muted-foreground">סטטוס</Label>
             <select
+              id="vsub-status"
               value={status}
               onChange={(e) => setStatus(e.target.value)}
               className="w-full mt-1 h-10 px-2 rounded-md border border-input bg-background text-sm"
@@ -129,8 +134,8 @@ export function VehicleSubscriptionDialog({
           </div>
 
           <div>
-            <Label className="text-xs text-muted-foreground">הערות</Label>
-            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="mt-1" />
+            <Label htmlFor="vsub-notes" className="text-xs text-muted-foreground">הערות</Label>
+            <Textarea id="vsub-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="mt-1" />
           </div>
         </div>
 
@@ -143,14 +148,16 @@ export function VehicleSubscriptionDialog({
               className="text-destructive hover:text-destructive"
               disabled={remove.isPending}
               onClick={async () => {
-                if (!window.confirm("למחוק את המנוי?")) return;
-                try {
-                  await remove.mutateAsync(subscription.id);
-                  toast({ title: "המנוי נמחק" });
-                  onOpenChange(false);
-                } catch (e: any) {
-                  toast({ title: "שגיאה במחיקה", description: e.message, variant: "destructive" });
-                }
+                const ok = await confirm({
+                  title: "למחוק את המנוי?",
+                  description: vehicleLabel ? `המנוי של ${vehicleLabel} יימחק לצמיתות.` : "המנוי יימחק לצמיתות.",
+                  confirmLabel: "מחק מנוי",
+                  destructive: true,
+                  onConfirm: () => remove.mutateAsync(subscription.id),
+                });
+                if (!ok) return;
+                toast({ title: "המנוי נמחק" });
+                onOpenChange(false);
               }}
             >
               מחיקה

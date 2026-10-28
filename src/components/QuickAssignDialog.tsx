@@ -7,6 +7,9 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Zap, Plus, X, ArrowLeft, Package } from "lucide-react";
 import { useEmployees, useAssets } from "@/hooks/useData";
 import { HandoverFlow } from "@/components/handover/HandoverFlow";
+import { MultiHandoverFlow } from "@/components/handover/MultiHandoverFlow";
+import { IconButton } from "@/components/feedback/IconButton";
+import { getDomain } from "@/lib/assetDomains";
 import { advanceQueue, closeFollowsAssign } from "@/lib/quickAssignQueue";
 
 interface Props {
@@ -22,12 +25,14 @@ export function QuickAssignDialog({ open, onOpenChange }: Props) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [picker, setPicker] = useState("");
   const [queueIndex, setQueueIndex] = useState<number | null>(null);
+  const [multiOpen, setMultiOpen] = useState(false);
 
   const reset = () => {
     setEmployeeId("");
     setSelectedIds([]);
     setPicker("");
     setQueueIndex(null);
+    setMultiOpen(false);
   };
 
   const handleOpenChange = (o: boolean) => {
@@ -83,7 +88,14 @@ export function QuickAssignDialog({ open, onOpenChange }: Props) {
 
   const canStart = !!employeeId && selectedIds.length > 0;
 
-  const startQueue = () => setQueueIndex(0);
+  // Items from one domain share a single protocol (one signature); mixed domains need one each.
+  const singleDomain = selectedAssets.length > 1
+    && new Set(selectedAssets.map((a: any) => getDomain(a.asset_categories))).size === 1;
+
+  const startQueue = () => {
+    if (singleDomain) setMultiOpen(true);
+    else setQueueIndex(0);
+  };
 
   // HandoverFlow calls onAssigned() and then closes itself; that close must
   // not abort the rest of the batch.
@@ -101,7 +113,7 @@ export function QuickAssignDialog({ open, onOpenChange }: Props) {
 
   return (
     <>
-      <Dialog open={open && queueIndex === null} onOpenChange={handleOpenChange}>
+      <Dialog open={open && queueIndex === null && !multiOpen} onOpenChange={handleOpenChange}>
         <DialogContent className="max-w-lg" dir="rtl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -109,13 +121,13 @@ export function QuickAssignDialog({ open, onOpenChange }: Props) {
               שיוך מהיר לעובד
             </DialogTitle>
             <DialogDescription>
-              בחרו עובד ופריט אחד או יותר. נריץ אשף חתימה/מסירה לכל פריט בנפרד.
+              בחרו עובד ופריט אחד או יותר. פריטים מאותו תחום נמסרים בפרוטוקול אחד; פריטים מתחומים שונים — פרוטוקול לכל פריט.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 mt-2">
-            <div>
-              <label className="text-sm font-medium mb-1 block">עובד מקבל</label>
+            <div role="group" aria-labelledby="qa-employee-label">
+              <span id="qa-employee-label" className="text-sm font-medium mb-1 block">עובד מקבל</span>
               <SearchableSelect
                 value={employeeId}
                 onChange={(v) => {
@@ -128,8 +140,8 @@ export function QuickAssignDialog({ open, onOpenChange }: Props) {
               />
             </div>
 
-            <div>
-              <label className="text-sm font-medium mb-1 block">פריטים לשיוך</label>
+            <div role="group" aria-labelledby="qa-items-label">
+              <span id="qa-items-label" className="text-sm font-medium mb-1 block">פריטים לשיוך</span>
               <div className="flex gap-2">
                 <div className="flex-1">
                   <SearchableSelect
@@ -144,7 +156,6 @@ export function QuickAssignDialog({ open, onOpenChange }: Props) {
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
                   onClick={addSelected}
                   disabled={!picker}
                   className="shrink-0 gap-1"
@@ -171,14 +182,14 @@ export function QuickAssignDialog({ open, onOpenChange }: Props) {
                           {a.asset_categories.category_name}
                         </span>
                       )}
-                      <button
+                      <IconButton
                         type="button"
+                        label={`הסר את ${a.asset_name}`}
                         onClick={() => removeSelected(a.id)}
-                        className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive shrink-0"
-                        aria-label="הסר"
+                        className="shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
+                        <X />
+                      </IconButton>
                     </div>
                   ))}
                 </div>
@@ -218,6 +229,19 @@ export function QuickAssignDialog({ open, onOpenChange }: Props) {
           asset={currentAsset}
           defaultEmployeeId={employeeId}
           onAssigned={handleAssigned}
+        />
+      )}
+
+      {multiOpen && (
+        <MultiHandoverFlow
+          open={true}
+          onOpenChange={(o) => {
+            // Cancelling the protocol returns to the selection, keeping the chosen items.
+            if (!o) setMultiOpen(false);
+          }}
+          assets={selectedAssets as any[]}
+          defaultEmployeeId={employeeId}
+          onAssigned={() => setTimeout(() => handleOpenChange(false), 0)}
         />
       )}
 
