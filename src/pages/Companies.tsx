@@ -310,20 +310,21 @@ export default function Companies() {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="gap-1">
-                        <Users className="w-3 h-3" />
+                        <Users className="w-3 h-3" aria-hidden="true" />
                         {countForCompany(c.id)}
+                        <span className="sr-only">משתמשים</span>
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {format(new Date(c.created_at), "dd/MM/yyyy", { locale: he })}
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(c)} className="gap-1">
-                        <Pencil className="w-3 h-3" />
+                      <Button variant="ghost" size="sm" onClick={() => handleEdit(c)} className="gap-1" aria-label={`ערוך את ${c.name}`}>
+                        <Pencil className="w-3 h-3" aria-hidden="true" />
                         ערוך
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => { setDeleteConfirmName(""); setDeleteTarget(c); }} className="gap-1 text-destructive hover:text-destructive">
-                        <Trash2 className="w-3 h-3" />
+                      <Button variant="ghost" size="sm" onClick={() => { setDeleteConfirmName(""); setDeleteTarget(c); }} className="gap-1 text-destructive hover:text-destructive" aria-label={`מחק את ${c.name}`}>
+                        <Trash2 className="w-3 h-3" aria-hidden="true" />
                         מחק
                       </Button>
                     </TableCell>

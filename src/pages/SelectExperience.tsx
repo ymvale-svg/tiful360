@@ -67,11 +67,12 @@ export default function SelectExperience() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <button
+            type="button"
             onClick={goOps}
-            className="group bg-card rounded-2xl border border-border shadow-card p-6 text-right hover:border-primary hover:shadow-lg transition-all"
+            className="group bg-card rounded-2xl border border-border shadow-card p-6 text-right hover:border-primary hover:shadow-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
-              <LayoutDashboard className="w-7 h-7 text-primary" />
+              <LayoutDashboard className="w-7 h-7 text-primary" aria-hidden="true" />
             </div>
             <h2 className="text-lg font-semibold mb-1">תפעול 360</h2>
             <p className="text-sm text-muted-foreground">
@@ -80,11 +81,12 @@ export default function SelectExperience() {
           </button>
 
           <button
+            type="button"
             onClick={goPortal}
-            className="group bg-card rounded-2xl border border-border shadow-card p-6 text-right hover:border-primary hover:shadow-lg transition-all"
+            className="group bg-card rounded-2xl border border-border shadow-card p-6 text-right hover:border-primary hover:shadow-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
-              <UserRound className="w-7 h-7 text-primary" />
+              <UserRound className="w-7 h-7 text-primary" aria-hidden="true" />
             </div>
             <h2 className="text-lg font-semibold mb-1">פורטל עובדים</h2>
             <p className="text-sm text-muted-foreground">

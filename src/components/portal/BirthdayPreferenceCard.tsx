@@ -83,7 +83,7 @@ export function BirthdayPreferenceCard({ employee }: Props) {
   return (
     <div className="bg-card rounded-xl border border-border/50 shadow-card p-5 space-y-4">
       <div className="flex items-center gap-2">
-        <Cake className="w-4 h-4 text-primary" />
+        <Cake className="w-4 h-4 text-primary" aria-hidden="true" />
         <h3 className="font-semibold text-sm">הגדרות יום הולדת</h3>
       </div>
 
@@ -105,24 +105,26 @@ export function BirthdayPreferenceCard({ employee }: Props) {
           </p>
           <div className="grid grid-cols-3 gap-2 text-right">
             <div>
-              <Label className="text-xs block text-right">יום</Label>
+              <Label htmlFor="bday-heb-day" className="text-xs block text-right">יום</Label>
               <Input
+                id="bday-heb-day"
+                aria-describedby={dayInvalid ? "bday-heb-day-error" : undefined}
                 type="text"
                 inputMode="text"
                 value={dayText}
                 onChange={(e) => setDayText(e.target.value)}
                 placeholder='לדוג׳ כ"ב'
-                aria-invalid={dayInvalid}
+                aria-invalid={dayInvalid || undefined}
                 className="text-right"
               />
               {dayInvalid && (
-                <p className="text-[11px] text-destructive mt-1 text-right">יום לא תקין</p>
+                <p id="bday-heb-day-error" role="alert" className="text-xs text-destructive mt-1 text-right">יום לא תקין</p>
               )}
             </div>
             <div>
-              <Label className="text-xs block text-right">חודש</Label>
+              <Label htmlFor="bday-heb-month" className="text-xs block text-right">חודש</Label>
               <Select value={month} onValueChange={setMonth}>
-                <SelectTrigger className="text-right"><SelectValue placeholder="חודש" /></SelectTrigger>
+                <SelectTrigger id="bday-heb-month" className="text-right"><SelectValue placeholder="חודש" /></SelectTrigger>
                 <SelectContent>
                   {monthOptions.map((m) => (
                     <SelectItem key={m.value} value={String(m.value)}>{m.label}</SelectItem>
@@ -131,18 +133,20 @@ export function BirthdayPreferenceCard({ employee }: Props) {
               </Select>
             </div>
             <div>
-              <Label className="text-xs block text-right">שנה (עברית)</Label>
+              <Label htmlFor="bday-heb-year" className="text-xs block text-right">שנה (עברית)</Label>
               <Input
+                id="bday-heb-year"
+                aria-describedby={yearInvalid ? "bday-heb-year-error" : undefined}
                 type="text"
                 inputMode="text"
                 value={yearText}
                 onChange={(e) => setYearText(e.target.value)}
                 placeholder='לדוג׳ תשמ"ה'
-                aria-invalid={yearInvalid}
+                aria-invalid={yearInvalid || undefined}
                 className="text-right"
               />
               {yearInvalid && (
-                <p className="text-[11px] text-destructive mt-1 text-right">שנה לא תקינה</p>
+                <p id="bday-heb-year-error" role="alert" className="text-xs text-destructive mt-1 text-right">שנה לא תקינה</p>
               )}
             </div>
           </div>
@@ -153,8 +157,8 @@ export function BirthdayPreferenceCard({ employee }: Props) {
       )}
 
       <div className="pt-1">
-        <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
-          {save.isPending ? "שומר..." : "שמור"}
+        <Button onClick={() => save.mutate()} loading={save.isPending} loadingText="שומר…">
+          שמור
         </Button>
       </div>
     </div>

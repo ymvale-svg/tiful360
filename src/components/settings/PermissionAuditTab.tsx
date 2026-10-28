@@ -6,6 +6,8 @@ import { useCompany } from "@/hooks/useCompany";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { exportToExcel } from "@/lib/exportExcel";
+import { toast } from "sonner";
+import { StateView } from "@/components/feedback/StateView";
 import { AUDIT_ACTION_LABELS, auditActionLabel, formatAuditDate } from "@/lib/permissionAudit";
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
@@ -48,7 +50,20 @@ export function PermissionAuditTab() {
   const [search, setSearch] = useState("");
   const [action, setAction] = useState("");
 
-  const { data: log, isLoading, error } = useQuery({
+  const [pdfBusy, setPdfBusy] = useState<"log" | "snapshot" | null>(null);
+  /** Building the Hebrew PDF loads fonts and can take a few seconds: show progress, report failures. */
+  const makePdf = async (which: "log" | "snapshot", ...args: Parameters<typeof downloadPdf>) => {
+    if (pdfBusy) return;
+    setPdfBusy(which);
+    try {
+      await downloadPdf(...args);
+    } catch (e) {
+      toast.error("יצירת ה-PDF נכשלה", { description: e instanceof Error ? e.message : "נסו שוב." });
+    } finally {
+      setPdfBusy(null);
+    }
+  };
+  const { data: log, isLoading, error, refetch } = useQuery({
     queryKey: ["permission-audit", activeCompanyId, from, to],
     enabled: !!activeCompanyId,
     queryFn: async () => {
@@ -106,28 +121,37 @@ export function PermissionAuditTab() {
           <p className="text-sm text-muted-foreground">כל שינוי בתפקידים, בגישה לחברה, בחסימת משתמשים ובגישות דיגיטליות. הרישומים אינם ניתנים לעריכה או מחיקה.</p>
         </div>
         <div className="flex flex-wrap items-end gap-3">
-          <label className="text-xs space-y-1">מתאריך<Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
-          <label className="text-xs space-y-1">עד תאריך<Input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
-          <label className="text-xs space-y-1">סוג פעולה
-            <select className="flex h-10 rounded-md border border-input bg-background px-3 text-sm" value={action} onChange={(e) => setAction(e.target.value)}>
+          <div className="text-sm space-y-1"><label htmlFor="audit-from" className="block">מתאריך</label><Input id="audit-from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></div>
+          <div className="text-sm space-y-1"><label htmlFor="audit-to" className="block">עד תאריך</label><Input id="audit-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} /></div>
+          <div className="text-sm space-y-1"><label htmlFor="audit-action" className="block">סוג פעולה</label>
+            <select id="audit-action" className="flex h-10 rounded-md border border-input bg-background px-3 text-sm" value={action} onChange={(e) => setAction(e.target.value)}>
               <option value="">הכל</option>
               {Object.entries(AUDIT_ACTION_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
-          </label>
-          <label className="text-xs space-y-1 flex-1 min-w-[180px]">חיפוש (מבצע / משתמש)<Input value={search} onChange={(e) => setSearch(e.target.value)} /></label>
-          <Button variant="outline" disabled={!rows.length} onClick={() => exportToExcel(rows, logHeaders, `לוג הרשאות ${from} עד ${to}`)}><FileSpreadsheet className="w-4 h-4" />אקסל</Button>
-          <Button variant="outline" disabled={!rows.length} onClick={() => downloadPdf(`לוג הרשאות ${from} – ${to}`, logHeaders.map((h) => h.label), rows.map((r) => logHeaders.map((h) => (r as any)[h.key])), `לוג הרשאות ${from} עד ${to}`)}><FileDown className="w-4 h-4" />PDF</Button>
+          </div>
+          <div className="text-sm space-y-1 flex-1 min-w-[180px]"><label htmlFor="audit-search" className="block">חיפוש (מבצע / משתמש)</label><Input id="audit-search" type="search" value={search} onChange={(e) => setSearch(e.target.value)} /></div>
+          <Button variant="outline" disabled={!rows.length} onClick={() => exportToExcel(rows, logHeaders, `לוג הרשאות ${from} עד ${to}`)}><FileSpreadsheet className="w-4 h-4" aria-hidden="true" />אקסל</Button>
+          <Button variant="outline" disabled={!rows.length || (!!pdfBusy && pdfBusy !== "log")} loading={pdfBusy === "log"} loadingText="מכין PDF…" onClick={() => makePdf("log", `לוג הרשאות ${from} – ${to}`, logHeaders.map((h) => h.label), rows.map((r) => logHeaders.map((h) => (r as any)[h.key])), `לוג הרשאות ${from} עד ${to}`)}><FileDown className="w-4 h-4" aria-hidden="true" />PDF</Button>
         </div>
-        {error ? <p className="text-sm text-destructive">שגיאה בטעינת הלוג</p> : isLoading ? <p className="text-sm text-muted-foreground">טוען...</p> : rows.length === 0 ? (
-          <p className="text-sm text-muted-foreground">אין רישומים בטווח שנבחר. הרישום פעיל מ-12/10/2026.</p>
-        ) : (
+        <StateView
+          loading={isLoading}
+          error={error}
+          onRetry={() => { void refetch(); }}
+          label="את לוג ההרשאות"
+          isEmpty={rows.length === 0}
+          empty={{
+            title: (search || action) ? "אין רישומים שתואמים לסינון" : "אין רישומים בטווח שנבחר",
+            description: "הרישום פעיל מ-12/10/2026.",
+            action: (search || action) ? <Button variant="outline" onClick={() => { setSearch(""); setAction(""); }}>נקה סינון</Button> : undefined,
+          }}
+        >
           <div className="overflow-x-auto rounded-lg border border-border">
             <table className="w-full text-sm">
               <thead className="bg-muted/50"><tr>{logHeaders.map((h) => <th key={h.key} className="text-start p-2 font-medium">{h.label}</th>)}</tr></thead>
               <tbody>{rows.map((r, i) => <tr key={i} className="border-t border-border">{logHeaders.map((h) => <td key={h.key} className="p-2">{(r as any)[h.key]}</td>)}</tr>)}</tbody>
             </table>
           </div>
-        )}
+        </StateView>
       </div>
 
       <div className="bg-card rounded-xl border border-border/50 shadow-card p-5 space-y-4">
@@ -137,8 +161,8 @@ export function PermissionAuditTab() {
             <p className="text-sm text-muted-foreground">מי מחזיק איזה תפקיד בחברה ברגע זה ({snapRows.length} משתמשים).</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" disabled={!snapRows.length} onClick={() => exportToExcel(snapRows, snapHeaders, `תמונת מצב הרשאות ${todayIso()}`)}><FileSpreadsheet className="w-4 h-4" />אקסל</Button>
-            <Button variant="outline" disabled={!snapRows.length} onClick={() => downloadPdf("תמונת מצב הרשאות", snapHeaders.map((h) => h.label), snapRows.map((r) => snapHeaders.map((h) => (r as any)[h.key])), `תמונת מצב הרשאות ${todayIso()}`)}><FileDown className="w-4 h-4" />PDF</Button>
+            <Button variant="outline" disabled={!snapRows.length} onClick={() => exportToExcel(snapRows, snapHeaders, `תמונת מצב הרשאות ${todayIso()}`)}><FileSpreadsheet className="w-4 h-4" aria-hidden="true" />אקסל</Button>
+            <Button variant="outline" disabled={!snapRows.length || (!!pdfBusy && pdfBusy !== "snapshot")} loading={pdfBusy === "snapshot"} loadingText="מכין PDF…" onClick={() => makePdf("snapshot", "תמונת מצב הרשאות", snapHeaders.map((h) => h.label), snapRows.map((r) => snapHeaders.map((h) => (r as any)[h.key])), `תמונת מצב הרשאות ${todayIso()}`)}><FileDown className="w-4 h-4" aria-hidden="true" />PDF</Button>
           </div>
         </div>
         <div className="overflow-x-auto rounded-lg border border-border max-h-[420px]">

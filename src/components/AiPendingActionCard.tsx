@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, X, AlertCircle, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -93,6 +93,9 @@ function formatValue(v: any): string {
 export function AiPendingActionCard({ action, loading, onApprove, onReject }: Props) {
   const [resolved, setResolved] = useState<Record<string, string>>({});
   const [showRaw, setShowRaw] = useState(false);
+  const headingRef = useRef<HTMLParagraphElement>(null);
+  // Move focus to the card heading (not "אשר ובצע"), so a stray Enter can't run the action.
+  useEffect(() => { headingRef.current?.focus(); }, []);
 
   const args = action.args ?? {};
   const values: Record<string, any> = args.values ?? args;
@@ -138,7 +141,7 @@ export function AiPendingActionCard({ action, loading, onApprove, onReject }: Pr
     >
       <div className="flex items-center gap-2 px-3 py-2 bg-amber-100/60 dark:bg-amber-900/30 border-b border-amber-200/60 dark:border-amber-800/60">
         <AlertCircle className="w-4 h-4 text-amber-700 dark:text-amber-300" aria-hidden />
-        <p className="text-sm font-semibold text-foreground">נדרש אישור</p>
+        <p ref={headingRef} tabIndex={-1} className="text-sm font-semibold text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded">נדרש אישור</p>
         <span className="text-xs text-muted-foreground mr-auto">{title}</span>
       </div>
 
@@ -173,8 +176,9 @@ export function AiPendingActionCard({ action, loading, onApprove, onReject }: Pr
       )}
 
       <button
+        type="button"
         onClick={() => setShowRaw((s) => !s)}
-        className="w-full px-3 py-1.5 text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted/50 flex items-center justify-center gap-1 border-t border-border/60"
+        className="w-full min-h-10 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 flex items-center justify-center gap-1 border-t border-border/60"
         aria-expanded={showRaw}
       >
         {showRaw ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
@@ -183,7 +187,7 @@ export function AiPendingActionCard({ action, loading, onApprove, onReject }: Pr
       {showRaw && (
         <pre
           dir="ltr"
-          className="text-[11px] bg-muted/40 p-2 overflow-x-auto max-h-40 border-t border-border/60"
+          className="text-xs bg-muted/40 p-2 overflow-x-auto max-h-40 border-t border-border/60"
         >
           {JSON.stringify(args, null, 2)}
         </pre>
@@ -191,6 +195,7 @@ export function AiPendingActionCard({ action, loading, onApprove, onReject }: Pr
 
       <div className="flex gap-2 p-3 bg-background border-t border-border/60">
         <button
+          type="button"
           onClick={onReject}
           disabled={loading}
           className={cn(
@@ -204,9 +209,9 @@ export function AiPendingActionCard({ action, loading, onApprove, onReject }: Pr
           <X className="w-4 h-4" /> ביטול
         </button>
         <button
+          type="button"
           onClick={onApprove}
           disabled={loading}
-          autoFocus
           className={cn(
             "flex-[2] min-h-11 rounded-lg px-3 text-sm font-semibold",
             "bg-primary text-primary-foreground hover:opacity-90",

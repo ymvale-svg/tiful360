@@ -133,6 +133,11 @@
   }
 }
 
+/* Height that bottom-fixed floaters must clear: the portal's phone tab bar (md+ it is inline). */
+@media (max-width: 767px) {
+  html.has-portal-tabbar { --floating-bottom: 4.5rem; }
+}
+
 @layer base {
   * {
     @apply border-border;

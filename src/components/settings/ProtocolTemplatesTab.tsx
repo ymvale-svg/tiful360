@@ -11,10 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { useConfirm } from "@/components/feedback/ConfirmDialog";
 import {
   FileText, Save, RotateCcw, Eye, Plus, Search, ChevronLeft, ChevronDown,
   Building2, ListTree, Trash2, AlertCircle,
@@ -78,6 +75,25 @@ export function ProtocolTemplatesTab() {
   });
   const [newOpen, setNewOpen] = useState(false);
   const [treeOpen, setTreeOpen] = useState(false);
+  // Reported by the editor, so switching scope in the tree never silently drops unsaved edits.
+  const [editorDirty, setEditorDirty] = useState(false);
+  const confirm = useConfirm();
+  const selectScope = async (s: ScopeSelection) => {
+    const same = s.protocolType === selection.protocolType && s.categoryId === selection.categoryId && s.groupId === selection.groupId;
+    if (!same && editorDirty) {
+      const ok = await confirm({
+        title: "לעבור בלי לשמור?",
+        description: `השינויים בתבנית "${selection.label}" לא נשמרו ויאבדו.`,
+        confirmLabel: "עבור בלי לשמור",
+        cancelLabel: "המשך לערוך",
+        destructive: true,
+      });
+      if (!ok) return false;
+    }
+    setSelection(s);
+    if (!same) setEditorDirty(false);
+    return true;
+  };
 
   if (!canManage) {
     return (
@@ -98,7 +114,7 @@ export function ProtocolTemplatesTab() {
       templates={templates}
       companyId={activeCompanyId}
       selection={selection}
-      onSelect={(s) => { setSelection(s); setTreeOpen(false); }}
+      onSelect={(s) => { void selectScope(s).then((ok) => { if (ok) setTreeOpen(false); }); }}
       onNew={() => { setNewOpen(true); setTreeOpen(false); }}
     />
   );
@@ -107,7 +123,7 @@ export function ProtocolTemplatesTab() {
     <div className="space-y-4">
       <div className="bg-card rounded-xl border border-border/50 shadow-card p-5">
         <div className="flex items-center gap-3 mb-2">
-          <FileText className="w-5 h-5 text-primary" />
+          <FileText className="w-5 h-5 text-primary" aria-hidden="true" />
           <h3 className="font-semibold">תבניות פרוטוקולים</h3>
         </div>
         <p className="text-xs text-muted-foreground">
@@ -121,7 +137,7 @@ export function ProtocolTemplatesTab() {
         <Sheet open={treeOpen} onOpenChange={setTreeOpen}>
           <SheetTrigger asChild>
             <Button variant="outline" className="w-full gap-2">
-              <ListTree className="w-4 h-4" />
+              <ListTree className="w-4 h-4" aria-hidden="true" />
               {selection.label}
             </Button>
           </SheetTrigger>
@@ -142,6 +158,7 @@ export function ProtocolTemplatesTab() {
           companyId={activeCompanyId}
           companyName={activeCompany?.name ?? ""}
           logoUrl={activeCompany?.logo_url ?? null}
+          onDirtyChange={setEditorDirty}
         />
         <div className="hidden md:block">{tree}</div>
       </div>
@@ -153,7 +170,7 @@ export function ProtocolTemplatesTab() {
         groups={groups}
         templates={templates}
         companyId={activeCompanyId}
-        onCreated={(s) => setSelection(s)}
+        onCreated={(s) => { void selectScope(s); }}
       />
     </div>
   );
@@ -199,17 +216,19 @@ function ScopeTree({
 
   return (
     <div className="bg-card rounded-xl border border-border/50 shadow-card p-3 space-y-3 md:sticky md:top-4">
-      <Button size="sm" className="w-full gap-1.5" onClick={onNew}>
-        <Plus className="w-4 h-4" /> פרוטוקול חדש
+      <Button className="w-full gap-1.5" onClick={onNew}>
+        <Plus className="w-4 h-4" aria-hidden="true" /> פרוטוקול חדש
       </Button>
 
       <div className="relative">
-        <Search className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <Search className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" aria-hidden="true" />
         <Input
+          type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="חיפוש קטגוריה או פרוטוקול"
-          className="h-8 pr-8 text-xs"
+          aria-label="חיפוש בעץ השיוך"
+          className="h-10 pr-8 text-sm"
         />
       </div>
 
@@ -247,9 +266,10 @@ function ScopeTree({
               <button
                 type="button"
                 onClick={() => setOpenDomains((s) => ({ ...s, [d]: !open }))}
-                className="w-full flex items-center gap-1.5 px-1 py-1.5 rounded-md text-xs font-semibold hover:bg-muted/60"
+                aria-expanded={open}
+                className="w-full flex items-center gap-1.5 px-1 min-h-9 rounded-md text-sm font-semibold hover:bg-muted/60"
               >
-                {open ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
+                {open ? <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" /> : <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" />}
                 {DOMAIN_META[d].title}
               </button>
               {open && cats.map((c) => {
@@ -262,12 +282,13 @@ function ScopeTree({
                       {catGroups.length > 0 && (
                         <button
                           type="button"
-                          aria-label="הצג תתי-קטגוריות"
+                          aria-label={`${catOpen ? "הסתר" : "הצג"} תתי-קטגוריות של ${c.category_name}`}
+                          aria-expanded={catOpen}
                           onClick={() => setOpenCats((s) => ({ ...s, [c.id]: !catOpen }))}
-                          className="px-1 text-muted-foreground hover:text-foreground"
+                          className="px-2 min-w-9 text-muted-foreground hover:text-foreground rounded-md"
                           style={{ marginInlineStart: 12 }}
                         >
-                          {catOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
+                          {catOpen ? <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" /> : <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" />}
                         </button>
                       )}
                       <NodeRow
@@ -326,9 +347,10 @@ function NodeRow({
     <button
       type="button"
       onClick={onClick}
+      aria-current={active ? "true" : undefined}
       style={{ paddingInlineStart: 8 + depth * 12 }}
       className={cn(
-        "w-full text-right flex items-center justify-between gap-2 py-1.5 pl-2 rounded-md text-xs transition-colors",
+        "w-full text-right flex items-center justify-between gap-2 min-h-9 py-1.5 pl-2 rounded-md text-sm transition-colors",
         active ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted/60",
         !custom && !active && "text-muted-foreground",
         className
@@ -336,12 +358,12 @@ function NodeRow({
     >
       <span className="truncate">
         {label}
-        {hint && <span className="text-[10px] text-muted-foreground/70 mr-1.5">· {hint}</span>}
+        {hint && <span className="text-xs text-muted-foreground mr-1.5">· {hint}</span>}
       </span>
       <span
         className={cn(
-          "shrink-0 text-[10px] px-1.5 py-0.5 rounded",
-          custom ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground/70"
+          "shrink-0 text-xs px-1.5 py-0.5 rounded",
+          custom ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
         )}
       >
         {custom ? "מותאם" : "יורש"}
@@ -353,20 +375,21 @@ function NodeRow({
 /* ------------------------------ editor panel ------------------------------ */
 
 function TemplateEditorPanel({
-  selection, templates, companyId, companyName, logoUrl,
+  selection, templates, companyId, companyName, logoUrl, onDirtyChange,
 }: {
   selection: ScopeSelection;
   templates: any[];
   companyId: string;
   companyName: string;
   logoUrl: string | null;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const { protocolType, categoryId, groupId } = selection;
   const { toast } = useToast();
   const upsert = useUpsertProtocolTemplate();
   const del = useDeleteProtocolTemplateOverride();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const [confirmReset, setConfirmReset] = useState(false);
+  const confirm = useConfirm();
 
   const effective = useMemo(
     () => resolveTemplate(templates, protocolType, companyId, categoryId, groupId),
@@ -405,6 +428,8 @@ function TemplateEditorPanel({
     displayName !== defaults.displayName ||
     requiresIssuer !== defaults.requiresIssuer ||
     validityDays !== defaults.validityDays;
+
+  useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
 
   // Warn before leaving the page with unsaved changes.
   useEffect(() => {
@@ -449,14 +474,14 @@ function TemplateEditorPanel({
 
   const onReset = async () => {
     if (!ownOverride) return;
-    try {
-      await del.mutateAsync(ownOverride.id);
-      toast({ title: "התבנית נמחקה — היעד חזר לירושה" });
-    } catch (e: any) {
-      toast({ title: "שגיאה", description: e.message, variant: "destructive" });
-    } finally {
-      setConfirmReset(false);
-    }
+    const ok = await confirm({
+      title: "למחוק את התבנית?",
+      description: `היעד יחזור לרשת מ${inheritsFrom ?? "הרמה שמעליו"}. הפעולה אינה הפיכה.`,
+      confirmLabel: "מחק תבנית",
+      destructive: true,
+      onConfirm: () => del.mutateAsync(ownOverride.id),
+    });
+    if (ok) toast({ title: "התבנית נמחקה — היעד חזר לירושה" });
   };
 
   const onPreview = async () => {
@@ -502,43 +527,46 @@ function TemplateEditorPanel({
           <h4 className="font-semibold truncate">{selection.label}</h4>
           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
             {isOverride ? (
-              <span className="text-[11px] px-2 py-0.5 rounded bg-primary/10 text-primary">התאמה אישית</span>
+              <span className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary">התאמה אישית</span>
             ) : (
-              <span className="text-[11px] px-2 py-0.5 rounded bg-muted text-muted-foreground">
+              <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">
                 יורש מ{inheritsFrom}
               </span>
             )}
             {dirty && (
-              <span className="text-[11px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" /> שינויים שלא נשמרו
+              <span role="status" className="text-xs px-2 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" aria-hidden="true" /> שינויים שלא נשמרו
               </span>
             )}
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" className="gap-1.5" onClick={onPreview}>
-            <Eye className="w-3.5 h-3.5" /> תצוגה מקדימה
+          <Button variant="outline" className="gap-1.5" onClick={onPreview}>
+            <Eye className="w-3.5 h-3.5" aria-hidden="true" /> תצוגה מקדימה
           </Button>
           {isOverride && (
-            <Button size="sm" variant="ghost" className="gap-1.5 text-destructive" onClick={() => setConfirmReset(true)}>
-              <Trash2 className="w-3.5 h-3.5" /> מחק תבנית
+            <Button variant="ghost" className="gap-1.5 text-destructive" onClick={() => { void onReset(); }}>
+              <Trash2 className="w-3.5 h-3.5" aria-hidden="true" /> מחק תבנית
             </Button>
           )}
-          <Button size="sm" className="gap-1.5" onClick={onSave} disabled={upsert.isPending || !dirty}>
-            <Save className="w-3.5 h-3.5" /> שמור
+          <Button className="gap-1.5" onClick={onSave} disabled={!dirty} loading={upsert.isPending} loadingText="שומר…">
+            <Save className="w-3.5 h-3.5" aria-hidden="true" /> שמור
           </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="md:col-span-2">
-          <Label className="text-xs mb-1 block">כותרת הפרוטוקול</Label>
-          <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
+          <Label htmlFor="protocol-display-name" className="text-xs mb-1 block">כותרת הפרוטוקול</Label>
+          <Input id="protocol-display-name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
         </div>
         <div>
-          <Label className="text-xs mb-1 block">תוקף (ימים, אופציונלי)</Label>
+          <Label htmlFor="protocol-validity" className="text-xs mb-1 block">תוקף (ימים, אופציונלי)</Label>
           <Input
+            id="protocol-validity"
             type="number"
+            inputMode="numeric"
+            min={0}
             value={validityDays}
             onChange={(e) => setValidityDays(e.target.value)}
             placeholder="לדוגמה: 30"
@@ -547,8 +575,9 @@ function TemplateEditorPanel({
       </div>
 
       <div>
-        <Label className="text-xs mb-1 block">טקסט הפרוטוקול</Label>
+        <Label htmlFor="protocol-body" className="text-xs mb-1 block">טקסט הפרוטוקול</Label>
         <Textarea
+          id="protocol-body"
           ref={textareaRef}
           value={body}
           onChange={(e) => setBody(e.target.value)}
@@ -557,7 +586,7 @@ function TemplateEditorPanel({
           dir="rtl"
         />
         <div className="mt-2">
-          <p className="text-[11px] text-muted-foreground mb-1">לחץ להוספת שדה דינמי במיקום הסמן:</p>
+          <p className="text-xs text-muted-foreground mb-1">לחץ להוספת שדה דינמי במיקום הסמן:</p>
           <div className="flex flex-wrap gap-1.5">
             {PLACEHOLDER_HINTS.map((h) => (
               <button
@@ -565,7 +594,8 @@ function TemplateEditorPanel({
                 type="button"
                 onClick={() => insertPlaceholder(h.key)}
                 title={h.label}
-                className="text-[11px] px-2 py-0.5 bg-muted hover:bg-muted/70 rounded font-mono transition-colors"
+                aria-label={`הוסף שדה ${h.label}`}
+                className="text-xs px-2 min-h-8 bg-muted hover:bg-muted/70 rounded font-mono transition-colors"
               >
                 {`{{${h.key}}}`}
               </button>
@@ -575,26 +605,9 @@ function TemplateEditorPanel({
       </div>
 
       <div className="flex items-center gap-2 pt-1">
-        <Switch checked={requiresIssuer} onCheckedChange={setRequiresIssuer} />
-        <Label className="text-sm">דורש גם חתימת נותן הציוד</Label>
+        <Switch id="protocol-requires-issuer" checked={requiresIssuer} onCheckedChange={setRequiresIssuer} />
+        <Label htmlFor="protocol-requires-issuer" className="text-sm">דורש גם חתימת נותן הציוד</Label>
       </div>
-
-      <AlertDialog open={confirmReset} onOpenChange={setConfirmReset}>
-        <AlertDialogContent dir="rtl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>למחוק את התבנית?</AlertDialogTitle>
-            <AlertDialogDescription>
-              היעד יחזור לרשת מ{inheritsFrom ?? "הרמה שמעליו"}. הפעולה אינה הפיכה.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>ביטול</AlertDialogCancel>
-            <AlertDialogAction onClick={onReset} className="bg-destructive text-destructive-foreground">
-              מחק
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

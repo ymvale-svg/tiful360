@@ -6,7 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Camera, Loader2, MapPin, Package, Paperclip, Phone, Plus } from "lucide-react";
+import { useDirtyGuard } from "@/components/feedback/useDirtyGuard";
+import { Camera, MapPin, Package, Paperclip, Phone, Plus } from "lucide-react";
 import { TICKET_PRIORITIES, TICKET_SUBJECTS } from "@/lib/serviceTickets";
 import {
   useCreateServiceTicket,
@@ -40,6 +41,9 @@ export function NewPortalTicketDialog({ open, onOpenChange, employeeId, employee
   const [assetId, setAssetId] = useState<string>("none");
   const [files, setFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [titleError, setTitleError] = useState<string | null>(null);
+  const dirty = !!(title.trim() || description.trim() || location.trim() || files.length);
+  const guard = useDirtyGuard(dirty, submitting);
 
   useEffect(() => {
     if (open && employeePhone && !phone) setPhone(employeePhone);
@@ -54,10 +58,15 @@ export function NewPortalTicketDialog({ open, onOpenChange, employeeId, employee
     setPhone(employeePhone ?? "");
     setAssetId("none");
     setFiles([]);
+    setTitleError(null);
   };
 
   const submit = async () => {
-    if (!title.trim()) return toast.error("יש להזין כותרת לקריאה");
+    if (!title.trim()) {
+      setTitleError("כתבו בקצרה מה הבעיה");
+      document.getElementById("pt-title")?.focus();
+      return;
+    }
     setSubmitting(true);
     try {
       const { uploaded: attachments, failed } = !files.length
@@ -88,7 +97,7 @@ export function NewPortalTicketDialog({ open, onOpenChange, employeeId, employee
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={guard(onOpenChange)}>
       <DialogContent dir="rtl" className="max-w-md max-h-[92vh] overflow-y-auto">
         <DialogHeader className="text-right">
           <DialogTitle className="text-xl font-bold">פתיחת קריאת שירות</DialogTitle>
@@ -111,8 +120,17 @@ export function NewPortalTicketDialog({ open, onOpenChange, employeeId, employee
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="pt-title"><span className="text-destructive">*</span> כותרת קצרה</Label>
-            <Input id="pt-title" value={title} onChange={(e) => setTitle(e.target.value.slice(0, 120))} placeholder="תאר בקצרה את התקלה או הבקשה" />
+            <Label htmlFor="pt-title">כותרת קצרה<span className="text-destructive ms-0.5" aria-hidden="true">*</span></Label>
+            <Input
+              id="pt-title"
+              value={title}
+              onChange={(e) => { setTitle(e.target.value.slice(0, 120)); if (titleError) setTitleError(null); }}
+              placeholder="תאר בקצרה את התקלה או הבקשה"
+              aria-required="true"
+              aria-invalid={titleError ? true : undefined}
+              aria-describedby={titleError ? "pt-title-error" : undefined}
+            />
+            {titleError && <p id="pt-title-error" role="alert" className="text-xs font-medium text-destructive">{titleError}</p>}
           </div>
 
           <div className="space-y-1.5">
@@ -160,20 +178,20 @@ export function NewPortalTicketDialog({ open, onOpenChange, employeeId, employee
               <Label htmlFor="pt-phone" className="flex items-center gap-1.5">
                 <Phone className="w-3.5 h-3.5" aria-hidden="true" /> טלפון
               </Label>
-              <Input id="pt-phone" value={phone} onChange={(e) => setPhone(e.target.value)} dir="ltr" inputMode="tel" />
+              <Input id="pt-phone" type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} dir="ltr" inputMode="tel" />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <span className="flex items-center gap-1.5 text-sm font-medium">
+            <span id="pt-files-label" className="flex items-center gap-1.5 text-sm font-medium">
               <Paperclip className="w-3.5 h-3.5" aria-hidden="true" /> קבצים מצורפים
             </span>
             {files.length > 0 && (
-              <ul className="space-y-1">
+              <ul className="space-y-1" aria-labelledby="pt-files-label">
                 {files.map((f, i) => (
-                  <li key={i} className="flex items-center justify-between text-xs bg-muted/50 rounded px-2 py-1">
-                    <button type="button" className="text-destructive" onClick={() => setFiles((p) => p.filter((_, x) => x !== i))}>הסר</button>
+                  <li key={i} className="flex items-center justify-between gap-2 text-sm bg-muted/50 rounded ps-2">
                     <span className="truncate">{f.name}</span>
+                    <button type="button" className="min-h-11 px-3 text-sm text-destructive hover:underline shrink-0" aria-label={`הסר את ${f.name}`} disabled={submitting} onClick={() => setFiles((p) => p.filter((_, x) => x !== i))}>הסר</button>
                   </li>
                 ))}
               </ul>
@@ -184,18 +202,19 @@ export function NewPortalTicketDialog({ open, onOpenChange, employeeId, employee
               multiple
               accept="image/*,application/pdf"
               className="sr-only"
-              onChange={(e) => e.target.files && setFiles((p) => [...p, ...Array.from(e.target.files!)])}
+              aria-labelledby="pt-files-label"
+              onChange={(e) => { const picked = e.target.files ? Array.from(e.target.files) : []; if (picked.length) setFiles((p) => [...p, ...picked]); e.target.value = ""; }}
             />
-            <Button variant="outline" type="button" className="w-full gap-2" onClick={() => fileRef.current?.click()}>
+            <Button variant="outline" type="button" className="w-full gap-2 min-h-11" onClick={() => fileRef.current?.click()} disabled={submitting}>
               <Camera className="w-4 h-4" aria-hidden="true" /> צילום או קובץ
             </Button>
             <TicketScreenshotButton disabled={submitting} onAttach={(file) => setFiles((previous) => [...previous, file])} />
           </div>
 
           <div className="flex gap-2 pt-1">
-            <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>ביטול</Button>
-            <Button className="flex-1 gap-2" onClick={submit} disabled={submitting}>
-              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            <Button variant="outline" className="flex-1 min-h-11" onClick={() => guard(onOpenChange)(false)} disabled={submitting}>ביטול</Button>
+            <Button className="flex-1 gap-2 min-h-11" onClick={submit} loading={submitting} loadingText={files.length ? "מעלה קבצים ושולח…" : "שולח…"}>
+              <Plus className="w-4 h-4" aria-hidden="true" />
               פתח קריאה
             </Button>
           </div>

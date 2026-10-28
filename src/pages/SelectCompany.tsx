@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
-import { Building2, Loader2 } from "lucide-react";
+import { Building2, Loader2, LogOut, RotateCw, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { hasDualAccess } from "@/lib/dualAccess";
 
@@ -39,6 +39,14 @@ export default function SelectCompany() {
   const navigate = useNavigate();
   const [companies, setCompanies] = useState<CompanyOption[]>([]);
   const [loading, setLoading] = useState(true);
+  /** A failed load is not "no companies": it gets its own message and a retry. */
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const retry = () => { setLoading(true); setLoadError(null); setAttempt((n) => n + 1); };
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    navigate("/login", { replace: true });
+  };
 
   const dual = hasDualAccess(roles);
   const defaultRoute = dual ? "/select-experience" : getDefaultRoute(auth);
@@ -59,30 +67,34 @@ export default function SelectCompany() {
     const fetchCompanies = async () => {
       try {
         if (isSuperAdmin) {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from("companies")
             .select("id, name, logo_url")
             .order("name");
+          if (error) throw error;
           setCompanies(data ?? []);
         } else {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from("user_company_access")
             .select("company_id, companies(id, name, logo_url)")
             .eq("user_id", user.id);
+          if (error) throw error;
           const mapped = (data ?? [])
             .map((d: any) => d.companies)
             .filter(Boolean);
           setCompanies(mapped);
         }
-      } catch {
+        setLoadError(null);
+      } catch (e) {
         setCompanies([]);
+        setLoadError(e instanceof Error && e.message ? e.message : "שגיאת רשת");
       } finally {
         setLoading(false);
       }
     };
 
     fetchCompanies();
-  }, [user, authLoading, isSuperAdmin, navigate]);
+  }, [user, authLoading, isSuperAdmin, navigate, attempt]);
 
   // Auto-redirect if only one company
   useEffect(() => {
@@ -95,24 +107,46 @@ export default function SelectCompany() {
   // Still loading or auto-redirecting
   if (authLoading || loading || companies.length === 1) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div role="status" className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" aria-hidden="true" />
+        <span className="sr-only">טוען את החברות שלך…</span>
       </div>
+    );
+  }
+
+  // Load failed — not the same as having no companies
+  if (loadError) {
+    return (
+      <main className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div role="alert" className="text-center max-w-md">
+          <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" aria-hidden="true" />
+          <h1 className="text-xl font-bold mb-2">לא הצלחנו לטעון את החברות שלך</h1>
+          <p className="text-muted-foreground text-sm">בדקו את החיבור לאינטרנט ונסו שוב.</p>
+          <div className="mt-6 flex flex-col sm:flex-row gap-2 justify-center">
+            <Button className="min-h-11 gap-2" onClick={retry}><RotateCw className="w-4 h-4" aria-hidden="true" />נסה שוב</Button>
+            <Button variant="outline" className="min-h-11 gap-2" onClick={signOut}><LogOut className="w-4 h-4" aria-hidden="true" />יציאה</Button>
+          </div>
+        </div>
+      </main>
     );
   }
 
   // No companies
   if (companies.length === 0) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <main className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center max-w-md">
-          <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" aria-hidden="true" />
           <h1 className="text-xl font-bold mb-2">אין חברות משויכות</h1>
           <p className="text-muted-foreground text-sm">
             המשתמש שלך עדיין לא שויך לאף חברה. פנה למנהל המערכת.
           </p>
+          <div className="mt-6 flex flex-col sm:flex-row gap-2 justify-center">
+            <Button variant="outline" className="min-h-11 gap-2" onClick={retry}><RotateCw className="w-4 h-4" aria-hidden="true" />בדוק שוב</Button>
+            <Button variant="outline" className="min-h-11 gap-2" onClick={signOut}><LogOut className="w-4 h-4" aria-hidden="true" />יציאה והתחברות בחשבון אחר</Button>
+          </div>
         </div>
-      </div>
+      </main>
     );
   }
 
@@ -126,7 +160,7 @@ export default function SelectCompany() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center mx-auto mb-4" aria-hidden="true">
             <Building2 className="w-8 h-8 text-primary-foreground" />
           </div>
           <h1 className="text-2xl font-bold">בחר חברה</h1>
@@ -143,9 +177,9 @@ export default function SelectCompany() {
             >
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                 {c.logo_url ? (
-                  <img src={c.logo_url} alt={c.name} className="w-8 h-8 rounded object-cover" />
+                  <img src={c.logo_url} alt="" className="w-8 h-8 rounded object-cover" />
                 ) : (
-                  <Building2 className="w-5 h-5 text-primary" />
+                  <Building2 className="w-5 h-5 text-primary" aria-hidden="true" />
                 )}
               </div>
               <span className="text-base font-medium">{c.name}</span>

@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { 
-  Package, Clock, Megaphone, BookOpen, Phone, ExternalLink,
+import {
+  Package, Megaphone, Phone, ExternalLink,
   FileText, CalendarDays, AlertCircle, LogOut, Cake, PartyPopper,
-  Box, Wifi, LayoutDashboard, Wrench, Search, X
+  Box, Wifi, LayoutDashboard, Wrench, Search, X, ArrowRight, ChevronLeft,
+  Thermometer, ClockAlert, Plus, UserX, Inbox, CheckCircle2,
 } from "lucide-react";
 import { MyTicketsTab } from "@/components/portal/MyTicketsTab";
 import portalLogo from "@/assets/portal-logo.png.asset.json";
@@ -18,49 +19,107 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PendingHandoverForms } from "@/components/PendingHandoverForms";
 import { MyProtocolsList } from "@/components/portal/MyProtocolsList";
 import { NewLeaveRequestDialog } from "@/components/NewLeaveRequestDialog";
+import { AttendanceCorrectionDialog } from "@/components/AttendanceCorrectionDialog";
+import { NewPortalTicketDialog } from "@/components/portal/NewPortalTicketDialog";
 import { LeaveRequestsList } from "@/components/LeaveRequestsList";
 import { useMyLeaveRequests } from "@/hooks/useLeaveRequests";
 import { EmployeePayslipsTab } from "@/components/EmployeePayslipsTab";
 import { Tax101Banner } from "@/components/portal/Tax101Banner";
 import { MyTax101FormsList } from "@/components/portal/MyTax101FormsList";
 import { useMyPunches, useCreateRemotePunch } from "@/hooks/useAttendancePunches";
+import { useMyPendingTax101 } from "@/hooks/useTax101";
 import { MyPunchesList } from "@/components/portal/MyPunchesList";
 import { MonthReportConfirm } from "@/components/portal/MonthReportConfirm";
 import { useToast } from "@/hooks/use-toast";
-import { Plus } from "lucide-react";
 import { InstallAppBanner } from "@/components/InstallAppBanner";
 import { BirthdayPreferenceCard } from "@/components/portal/BirthdayPreferenceCard";
-import { WelcomeDateTime } from "@/components/portal/WelcomeDateTime";
 import { processBirthdaysForCurrentMonth } from "@/lib/hebrewBirthday";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { PortalLearningLibrary } from "@/components/portal/PortalLearningLibrary";
 import { useGuideLibrary, useProcedureLibrary } from "@/hooks/usePortalLearning";
+import { PortalTabBar, PORTAL_TABBAR_SPACE } from "@/components/portal/PortalTabBar";
+import { PortalClockCard } from "@/components/portal/PortalClockCard";
+import { portalLocationParams, resolvePortalLocation, type PortalLocation, type PortalMoreView, type PortalTab } from "@/components/portal/portalTabs";
+import { EmptyState, ListSkeleton, StateView } from "@/components/feedback/StateView";
+import { useConfirm } from "@/components/feedback/ConfirmDialog";
 
-const portalTabs = [
-  { id: "assets", label: "הציוד שלי", icon: Package, tone: "portal-tile--teal", shape: "portal-tile--wash portal-tile--chip-round" },
-  { id: "attendance", label: "נוכחות", icon: Clock, tone: "portal-tile--blue", shape: "portal-tile--arc portal-tile--chip-square" },
-  { id: "hr", label: "שכר וחופשות", icon: FileText, tone: "portal-tile--amber", shape: "portal-tile--band portal-tile--chip-leaf" },
-  { id: "tickets", label: "קריאות שירות", icon: Wrench, tone: "portal-tile--coral", shape: "portal-tile--halo portal-tile--chip-flag" },
-  { id: "news", label: "הודעות", icon: Megaphone, tone: "portal-tile--violet", shape: "portal-tile--arc portal-tile--chip-round" },
-  { id: "kb", label: "נהלים", icon: BookOpen, tone: "portal-tile--green", shape: "portal-tile--band portal-tile--chip-square" },
-  { id: "guides", label: "מדריכים", icon: FileText, tone: "portal-tile--rose", shape: "portal-tile--halo portal-tile--chip-leaf" },
-  { id: "contacts", label: "אנשי קשר", icon: Phone, tone: "portal-tile--indigo", shape: "portal-tile--wash portal-tile--chip-flag" },
-];
+const MORE_VIEW_LABELS: Record<PortalMoreView, string> = {
+  contacts: "אנשי קשר",
+  assets: "הציוד שלי",
+  pay: "שכר ומסמכים",
+  news: "הודעות החברה",
+};
+
+const TAB_TITLES: Record<PortalTab, string> = {
+  home: "בית",
+  attendance: "נוכחות",
+  requests: "בקשות",
+  knowledge: "ידע",
+  more: "עוד",
+};
+
+/** Shown in place of personal data when the user has no employee card. */
+function NotLinked() {
+  return (
+    <EmptyState
+      icon={<UserX className="w-6 h-6" />}
+      title="החשבון שלך עדיין לא מקושר לכרטיס עובד"
+      description="פנו למנהל המערכת כדי לקשר את המשתמש לכרטיס העובד שלכם."
+    />
+  );
+}
+
+function AnnouncementCard({ item, compact = false }: { item: any; compact?: boolean }) {
+  return (
+    <article className={cn(compact ? "bg-muted/50 rounded-lg p-3" : "bg-card rounded-xl border border-border/50 p-4")}>
+      <div className="flex items-start justify-between gap-2 mb-1">
+        <h3 className={cn("text-sm", compact ? "font-medium" : "font-semibold")}>{item.title}</h3>
+        <span className="text-xs text-muted-foreground whitespace-nowrap">
+          {new Date(item.published_at).toLocaleDateString("en-GB")}
+        </span>
+      </div>
+      <p className={cn("text-muted-foreground whitespace-pre-line", compact ? "text-xs" : "text-sm")}>{item.content}</p>
+      {item.sender_name && (
+        <p className="mt-2 pt-2 border-t border-border/40 text-xs text-muted-foreground">
+          בברכה, {item.sender_name}
+          {item.sender_role ? ` · ${item.sender_role}` : ""}
+        </p>
+      )}
+    </article>
+  );
+}
 
 export default function EmployeePortal() {
-  const [activeTab, setActiveTab] = useState("home");
-  const [newLeaveOpen, setNewLeaveOpen] = useState(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const [leaveType, setLeaveType] = useState<"vacation" | "sick">("vacation");
+  const [ticketOpen, setTicketOpen] = useState(false);
+  const [correctionOpen, setCorrectionOpen] = useState(false);
   const [punchingDir, setPunchingDir] = useState<"in" | "out" | null>(null);
   const [contactSearch, setContactSearch] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
+  const loc = resolvePortalLocation(searchParams);
   const { user, signOut, roles } = useAuth();
   const { data: profile } = useProfile();
-  const { activeCompanyId, activeCompany } = useCompany();
+  const { activeCompanyId, activeCompany, loading: companyLoading } = useCompany();
   const portalName = (activeCompany?.portal_name && activeCompany.portal_name.trim())
     || (activeCompany?.name?.includes("אשל הירדן") ? "אשל שלי" : "פורטל עובדים");
   const portalLogoSrc = activeCompany?.portal_logo_url || portalLogo.url;
   const navigate = useNavigate();
   const createPunch = useCreateRemotePunch();
+  const confirm = useConfirm();
+
+  /** Tabs live in the URL with push history, so the phone's Back button returns to the previous tab. */
+  const go = (next: Partial<PortalLocation> & { tab: PortalTab }) => {
+    setSearchParams(portalLocationParams(searchParams, next));
+    window.scrollTo({ top: 0 });
+  };
+
+  // Normalise old/unknown params (legacy tile ids, ?correction=open from old emails) without adding history.
+  useEffect(() => {
+    const canonical = portalLocationParams(searchParams, loc);
+    if (canonical.toString() !== searchParams.toString()) setSearchParams(canonical, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   // Pre-warm GPS while the portal is open so a punch can use a fresh reading instantly.
   const warmPosRef = useRef<GeolocationPosition | null>(null);
@@ -90,10 +149,9 @@ export default function EmployeePortal() {
   };
 
   const displayName = profile?.display_name || user?.email?.split("@")[0] || "עובד";
-  const initials = displayName.split(" ").map(w => w[0]).join("").slice(0, 2);
 
   // Find employee record linked to current user
-  const { data: myEmployee } = useQuery({
+  const employeeQuery = useQuery({
     queryKey: ["my_employee", activeCompanyId, user?.id],
     queryFn: async () => {
       if (!activeCompanyId || !user?.id) return null;
@@ -108,27 +166,15 @@ export default function EmployeePortal() {
     },
     enabled: !!activeCompanyId && !!user?.id,
   });
-
-  // Handle deep-link from missing-punches email: switch to attendance tab and highlight the date
-  useEffect(() => {
-    if (!myEmployee?.id) return;
-    const tab = searchParams.get("tab");
-    const legacyCorrection = searchParams.get("correction");
-    if (tab === "attendance") setActiveTab("attendance");
-    // Backward-compat: strip old ?correction=open&date=... params without opening the dialog
-    if (legacyCorrection) {
-      const next = new URLSearchParams(searchParams);
-      next.delete("correction");
-      setSearchParams(next, { replace: true });
-    }
-  }, [myEmployee?.id, searchParams, setSearchParams]);
-
+  const myEmployee = employeeQuery.data;
+  // While the company or the employee card loads, never claim "not linked" or "no equipment".
+  const employeeLoading = companyLoading || employeeQuery.isLoading;
 
   // Prefixes considered "digital" (shown in הרשאות ומערכות section instead of ציוד פיזי)
   const DIGITAL_PREFIXES = ["DACC", "SFT"];
 
   // Fetch assets assigned to my employee
-  const { data: myAssets = [] } = useQuery({
+  const assetsQuery = useQuery({
     queryKey: ["my_assets", myEmployee?.id],
     queryFn: async () => {
       if (!myEmployee?.id) return [];
@@ -145,9 +191,10 @@ export default function EmployeePortal() {
     },
     enabled: !!myEmployee?.id,
   });
+  const myAssets = assetsQuery.data ?? [];
 
   // Fetch digital access for my employee (DACC + SFT categories)
-  const { data: myDigitalAccess = [] } = useQuery({
+  const digitalQuery = useQuery({
     queryKey: ["my_digital_access", myEmployee?.id],
     queryFn: async () => {
       if (!myEmployee?.id) return [];
@@ -173,9 +220,11 @@ export default function EmployeePortal() {
     },
     enabled: !!myEmployee?.id,
   });
+  const myDigitalAccess = digitalQuery.data ?? [];
 
   // Fetch attendance punches for my employee (last 30 days)
-  const { data: myPunches = [] } = useMyPunches(myEmployee?.id, 30);
+  const punchesQuery = useMyPunches(myEmployee?.id, 30);
+  const myPunches = punchesQuery.data ?? [];
   const qc = useQueryClient();
   useEffect(() => {
     if (!myEmployee?.id) return;
@@ -207,7 +256,8 @@ export default function EmployeePortal() {
   });
 
   // Fetch merged company contacts (employees + external) via secure hook
-  const { data: portalContacts = [] } = useCompanyContacts();
+  const contactsQuery = useCompanyContacts();
+  const portalContacts = useMemo(() => contactsQuery.data ?? [], [contactsQuery.data]);
 
   const contactSearchTerms = contactSearch.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const filteredContacts = useMemo(() => {
@@ -222,7 +272,7 @@ export default function EmployeePortal() {
   }, [portalContacts, contactSearchTerms]);
 
   // Fetch announcements from DB
-  const { data: announcements = [] } = useQuery({
+  const announcementsQuery = useQuery({
     queryKey: ["announcements", activeCompanyId],
     queryFn: async () => {
       if (!activeCompanyId) return [];
@@ -240,6 +290,7 @@ export default function EmployeePortal() {
     },
     enabled: !!activeCompanyId,
   });
+  const announcements = announcementsQuery.data ?? [];
 
   // Announcements published in the last 3 days are shown "open"; older ones go to the archive
   const threeDaysAgo = Date.now() - 3 * 24 * 60 * 60 * 1000;
@@ -263,27 +314,35 @@ export default function EmployeePortal() {
     enabled: !!activeCompanyId,
   });
 
-  const { data: procedureLibrary = { departments: [], items: [] } } = useProcedureLibrary(activeCompanyId);
-  const { data: guideLibrary = { topics: [], guides: [] } } = useGuideLibrary(activeCompanyId);
+  const procedureQuery = useProcedureLibrary(activeCompanyId);
+  const guideQuery = useGuideLibrary(activeCompanyId);
+  const procedureLibrary = procedureQuery.data ?? { departments: [], items: [] };
+  const guideLibrary = guideQuery.data ?? { topics: [], guides: [] };
 
   const { data: myLeaveRequests = [] } = useMyLeaveRequests(myEmployee?.id);
-  
 
-  // Helper: calculate hours between check_in and check_out
-  const calcHours = (checkIn: string | null, checkOut: string | null) => {
-    if (!checkIn || !checkOut) return "—";
-    const [h1, m1] = checkIn.split(":").map(Number);
-    const [h2, m2] = checkOut.split(":").map(Number);
-    const totalMin = (h2 * 60 + m2) - (h1 * 60 + m1);
-    if (totalMin <= 0) return "—";
-    const hrs = Math.floor(totalMin / 60);
-    const mins = totalMin % 60;
-    return `${hrs}:${mins.toString().padStart(2, "0")}`;
-  };
+  // "מחכה לך": the same queries the banners below use (shared cache), to know whether anything waits.
+  const { data: pendingTax101 } = useMyPendingTax101(myEmployee?.id, new Date().getFullYear() + 1);
+  const { data: pendingHandover = [] } = useQuery({
+    queryKey: ["pending-handover", myEmployee?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("asset_handover_forms")
+        .select("*")
+        .eq("employee_id", myEmployee!.id)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!myEmployee?.id,
+  });
+  const pendingActions = (pendingTax101 ? 1 : 0) + pendingHandover.length;
 
   const employeeName = myEmployee?.full_name || displayName;
+  const firstName = (employeeName.trim().split(/\s+/).slice(-1)[0]) || employeeName;
 
-  const handlePunch = (direction: "in" | "out") => {
+  const runPunch = (direction: "in" | "out") => {
     if (!myEmployee) return;
     if (!navigator.geolocation) {
       toast({
@@ -342,9 +401,10 @@ export default function EmployeePortal() {
             accuracy: pos.coords.accuracy,
           },
         });
-        toast({ title: direction === "in" ? "כניסה נרשמה ✓" : "יציאה נרשמה ✓" });
+        const at = new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
+        toast({ title: direction === "in" ? `החתמת כניסה נרשמה ב-${at}` : `החתמת יציאה נרשמה ב-${at}` });
       } catch (e: any) {
-        toast({ title: "שגיאה בשליחה", description: e.message, variant: "destructive" });
+        toast({ title: "ההחתמה לא נשלחה", description: e.message, variant: "destructive" });
       } finally {
         setPunchingDir(null);
       }
@@ -399,215 +459,420 @@ export default function EmployeePortal() {
     }, 15000);
   };
 
+  /**
+   * Clock-in is one tap. A remote punch can't be reverted by the employee (there is no "delete own
+   * punch"), so clock-out — the one people hit by mistake — asks first instead of offering undo.
+   */
+  const handlePunch = async (direction: "in" | "out") => {
+    if (direction === "out") {
+      const ok = await confirm({
+        title: "להחתים יציאה עכשיו?",
+        description: "ההחתמה נרשמת עם השעה והמיקום הנוכחיים. תיקון אחר כך נספר במכסת התיקונים החודשית.",
+        confirmLabel: "החתמת יציאה",
+        cancelLabel: "לא עכשיו",
+      });
+      if (!ok) return;
+    }
+    runPunch(direction);
+  };
+
+  const processedBirthdays = processBirthdaysForCurrentMonth(birthdayEmployees as any);
+  const balanceUpdated = myEmployee?.balances_updated_at
+    ? `עודכן לאחרונה: ${new Date(myEmployee.balances_updated_at).toLocaleDateString("en-GB")} · מקור: ${myEmployee?.balances_source === "payslip" ? "תלוש שכר" : "ידני"}`
+    : "היתרות מתעדכנות אוטומטית מתלושי השכר";
+
+  /** Personal content: skeleton while loading, a clear message when unlinked. */
+  const withEmployee = (render: (emp: NonNullable<typeof myEmployee>) => React.ReactNode) => {
+    if (employeeLoading) return <div role="status" aria-busy="true"><span className="sr-only">טוען…</span><ListSkeleton rows={3} /></div>;
+    if (employeeQuery.error) {
+      return <StateView error={employeeQuery.error} onRetry={() => { void employeeQuery.refetch(); }} label="את פרטי העובד">{null}</StateView>;
+    }
+    if (!myEmployee) return <NotLinked />;
+    return render(myEmployee);
+  };
+
+  const sectionTitle = loc.tab === "more" && loc.view ? MORE_VIEW_LABELS[loc.view] : TAB_TITLES[loc.tab];
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
-      <InstallAppBanner />
-      {/* Mobile/tablet-friendly top bar */}
-      <header role="banner" className="sticky top-0 z-30 bg-card/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
+      <InstallAppBanner aboveTabBar />
+      <header role="banner" className="sticky top-0 z-30 bg-card/95 backdrop-blur-md border-b border-border px-4 py-2 pt-[calc(0.5rem+env(safe-area-inset-top,0px))] flex items-center justify-between gap-2">
         <div className="flex items-center gap-3 min-w-0">
           <img src={portalLogoSrc} alt={portalName} className="w-9 h-9 rounded-full object-contain shrink-0 bg-white" />
           <div className="min-w-0">
-            <h1 className="text-sm font-semibold leading-tight truncate">{portalName} — שלום, {(employeeName.trim().split(/\s+/).slice(-1)[0]) || employeeName} <span aria-hidden="true">👋</span></h1>
-            <p className="text-[11px] text-muted-foreground">
-              {myEmployee ? `${myEmployee.role} • ${myEmployee.department}` : portalName}
+            <p className="text-sm font-semibold leading-tight truncate">שלום, {firstName}</p>
+            <p className="text-xs text-muted-foreground truncate">
+              {myEmployee ? [myEmployee.role, myEmployee.department].filter(Boolean).join(" • ") : portalName}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
-          {hasDualAccess(roles) && (
-            <button
-              type="button"
-              onClick={() => {
-                sessionStorage.setItem("activeExperience", "ops");
-                navigate("/");
-              }}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-muted hover:bg-muted/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label="מעבר לתפעול 360"
-              title="מעבר לתפעול 360"
-            >
-              <LayoutDashboard className="w-3.5 h-3.5" aria-hidden="true" />
-              <span className="hidden sm:inline">תפעול 360</span>
-            </button>
-          )}
-          <ThemeToggle />
-          <button
-            type="button"
-            onClick={handleSignOut}
-            className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="יציאה מהמערכת"
-            title="יציאה"
-          >
-            <LogOut className="w-4 h-4" aria-hidden="true" />
-          </button>
-        </div>
+        <ThemeToggle />
       </header>
 
-      <main id="main-content" tabIndex={-1} className="max-w-2xl md:max-w-3xl mx-auto px-4 py-4 space-y-4 overflow-x-hidden focus:outline-none">
-        {/* Welcome banner */}
-        <div className="bg-gradient-to-l from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 rounded-xl border border-primary/20 p-5">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <h2 className="text-lg font-bold text-foreground">ברוכים הבאים, {employeeName} 👋</h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                {myEmployee 
-                  ? `${myEmployee.role} • מחלקת ${myEmployee.department}`
-                  : "שמחים לראות אותך בפורטל העובדים"}
-              </p>
-            </div>
-            <WelcomeDateTime />
-          </div>
-        </div>
+      <main id="main-content" tabIndex={-1} className={cn("max-w-2xl md:max-w-3xl mx-auto px-4 py-4 space-y-4 overflow-x-hidden focus:outline-none", PORTAL_TABBAR_SPACE)}>
+        <PortalTabBar active={loc.tab} onSelect={(tab) => go({ tab })} badges={{ home: pendingActions }} />
 
-        {/* Announcements & Birthdays card */}
-        <div className="space-y-3">
-          {(() => {
-            const processed = processBirthdaysForCurrentMonth(birthdayEmployees as any);
-            if (processed.length === 0) return null;
-            return (
-              <div className="bg-gradient-to-l from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-xl border border-amber-200/50 dark:border-amber-800/50 p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Cake className="w-4 h-4 text-amber-600" />
-                  <h3 className="font-semibold text-sm text-amber-800 dark:text-amber-300">🎂 ימי הולדת החודש</h3>
+        <h1 className={cn("text-lg font-bold", loc.tab === "home" && "sr-only")}>{loc.tab === "home" ? `${portalName} — בית` : sectionTitle}</h1>
+
+        {/* ===== HOME ===== */}
+        {loc.tab === "home" && (
+          <div className="space-y-4 animate-fade-in">
+            {employeeLoading ? (
+              <ListSkeleton rows={2} className="rounded-2xl border border-border/50" />
+            ) : myEmployee ? (
+              <PortalClockCard
+                punches={myPunches}
+                canRemotePunch={!!myEmployee.can_remote_punch}
+                punchingDir={punchingDir}
+                onPunch={(d) => { void handlePunch(d); }}
+                onOpenAttendance={() => go({ tab: "attendance" })}
+              />
+            ) : null}
+
+            <section aria-labelledby="portal-waiting-title" className="space-y-3">
+              <h2 id="portal-waiting-title" className="font-semibold">מחכה לך</h2>
+              {myEmployee && <Tax101Banner employee={myEmployee} />}
+              {myEmployee && <PendingHandoverForms employeeId={myEmployee.id} />}
+              {freshAnnouncements.length > 0 && (
+                <div className="bg-card rounded-xl border border-border/50 p-4">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <h3 className="font-semibold text-sm flex items-center gap-2">
+                      <Megaphone className="w-4 h-4 text-primary" aria-hidden="true" />
+                      הודעות חדשות ({freshAnnouncements.length})
+                    </h3>
+                    <Button variant="ghost" className="min-h-11 gap-1 text-primary" onClick={() => go({ tab: "more", view: "news" })}>
+                      לכל ההודעות <ChevronLeft aria-hidden="true" />
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    {freshAnnouncements.slice(0, 3).map((ann: any) => <AnnouncementCard key={ann.id} item={ann} compact />)}
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {processed.map((emp) => {
-                    const prefix = emp.isToday ? "🎉 היום!" : emp.isTomorrow ? "מחר" : null;
+              )}
+              {!employeeLoading && !pendingActions && !freshAnnouncements.length && (
+                <p className="flex items-center gap-2 rounded-xl border border-border/50 bg-card p-4 text-sm text-muted-foreground">
+                  <CheckCircle2 className="w-4 h-4 text-success shrink-0" aria-hidden="true" />
+                  {myEmployee ? "אין משימות פתוחות — הכל מעודכן." : "אין הודעות חדשות."}
+                </p>
+              )}
+              {!employeeLoading && !myEmployee && !employeeQuery.error && <NotLinked />}
+            </section>
+
+            {processedBirthdays.length > 0 && (
+              <section aria-labelledby="portal-bdays-title" className="bg-gradient-to-l from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-xl border border-amber-200/50 dark:border-amber-800/50 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Cake className="w-4 h-4 text-amber-600" aria-hidden="true" />
+                  <h2 id="portal-bdays-title" className="font-semibold text-sm text-amber-800 dark:text-amber-300">ימי הולדת החודש</h2>
+                </div>
+                <ul className="flex flex-wrap gap-2">
+                  {processedBirthdays.map((emp) => {
+                    const prefix = emp.isToday ? "היום!" : emp.isTomorrow ? "מחר" : null;
                     const dateText = prefix ? `${prefix} · ${emp.label}` : emp.label;
                     return (
-                      <div key={emp.id} className="flex items-center gap-2 bg-white/60 dark:bg-white/10 rounded-lg px-3 py-1.5">
-                        <PartyPopper className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <li key={emp.id} className="flex items-center gap-2 bg-white/60 dark:bg-white/10 rounded-lg px-3 py-1.5">
+                        <PartyPopper className="w-3.5 h-3.5 text-amber-600 shrink-0" aria-hidden="true" />
                         <span className="text-xs font-medium">{emp.full_name}</span>
-                        <span className="text-[11px] text-muted-foreground">— {dateText}</span>
-                      </div>
+                        <span className="text-xs text-muted-foreground">— {dateText}</span>
+                      </li>
                     );
                   })}
-                </div>
-              </div>
-            );
-          })()}
-
-          {freshAnnouncements.length > 0 && (
-            <div className="bg-card rounded-xl border border-border/50 p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Megaphone className="w-4 h-4 text-primary" />
-                <h3 className="font-semibold text-sm">הודעות חברה</h3>
-              </div>
-              <div className="space-y-2">
-                {freshAnnouncements.slice(0, 3).map((ann: any) => (
-                  <div key={ann.id} className="bg-muted/50 rounded-lg p-3">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <p className="text-sm font-medium">{ann.title}</p>
-                      <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                        {new Date(ann.published_at).toLocaleDateString("en-GB")}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground whitespace-pre-line">{ann.content}</p>
-                    {ann.sender_name && (
-                      <p className="mt-2 pt-2 border-t border-border/40 text-[11px] text-muted-foreground">
-                        בברכה, {ann.sender_name}
-                        {ann.sender_role ? ` · ${ann.sender_role}` : ""}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Quick links */}
-        {portalLinks.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {portalLinks.map((link) => (
-              <a
-                key={link.id}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-2 bg-card border border-border/50 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-              >
-                <ExternalLink className="w-3 h-3 shrink-0" />
-                {link.label}
-              </a>
-            ))}
-          </div>
-        )}
-
-        {/* Remote punch — authorized employees only */}
-        {activeTab === "home" && myEmployee?.can_remote_punch && (
-          <div className="bg-primary/5 rounded-2xl border border-primary/20 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="flex items-center gap-3 flex-1">
-              <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <Clock className="w-5 h-5 text-primary" aria-hidden="true" />
-              </div>
-              <div>
-                <p className="font-bold">דיווח נוכחות מרחוק</p>
-                <p className="text-xs text-muted-foreground">בלחיצה ראשונה הדפדפן יבקש אישור גישה למיקום.</p>
-              </div>
-            </div>
-            <div className="flex gap-2 sm:w-80">
-              <Button className="flex-1 h-12 bg-success hover:bg-success/90 text-success-foreground" disabled={punchingDir !== null} onClick={() => handlePunch("in")}>
-                {punchingDir === "in" ? "מאתר מיקום..." : "כניסה"}
-              </Button>
-              <Button variant="destructive" className="flex-1 h-12" disabled={punchingDir !== null} onClick={() => handlePunch("out")}>
-                {punchingDir === "out" ? "מאתר מיקום..." : "יציאה"}
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Home tiles */}
-        {activeTab === "home" ? (
-          <nav aria-label="ניווט פורטל" className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {portalTabs.map((tab) => (
-              <button
-                type="button"
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "portal-tile",
-                  tab.tone,
-                  tab.shape,
-                  "aspect-[4/3] md:aspect-auto md:h-36 flex flex-col items-center justify-center gap-2 px-3",
-                )}
-              >
-                <span className="portal-tile-icon w-12 h-12 flex items-center justify-center">
-                  <tab.icon className="w-6 h-6" aria-hidden="true" />
-                </span>
-                <span className="portal-tile-label text-sm font-semibold">{tab.label}</span>
-              </button>
-            ))}
-          </nav>
-        ) : (
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setActiveTab("home")}>
-              ← חזרה לראשי
-            </Button>
-            <h2 className="font-semibold">{portalTabs.find((t) => t.id === activeTab)?.label}</h2>
-          </div>
-        )}
-
-        {/* ===== ASSETS TAB ===== */}
-        {activeTab === "assets" && (
-          <div role="tabpanel" id="portal-tabpanel-assets" aria-labelledby="portal-tab-assets" className="space-y-4 animate-fade-in">
-            {!myEmployee && (
-              <p className="text-center text-sm text-muted-foreground py-4">
-                המשתמש שלך לא מקושר לעובד. פנה למנהל המערכת.
-              </p>
+                </ul>
+              </section>
             )}
 
-            {myEmployee && (
+            {portalLinks.length > 0 && (
+              <section aria-label="קישורים מהירים" className="flex flex-wrap gap-2">
+                {portalLinks.map((link) => (
+                  <a
+                    key={link.id}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 min-h-11 px-3 bg-card border border-border/50 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                    {link.label}
+                  </a>
+                ))}
+              </section>
+            )}
+          </div>
+        )}
+
+        {/* ===== ATTENDANCE ===== */}
+        {loc.tab === "attendance" && (
+          <div className="animate-fade-in space-y-3">
+            {withEmployee((emp) => (
               <>
-                <Tax101Banner employee={myEmployee} />
-                <PendingHandoverForms employeeId={myEmployee.id} />
-                <h2 className="font-semibold text-sm">ציוד פיזי ({myAssets.length})</h2>
-                {myAssets.length > 0 ? (
-                  <div className="grid grid-cols-1 gap-3">
-                    {myAssets.map((asset) => (
-                      <div key={asset.id} className="bg-card rounded-xl border border-border/50 p-3 flex items-center gap-3">
+                <MonthReportConfirm employeeId={emp.id} />
+                <StateView
+                  loading={punchesQuery.isLoading}
+                  error={punchesQuery.error}
+                  onRetry={() => { void punchesQuery.refetch(); }}
+                  label="ההחתמות שלך"
+                  isEmpty={myPunches.length === 0}
+                  empty={{ title: "אין החתמות ב-30 הימים האחרונים", description: "החתמות מהשעון או מהטלפון יופיעו כאן." }}
+                >
+                  <MyPunchesList
+                    punches={myPunches}
+                    leaves={(myLeaveRequests as any[]).filter((l) => l.status === "approved")}
+                    highlightDate={searchParams.get("highlight") || undefined}
+                  />
+                </StateView>
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                  ניתן לתקן שעה ישירות ברשימה עד יום למחרת. בתוך אותו חודש — עד 3 תיקונים נוספים.
+                </p>
+              </>
+            ))}
+          </div>
+        )}
+
+        {/* ===== REQUESTS ===== */}
+        {loc.tab === "requests" && (
+          <div className="space-y-4 animate-fade-in">
+            {withEmployee((emp) => (
+              <>
+                <section aria-label="בקשה חדשה" className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: "חופשה", icon: CalendarDays, onClick: () => { setLeaveType("vacation"); setLeaveOpen(true); } },
+                    { label: "דיווח מחלה", icon: Thermometer, onClick: () => { setLeaveType("sick"); setLeaveOpen(true); } },
+                    { label: "קריאת שירות", icon: Wrench, onClick: () => setTicketOpen(true) },
+                    { label: "תיקון נוכחות", icon: ClockAlert, onClick: () => setCorrectionOpen(true) },
+                  ].map((tile) => (
+                    <button
+                      key={tile.label}
+                      type="button"
+                      onClick={tile.onClick}
+                      className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-xl border border-border/50 bg-card p-3 text-sm font-semibold hover:border-primary/40 hover:bg-muted/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [touch-action:manipulation]"
+                    >
+                      <span className="grid h-11 w-11 place-items-center rounded-xl bg-primary/10 text-primary">
+                        <tile.icon className="h-5 w-5" aria-hidden="true" />
+                      </span>
+                      <span className="flex items-center gap-1"><Plus className="h-3.5 w-3.5" aria-hidden="true" />{tile.label}</span>
+                    </button>
+                  ))}
+                </section>
+
+                <section aria-labelledby="portal-balances-title" className="bg-card rounded-xl border border-border/50 p-4">
+                  <h2 id="portal-balances-title" className="font-semibold text-sm mb-3 flex items-center gap-2">
+                    <CalendarDays className="w-4 h-4 text-primary" aria-hidden="true" />
+                    יתרות חופשה ומחלה
+                  </h2>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col items-center p-3 bg-muted/50 rounded-lg">
+                      <span className="text-2xl font-bold text-primary">
+                        {emp.vacation_balance != null ? Number(emp.vacation_balance).toFixed(2) : "—"}
+                      </span>
+                      <span className="text-xs text-muted-foreground">ימי חופשה</span>
+                    </div>
+                    <div className="flex flex-col items-center p-3 bg-muted/50 rounded-lg">
+                      <span className="text-2xl font-bold text-info">
+                        {emp.sick_balance != null ? Number(emp.sick_balance).toFixed(2) : "—"}
+                      </span>
+                      <span className="text-xs text-muted-foreground">ימי מחלה</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-3">{balanceUpdated}</p>
+                </section>
+
+                <section aria-labelledby="portal-my-requests-title" className="space-y-3">
+                  <h2 id="portal-my-requests-title" className="font-semibold">הבקשות שלי</h2>
+                  <div className="bg-card rounded-xl border border-border/50 p-4">
+                    <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                      <CalendarDays className="w-4 h-4 text-primary" aria-hidden="true" />
+                      חופשה ומחלה
+                    </h3>
+                    <LeaveRequestsList requests={myLeaveRequests} allowCancel />
+                  </div>
+                  <div className="bg-card rounded-xl border border-border/50 p-4">
+                    <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                      <Wrench className="w-4 h-4 text-primary" aria-hidden="true" />
+                      קריאות שירות
+                    </h3>
+                    <MyTicketsTab employeeId={emp.id} employeeName={emp.full_name} employeePhone={emp.phone} showNewButton={false} />
+                  </div>
+                </section>
+              </>
+            ))}
+          </div>
+        )}
+
+        {/* ===== KNOWLEDGE: procedures + guides ===== */}
+        {loc.tab === "knowledge" && (
+          <div className="space-y-4 animate-fade-in">
+            <div role="group" aria-label="סוג תוכן" className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
+              {([["procedures", "נהלים"], ["guides", "מדריכים"]] as const).map(([kind, label]) => (
+                <button
+                  key={kind}
+                  type="button"
+                  aria-pressed={loc.kind === kind}
+                  onClick={() => go({ tab: "knowledge", kind })}
+                  className={cn(
+                    "min-h-11 rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    loc.kind === kind ? "bg-card font-bold text-foreground shadow-sm" : "font-medium text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {loc.kind === "procedures" ? (
+              <StateView loading={procedureQuery.isLoading} error={procedureQuery.error} onRetry={() => { void procedureQuery.refetch(); }} label="את הנהלים">
+                <PortalLearningLibrary key="procedures" mode="procedures" departments={procedureLibrary.departments} items={procedureLibrary.items} />
+              </StateView>
+            ) : (
+              <StateView loading={guideQuery.isLoading} error={guideQuery.error} onRetry={() => { void guideQuery.refetch(); }} label="את המדריכים">
+                <PortalLearningLibrary key="guides" mode="guides" topics={guideLibrary.topics} items={guideLibrary.guides} />
+              </StateView>
+            )}
+          </div>
+        )}
+
+        {/* ===== MORE: menu ===== */}
+        {loc.tab === "more" && !loc.view && (
+          <nav aria-label="עוד" className="animate-fade-in">
+            <ul className="divide-y divide-border/60 rounded-xl border border-border/50 bg-card overflow-hidden">
+              {([
+                { view: "contacts", icon: Phone },
+                { view: "assets", icon: Package },
+                { view: "pay", icon: FileText },
+                { view: "news", icon: Megaphone },
+              ] as const).map((item) => (
+                <li key={item.view}>
+                  <button
+                    type="button"
+                    onClick={() => go({ tab: "more", view: item.view })}
+                    className="flex w-full min-h-14 items-center gap-3 px-4 text-right text-sm font-medium hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                  >
+                    <item.icon className="w-5 h-5 text-primary" aria-hidden="true" />
+                    <span className="flex-1">{MORE_VIEW_LABELS[item.view]}</span>
+                    <ChevronLeft className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                  </button>
+                </li>
+              ))}
+              {hasDualAccess(roles) && (
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sessionStorage.setItem("activeExperience", "ops");
+                      navigate("/");
+                    }}
+                    className="flex w-full min-h-14 items-center gap-3 px-4 text-right text-sm font-medium hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                  >
+                    <LayoutDashboard className="w-5 h-5 text-primary" aria-hidden="true" />
+                    <span className="flex-1">מעבר לממשק הניהול</span>
+                    <ChevronLeft className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                  </button>
+                </li>
+              )}
+              <li>
+                <button
+                  type="button"
+                  onClick={() => { void handleSignOut(); }}
+                  className="flex w-full min-h-14 items-center gap-3 px-4 text-right text-sm font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                >
+                  <LogOut className="w-5 h-5" aria-hidden="true" />
+                  <span className="flex-1">יציאה מהמערכת</span>
+                </button>
+              </li>
+            </ul>
+          </nav>
+        )}
+
+        {loc.tab === "more" && loc.view && (
+          <Button variant="ghost" className="min-h-11 -ms-2 gap-1" onClick={() => go({ tab: "more" })}>
+            <ArrowRight aria-hidden="true" />
+            חזרה לעוד
+          </Button>
+        )}
+
+        {/* ===== MORE → CONTACTS ===== */}
+        {loc.tab === "more" && loc.view === "contacts" && (
+          <div className="space-y-3 animate-fade-in">
+            <div className="relative">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" aria-hidden="true" />
+              <input
+                type="search"
+                value={contactSearch}
+                onChange={(e) => setContactSearch(e.target.value)}
+                placeholder="חפש לפי שם, תפקיד, מחלקה, טלפון או דוא״ל..."
+                className="w-full min-h-11 pr-9 pl-12 py-2.5 bg-card border border-border/50 rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground"
+                aria-label="חיפוש אנשי קשר"
+              />
+              {contactSearch && (
+                <button
+                  type="button"
+                  onClick={() => setContactSearch("")}
+                  className="absolute left-0.5 top-1/2 -translate-y-1/2 h-11 w-11 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label="נקה חיפוש"
+                >
+                  <X className="w-4 h-4" aria-hidden="true" />
+                </button>
+              )}
+            </div>
+            <StateView
+              loading={contactsQuery.isLoading}
+              error={contactsQuery.error}
+              onRetry={() => { void contactsQuery.refetch(); }}
+              label="אנשי הקשר"
+              isEmpty={filteredContacts.length === 0}
+              empty={contactSearch
+                ? { title: "לא נמצאו אנשי קשר התואמים לחיפוש", action: <Button variant="outline" onClick={() => setContactSearch("")}>נקה חיפוש</Button> }
+                : { title: "אין אנשי קשר כרגע" }}
+            >
+              <ul className="space-y-2">
+                {filteredContacts.map((contact) => (
+                  <li key={contact.id} className="bg-card rounded-xl border border-border/50 p-3 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0" aria-hidden="true">
+                      <span className="text-sm font-bold text-primary">{contact.name[0]}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{contact.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{[contact.role, contact.department].filter(Boolean).join(" • ")}</p>
+                      {contact.email && (
+                        <a href={`mailto:${contact.email}`} className="text-xs text-primary hover:underline truncate block" dir="ltr">
+                          {contact.email}
+                        </a>
+                      )}
+                    </div>
+                    {contact.phone && (
+                      <a
+                        href={`tel:${contact.phone}`}
+                        className="h-11 w-11 shrink-0 inline-flex items-center justify-center rounded-full bg-primary/10 text-primary hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        aria-label={`התקשר אל ${contact.name}: ${contact.phone}`}
+                        title={contact.phone}
+                      >
+                        <Phone className="w-4 h-4" aria-hidden="true" />
+                      </a>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </StateView>
+          </div>
+        )}
+
+        {/* ===== MORE → ASSETS ===== */}
+        {loc.tab === "more" && loc.view === "assets" && (
+          <div className="space-y-4 animate-fade-in">
+            {withEmployee((emp) => (
+              <>
+                <h2 className="font-semibold text-sm">ציוד פיזי{assetsQuery.isSuccess ? ` (${myAssets.length})` : ""}</h2>
+                <StateView
+                  loading={assetsQuery.isLoading}
+                  error={assetsQuery.error}
+                  onRetry={() => { void assetsQuery.refetch(); }}
+                  label="את הציוד שלך"
+                  isEmpty={myAssets.length === 0}
+                  empty={{ icon: <Box className="w-6 h-6" />, title: "אין ציוד משויך אליך" }}
+                >
+                  <ul className="grid grid-cols-1 gap-3">
+                    {myAssets.map((asset: any) => (
+                      <li key={asset.id} className="bg-card rounded-xl border border-border/50 p-3 flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                          <Box className="w-5 h-5 text-primary" />
+                          <Box className="w-5 h-5 text-primary" aria-hidden="true" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{asset.asset_name}</p>
@@ -616,293 +881,116 @@ export default function EmployeePortal() {
                             {asset.serial_number && ` • ${asset.serial_number}`}
                           </p>
                         </div>
-                      </div>
+                      </li>
                     ))}
-                  </div>
-                ) : (
-                  <p className="text-center text-sm text-muted-foreground py-4">אין ציוד משויך אליך</p>
-                )}
+                  </ul>
+                </StateView>
 
-                <MyProtocolsList employeeId={myEmployee.id} />
+                <MyProtocolsList employeeId={emp.id} />
 
-                <h2 className="font-semibold text-sm mt-6">הרשאות ומערכות ({myDigitalAccess.length})</h2>
-                {myDigitalAccess.length > 0 ? (
-                  <div className="grid grid-cols-1 gap-3">
+                <h2 className="font-semibold text-sm mt-6">הרשאות ומערכות{digitalQuery.isSuccess ? ` (${myDigitalAccess.length})` : ""}</h2>
+                <StateView
+                  loading={digitalQuery.isLoading}
+                  error={digitalQuery.error}
+                  onRetry={() => { void digitalQuery.refetch(); }}
+                  label="את ההרשאות שלך"
+                  isEmpty={myDigitalAccess.length === 0}
+                  empty={{ icon: <Wifi className="w-6 h-6" />, title: "אין הרשאות דיגיטליות" }}
+                >
+                  <ul className="grid grid-cols-1 gap-3">
                     {myDigitalAccess.map((item) => (
-                      <div key={item.id} className="bg-card rounded-xl border border-border/50 p-3 flex items-center gap-3">
+                      <li key={item.id} className="bg-card rounded-xl border border-border/50 p-3 flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                          <Wifi className="w-5 h-5 text-primary" />
+                          <Wifi className="w-5 h-5 text-primary" aria-hidden="true" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{item.resource_path}</p>
                           <p className="text-xs text-muted-foreground">{item.access_type} • {item.permission_level}</p>
                         </div>
-                      </div>
+                      </li>
                     ))}
-                  </div>
-                ) : (
-                  <p className="text-center text-sm text-muted-foreground py-4">אין הרשאות דיגיטליות</p>
-                )}
-
-                {/* כפתור "דווח על ציוד תקול / בקשה לציוד חדש" הוסתר זמנית עד שיהיה פעיל */}
+                  </ul>
+                </StateView>
               </>
-            )}
+            ))}
           </div>
         )}
 
-        {/* ===== ATTENDANCE TAB ===== */}
-        {activeTab === "attendance" && (
-          <div role="tabpanel" id="portal-tabpanel-attendance" aria-labelledby="portal-tab-attendance" className="animate-fade-in space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="font-semibold text-sm">נוכחות</h2>
-            </div>
-
-
-
-            {!myEmployee && (
-              <p className="text-center text-sm text-muted-foreground py-4">
-                המשתמש שלך לא מקושר לעובד. פנה למנהל המערכת.
-              </p>
-            )}
-
-
-            {myEmployee && <MonthReportConfirm employeeId={myEmployee.id} />}
-
-            {myEmployee && myPunches.length > 0 ? (
-<MyPunchesList
-                punches={myPunches}
-                leaves={(myLeaveRequests as any[]).filter((l) => l.status === "approved")}
-                highlightDate={searchParams.get("highlight") || undefined}
-              />
-            ) : myEmployee ? (
-              <p className="text-center text-sm text-muted-foreground py-4">אין רשומות נוכחות</p>
-            ) : null}
-
-            <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-              <AlertCircle className="w-3 h-3" />
-              ניתן לתקן שעה ישירות בטבלה עד יום למחרת. בתוך אותו חודש — עד 3 תיקונים נוספים.
-            </p>
-          </div>
-        )}
-
-        {/* ===== HR TAB ===== */}
-        {activeTab === "hr" && (
-          <div role="tabpanel" id="portal-tabpanel-hr" aria-labelledby="portal-tab-hr" className="space-y-4 animate-fade-in">
-            <div className="bg-card rounded-xl border border-border/50 p-4">
-              <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
-                <CalendarDays className="w-4 h-4 text-primary" />
-                יתרות חופשה ומחלה
-              </h3>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col items-center p-3 bg-muted/50 rounded-lg">
-                  <span className="text-2xl font-bold text-primary">
-                    {myEmployee?.vacation_balance != null
-                      ? Number(myEmployee.vacation_balance).toFixed(2)
-                      : "—"}
-                  </span>
-                  <span className="text-[11px] text-muted-foreground">ימי חופשה</span>
-                </div>
-                <div className="flex flex-col items-center p-3 bg-muted/50 rounded-lg">
-                  <span className="text-2xl font-bold text-info">
-                    {myEmployee?.sick_balance != null
-                      ? Number(myEmployee.sick_balance).toFixed(2)
-                      : "—"}
-                  </span>
-                  <span className="text-[11px] text-muted-foreground">ימי מחלה</span>
-                </div>
-              </div>
-              <p className="text-[11px] text-muted-foreground mt-3">
-                {myEmployee?.balances_updated_at ? (
-                  <>
-                    עודכן לאחרונה: {new Date(myEmployee.balances_updated_at).toLocaleDateString("en-GB")}
-                    {" · "}
-                    מקור: {myEmployee?.balances_source === "payslip" ? "תלוש שכר" : "ידני"}
-                  </>
-                ) : (
-                  "* היתרות מתעדכנות אוטומטית מתלושי השכר"
-                )}
-              </p>
-            </div>
-
-            <div className="bg-card rounded-xl border border-border/50 p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-sm flex items-center gap-2">
-                  <CalendarDays className="w-4 h-4 text-primary" />
-                  בקשות חופשה ומחלה
-                </h3>
-                <Button size="sm" className="gap-1 h-8 text-xs" onClick={() => setNewLeaveOpen(true)} disabled={!myEmployee}>
-                  <Plus className="w-3 h-3" />
-                  בקשה חדשה
-                </Button>
-              </div>
-              <LeaveRequestsList requests={myLeaveRequests} allowCancel />
-            </div>
-
-            <div className="bg-card rounded-xl border border-border/50 p-4">
-              <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-primary" />
-                תלושי שכר
-              </h3>
-              {myEmployee ? (
-                <EmployeePayslipsTab employeeId={myEmployee.id} employee={myEmployee} canSeeSalary={true} hideBalances isSelf auditContext="פורטל עובדים — תלושי שכר" />
-              ) : (
-                <p className="text-center text-sm text-muted-foreground py-4">אין מידע זמין</p>
-              )}
-            </div>
-
-            <div className="bg-card rounded-xl border border-border/50 p-4">
-              <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-primary" />
-                טפסי 101
-              </h3>
-              <MyTax101FormsList employeeId={myEmployee?.id} />
-            </div>
-
-            <BirthdayPreferenceCard employee={myEmployee} />
-          </div>
-        )}
-
-        {/* ===== SERVICE TICKETS TAB ===== */}
-        {activeTab === "tickets" && myEmployee && (
-          <div role="tabpanel" id="portal-tabpanel-tickets" aria-labelledby="portal-tab-tickets" className="animate-fade-in">
-            <MyTicketsTab
-              employeeId={myEmployee.id}
-              employeeName={myEmployee.full_name}
-              employeePhone={myEmployee.phone}
-            />
-          </div>
-        )}
-
-        {/* ===== NEWS TAB ===== */}
-        {activeTab === "news" && (
-          <div role="tabpanel" id="portal-tabpanel-news" aria-labelledby="portal-tab-news" className="space-y-3 animate-fade-in">
-            {announcements.length > 0 ? (
+        {/* ===== MORE → PAY & DOCUMENTS ===== */}
+        {loc.tab === "more" && loc.view === "pay" && (
+          <div className="space-y-4 animate-fade-in">
+            {withEmployee((emp) => (
               <>
-                {freshAnnouncements.map((item: any) => (
-                  <div key={item.id} className="bg-card rounded-xl border border-border/50 p-4">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <h3 className="font-semibold text-sm">{item.title}</h3>
-                      <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-                        {new Date(item.published_at).toLocaleDateString("en-GB")}
-                      </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground whitespace-pre-line">{item.content}</p>
-                    {item.sender_name && (
-                      <p className="mt-3 pt-2 border-t border-border/40 text-xs text-muted-foreground">
-                        בברכה, {item.sender_name}
-                        {item.sender_role ? ` · ${item.sender_role}` : ""}
-                      </p>
-                    )}
-                  </div>
-                ))}
-                {archivedAnnouncements.length > 0 && (
-                  <details className="bg-card rounded-xl border border-border/50">
-                    <summary className="cursor-pointer p-4 text-sm font-medium text-muted-foreground select-none">
-                      ארכיון הודעות ({archivedAnnouncements.length})
-                    </summary>
-                    <div className="px-4 pb-4 space-y-3">
-                      {archivedAnnouncements.map((item: any) => (
-                        <div key={item.id} className="rounded-lg bg-muted/40 p-3">
-                          <div className="flex items-start justify-between gap-2 mb-1">
-                            <h4 className="font-medium text-sm">{item.title}</h4>
-                            <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-                              {new Date(item.published_at).toLocaleDateString("en-GB")}
-                            </span>
-                          </div>
-                          <p className="text-sm text-muted-foreground whitespace-pre-line">{item.content}</p>
-                          {item.sender_name && (
-                            <p className="mt-2 pt-2 border-t border-border/40 text-xs text-muted-foreground">
-                              בברכה, {item.sender_name}
-                              {item.sender_role ? ` · ${item.sender_role}` : ""}
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </details>
-                )}
+                <section className="bg-card rounded-xl border border-border/50 p-4">
+                  <h2 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-primary" aria-hidden="true" />
+                    תלושי שכר
+                  </h2>
+                  <EmployeePayslipsTab employeeId={emp.id} employee={emp} canSeeSalary={true} hideBalances isSelf auditContext="פורטל עובדים — תלושי שכר" />
+                </section>
+                <section className="bg-card rounded-xl border border-border/50 p-4">
+                  <h2 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-primary" aria-hidden="true" />
+                    טפסי 101
+                  </h2>
+                  <MyTax101FormsList employeeId={emp.id} />
+                </section>
+                <BirthdayPreferenceCard employee={emp} />
               </>
-            ) : (
-              <p className="text-center text-sm text-muted-foreground py-8">אין הודעות כרגע</p>
-            )}
+            ))}
           </div>
         )}
 
-        {/* ===== KB TAB ===== */}
-        {activeTab === "kb" && (
-          <div role="tabpanel" id="portal-tabpanel-kb" aria-labelledby="portal-tab-kb">
-            <PortalLearningLibrary mode="procedures" departments={procedureLibrary.departments} items={procedureLibrary.items} />
-          </div>
-        )}
-
-        {activeTab === "guides" && (
-          <div role="tabpanel" id="portal-tabpanel-guides" aria-labelledby="portal-tab-guides">
-            <PortalLearningLibrary mode="guides" topics={guideLibrary.topics} items={guideLibrary.guides} />
-          </div>
-        )}
-
-        {/* ===== CONTACTS TAB ===== */}
-        {activeTab === "contacts" && (
-          <div role="tabpanel" id="portal-tabpanel-contacts" aria-labelledby="portal-tab-contacts" className="space-y-3 animate-fade-in">
-            <div className="relative">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-              <input
-                type="search"
-                value={contactSearch}
-                onChange={(e) => setContactSearch(e.target.value)}
-                placeholder="חפש לפי שם, תפקיד, מחלקה, טלפון או דוא״ל..."
-                className="w-full pr-9 pl-9 py-2.5 bg-card border border-border/50 rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground"
-                aria-label="חיפוש אנשי קשר"
-              />
-              {contactSearch && (
-                <button
-                  type="button"
-                  onClick={() => setContactSearch("")}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded p-0.5"
-                  aria-label="נקה חיפוש"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+        {/* ===== MORE → NEWS ===== */}
+        {loc.tab === "more" && loc.view === "news" && (
+          <div className="space-y-3 animate-fade-in">
+            <StateView
+              loading={announcementsQuery.isLoading}
+              error={announcementsQuery.error}
+              onRetry={() => { void announcementsQuery.refetch(); }}
+              label="את ההודעות"
+              isEmpty={announcements.length === 0}
+              empty={{ icon: <Inbox className="w-6 h-6" />, title: "אין הודעות כרגע" }}
+            >
+              {freshAnnouncements.map((item: any) => <AnnouncementCard key={item.id} item={item} />)}
+              {archivedAnnouncements.length > 0 && (
+                <details className="bg-card rounded-xl border border-border/50">
+                  <summary className="cursor-pointer min-h-11 flex items-center p-4 text-sm font-medium text-muted-foreground select-none">
+                    ארכיון הודעות ({archivedAnnouncements.length})
+                  </summary>
+                  <div className="px-4 pb-4 space-y-3">
+                    {archivedAnnouncements.map((item: any) => <AnnouncementCard key={item.id} item={item} compact />)}
+                  </div>
+                </details>
               )}
-            </div>
-            {filteredContacts.length > 0 ? filteredContacts.map((contact) => (
-              <div key={contact.id} className="bg-card rounded-xl border border-border/50 p-3 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <span className="text-sm font-bold text-primary">{contact.name[0]}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{contact.name}</p>
-                  <p className="text-[11px] text-muted-foreground truncate">{contact.role} • {contact.department}</p>
-                  {contact.email && (
-                    <a href={`mailto:${contact.email}`} className="text-[11px] text-primary hover:underline truncate block" dir="ltr">
-                      {contact.email}
-                    </a>
-                  )}
-                </div>
-                {contact.phone && (
-                  <a href={`tel:${contact.phone}`} className="flex items-center gap-1 text-xs text-primary hover:underline shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded p-1" aria-label={`התקשר אל ${contact.name}: ${contact.phone}`} title={contact.phone}>
-                    <Phone className="w-3.5 h-3.5" aria-hidden="true" />
-                  </a>
-                )}
-              </div>
-            )) : (
-              <p className="text-center text-sm text-muted-foreground py-8">
-                {contactSearch ? "לא נמצאו אנשי קשר התואמים לחיפוש" : "אין אנשי קשר כרגע"}
-              </p>
-            )}
+            </StateView>
           </div>
         )}
-
-        <div className="h-6" />
       </main>
 
       {myEmployee && (
         <>
           <NewLeaveRequestDialog
-            open={newLeaveOpen}
-            onOpenChange={setNewLeaveOpen}
+            open={leaveOpen}
+            onOpenChange={setLeaveOpen}
+            initialType={leaveType}
             employeeId={myEmployee.id}
             managerId={myEmployee.direct_manager_id ?? null}
+          />
+          <NewPortalTicketDialog
+            open={ticketOpen}
+            onOpenChange={setTicketOpen}
+            employeeId={myEmployee.id}
+            employeeName={myEmployee.full_name}
+            employeePhone={myEmployee.phone}
+          />
+          <AttendanceCorrectionDialog
+            open={correctionOpen}
+            onClose={() => setCorrectionOpen(false)}
+            employeeId={myEmployee.id}
+            managerId={myEmployee.direct_manager_id ?? null}
+            initiatedBy="employee"
+            tracksAttendance={(myEmployee as any).tracks_attendance !== false}
           />
         </>
       )}

@@ -8,6 +8,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAddCategoryFieldOption } from "@/hooks/useCategories";
 import { toast } from "@/hooks/use-toast";
 import { useSites, useCreateSite } from "@/hooks/useSites";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 /** Fields whose values come from the company's existing sites list */
 const isSiteField = (name: string) => /^שיוך לאתר/.test(name.trim());
@@ -61,16 +65,38 @@ export function CustomFieldsRenderer({
   const addOption = useAddCategoryFieldOption();
   const canAddOptions = isAdmin && !readOnly;
 
-  const handleAddOption = async (cf: CustomField) => {
-    const v = window.prompt(`הוסף ערך חדש לרשימה "${cf.field_name}":`);
-    if (!v || !v.trim()) return;
+  /** Replaces window.prompt: one labelled text dialog for "new list value" and "new site". */
+  const [prompt, setPrompt] = useState<
+    | { kind: "option"; cf: CustomField }
+    | { kind: "site"; cf: CustomField; selected: string[] }
+    | null
+  >(null);
+  const [promptValue, setPromptValue] = useState("");
+  const [promptBusy, setPromptBusy] = useState(false);
+  const openPrompt = (p: NonNullable<typeof prompt>) => { setPromptValue(""); setPrompt(p); };
+
+  const submitPrompt = async () => {
+    const v = promptValue.trim();
+    if (!prompt || !v) return;
+    setPromptBusy(true);
     try {
-      await addOption.mutateAsync({ fieldId: cf.id, newOption: v.trim() });
-      toast({ title: "הערך נוסף לרשימה" });
+      if (prompt.kind === "option") {
+        await addOption.mutateAsync({ fieldId: prompt.cf.id, newOption: v });
+        toast({ title: "הערך נוסף לרשימה" });
+      } else {
+        const site = await createSite.mutateAsync({ name: v, address: "", contact_name: "", phone: "" } as any);
+        toast({ title: "האתר נוסף", description: site.name });
+        if (!prompt.selected.includes(site.name)) onChange(prompt.cf.field_name, [...prompt.selected, site.name].join(", "));
+      }
+      setPrompt(null);
     } catch (e: any) {
-      toast({ title: "שגיאה בהוספת ערך", description: e?.message, variant: "destructive" });
+      toast({ title: prompt.kind === "option" ? "שגיאה בהוספת ערך" : "שגיאה בהוספת אתר", description: e?.message, variant: "destructive" });
+    } finally {
+      setPromptBusy(false);
     }
   };
+
+  const handleAddOption = (cf: CustomField) => openPrompt({ kind: "option", cf });
 
   // For LEASE category: derive contextual labels based on the "כיוון חוזה" value
   const leaseDirection = categoryPrefix === "LEASE" ? values["כיוון חוזה"] : undefined;
@@ -106,21 +132,28 @@ export function CustomFieldsRenderer({
           const errKey = `cf_${cf.field_name}`;
           const helper = getHelperText(cf.field_name);
           const value = values[cf.field_name] ?? "";
+          // Label, control, helper and error are wired by id so screen readers read them together.
+          const fieldId = `cf-${cf.id}`;
+          const labelId = `${fieldId}-label`;
+          const helperId = helper ? `${fieldId}-help` : undefined;
+          const errorId = errors[errKey] ? `${fieldId}-error` : undefined;
+          const describedBy = [helperId, errorId].filter(Boolean).join(" ") || undefined;
           return (
             <div key={cf.id}>
               <div className="flex items-center justify-between mb-1 gap-2">
-                <label className="text-sm font-medium">
+                <label id={labelId} htmlFor={readOnly || cf.field_type === "list" ? undefined : fieldId} className="text-sm font-medium">
                   {cf.field_name}
-                  {cf.is_required && !readOnly && <span className="text-destructive mr-1">*</span>}
+                  {cf.is_required && !readOnly && <span className="text-destructive mr-1" aria-hidden="true">*</span>}
                 </label>
                 {canAddOptions && (cf.field_type === "list" || cf.field_type === "list_multi") && (
                   <button
                     type="button"
                     onClick={() => handleAddOption(cf)}
-                    className="text-xs text-muted-foreground hover:text-primary flex items-center gap-0.5"
+                    className="min-h-8 px-1 text-xs text-muted-foreground hover:text-primary flex items-center gap-0.5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     title="הוסף ערך חדש לרשימה"
+                    aria-label={`הוסף ערך חדש לרשימה ${cf.field_name}`}
                   >
-                    <Plus className="w-3 h-3" /> ערך חדש
+                    <Plus className="w-3 h-3" aria-hidden="true" /> ערך חדש
                   </button>
                 )}
               </div>
@@ -171,6 +204,7 @@ export function CustomFieldsRenderer({
                   );
                 })()
               ) : cf.field_type === "list" ? (
+                <div role="group" aria-labelledby={labelId} aria-describedby={describedBy}>
                 <SearchableSelect
                   value={value}
                   onChange={(v) => onChange(cf.field_name, v)}
@@ -180,6 +214,7 @@ export function CustomFieldsRenderer({
                   placeholder="בחר..."
                   error={!!errors[errKey]}
                 />
+                </div>
               ) : cf.field_type === "list_multi" || isSiteField(cf.field_name) ? (
                 (() => {
                   const opts = isSiteField(cf.field_name)
@@ -197,6 +232,10 @@ export function CustomFieldsRenderer({
                       <PopoverTrigger asChild>
                         <button
                           type="button"
+                          id={fieldId}
+                          aria-labelledby={`${labelId} ${fieldId}`}
+                          aria-describedby={describedBy}
+                          aria-invalid={errors[errKey] ? true : undefined}
                           className={cn(
                             "w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 text-right flex items-center justify-between gap-2 min-h-[40px]",
                             errors[errKey] ? "ring-2 ring-destructive/50" : "focus:ring-primary/30",
@@ -213,6 +252,7 @@ export function CustomFieldsRenderer({
                                 >
                                   {s}
                                   <XIcon
+                                    aria-hidden="true"
                                     className="w-3 h-3 cursor-pointer hover:text-destructive"
                                     onClick={(e) => { e.stopPropagation(); toggle(s); }}
                                   />
@@ -232,19 +272,9 @@ export function CustomFieldsRenderer({
                             <button
                               type="button"
                               className="w-full flex items-center gap-1 px-2 py-1.5 rounded hover:bg-muted text-sm text-primary border-b border-border/50 mb-1"
-                              onClick={async () => {
-                                const name = window.prompt("שם האתר החדש:");
-                                if (!name?.trim()) return;
-                                try {
-                                  const site = await createSite.mutateAsync({ name: name.trim(), address: "", contact_name: "", phone: "" } as any);
-                                  toast({ title: "האתר נוסף", description: site.name });
-                                  if (!selected.includes(site.name)) onChange(cf.field_name, [...selected, site.name].join(", "));
-                                } catch (e: any) {
-                                  toast({ title: "שגיאה בהוספת אתר", description: e?.message, variant: "destructive" });
-                                }
-                              }}
+                              onClick={() => openPrompt({ kind: "site", cf, selected })}
                             >
-                              <Plus className="w-3.5 h-3.5" /> אתר חדש
+                              <Plus className="w-3.5 h-3.5" aria-hidden="true" /> אתר חדש
                             </button>
                           )}
                           {opts.map((opt) => {
@@ -266,6 +296,10 @@ export function CustomFieldsRenderer({
                 })()
               ) : (
                 <input
+                  id={fieldId}
+                  aria-invalid={errors[errKey] ? true : undefined}
+                  aria-describedby={describedBy}
+                  aria-required={cf.is_required || undefined}
                   type={
                     cf.field_type === "number"
                       ? "number"
@@ -283,14 +317,14 @@ export function CustomFieldsRenderer({
                 />
               )}
               {helper && (
-                <p className="text-[11px] text-primary/80 mt-1 flex items-center gap-1">
-                  <Info className="w-3 h-3 shrink-0" />
+                <p id={helperId} className="text-xs text-primary/80 mt-1 flex items-center gap-1">
+                  <Info className="w-3 h-3 shrink-0" aria-hidden="true" />
                   {helper}
                 </p>
               )}
               {errors[errKey] && (
-                <p className="text-xs text-destructive mt-1 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
+                <p id={errorId} role="alert" className="text-xs text-destructive mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" aria-hidden="true" />
                   {errors[errKey]}
                 </p>
               )}
@@ -301,13 +335,29 @@ export function CustomFieldsRenderer({
       {/* Lease direction summary */}
       {categoryPrefix === "LEASE" && leaseDirection && (
         <div className="mt-3 p-2 rounded-lg bg-primary/5 border border-primary/20 text-xs text-primary flex items-start gap-2">
-          <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+          <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" aria-hidden="true" />
           <span>
             {isCompanyRenting && "החברה היא השוכרת בחוזה זה — הצד השני הוא בעל הנכס/המשכיר."}
             {isCompanyLeasing && "החברה היא המשכירה בחוזה זה — הצד השני הוא השוכר של הנכס."}
           </span>
         </div>
       )}
+
+      <Dialog open={!!prompt} onOpenChange={(v) => { if (!v && !promptBusy) setPrompt(null); }}>
+        <DialogContent dir="rtl" className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{prompt?.kind === "site" ? "הוספת אתר חדש" : `ערך חדש לרשימה "${prompt?.cf.field_name ?? ""}"`}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={(e) => { e.preventDefault(); void submitPrompt(); }} className="space-y-1.5">
+            <Label htmlFor="cf-prompt-value">{prompt?.kind === "site" ? "שם האתר" : "הערך"}</Label>
+            <Input id="cf-prompt-value" value={promptValue} onChange={(e) => setPromptValue(e.target.value)} autoFocus disabled={promptBusy} />
+          </form>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setPrompt(null)} disabled={promptBusy}>ביטול</Button>
+            <Button onClick={submitPrompt} disabled={!promptValue.trim()} loading={promptBusy} loadingText="מוסיף…">הוסף</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

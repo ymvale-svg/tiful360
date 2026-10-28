@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -19,6 +19,8 @@ interface Props {
   onOpenChange: (v: boolean) => void;
   employeeId: string;
   managerId: string | null;
+  /** Which type the dialog opens on, e.g. "sick" from the portal's sick-report tile. */
+  initialType?: LeaveRequestType;
 }
 
 const TYPES: { value: LeaveRequestType; label: string }[] = [
@@ -38,10 +40,12 @@ function calcDays(start: string, end: string): number {
   return Math.floor(ms / (1000 * 60 * 60 * 24)) + 1;
 }
 
-export function NewLeaveRequestDialog({ open, onOpenChange, employeeId, managerId }: Props) {
+export function NewLeaveRequestDialog({ open, onOpenChange, employeeId, managerId, initialType = "vacation" }: Props) {
   const { toast } = useToast();
   const create = useCreateLeaveRequest();
-  const [type, setType] = useState<LeaveRequestType>("vacation");
+  const [type, setType] = useState<LeaveRequestType>(initialType);
+  // Each opening starts on the type its entry point asked for ("דיווח מחלה" → sick).
+  useEffect(() => { if (open) setType(initialType); }, [open, initialType]);
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [reason, setReason] = useState("");
@@ -58,7 +62,7 @@ export function NewLeaveRequestDialog({ open, onOpenChange, employeeId, managerI
   const provisionalDays = isSick && start && !end ? 1 : days;
 
   const reset = () => {
-    setType("vacation"); setStart(""); setEnd(""); setReason(""); setFile(null); setErrors({});
+    setType(initialType); setStart(""); setEnd(""); setReason(""); setFile(null); setErrors({});
   };
 
   const doSubmit = async () => {

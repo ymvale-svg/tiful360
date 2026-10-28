@@ -59,6 +59,8 @@ export function FileDrop({ onFiles, accept, multiple, disabled, title, hint, id,
         disabled={disabled}
         onChange={(e) => { take(e.target.files); e.target.value = ""; }}
       />
+      {/* The label is the drop target and the click target of the (focusable) input it names. */}
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <label
         htmlFor={inputId}
         onDragOver={(e) => { e.preventDefault(); if (!disabled) setOver(true); }}

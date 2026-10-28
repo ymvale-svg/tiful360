@@ -49,6 +49,33 @@ export function useSaveSlaSetting() {
 }
 
 /** Assets currently assigned to a given employee (for linking to a ticket) */
+/**
+ * Saves every SLA row in one upsert request, so a failure leaves nothing half-saved
+ * (the old per-row loop could stop midway without saying which rows were written).
+ */
+export function useSaveSlaSettings() {
+  const { activeCompanyId } = useCompany();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (rows: SlaSettingRow[]) => {
+      if (!activeCompanyId) throw new Error("לא נבחרה חברה");
+      if (!rows.length) return;
+      const { error } = await supabase.from("sla_settings").upsert(
+        rows.map((row) => ({
+          company_id: activeCompanyId,
+          subject_category: row.subject_category,
+          priority: row.priority,
+          target_hours: row.target_hours,
+          notify_on_breach: row.notify_on_breach,
+        })),
+        { onConflict: "company_id,subject_category,priority" },
+      );
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sla-settings"] }),
+  });
+}
+
 export function useEmployeeAssetOptions(employeeId?: string | null) {
   return useQuery({
     queryKey: ["employee-asset-options", employeeId],

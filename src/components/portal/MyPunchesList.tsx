@@ -4,6 +4,10 @@ import { cn } from "@/lib/utils";
 import { AlertCircle, ArrowRight, ArrowLeft, Pencil, Check, X, Clock, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FormField } from "@/components/feedback/FormField";
+import { useConfirm } from "@/components/feedback/ConfirmDialog";
 import { useEditOwnPunchTime, useAddOwnPunch, useMySelfEditCount, type AttendancePunch } from "@/hooks/useAttendancePunches";
 import { useCompanyHolidaySet } from "@/hooks/useCompanyHolidays";
 
@@ -59,6 +63,9 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
   const add = useAddOwnPunch();
   const { toast } = useToast();
   const holidays = useCompanyHolidaySet();
+  const confirm = useConfirm();
+  /** Over the monthly limit: the change goes to payroll as a request with a mandatory reason. */
+  const [correctionFor, setCorrectionFor] = useState<{ id: string; d: Date } | null>(null);
 
   const highlightRef = useRef<HTMLDivElement | null>(null);
 
@@ -155,14 +162,14 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
   const remaining = Math.max(0, 3 - selfEditCount);
 
   /** מעבר ל-3 תיקונים בחודש — נשלחת בקשת תיקון עם נימוק חובה לאחראי השכר */
-  const requestCorrection = async (id: string, d: Date) => {
+  const requestCorrection = (id: string, d: Date) => {
+    setCorrectionFor({ id, d });
+  };
+
+  /** Throws on failure so the dialog can stay open and show the error. */
+  const submitCorrection = async (id: string, d: Date, reason: string) => {
     const p = punches.find((x) => x.id === id);
-    if (!p?.employee_id) return;
-    const reason = window.prompt("ניצלת את 3 התיקונים החודש. כתוב/י נימוק לבקשת התיקון (חובה):")?.trim();
-    if (!reason) {
-      toast({ title: "לא נשלח", description: "חובה לכתוב נימוק", variant: "destructive" });
-      return;
-    }
+    if (!p?.employee_id) throw new Error("ההחתמה לא נמצאה");
     const day = ymd(new Date(p.punch_at));
     const time = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
     const { error } = await supabase.from("attendance_corrections").insert({
@@ -171,8 +178,8 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
       requested_check_out: p.direction === "out" ? time : null,
       reason, initiated_by: "employee", status: "pending",
     } as any);
-    if (error) toast({ title: "שגיאה", description: error.message, variant: "destructive" });
-    else toast({ title: "בקשת התיקון נשלחה", description: "השעה תתעדכן לאחר אישור" });
+    if (error) throw new Error(error.message);
+    toast({ title: "בקשת התיקון נשלחה", description: "השעה תתעדכן לאחר אישור" });
   };
 
   const save = async (id: string, iso: string, newTime: string) => {
@@ -180,6 +187,14 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
     const [h, m] = newTime.split(":").map(Number);
     d.setHours(h, m, 0, 0);
     if (remaining <= 0) return requestCorrection(id, d);
+    if (remaining === 1) {
+      const ok = await confirm({
+        title: "זה התיקון האחרון החודש",
+        description: "אחרי תיקון זה, כל שינוי נוסף החודש יישלח כבקשה לאחראי השכר ויחכה לאישור.",
+        confirmLabel: "שמור את התיקון",
+      });
+      if (!ok) return;
+    }
     try {
       await edit.mutateAsync({ id, newPunchAt: d.toISOString() });
       toast({ title: "נשמר", description: "השעה עודכנה מיידית" });
@@ -207,7 +222,7 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
       <div className="flex items-start gap-2 text-[0.8125rem] text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
         <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
         <span className="leading-relaxed">
-          לחץ על השעה לעריכה, ועל <span className="font-semibold text-foreground">＋ הוסף</span> להשלמת החתמה שנשכחה — השינוי נשמר <span className="font-semibold text-foreground">מיידית</span>, ללא צורך באישור.
+          לחץ על השעה לעריכה, ועל <span className="font-semibold text-foreground">הוסף</span> להשלמת החתמה שנשכחה — השינוי נשמר <span className="font-semibold text-foreground">מיידית</span>, ללא צורך באישור.
           {" "}נותרו לך <span className="font-semibold text-foreground">{remaining}</span> תיקונים החודש.
         </span>
       </div>
@@ -313,14 +328,60 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
               <span>({sorted.length} פעימות)</span>
               {sorted.some((p: any) => p.edited_at) && (
                 <span className="inline-flex items-center gap-1 text-primary font-medium" title="נערך ידנית">
-                  <Pencil className="w-2.5 h-2.5" /> תוקן
+                  <Pencil className="w-3 h-3" aria-hidden="true" /> תוקן
                 </span>
               )}
             </div>
           </div>
         );
       })}
+
+      <CorrectionReasonDialog
+        open={!!correctionFor}
+        onClose={() => setCorrectionFor(null)}
+        onSubmit={(reason) => submitCorrection(correctionFor!.id, correctionFor!.d, reason)}
+      />
     </div>
+  );
+}
+
+/** Replaces window.prompt: a labelled, required reason for a correction over the monthly limit. */
+function CorrectionReasonDialog({ open, onClose, onSubmit }: { open: boolean; onClose: () => void; onSubmit: (reason: string) => Promise<void> }) {
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { if (open) { setReason(""); setError(null); } }, [open]);
+
+  const submit = async () => {
+    if (!reason.trim()) { setError("חובה לכתוב נימוק"); return; }
+    setBusy(true);
+    setError(null);
+    try {
+      await onSubmit(reason.trim());
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error && e.message ? e.message : "השליחה נכשלה. נסו שוב.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v && !busy) onClose(); }}>
+      <DialogContent dir="rtl" className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>בקשת תיקון שעה</DialogTitle>
+          <DialogDescription>ניצלת את 3 התיקונים החודש. הבקשה תישלח לאחראי השכר, והשעה תתעדכן לאחר אישור.</DialogDescription>
+        </DialogHeader>
+        <FormField label="נימוק" required error={error}>
+          <Textarea value={reason} onChange={(e) => { setReason(e.target.value); if (error) setError(null); }} rows={3} placeholder="למשל: שכחתי להחתים ביציאה" autoFocus />
+        </FormField>
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={onClose} disabled={busy}>ביטול</Button>
+          <Button onClick={submit} loading={busy} loadingText="שולח…">שלח בקשה</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -392,10 +453,10 @@ function PunchSlot({
               }}
               className="h-11 px-2 text-base font-mono w-[120px]"
             />
-            <Button size="icon" variant="ghost" className="h-11 w-11" onClick={submit} disabled={pending} aria-label="שמור">
+            <Button size="icon" variant="ghost" className="h-11 w-11" onClick={submit} disabled={pending} aria-label={`שמור שעת ${label}`}>
               <Check className="w-5 h-5 text-emerald-600" />
             </Button>
-            <Button size="icon" variant="ghost" className="h-11 w-11" onClick={cancel} aria-label="ביטול">
+            <Button size="icon" variant="ghost" className="h-11 w-11" onClick={cancel} aria-label="בטל עריכה">
               <X className="w-5 h-5" />
             </Button>
           </div>
@@ -404,22 +465,24 @@ function PunchSlot({
             type="button"
             onClick={startEdit}
             className={cn(
-              "group inline-flex items-center gap-1 font-mono font-semibold text-sm hover:underline underline-offset-2",
+              "-ms-2 inline-flex min-h-11 items-center gap-1.5 rounded-md px-2 font-mono font-semibold text-base hover:bg-background/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               accentClasses.text,
             )}
-            title="לחץ לעריכה"
+            aria-label={`ערוך שעת ${label}: ${timeStr}`}
+            title={`ערוך שעת ${label}`}
           >
             {timeStr}
-            <Pencil className="w-2.5 h-2.5 opacity-0 group-hover:opacity-70 transition-opacity" />
+            <Pencil className="w-4 h-4 opacity-70" aria-hidden="true" />
           </button>
         ) : (
           <button
             type="button"
             onClick={startEdit}
-            className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline underline-offset-2"
+            className="-ms-2 inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-sm font-medium text-primary hover:bg-background/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={`הוסף שעת ${label} שנשכחה`}
             title="הוסף החתמה שנשכחה"
           >
-            <Plus className="w-3 h-3" /> הוסף
+            <Plus className="w-4 h-4" aria-hidden="true" /> הוסף
           </button>
         )}
 

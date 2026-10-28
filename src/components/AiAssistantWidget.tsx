@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { cn } from "@/lib/utils";
 import { AiPendingActionCard } from "./AiPendingActionCard";
+import { useConfirm } from "@/components/feedback/ConfirmDialog";
+import { launcherOffset, useUploadJobCount } from "@/lib/floatingLayer";
 
 type Msg = { role: "user" | "assistant"; content: string };
 type PendingAction = { name: string; args: Record<string, any> } | null;
@@ -59,6 +61,11 @@ export function AiAssistantWidget() {
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== "undefined" ? window.innerWidth < 1024 : false
   );
+  const [viewportWidth, setViewportWidth] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth : 1280
+  );
+  const uploadJobCount = useUploadJobCount();
+  const confirm = useConfirm();
   const { activeCompanyId } = useCompany();
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -68,8 +75,13 @@ export function AiAssistantWidget() {
     if (typeof window === "undefined") return;
     const mql = window.matchMedia("(max-width: 1023px)");
     const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    const onResize = () => setViewportWidth(window.innerWidth);
     mql.addEventListener("change", onChange);
-    return () => mql.removeEventListener("change", onChange);
+    window.addEventListener("resize", onResize);
+    return () => {
+      mql.removeEventListener("change", onChange);
+      window.removeEventListener("resize", onResize);
+    };
   }, []);
 
   const panel = useDraggable(
@@ -137,10 +149,10 @@ export function AiAssistantWidget() {
         setMessages((m) => [...m, { role: "assistant", content: data.text || "(אין תשובה)" }]);
         setPending(null);
       } else if (data?.error) {
-        setMessages((m) => [...m, { role: "assistant", content: `⚠️ שגיאה: ${data.error}` }]);
+        setMessages((m) => [...m, { role: "assistant", content: `שגיאה: ${data.error}` }]);
       }
     } catch (e: any) {
-      setMessages((m) => [...m, { role: "assistant", content: `⚠️ שגיאה: ${e?.message ?? e}` }]);
+      setMessages((m) => [...m, { role: "assistant", content: `שגיאה: ${e?.message ?? e}` }]);
     } finally {
       setLoading(false);
     }
@@ -159,7 +171,7 @@ export function AiAssistantWidget() {
     if (!pending) return;
     const action = pending;
     setPending(null);
-    setMessages((m) => [...m, { role: "user", content: `✓ אישור: ${ACTION_LABELS[action.name] ?? action.name}` }]);
+    setMessages((m) => [...m, { role: "user", content: `אישרתי: ${ACTION_LABELS[action.name] ?? action.name}` }]);
     await callAssistant(messages, action);
   }
 
@@ -167,12 +179,21 @@ export function AiAssistantWidget() {
     setPending(null);
     setMessages((m) => [
       ...m,
-      { role: "user", content: "✗ ביטלתי את הפעולה" },
+      { role: "user", content: "ביטלתי את הפעולה" },
       { role: "assistant", content: "בסדר, ביטלתי. במה עוד אוכל לעזור?" },
     ]);
   }
 
-  function reset() {
+  async function reset() {
+    if (messages.length > 0 || pending) {
+      const ok = await confirm({
+        title: "להתחיל שיחה חדשה?",
+        description: "השיחה הנוכחית תימחק ולא ניתן יהיה לשחזר אותה.",
+        confirmLabel: "נקה שיחה",
+        destructive: true,
+      });
+      if (!ok) return;
+    }
     setMessages([]);
     setPending(null);
     setInput("");
@@ -184,14 +205,18 @@ export function AiAssistantWidget() {
     <>
       {/* Floating button */}
       <button
+        type="button"
         onClick={() => setOpen((o) => !o)}
         aria-label={open ? "סגור עוזר AI" : "פתח עוזר AI"}
+        aria-expanded={open}
+        // Steps aside while the upload progress center (bottom-left) shows jobs; see floatingLayer.ts
+        style={launcherOffset(uploadJobCount, viewportWidth, isMobile ? 16 : 24)}
         className={cn(
-          "fixed z-50 rounded-full shadow-xl flex items-center justify-center transition-all",
+          "fixed z-40 rounded-full shadow-xl flex items-center justify-center transition-all",
           "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground hover:scale-105 active:scale-95",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-          // Mobile/tablet: larger, more prominent, above safe-area
-          "bottom-4 left-4 w-16 h-16 lg:bottom-6 lg:left-6 lg:w-14 lg:h-14",
+          // Mobile/tablet: larger, more prominent; position (incl. safe-area) comes from launcherOffset
+          "w-16 h-16 lg:w-14 lg:h-14",
           "ring-4 ring-primary/20 lg:ring-0",
         )}
       >
@@ -229,24 +254,26 @@ export function AiAssistantWidget() {
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-semibold truncate">תפעול AI</p>
-                <p className="text-[11px] text-muted-foreground truncate">עוזר חכם • Lovable AI</p>
+                <p className="text-xs text-muted-foreground truncate">עוזר חכם • Lovable AI</p>
               </div>
             </div>
             <div className="flex items-center gap-1 shrink-0">
               <button
-                onClick={reset}
-                className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-muted"
+                type="button"
+                onClick={() => { void reset(); }}
+                className="min-h-11 text-sm text-muted-foreground hover:text-foreground px-3 rounded-md hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 title="שיחה חדשה"
               >
                 נקה
               </button>
               {isMobile && (
                 <button
+                  type="button"
                   onClick={() => setOpen(false)}
-                  className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-                  aria-label="סגור"
+                  className="h-11 w-11 inline-flex items-center justify-center rounded-md hover:bg-muted text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label="סגור עוזר AI"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-5 h-5" />
                 </button>
               )}
             </div>
@@ -351,7 +378,8 @@ export function AiAssistantWidget() {
               <button
                 onClick={handleSend}
                 disabled={loading || !input.trim() || !!pending}
-                className="w-9 h-9 rounded-md bg-primary text-primary-foreground flex items-center justify-center hover:opacity-90 disabled:opacity-50"
+                type="button"
+                className="w-11 h-11 shrink-0 rounded-md bg-primary text-primary-foreground flex items-center justify-center hover:opacity-90 disabled:opacity-50"
                 aria-label="שלח"
               >
                 <Send className="w-4 h-4" />
@@ -393,23 +421,27 @@ export function AiAssistantWidget() {
                 href={viewer.url}
                 target="_blank"
                 rel="noreferrer"
-                className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                className="h-10 w-10 inline-flex items-center justify-center rounded-md hover:bg-muted text-muted-foreground hover:text-foreground"
                 title="פתח בכרטיסייה חדשה"
+                aria-label="פתח בכרטיסייה חדשה"
               >
                 <ExternalLink className="w-4 h-4" />
               </a>
               <a
                 href={viewer.url}
                 download
-                className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                className="h-10 w-10 inline-flex items-center justify-center rounded-md hover:bg-muted text-muted-foreground hover:text-foreground"
                 title="הורד"
+                aria-label="הורד מסמך"
               >
                 <Download className="w-4 h-4" />
               </a>
               <button
+                type="button"
                 onClick={() => setViewer(null)}
-                className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                className="h-10 w-10 inline-flex items-center justify-center rounded-md hover:bg-muted text-muted-foreground hover:text-foreground"
                 title="סגור"
+                aria-label="סגור מסמך"
               >
                 <X className="w-4 h-4" />
               </button>

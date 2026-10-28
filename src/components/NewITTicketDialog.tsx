@@ -10,9 +10,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Camera, Loader2, MapPin, Package, Paperclip, Phone, Plus, User } from "lucide-react";
+import { Camera, MapPin, Package, Paperclip, Phone, Plus, User } from "lucide-react";
 import { TICKET_PRIORITIES, TICKET_SUBJECTS } from "@/lib/serviceTickets";
 import { TicketScreenshotButton } from "@/components/TicketScreenshotButton";
+import { focusFirstInvalid } from "@/components/feedback/FormField";
+import { useDirtyGuard } from "@/components/feedback/useDirtyGuard";
 import {
   useCreateServiceTicket,
   useEmployeeAssetOptions,
@@ -41,6 +43,10 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
   const [assetId, setAssetId] = useState("none");
   const [files, setFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState<{ employee?: string; title?: string }>({});
+  const formRef = useRef<HTMLDivElement>(null);
+  const dirty = !!(title.trim() || description.trim() || location.trim() || files.length);
+  const guard = useDirtyGuard(dirty, submitting);
 
   // Employees of the company — the ticket can be opened on behalf of any of them
   const { data: employees } = useQuery({
@@ -81,12 +87,20 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
     setContactPhone("");
     setAssetId("none");
     setFiles([]);
+    setErrors({});
   };
 
   const handleSubmit = async () => {
     if (!activeCompanyId) return toast.error("לא נבחרה חברה פעילה");
-    if (!employeeId) return toast.error("יש לבחור עובד");
-    if (!title.trim()) return toast.error("יש להזין כותרת לקריאה");
+    const nextErrors = {
+      employee: employeeId ? undefined : "בחרו את העובד שפותח את הקריאה",
+      title: title.trim() ? undefined : "כתבו כותרת קצרה לקריאה",
+    };
+    setErrors(nextErrors);
+    if (nextErrors.employee || nextErrors.title) {
+      requestAnimationFrame(() => focusFirstInvalid(formRef.current));
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -108,6 +122,7 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
       else toast.success("הקריאה נפתחה בהצלחה");
       reset();
       onOpenChange(false);
+      return;
     } catch (err: any) {
       toast.error(err?.message ?? "שגיאה בפתיחת הקריאה");
     } finally {
@@ -116,26 +131,27 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={guard(onOpenChange)}>
       <DialogContent className="max-w-md max-h-[92vh] overflow-y-auto" dir="rtl">
         <DialogHeader className="text-right">
           <DialogTitle className="text-xl font-bold">קריאת שירות חדשה</DialogTitle>
           <DialogDescription>הקריאה נשלחת לכתובות התפעול המוגדרות בהגדרות</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4" ref={formRef}>
           <div className="space-y-1.5">
             <Label htmlFor="it-employee" className="flex items-center gap-1.5">
-              <User className="w-3.5 h-3.5" aria-hidden="true" /> פותח הקריאה
+              <User className="w-3.5 h-3.5" aria-hidden="true" /> פותח הקריאה<span className="text-destructive" aria-hidden="true">*</span>
             </Label>
-            <Select value={employeeId} onValueChange={setEmployeeId}>
-              <SelectTrigger id="it-employee"><SelectValue placeholder="בחר עובד" /></SelectTrigger>
+            <Select value={employeeId} onValueChange={(v) => { setEmployeeId(v); setErrors((e) => ({ ...e, employee: undefined })); }}>
+              <SelectTrigger id="it-employee" aria-required="true" aria-invalid={errors.employee ? true : undefined} aria-describedby={errors.employee ? "it-employee-error" : undefined}><SelectValue placeholder="בחר עובד" /></SelectTrigger>
               <SelectContent>
                 {(employees ?? []).map((e: any) => (
                   <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {errors.employee && <p id="it-employee-error" role="alert" className="text-xs font-medium text-destructive">{errors.employee}</p>}
           </div>
 
           <div className="space-y-1.5">
@@ -151,8 +167,18 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="it-title"><span className="text-destructive">*</span> כותרת קצרה</Label>
-            <Input id="it-title" value={title} onChange={(e) => setTitle(e.target.value.slice(0, 120))} placeholder="תאר בקצרה את הבעיה" />
+            <Label htmlFor="it-title">כותרת קצרה<span className="text-destructive ms-0.5" aria-hidden="true">*</span></Label>
+            <Input
+              id="it-title"
+              value={title}
+              onChange={(e) => { setTitle(e.target.value.slice(0, 120)); if (errors.title) setErrors((x) => ({ ...x, title: undefined })); }}
+              onBlur={() => { if (!title.trim() && title !== "") setErrors((x) => ({ ...x, title: "כתבו כותרת קצרה לקריאה" })); }}
+              placeholder="תאר בקצרה את הבעיה"
+              aria-required="true"
+              aria-invalid={errors.title ? true : undefined}
+              aria-describedby={errors.title ? "it-title-error" : undefined}
+            />
+            {errors.title && <p id="it-title-error" role="alert" className="text-xs font-medium text-destructive">{errors.title}</p>}
           </div>
 
           <div className="space-y-1.5">
@@ -200,20 +226,20 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
               <Label htmlFor="it-phone" className="flex items-center gap-1.5">
                 <Phone className="w-3.5 h-3.5" aria-hidden="true" /> טלפון
               </Label>
-              <Input id="it-phone" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} dir="ltr" inputMode="tel" />
+              <Input id="it-phone" type="tel" autoComplete="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} dir="ltr" inputMode="tel" />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <span className="flex items-center gap-1.5 text-sm font-medium">
+            <span id="it-files-label" className="flex items-center gap-1.5 text-sm font-medium">
               <Paperclip className="w-3.5 h-3.5" aria-hidden="true" /> קבצים מצורפים
             </span>
             {files.length > 0 && (
-              <ul className="space-y-1">
+              <ul className="space-y-1" aria-labelledby="it-files-label">
                 {files.map((f, i) => (
-                  <li key={i} className="flex items-center justify-between text-xs bg-muted/50 rounded px-2 py-1">
-                    <button type="button" className="text-destructive" onClick={() => setFiles((p) => p.filter((_, x) => x !== i))}>הסר</button>
+                  <li key={i} className="flex items-center justify-between gap-2 text-sm bg-muted/50 rounded ps-2">
                     <span className="truncate">{f.name}</span>
+                    <button type="button" className="min-h-10 px-3 text-sm text-destructive hover:underline shrink-0" aria-label={`הסר את ${f.name}`} disabled={submitting} onClick={() => setFiles((p) => p.filter((_, x) => x !== i))}>הסר</button>
                   </li>
                 ))}
               </ul>
@@ -224,7 +250,8 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
               multiple
               accept="image/*,application/pdf"
               className="sr-only"
-              onChange={(e) => e.target.files && setFiles((p) => [...p, ...Array.from(e.target.files!)])}
+              aria-labelledby="it-files-label"
+              onChange={(e) => { const picked = e.target.files ? Array.from(e.target.files) : []; if (picked.length) setFiles((p) => [...p, ...picked]); e.target.value = ""; }}
             />
             <Button variant="outline" type="button" className="w-full gap-2" onClick={() => fileInputRef.current?.click()}>
               <Camera className="w-4 h-4" aria-hidden="true" /> צילום או קובץ
@@ -233,9 +260,9 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
           </div>
 
           <div className="flex gap-2 pt-1">
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">ביטול</Button>
-            <Button onClick={handleSubmit} disabled={submitting} className="flex-1 gap-2">
-              {submitting ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <Plus className="w-4 h-4" aria-hidden="true" />}
+            <Button variant="outline" onClick={() => guard(onOpenChange)(false)} disabled={submitting} className="flex-1">ביטול</Button>
+            <Button onClick={handleSubmit} loading={submitting} loadingText="פותח קריאה…" className="flex-1 gap-2">
+              <Plus className="w-4 h-4" aria-hidden="true" />
               פתח קריאה
             </Button>
           </div>

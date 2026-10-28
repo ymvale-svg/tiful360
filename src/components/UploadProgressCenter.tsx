@@ -38,8 +38,8 @@ export function UploadProgressCenter() {
   const jobs = useSyncExternalStore(uploadJobs.subscribe, uploadJobs.get);
   if (!jobs.length) return null;
   return (
-    <div dir="rtl" className="fixed bottom-4 left-4 z-[100] w-80 max-w-[calc(100vw-2rem)] space-y-2" role="status" aria-live="polite"
-      style={{ marginBottom: "env(safe-area-inset-bottom, 0px)" }}>
+    <div dir="rtl" className="fixed left-4 z-[100] w-80 max-w-[calc(100vw-2rem)] space-y-2" role="status" aria-live="polite"
+      style={{ bottom: "calc(1rem + var(--floating-bottom, 0px) + env(safe-area-inset-bottom, 0px))" }}>
       {jobs.map((j) => (
         <div key={j.id} className="bg-card text-card-foreground border border-border rounded-xl shadow-lg p-3 flex gap-3 items-center">
           <Donut job={j} />

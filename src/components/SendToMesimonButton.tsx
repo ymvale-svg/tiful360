@@ -72,6 +72,8 @@ export function SendToMesimonButton({ ticket }: Props) {
   const [dueDate, setDueDate] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [sending, setSending] = useState(false);
+  /** Progress line while sending — encoding up to 20MB and the Mesimon round-trip can take a while. */
+  const [stage, setStage] = useState("");
 
   // Availability is per company — one check per company, not per ticket
   const { data: status } = useQuery({
@@ -121,14 +123,14 @@ export function SendToMesimonButton({ ticket }: Props) {
         href={ticket.mesimon_task_url}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-xs px-3 py-1.5 rounded-md border border-border hover:bg-muted flex items-center gap-1"
+        className="text-sm px-3 min-h-11 sm:min-h-9 rounded-md border border-border hover:bg-muted flex items-center gap-1"
         title="פתיחת המשימה במשימון"
       >
         <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
         {label}
       </a>
     ) : (
-      <span className="text-xs px-3 py-1.5 rounded-md border border-border flex items-center gap-1 text-muted-foreground">
+      <span className="text-sm px-3 min-h-9 rounded-md border border-border flex items-center gap-1 text-muted-foreground">
         <ListTodo className="w-3.5 h-3.5" aria-hidden="true" />
         {label}
       </span>
@@ -187,9 +189,13 @@ export function SendToMesimonButton({ ticket }: Props) {
   const send = async () => {
     setSending(true);
     try {
-      const encoded = await Promise.all(
-        files.map(async (f) => ({ name: f.name, mime: f.type, data: await readAsDataUrl(f) })),
-      );
+      const encoded: { name: string; mime: string; data: string }[] = [];
+      for (const [i, f] of files.entries()) {
+        setStage(`מכין קובץ ${i + 1} מתוך ${files.length}…`);
+        encoded.push({ name: f.name, mime: f.type, data: await readAsDataUrl(f) });
+      }
+      const totalMb = files.reduce((n, f) => n + f.size, 0) / (1024 * 1024);
+      setStage(files.length ? `שולח למשימון (${totalMb.toFixed(1)}MB)…` : "יוצר משימה במשימון…");
       const data = await invokeMesimon<{ existing?: boolean; assigned?: boolean; assignee_email?: string }>({
         action: "create",
         ticket_id: ticket.id,
@@ -209,6 +215,7 @@ export function SendToMesimonButton({ ticket }: Props) {
       toast.error("יצירת המשימה במשימון נכשלה", { description: e instanceof Error ? e.message : undefined });
     } finally {
       setSending(false);
+      setStage("");
     }
   };
 
@@ -217,13 +224,14 @@ export function SendToMesimonButton({ ticket }: Props) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="text-xs px-3 py-1.5 rounded-md border border-border hover:bg-muted flex items-center gap-1"
+        className="text-sm px-3 min-h-11 sm:min-h-9 rounded-md border border-border hover:bg-muted flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         title="יצירת משימה במשימון מהקריאה"
       >
         <ListTodo className="w-3.5 h-3.5" aria-hidden="true" />
         הפוך למשימה במשימון
       </button>
-      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
+      {/* Closing is blocked while the task is being sent. */}
+      <Dialog open={open} onOpenChange={(v) => { if (sending) return; setOpen(v); if (!v) reset(); }}>
         <DialogContent dir="rtl" className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>הפיכת הקריאה למשימה במשימון</DialogTitle>
@@ -232,19 +240,19 @@ export function SendToMesimonButton({ ticket }: Props) {
             </DialogDescription>
           </DialogHeader>
           {optionsLoading ? (
-            <p className="text-sm text-muted-foreground py-6 text-center">טוען נתונים ממשימון...</p>
+            <p role="status" className="text-sm text-muted-foreground py-6 text-center">טוען נתונים ממשימון...</p>
           ) : optionsError ? (
-            <p className="text-sm text-destructive py-6 text-center">
+            <p role="alert" className="text-sm text-destructive py-6 text-center">
               {optionsError instanceof Error ? optionsError.message : "טעינת הנתונים ממשימון נכשלה"}
             </p>
           ) : (
             <div className="space-y-3">
-              <div className="space-y-1">
-                <Label>פרויקט</Label>
+              <div className="space-y-1" role="group" aria-labelledby="mesimon-project-label">
+                <Label id="mesimon-project-label">פרויקט</Label>
                 <SearchableSelect value={project} onChange={setProject} options={projectOptions} searchPlaceholder="חיפוש פרויקט..." />
               </div>
-              <div className="space-y-1">
-                <Label>אחראי</Label>
+              <div className="space-y-1" role="group" aria-labelledby="mesimon-assignee-label">
+                <Label id="mesimon-assignee-label">אחראי</Label>
                 <SearchableSelect value={assignee} onChange={setAssignee} options={assigneeOptions} searchPlaceholder="חיפוש משתמש..." />
               </div>
               <div className="space-y-1">
@@ -255,8 +263,8 @@ export function SendToMesimonButton({ ticket }: Props) {
                 <Label htmlFor="mesimon-note">הערה (לא חובה)</Label>
                 <Textarea id="mesimon-note" value={note} onChange={(e) => setNote(e.target.value)} rows={3} maxLength={2000} />
               </div>
-              <div className="space-y-1">
-                <Label>קבצים (לא חובה)</Label>
+              <div className="space-y-1" role="group" aria-labelledby="mesimon-files-label">
+                <Label id="mesimon-files-label">קבצים (לא חובה)</Label>
                 <input
                   ref={fileInput}
                   type="file"
@@ -265,22 +273,23 @@ export function SendToMesimonButton({ ticket }: Props) {
                   accept={options?.allowedExtensions.map((e) => `.${e}`).join(",")}
                   onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }}
                 />
-                <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => fileInput.current?.click()}>
+                <Button type="button" variant="outline" className="gap-1" disabled={sending} onClick={() => fileInput.current?.click()}>
                   <Paperclip className="w-3.5 h-3.5" aria-hidden="true" />
                   הוספת קובץ
                 </Button>
                 {files.length > 0 && (
                   <ul className="space-y-1 pt-1">
                     {files.map((f, i) => (
-                      <li key={`${f.name}-${i}`} className="flex items-center justify-between gap-2 text-sm rounded-md border border-border px-2 py-1">
+                      <li key={`${f.name}-${i}`} className="flex items-center justify-between gap-2 text-sm rounded-md border border-border ps-2">
                         <span className="truncate">{f.name}</span>
                         <button
                           type="button"
                           onClick={() => setFiles(files.filter((_, j) => j !== i))}
-                          className="text-muted-foreground hover:text-foreground"
+                          disabled={sending}
+                          className="h-10 w-10 shrink-0 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-50 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11"
                           aria-label={`הסרת ${f.name}`}
                         >
-                          <X className="w-3.5 h-3.5" aria-hidden="true" />
+                          <X className="w-4 h-4" aria-hidden="true" />
                         </button>
                       </li>
                     ))}
@@ -289,9 +298,12 @@ export function SendToMesimonButton({ ticket }: Props) {
               </div>
             </div>
           )}
-          <DialogFooter>
+          {sending && stage && (
+            <p role="status" aria-live="polite" className="text-sm text-muted-foreground">{stage}</p>
+          )}
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setOpen(false)} disabled={sending}>ביטול</Button>
-            <Button onClick={send} disabled={sending || !options}>{sending ? "יוצר..." : "צור משימה"}</Button>
+            <Button onClick={send} disabled={!options} loading={sending} loadingText="יוצר משימה…">צור משימה</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
