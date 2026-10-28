@@ -34,9 +34,12 @@ function EmailsSettings({
   const [loaded, setLoaded] = useState(false);
 
   // Load current recipients via the security-definer RPC (direct column reads
-  // are restricted for non-admin roles).
+  // are restricted for non-admin roles). Reload from scratch whenever the
+  // active company changes so one company's addresses are never saved into another.
   useEffect(() => {
-    if (!activeCompanyId || loaded) return;
+    setEmails("");
+    setLoaded(false);
+    if (!activeCompanyId) return;
     let cancelled = false;
     supabase
       .rpc("get_company_routing_emails", { _company_id: activeCompanyId })
@@ -48,7 +51,7 @@ function EmailsSettings({
         setLoaded(true);
       });
     return () => { cancelled = true; };
-  }, [activeCompanyId, columnKey, loaded]);
+  }, [activeCompanyId, columnKey]);
 
   const updateMutation = useMutation({
     mutationFn: async () => {
@@ -88,7 +91,7 @@ function EmailsSettings({
           dir="ltr"
         />
       </div>
-      <Button className="gap-1.5" onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>
+      <Button className="gap-1.5" onClick={() => updateMutation.mutate()} disabled={!loaded || updateMutation.isPending}>
         <Save className="w-4 h-4" />
         {updateMutation.isPending ? "שומר..." : "שמור שינויים"}
       </Button>
@@ -407,20 +410,14 @@ function GeneralSettings() {
 // Alert Rules Settings
 // ============================
 function AlertRulesSettings() {
-  const { activeCompanyId } = useCompany();
-  const { toast } = useToast();
-
-  const [rules, setRules] = useState([
+  // There is no table behind these rules yet: they are fixed in the system, so
+  // show them as information only instead of toggles that pretend to save.
+  const rules = [
     { id: "expiry", label: "התראה על ציוד שפג תוקפו", desc: "שלח התראה 30 יום לפני תפוגת ציוד", enabled: true },
     { id: "leaving", label: "התראה על עובד עוזב", desc: "הצג התראה כשעובד עובר לסטטוס ׳עוזב׳", enabled: true },
     { id: "unassigned", label: "ציוד ללא שיוך", desc: "הצג ציוד שנמצא במלאי מעל 60 יום", enabled: false },
     { id: "license", label: "חידוש רישיונות", desc: "תזכורת לחידוש רישיונות תוכנה", enabled: true },
-  ]);
-
-  const toggle = (id: string) => {
-    setRules(rules.map(r => r.id === id ? { ...r, enabled: !r.enabled } : r));
-    toast({ title: "חוק עודכן" });
-  };
+  ];
 
   return (
     <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 space-y-3 max-w-xl">
@@ -428,33 +425,28 @@ function AlertRulesSettings() {
         <Bell className="w-5 h-5 text-primary" />
         <h3 className="font-semibold">חוקי התראות</h3>
       </div>
-      <p className="text-xs text-muted-foreground">הגדר אילו התראות אוטומטיות יופעלו במערכת</p>
+      <p className="text-xs text-muted-foreground">כללי ההתראות מוגדרים במערכת ואינם ניתנים לשינוי מכאן.</p>
 
-      <div className="space-y-2 mt-3">
+      <ul className="space-y-2 mt-3">
         {rules.map((rule) => (
-          <div
+          <li
             key={rule.id}
-            className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-background"
+            className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border/50 bg-background"
           >
             <div>
               <p className="text-sm font-medium">{rule.label}</p>
               <p className="text-xs text-muted-foreground">{rule.desc}</p>
             </div>
-            <button
-              onClick={() => toggle(rule.id)}
-              className={`w-11 h-6 rounded-full transition-colors relative ${
-                rule.enabled ? "bg-primary" : "bg-muted"
+            <span
+              className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                rule.enabled ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
               }`}
             >
-              <div
-                className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                  rule.enabled ? "right-0.5" : "left-0.5"
-                }`}
-              />
-            </button>
-          </div>
+              {rule.enabled ? "פעיל" : "כבוי"}
+            </span>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }

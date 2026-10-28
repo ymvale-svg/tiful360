@@ -7,7 +7,7 @@ import { Wallet, FileText, Stethoscope, Calendar, Clock4, Upload, LayoutDashboar
 
 import { Button } from "@/components/ui/button";
 import { PayslipsUploadDialog } from "@/components/PayslipsUploadDialog";
-import { getPayslipSignedUrl, usePayslipBatches, useUnmatchedPayslips, useAssignPayslipToEmployee, useBatchPayslips, useDeletePayslip, useDeleteBatch } from "@/hooks/usePayslips";
+import { getPayslipSignedUrl, usePayslipBatches, useUnmatchedPayslips, useBatchPayslips, useDeletePayslip, useDeleteBatch } from "@/hooks/usePayslips";
 import { Trash2 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -22,6 +22,7 @@ import { Tax101AdminTab } from "@/components/payroll/Tax101AdminTab";
 import { AttendanceClockTab } from "@/components/payroll/AttendanceClockTab";
 import { MonthlyAttendanceReview } from "@/components/payroll/MonthlyAttendanceReview";
 import { MichpalExportCard } from "@/components/payroll/MichpalExportCard";
+import { PayslipAssignConfirmDialog, type PendingPayslipAssign } from "@/components/payroll/PayslipAssignConfirmDialog";
 
 const MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
 const TYPE_LABELS_PAYROLL: Record<string, string> = { vacation: "חופשה", sick: "מחלה", reserve: "מילואים", personal: "יום אישי", other: "אחר" };
@@ -685,7 +686,6 @@ function BatchPayslipsList({ batch }: { batch: any }) {
   const batchId = batch.id as string;
   const { data: payslips, isLoading } = useBatchPayslips(batchId);
   const { data: employees = [] } = useEmployees();
-  const assign = useAssignPayslipToEmployee();
   const deletePayslip = useDeletePayslip();
   const { toast } = useToast();
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
@@ -696,13 +696,12 @@ function BatchPayslipsList({ batch }: { batch: any }) {
     label: `${e.full_name} (${e.id_number})`,
   }));
 
-  const handleAssign = async (payslipId: string, employeeId: string) => {
-    try {
-      await assign.mutateAsync({ payslipId, employeeId });
-      toast({ title: "התלוש שויך בהצלחה" });
-    } catch (e: any) {
-      toast({ title: "שגיאה", description: e.message, variant: "destructive" });
-    }
+  const [pendingAssign, setPendingAssign] = useState<PendingPayslipAssign | null>(null);
+  // Picking an employee only opens a confirmation; nothing is saved until confirmed.
+  const handleAssign = (payslip: any, employeeId: string) => {
+    if (!employeeId) return;
+    const emp = (employees ?? []).find((e: any) => e.id === employeeId);
+    setPendingAssign({ payslip, employeeId, employeeName: emp?.full_name ?? "העובד שנבחר" });
   };
 
   const savedPayslips = payslips ?? [];
@@ -778,7 +777,7 @@ function BatchPayslipsList({ batch }: { batch: any }) {
                 <SearchableSelect
                   options={employeeOptions}
                   value=""
-                  onChange={(v) => handleAssign(p.id, v)}
+                  onChange={(v) => handleAssign(p, v)}
                   placeholder="בחר עובד לשיוך..."
                 />
               </div>
@@ -796,6 +795,8 @@ function BatchPayslipsList({ batch }: { batch: any }) {
           </div>
         );
       })}
+
+      <PayslipAssignConfirmDialog pending={pendingAssign} onClose={() => setPendingAssign(null)} />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent dir="rtl">
@@ -834,21 +835,18 @@ function BatchPayslipsList({ batch }: { batch: any }) {
 function UnmatchedPayslipsList({ batchId }: { batchId: string }) {
   const { data: unmatched, isLoading } = useUnmatchedPayslips(batchId);
   const { data: employees = [] } = useEmployees();
-  const assign = useAssignPayslipToEmployee();
-  const { toast } = useToast();
 
   const employeeOptions = (employees ?? []).map((e: any) => ({
     value: e.id,
     label: `${e.full_name} (${e.id_number})`,
   }));
 
-  const handleAssign = async (payslipId: string, employeeId: string) => {
-    try {
-      await assign.mutateAsync({ payslipId, employeeId });
-      toast({ title: "התלוש שויך בהצלחה" });
-    } catch (e: any) {
-      toast({ title: "שגיאה", description: e.message, variant: "destructive" });
-    }
+  const [pendingAssign, setPendingAssign] = useState<PendingPayslipAssign | null>(null);
+  // Picking an employee only opens a confirmation; nothing is saved until confirmed.
+  const handleAssign = (payslip: any, employeeId: string) => {
+    if (!employeeId) return;
+    const emp = (employees ?? []).find((e: any) => e.id === employeeId);
+    setPendingAssign({ payslip, employeeId, employeeName: emp?.full_name ?? "העובד שנבחר" });
   };
 
   if (isLoading) return <div className="p-4 text-center text-sm text-muted-foreground">טוען...</div>;
@@ -871,12 +869,13 @@ function UnmatchedPayslipsList({ batchId }: { batchId: string }) {
             <SearchableSelect
               options={employeeOptions}
               value=""
-              onChange={(v) => handleAssign(p.id, v)}
+              onChange={(v) => handleAssign(p, v)}
               placeholder="בחר עובד לשיוך..."
             />
           </div>
         </div>
       ))}
+      <PayslipAssignConfirmDialog pending={pendingAssign} onClose={() => setPendingAssign(null)} />
     </div>
   );
 }

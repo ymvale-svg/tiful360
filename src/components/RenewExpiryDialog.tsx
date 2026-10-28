@@ -93,15 +93,9 @@ export function RenewExpiryDialog({ open, onOpenChange, item }: Props) {
         if (error) throw error;
       } else if (item.source_type === "document") {
         if (replaceFile && activeCompanyId) {
-          // Archive the previous document instead of overwriting it
-          const period = periodFromExpiry(item.expiry_date);
-          const { error: archErr } = await supabase
-            .from("asset_documents" as any)
-            .update({ is_archived: true, period })
-            .eq("id", item.source_id);
-          if (archErr) throw archErr;
-
-          // Upload the new file as the current document
+          // Upload the new file first; the previous document is archived (not
+          // overwritten) only after the new one is safely stored, so a failed
+          // upload never leaves the item without a current document.
           const safeName = replaceFile.name.replace(/[^\w.\-א-ת]+/g, "_");
           const path = `${activeCompanyId}/${item.asset_id}/${Date.now()}_${safeName}`;
           const up = await uploadFile("asset-documents", path, replaceFile);
@@ -112,7 +106,7 @@ export function RenewExpiryDialog({ open, onOpenChange, item }: Props) {
             .eq("id", item.source_id)
             .single();
           const { data: { user } } = await supabase.auth.getUser();
-          const { error } = await supabase.from("asset_documents" as any).insert({
+          const { data: newDoc, error } = await supabase.from("asset_documents" as any).insert({
             asset_id: item.asset_id,
             company_id: activeCompanyId,
             document_type: (oldDoc as any)?.document_type ?? "other",
@@ -123,8 +117,23 @@ export function RenewExpiryDialog({ open, onOpenChange, item }: Props) {
             expiry_date: newDate,
             notes: (oldDoc as any)?.notes ?? null,
             uploaded_by: user?.id ?? null,
-          } as any);
-          if (error) throw error;
+          } as any).select("id").single();
+          if (error) {
+            await supabase.storage.from("asset-documents").remove([path]);
+            throw error;
+          }
+
+          const period = periodFromExpiry(item.expiry_date);
+          const { error: archErr } = await supabase
+            .from("asset_documents" as any)
+            .update({ is_archived: true, period })
+            .eq("id", item.source_id);
+          if (archErr) {
+            // Roll back the new document so the old one stays the only current one.
+            await supabase.from("asset_documents" as any).delete().eq("id", (newDoc as any)?.id);
+            await supabase.storage.from("asset-documents").remove([path]);
+            throw archErr;
+          }
         } else {
           const { error } = await supabase
             .from("asset_documents" as any)

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -7,6 +7,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Zap, Plus, X, ArrowLeft, Package } from "lucide-react";
 import { useEmployees, useAssets } from "@/hooks/useData";
 import { HandoverFlow } from "@/components/handover/HandoverFlow";
+import { advanceQueue, closeFollowsAssign } from "@/lib/quickAssignQueue";
 
 interface Props {
   open: boolean;
@@ -84,17 +85,15 @@ export function QuickAssignDialog({ open, onOpenChange }: Props) {
 
   const startQueue = () => setQueueIndex(0);
 
+  // HandoverFlow calls onAssigned() and then closes itself; that close must
+  // not abort the rest of the batch.
+  const justAssignedRef = useRef(false);
+
   const handleAssigned = () => {
-    setQueueIndex((idx) => {
-      if (idx === null) return null;
-      const next = idx + 1;
-      if (next >= selectedIds.length) {
-        // finished — close all
-        setTimeout(() => handleOpenChange(false), 0);
-        return null;
-      }
-      return next;
-    });
+    justAssignedRef.current = true;
+    const step = advanceQueue(queueIndex, selectedIds.length);
+    setQueueIndex(step.next);
+    if (step.done) setTimeout(() => handleOpenChange(false), 0);
   };
 
   const currentAsset =
@@ -208,6 +207,9 @@ export function QuickAssignDialog({ open, onOpenChange }: Props) {
           open={true}
           onOpenChange={(o) => {
             if (!o) {
+              const justAssigned = justAssignedRef.current;
+              justAssignedRef.current = false;
+              if (closeFollowsAssign(justAssigned) === "ignore") return;
               // User cancelled mid-queue — abort the whole batch
               setQueueIndex(null);
               handleOpenChange(false);

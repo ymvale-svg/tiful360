@@ -157,16 +157,32 @@ export function useUpdateTicketStatus() {
   });
 }
 
-/** Upload ticket attachments; returns stored file references */
+/**
+ * Upload ticket attachments. Returns the stored file references plus the names
+ * of files that failed, so callers never report a full success when some
+ * attachments are missing.
+ */
 export async function uploadTicketAttachments(companyId: string, files: File[]) {
-  const out: { name: string; url: string }[] = [];
+  const uploaded: { name: string; url: string }[] = [];
+  const failed: string[] = [];
   for (const f of files) {
     const path = `it-tickets/${companyId}/${Date.now()}-${f.name}`;
-    const { error } = await uploadFile("documents", path, f, { upsert: false });
-    if (!error) {
+    try {
+      const { error } = await uploadFile("documents", path, f, { upsert: false });
+      if (error) {
+        failed.push(f.name);
+        continue;
+      }
       const { data } = supabase.storage.from("documents").getPublicUrl(path);
-      out.push({ name: f.name, url: data.publicUrl });
+      uploaded.push({ name: f.name, url: data.publicUrl });
+    } catch {
+      failed.push(f.name);
     }
   }
-  return out;
+  return { uploaded, failed };
+}
+
+/** Message for a ticket that was created while some attachments failed to upload. */
+export function failedAttachmentsMessage(failed: string[]) {
+  return `הקריאה נפתחה, אבל ${failed.length} קבצים לא הועלו: ${failed.join(", ")}`;
 }

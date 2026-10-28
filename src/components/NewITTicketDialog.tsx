@@ -17,6 +17,7 @@ import {
   useCreateServiceTicket,
   useEmployeeAssetOptions,
   uploadTicketAttachments,
+  failedAttachmentsMessage,
 } from "@/hooks/useServiceTickets";
 
 interface NewITTicketDialogProps {
@@ -89,7 +90,9 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
 
     setSubmitting(true);
     try {
-      const attachments = files.length ? await uploadTicketAttachments(activeCompanyId, files) : [];
+      const { uploaded: attachments, failed } = files.length
+        ? await uploadTicketAttachments(activeCompanyId, files)
+        : { uploaded: [], failed: [] as string[] };
       await createTicket.mutateAsync({
         employeeId,
         subject,
@@ -101,7 +104,8 @@ export function NewITTicketDialog({ open, onOpenChange }: NewITTicketDialogProps
         relatedAssetId: assetId === "none" ? null : assetId,
         attachments,
       });
-      toast.success("הקריאה נפתחה בהצלחה");
+      if (failed.length) toast.error(failedAttachmentsMessage(failed));
+      else toast.success("הקריאה נפתחה בהצלחה");
       reset();
       onOpenChange(false);
     } catch (err: any) {

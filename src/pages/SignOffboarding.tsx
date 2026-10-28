@@ -21,6 +21,11 @@ export default function SignOffboarding() {
   const sigRef = useRef<SignaturePadHandle>(null);
   const [sigUrl, setSigUrl] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  // Local copy of the PDF signed in this session. record.pdf_url is a private
+  // storage path (not a URL), so it cannot be linked from this public page.
+  const [signedCopyUrl, setSignedCopyUrl] = useState<string | null>(null);
+
+  useEffect(() => () => { if (signedCopyUrl) URL.revokeObjectURL(signedCopyUrl); }, [signedCopyUrl]);
 
   useEffect(() => {
     (async () => {
@@ -106,6 +111,7 @@ export default function SignOffboarding() {
       });
       if (error) throw error;
 
+      setSignedCopyUrl(URL.createObjectURL(pdfBlob));
       setDone(true);
     } catch (err: any) {
       toast({
@@ -139,15 +145,14 @@ export default function SignOffboarding() {
       >
         <CheckCircle2 className="w-16 h-16 text-green-500 mb-4" aria-hidden="true" />
         <h1 className="text-2xl font-bold mb-2">הטופס נחתם בהצלחה</h1>
-        <p className="text-muted-foreground">תודה. עותק נשמר בתיק שלך.</p>
-        {record.pdf_url && (
+        <p className="text-muted-foreground">תודה. הטופס החתום נשלח לחברה.</p>
+        {signedCopyUrl && (
           <a
-            href={record.pdf_url}
-            target="_blank"
-            rel="noreferrer"
+            href={signedCopyUrl}
+            download="טופס-עזיבה-חתום.pdf"
             className="mt-4 text-primary underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
           >
-            הורד PDF
+            הורד עותק PDF
           </a>
         )}
       </main>

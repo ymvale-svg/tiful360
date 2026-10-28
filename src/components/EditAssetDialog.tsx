@@ -105,31 +105,36 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
     return true;
   });
 
+  /** Load the form from the saved asset (used on open and on "ביטול"). */
+  const resetFromAsset = (a: Asset) => {
+    setForm({
+      asset_name: a.asset_name,
+      category_id: a.category_id,
+      group_id: (a as any).group_id ?? "",
+      serial_number: a.serial_number ?? "",
+      current_owner_id: a.current_owner_id ?? "",
+      assigned_site_id: (a as any).assigned_site_id ?? "",
+      container_id: (a as any).container_id ?? "",
+      status: a.status,
+      manufacturer_model: a.manufacturer_model ?? "",
+      condition: a.condition ?? "good",
+      expiry_date: a.expiry_date ?? "",
+      notes: a.notes ?? "",
+      notification_days_before: (a as any).notification_days_before == null ? "" : String((a as any).notification_days_before),
+    });
+    // Load existing custom_fields as strings
+    const cf: Record<string, string> = {};
+    const raw = (a as any).custom_fields ?? {};
+    Object.keys(raw).forEach((k) => { cf[k] = raw[k] == null ? "" : String(raw[k]); });
+    setCustomFields(cf);
+    setMode("view");
+  };
+
+  // Re-init whenever the dialog opens or shows another asset, so unsaved
+  // edits from a previous session never leak back in.
   useEffect(() => {
-    if (asset) {
-      setForm({
-        asset_name: asset.asset_name,
-        category_id: asset.category_id,
-        group_id: (asset as any).group_id ?? "",
-        serial_number: asset.serial_number ?? "",
-        current_owner_id: asset.current_owner_id ?? "",
-        assigned_site_id: (asset as any).assigned_site_id ?? "",
-        container_id: (asset as any).container_id ?? "",
-        status: asset.status,
-        manufacturer_model: asset.manufacturer_model ?? "",
-        condition: asset.condition ?? "good",
-        expiry_date: asset.expiry_date ?? "",
-        notes: asset.notes ?? "",
-        notification_days_before: (asset as any).notification_days_before == null ? "" : String((asset as any).notification_days_before),
-      });
-      // Load existing custom_fields as strings
-      const cf: Record<string, string> = {};
-      const raw = (asset as any).custom_fields ?? {};
-      Object.keys(raw).forEach((k) => { cf[k] = raw[k] == null ? "" : String(raw[k]); });
-      setCustomFields(cf);
-      setMode("view");
-    }
-  }, [asset?.id]);
+    if (open && asset) resetFromAsset(asset);
+  }, [asset?.id, open]);
 
   // History of past owners — derived from signed handover forms for this asset
   const { data: handoverHistory } = useQuery({
@@ -183,6 +188,10 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
   }, [handoverHistory, empById, asset?.current_owner_id]);
 
 
+  // Hooks must run before the early return below (Rules of Hooks).
+  const { data: sites } = useSites();
+  const { data: containers } = useSiteContainers(form.assigned_site_id || null);
+
   const handleSubmit = async () => {
     if (!asset) return;
     try {
@@ -223,9 +232,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
   const display = (v: string | null | undefined) =>
     v && String(v).trim() !== "" ? String(v) : <span className="text-muted-foreground">—</span>;
 
-  const { data: sites } = useSites();
   const ownerName = (employees ?? []).find((e: any) => e.id === form.current_owner_id)?.full_name;
-  const { data: containers } = useSiteContainers(form.assigned_site_id || null);
   const siteName = form.assigned_site_id
     ? (() => { const s = (sites ?? []).find((s) => s.id === form.assigned_site_id); return s ? (s.address ? `${s.name} — ${s.address}` : s.name) : null; })()
     : null;
@@ -579,7 +586,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
               </>
             ) : (
               <>
-                <Button variant="outline" className="flex-1" onClick={() => setMode("view")}>ביטול</Button>
+                <Button variant="outline" className="flex-1" onClick={() => resetFromAsset(asset)}>ביטול</Button>
                 <Button className="flex-1" onClick={handleSubmit} disabled={mutation.isPending}>
                   {mutation.isPending ? "שומר..." : "שמור שינויים"}
                 </Button>

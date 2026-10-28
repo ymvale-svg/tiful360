@@ -7,6 +7,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useUpdateEmployee } from "@/hooks/useMutations";
 import { useEmployees } from "@/hooks/useData";
@@ -28,6 +32,12 @@ import { useSubEmployers } from "@/hooks/useSubEmployers";
 import { useAuth } from "@/hooks/useAuth";
 import { useCancelOffboarding } from "@/hooks/useOffboarding";
 
+/** True when saving would move an employee in an offboarding back to active. */
+function isLeavingToActive(employee: any, nextStatus: string | undefined): boolean {
+  if (nextStatus !== "active" || employee?.status === "active") return false;
+  return employee?.status === "leaving" || !!employee?.end_date || !!employee?.access_revoked_at;
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -47,6 +57,7 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
   const [form, setForm] = useState<any>({});
   const [hebYearText, setHebYearText] = useState<string>("");
   const [hebDayText, setHebDayText] = useState<string>("");
+  const [confirmRevertOpen, setConfirmRevertOpen] = useState(false);
 
   useEffect(() => {
     if (employee) {
@@ -159,28 +170,23 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
         payload.hebrew_birth_month = null;
         payload.hebrew_birth_year = null;
       }
-      // Returning an employee that actually has an offboarding (leaving, or a recorded
-      // leave date / revoked access) back to active must also cancel the offboarding.
-      // A plain onboarding/inactive → active change is just a status update.
-      const hasOffboarding =
-        employee?.status === "leaving" ||
-        !!(employee as any)?.end_date ||
-        !!(employee as any)?.access_revoked_at;
-      const wantsRevert = payload.status === "active" && hasOffboarding;
-
-      await update.mutateAsync({ id: employee.id, ...payload });
+      // Returning a leaving employee to active cancels the offboarding through the
+      // atomic cancel_offboarding RPC first (the user confirmed this). If that is
+      // not allowed, nothing is saved — a bare status flip would leave a
+      // half-cancelled departure behind.
+      const wantsRevert = payload.status === "active" && isLeavingToActive(employee, payload.status);
 
       let revertingOffboarding = false;
       if (wantsRevert) {
         try {
           await cancelOffboarding.mutateAsync(employee.id);
           revertingOffboarding = true;
-        } catch {
-          // Users without permission to cancel an offboarding still get the plain
-          // status change saved above — no partial failure, no error toast.
-          revertingOffboarding = false;
+        } catch (e: any) {
+          throw new Error(`לא ניתן לבטל את תהליך העזיבה: ${e?.message ?? "אין הרשאה"}`);
         }
       }
+
+      await update.mutateAsync({ id: employee.id, ...payload });
 
       if (revertingOffboarding) {
         try {
@@ -257,16 +263,22 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
             <Input type="date" value={form.start_date ?? ""} onChange={(e) => set("start_date", e.target.value)} />
           </div>
           <div>
-            <Label>סטטוס</Label>
+            <Label htmlFor="employee-status">סטטוס</Label>
             <Select value={form.status} onValueChange={(v) => set("status", v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger id="employee-status" aria-describedby="employee-status-hint"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="active">פעיל</SelectItem>
                 <SelectItem value="onboarding">בקליטה</SelectItem>
-                <SelectItem value="leaving">בעזיבה</SelectItem>
+                {/* "בעזיבה" is set only by the offboarding flow; shown here just as the current value. */}
+                {employee?.status === "leaving" && (
+                  <SelectItem value="leaving" disabled>בעזיבה</SelectItem>
+                )}
                 <SelectItem value="inactive">לא פעיל</SelectItem>
               </SelectContent>
             </Select>
+            <p id="employee-status-hint" className="text-xs text-muted-foreground mt-1">
+              להתחלת עזיבה השתמשו בכפתור התחלת עזיבה בתיק העובד
+            </p>
           </div>
           <div>
             <Label>מנהל ישיר</Label>
@@ -513,11 +525,42 @@ export function EditEmployeeDialog({ open, onOpenChange, employee }: Props) {
 
         <div className="flex gap-2 pt-4">
           <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>ביטול</Button>
-          <Button className="flex-1" disabled={update.isPending} onClick={handleSave}>
-            {update.isPending ? "שומר..." : "שמור"}
+          <Button
+            className="flex-1"
+            disabled={update.isPending || cancelOffboarding.isPending}
+            onClick={() => (isLeavingToActive(employee, form.status) ? setConfirmRevertOpen(true) : handleSave())}
+          >
+            {update.isPending || cancelOffboarding.isPending ? "שומר..." : "שמור"}
           </Button>
         </div>
       </DialogContent>
+
+      <AlertDialog
+        open={confirmRevertOpen}
+        onOpenChange={(o) => !o && !(update.isPending || cancelOffboarding.isPending) && setConfirmRevertOpen(false)}
+      >
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>להחזיר את {employee?.full_name ?? "העובד"} לפעיל?</AlertDialogTitle>
+            <AlertDialogDescription>
+              תהליך העזיבה יבוטל: תאריך העזיבה יימחק, חסימת הגישה למערכת תוסר, טפסי עזיבה שלא נחתמו יבוטלו וקריאת העזיבה תיסגר.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={update.isPending || cancelOffboarding.isPending}>השאר בעזיבה</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={update.isPending || cancelOffboarding.isPending}
+              onClick={async (e) => {
+                e.preventDefault();
+                await handleSave();
+                setConfirmRevertOpen(false);
+              }}
+            >
+              {update.isPending || cancelOffboarding.isPending ? "מבטל עזיבה..." : "בטל עזיבה ושמור"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

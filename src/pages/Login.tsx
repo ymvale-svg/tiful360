@@ -22,6 +22,8 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  /** Inline sign-in error (kept visible, unlike a toast — e.g. after a Google redirect). */
+  const [authError, setAuthError] = useState<string | null>(null);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
@@ -51,8 +53,14 @@ export default function Login() {
       if (done || !hasSession) return;
       done = true;
       const ok = await verifyActiveEmployee("", null);
-      if (ok) navigate(afterLogin, { replace: true });
-      else done = false;
+      if (ok) {
+        navigate(afterLogin, { replace: true });
+        return;
+      }
+      // Same as the popup path: an unauthorized account must not stay signed in.
+      await supabase.auth.signOut();
+      setAuthError(UNAUTHORIZED_MESSAGE);
+      done = false;
     };
     supabase.auth.getSession().then(({ data }) => proceed(!!data.session));
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
@@ -64,6 +72,7 @@ export default function Login() {
 
 
   const handleGoogleLogin = async () => {
+    setAuthError(null);
     setGoogleLoading(true);
     // Managed Google sign-in returns to /login?next=..., which carries the return
     // path — no sessionStorage key here (a stale key would bounce the dashboard later).
@@ -82,6 +91,7 @@ export default function Login() {
         const ok = await verifyActiveEmployee(user.id, user.email);
         if (!ok) {
           await supabase.auth.signOut();
+          setAuthError(UNAUTHORIZED_MESSAGE);
           toast({
             title: "אין הרשאת גישה",
             description: UNAUTHORIZED_MESSAGE,
@@ -113,6 +123,7 @@ export default function Login() {
       toast({ title: "שגיאה", description: "יש להזין אימייל וסיסמה", variant: "destructive" });
       return;
     }
+    setAuthError(null);
     setEmailLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -125,6 +136,7 @@ export default function Login() {
         const ok = await verifyActiveEmployee(data.user.id, data.user.email);
         if (!ok) {
           await supabase.auth.signOut();
+          setAuthError(UNAUTHORIZED_MESSAGE);
           toast({
             title: "אין הרשאת גישה",
             description: UNAUTHORIZED_MESSAGE,
@@ -189,6 +201,15 @@ export default function Login() {
           <p className="text-xs text-muted-foreground text-center mb-6">
             הכניסה מיועדת למשתמשים שהוקמו מראש על ידי מנהל המערכת בלבד.
           </p>
+
+          {authError && (
+            <p
+              role="alert"
+              className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive text-center"
+            >
+              {authError}
+            </p>
+          )}
 
           {mode === "choose" && (
             <div className="space-y-3">

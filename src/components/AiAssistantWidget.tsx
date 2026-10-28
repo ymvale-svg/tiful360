@@ -62,6 +62,7 @@ export function AiAssistantWidget() {
   const { activeCompanyId } = useCompany();
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -91,8 +92,9 @@ export function AiAssistantWidget() {
     if (open) setTimeout(() => inputRef.current?.focus(), 100);
   }, [open]);
 
-  // While the chat is open, redirect keystrokes into the textarea even if focus
-  // is elsewhere — so the user can just start typing without clicking the field.
+  // When focus is already inside the assistant panel (e.g. on a message or the
+  // header), redirect typing into the textarea. Keys aimed at the rest of the
+  // page are never touched.
   useEffect(() => {
     if (!open || pending) return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -100,6 +102,9 @@ export function AiAssistantWidget() {
       if (!ta) return;
       if (document.activeElement === ta) return;
       const target = e.target as HTMLElement | null;
+      if (!target || !panelRef.current?.contains(target)) return;
+      // Space/Enter on a button or link inside the panel must keep activating it
+      if (target.closest("button, a, [role='button']") && (e.key === " " || e.key === "Enter")) return;
       // Don't hijack keys aimed at other editable fields
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -196,6 +201,7 @@ export function AiAssistantWidget() {
       {/* Chat panel */}
       {open && (
         <div
+          ref={panelRef}
           dir="rtl"
           style={
             isMobile
@@ -337,6 +343,7 @@ export function AiAssistantWidget() {
                   }
                 }}
                 rows={1}
+                aria-label="הודעה לעוזר"
                 placeholder="שאל אותי כל דבר..."
                 disabled={loading || !!pending}
                 className="flex-1 resize-none bg-muted rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring max-h-32 disabled:opacity-60"

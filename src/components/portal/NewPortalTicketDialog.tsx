@@ -12,6 +12,7 @@ import {
   useCreateServiceTicket,
   useEmployeeAssetOptions,
   uploadTicketAttachments,
+  failedAttachmentsMessage,
 } from "@/hooks/useServiceTickets";
 import { useCompany } from "@/hooks/useCompany";
 import { TicketScreenshotButton } from "@/components/TicketScreenshotButton";
@@ -59,9 +60,11 @@ export function NewPortalTicketDialog({ open, onOpenChange, employeeId, employee
     if (!title.trim()) return toast.error("יש להזין כותרת לקריאה");
     setSubmitting(true);
     try {
-      const attachments = activeCompanyId && files.length
-        ? await uploadTicketAttachments(activeCompanyId, files)
-        : [];
+      const { uploaded: attachments, failed } = !files.length
+        ? { uploaded: [], failed: [] as string[] }
+        : activeCompanyId
+          ? await uploadTicketAttachments(activeCompanyId, files)
+          : { uploaded: [], failed: files.map((f) => f.name) };
       await createTicket.mutateAsync({
         employeeId,
         subject,
@@ -73,7 +76,8 @@ export function NewPortalTicketDialog({ open, onOpenChange, employeeId, employee
         relatedAssetId: assetId === "none" ? null : assetId,
         attachments,
       });
-      toast.success("הקריאה נפתחה ונשלחה לתפעול");
+      if (failed.length) toast.error(failedAttachmentsMessage(failed));
+      else toast.success("הקריאה נפתחה ונשלחה לתפעול");
       reset();
       onOpenChange(false);
     } catch (err: any) {
