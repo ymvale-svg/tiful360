@@ -4,6 +4,7 @@ import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import logoImg from "@/assets/logo.svg";
+import { LineFieldBackground } from "@/components/backgrounds/LineFieldBackground";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { translateAuthError } from "@/lib/authErrors";
@@ -183,8 +184,9 @@ export default function Login() {
   };
 
   return (
-    <main className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <main className="relative isolate min-h-screen bg-background flex items-center justify-center p-4">
+      <LineFieldBackground />
+      <div className="relative w-full max-w-md">
         <div className="text-center mb-8">
           <img src={logoImg} alt="לוגו תפעול 360" className="w-16 h-16 mx-auto mb-3 object-contain" />
           <h1 className="text-2xl font-bold">תפעול 360 — מערכת ניהול משאבים מרכזית</h1>
