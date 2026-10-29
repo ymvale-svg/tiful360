@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, BookOpen, Building2, Car, Download, ExternalLink, FileText, Laptop, Loader2, PlayCircle, Search, ShieldCheck, X } from "lucide-react";
+import { SearchInput } from "@/components/ui/search-input";
+import { ArrowRight, BookOpen, Building2, Car, Download, ExternalLink, FileText, Laptop, Loader2, PlayCircle, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DocumentPreviewDialog } from "@/components/DocumentPreviewDialog";
@@ -112,7 +113,7 @@ function TopicLogo({ path, name }: { path: string; name: string }) {
 }
 
 function SearchBox({ value, onChange }: { value: string; onChange: (value: string) => void }) {
-  return <div className="relative"><Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" aria-hidden="true" /><input type="search" value={value} onChange={(e) => onChange(e.target.value)} placeholder="חיפוש..." aria-label="חיפוש בספרייה" className="w-full min-h-11 pr-9 pl-12 py-2.5 bg-card border border-border/50 rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30" />{value && <button type="button" onClick={() => onChange("")} className="absolute left-0.5 top-1/2 -translate-y-1/2 h-11 w-11 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="נקה חיפוש"><X className="w-4 h-4" aria-hidden="true" /></button>}</div>;
+  return <SearchInput label="חיפוש בספרייה" placeholder="חיפוש..." value={value} onValueChange={onChange} />;
 }
 
 function Empty({ label }: { label: string }) { return <p className="text-center text-sm text-muted-foreground py-8">{label}</p>; }

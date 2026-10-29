@@ -1,6 +1,7 @@
 // The header's notification center. Its row anatomy, resolve-in-place behaviour and animated tab
 // indicator are adapted from "Notification Panel" by uvain on 21st.dev (MIT), reworked for system
 // alerts (expiry, unassigned equipment, offboarding) instead of collaboration events.
+import { EMPTY_ICONS } from "@/components/feedback/emptyIcons";
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
@@ -183,7 +184,7 @@ function NotificationCenter() {
             empty={{
               title: tab === "all" ? "אין התראות פתוחות" : "אין התראות בחומרה הזו",
               description: "תפוגות, ציוד ללא שיוך ועובדים בתהליך עזיבה יופיעו כאן.",
-              icon: <Bell className="h-6 w-6" />,
+              icons: EMPTY_ICONS.alerts,
             }}
           >
             {groups.map((g) => (

@@ -1,4 +1,7 @@
 import { formatDateDMY } from "@/lib/utils";
+import { SearchInput } from "@/components/ui/search-input";
+import { BulkActionBar } from "@/components/ui/bulk-action-bar";
+import { EMPTY_ICONS } from "@/components/feedback/emptyIcons";
 import { useNextInsurancePayments } from "@/hooks/useInsurancePayments";
 import { RowContextMenu, copyAction, openInNewTab, type ContextAction } from "@/components/context/RowContextMenu";
 import React, { useMemo, useState } from "react";
@@ -519,17 +522,12 @@ export default function AssetsDomainPage() {
 
       {/* Search + category chips + sort */}
       <div className="space-y-3">
-        <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
-          <Search className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="חיפוש (שם / קוד / מס׳ סידורי / עובד / תת-קטגוריה)..."
-            className="min-h-10 bg-transparent text-base outline-none w-full placeholder:text-muted-foreground"
-            aria-label="חיפוש"
-          />
-        </div>
+        <SearchInput
+          label="חיפוש פריטים"
+          placeholder="חיפוש (שם / קוד / מס׳ סידורי / עובד / תת-קטגוריה)..."
+          value={search}
+          onValueChange={setSearch}
+        />
 
         {!isDrilled && (
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -654,29 +652,24 @@ export default function AssetsDomainPage() {
               </Button>
             </div>
           )}
-          {selectedIds.size > 0 && (
-            <div className="sticky bottom-3 z-20 bg-card border border-primary/40 shadow-lg rounded-xl p-3 flex flex-wrap items-center gap-2">
-              <span className="text-sm font-medium">{selectedIds.size} פריטים נבחרו</span>
-              <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())} className="gap-1">
-                <X className="w-3.5 h-3.5" /> נקה בחירה
-              </Button>
-              <div className="flex-1" />
-              <Button size="sm" className="gap-1.5" onClick={() => setHandoverOpen(true)}>
-                <FileSignature className="w-4 h-4" />
-                מסור {selectedIds.size} פריטים
-              </Button>
-            </div>
-          )}
+          <BulkActionBar count={selectedIds.size} onClear={() => setSelectedIds(new Set())}>
+            <Button size="sm" className="gap-1.5" onClick={() => setHandoverOpen(true)}>
+              <FileSignature className="w-4 h-4" aria-hidden="true" />
+              מסירה
+            </Button>
+          </BulkActionBar>
           {drilledItems.length === 0 ? (
             <div className="bg-card border border-dashed border-border rounded-2xl">
               {search.trim() || expiredOnly ? (
                 <EmptyState
+                  icons={EMPTY_ICONS.noMatch}
                   title="לא נמצאו פריטים"
                   description={search.trim() ? `אין פריטים שתואמים את "${search.trim()}" בתת-קטגוריה זו.` : "אין פריטים שפג תוקפם בתת-קטגוריה זו."}
                   action={<Button variant="outline" onClick={clearFilters}>נקה סינון</Button>}
                 />
               ) : (
                 <EmptyState
+                  icons={EMPTY_ICONS.assets}
                   title="אין עדיין פריטים בתת-קטגוריה זו"
                   action={<Button onClick={openAddHere} className="gap-1.5"><Plus aria-hidden="true" />פריט חדש</Button>}
                 />
@@ -706,6 +699,7 @@ export default function AssetsDomainPage() {
       ) : cardsByCategory.length === 0 ? (
         <div className="bg-card border border-dashed border-border rounded-2xl">
           <EmptyState
+            icons={search.trim() || expiredOnly || catParam ? EMPTY_ICONS.noMatch : EMPTY_ICONS.assets}
             title="לא נמצאו תוצאות"
             description={search.trim() ? `אין פריטים או תתי-קטגוריות שתואמים את "${search.trim()}".` : undefined}
             action={(search.trim() || expiredOnly || catParam)

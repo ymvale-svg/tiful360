@@ -1,7 +1,10 @@
 import { useMemo, useState } from "react";
+import { SearchInput } from "@/components/ui/search-input";
+import { ActiveFilters } from "@/components/ui/active-filters";
+import { EMPTY_ICONS } from "@/components/feedback/emptyIcons";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { UserPlus, Search, Send, UserRound, AlertCircle, ListChecks } from "lucide-react";
+import { UserPlus, Send, UserRound, AlertCircle, ListChecks } from "lucide-react";
 import { EmptyState, ListSkeleton } from "@/components/feedback/StateView";
 import { NewOnboardingDialog } from "@/components/onboarding/NewOnboardingDialog";
 import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
@@ -62,17 +65,13 @@ export default function Onboarding() {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
-          <input
-            type="search"
-            aria-label="חיפוש תהליכי קליטה לפי שם או מזהה עובד"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="חיפוש לפי שם או מזהה עובד"
-            className="w-full min-h-11 pr-9 pl-3 py-2 bg-card border border-border rounded-lg text-base outline-none focus:ring-2 focus:ring-primary/30"
-          />
-        </div>
+        <SearchInput
+          wrapperClassName="flex-1"
+          label="חיפוש תהליכי קליטה לפי שם או מזהה עובד"
+          placeholder="חיפוש לפי שם או מזהה עובד"
+          value={query}
+          onValueChange={setQuery}
+        />
         <div className="grid grid-cols-3 sm:flex gap-1.5 w-full sm:w-auto">
           {(["all", "draft", "sent", "in_progress", "done"] as const).map((s) => (
             <button
@@ -107,15 +106,27 @@ export default function Onboarding() {
             <Button size="sm" variant="outline" onClick={() => void refetch()}>נסה שוב</Button>
           </div>
         )}
+        {!isLoading && !isError && processes.length > 0 && (
+          <ActiveFilters
+            summary={`${filtered.length} מתוך ${processes.length} תהליכים`}
+            onClearAll={() => { setQuery(""); setStatusFilter("all"); }}
+            filters={[
+              ...(query.trim() ? [{ id: "q", label: "חיפוש", value: query.trim(), onRemove: () => setQuery("") }] : []),
+              ...(statusFilter !== "all" ? [{ id: "status", label: "סטטוס", value: ONBOARDING_STATUS_LABEL[statusFilter], onRemove: () => setStatusFilter("all") }] : []),
+            ]}
+          />
+        )}
         {!isLoading && !isError && filtered.length === 0 && (
           processes.length > 0 ? (
             <EmptyState
+              icons={EMPTY_ICONS.noMatch}
               title="אין תהליכי קליטה שתואמים לסינון"
               description={[query.trim() && `חיפוש "${query.trim()}"`, statusFilter !== "all" && `סטטוס "${ONBOARDING_STATUS_LABEL[statusFilter]}"`].filter(Boolean).join(" ו")}
               action={<Button size="sm" variant="outline" onClick={() => { setQuery(""); setStatusFilter("all"); }}>נקה סינון</Button>}
             />
           ) : (
             <EmptyState
+              icons={EMPTY_ICONS.onboarding}
               title="עדיין אין תהליכי קליטה"
               description="פתחו תהליך קליטה לעובד חדש כדי לרכז את הצרכים, הציוד והגישות שלו."
               action={<Button size="sm" className="gap-1.5" onClick={() => setDialogOpen(true)}><UserPlus className="w-4 h-4" />תהליך קליטה חדש</Button>}

@@ -5,6 +5,7 @@ import {
 import { Link, Navigate } from "react-router-dom";
 import { useDashboardStats, useAlerts, useEmployees, useActivityLog } from "@/hooks/useData";
 import { useAuth } from "@/hooks/useAuth";
+import { useDashboardTrends } from "@/hooks/useDashboardTrends";
 import { ExpiringAssetsCard } from "@/components/ExpiringAssetsCard";
 import { LeaveStatusCard } from "@/components/dashboard/LeaveStatusCard";
 import { OnboardingCard } from "@/components/dashboard/OnboardingCard";
@@ -19,7 +20,8 @@ import { resolveDashboardConfig, type KpiKey, type WidgetKey } from "@/lib/dashb
 import { useDashboardPrefs, applyWidgetOrder } from "@/hooks/useDashboardPrefs";
 import { cn } from "@/lib/utils";
 import { KpiTile } from "@/components/ui/kpi-tile";
-import { ListSkeleton } from "@/components/feedback/StateView";
+import { EmptyState, ListSkeleton } from "@/components/feedback/StateView";
+import { ActivityTimeline } from "@/components/ui/activity-timeline";
 import { Skeleton } from "@/components/ui/skeleton";
 import { notificationCenter } from "@/lib/notificationCenter";
 
@@ -29,6 +31,7 @@ export default function Dashboard() {
   const { data: alerts } = useAlerts();
   const { data: employees } = useEmployees();
   const { data: activityLog } = useActivityLog();
+  const { data: trends } = useDashboardTrends(stats);
   const { prefs, toggleHidden, toggleWide, setOrder, reset, isCustomized } = useDashboardPrefs(user?.id);
   const [customizeOpen, setCustomizeOpen] = useState(false);
 
@@ -87,28 +90,22 @@ export default function Dashboard() {
       <div className="p-5 border-b border-border/50 flex items-center justify-between">
         <h2 className="font-semibold">פעילות אחרונה</h2>
       </div>
-      <div className="divide-y divide-border/50">
-        {(activityLog ?? []).slice(0, 5).map((item) => (
-          <div key={item.id} className="p-4 flex items-center gap-4 hover:bg-muted/30 transition-colors">
-            <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
-              <Clock className="w-4 h-4 text-muted-foreground" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm">{item.action}</p>
-              {item.details && <p className="text-xs text-muted-foreground">{item.details}</p>}
-            </div>
-            <time dateTime={item.created_at} className="text-xs text-muted-foreground whitespace-nowrap tabular-nums">
-              {new Date(item.created_at).toLocaleDateString("he-IL")}
-            </time>
-          </div>
-        ))}
-        {(!activityLog || activityLog.length === 0) && (
-          <div className="p-8 text-center text-sm">
-            <p className="font-medium">אין פעילות עדיין</p>
-            <p className="text-muted-foreground mt-1">שיוכים, קליטות ועזיבות יופיעו כאן.</p>
-          </div>
-        )}
-      </div>
+      {activityLog && activityLog.length > 0 ? (
+        <ActivityTimeline
+          className="p-5"
+          items={activityLog.slice(0, 6).map((item) => ({
+            id: item.id,
+            at: item.created_at,
+            icon: Clock,
+            title: item.action,
+            detail: item.details ?? undefined,
+            actor: (item as { performed_by_name?: string | null }).performed_by_name ?? undefined,
+            tone: "primary" as const,
+          }))}
+        />
+      ) : (
+        <EmptyState title="אין פעילות עדיין" description="שיוכים, קליטות ועזיבות יופיעו כאן." />
+      )}
     </div>
   );
 
@@ -217,6 +214,11 @@ export default function Dashboard() {
               loading={!stats}
               format={(n) => Math.round(n).toLocaleString("he-IL")}
               href={stat.href}
+              trend={trends?.[stat.key as keyof typeof trends]?.series}
+              trendLabels={trends?.[stat.key as keyof typeof trends]?.labels}
+              delta={trends?.[stat.key as keyof typeof trends]?.delta}
+              deltaLabel="לעומת לפני שבועיים"
+              lowerIsBetter={stat.key === "openTickets" || stat.key === "openAlerts"}
               action={stat.onOpen ? (
                 <button type="button" onClick={stat.onOpen} className="-mt-1 self-start rounded text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                   {stat.linkLabel} ←

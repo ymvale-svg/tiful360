@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, forwardRef } from "react";
+import { Stepper } from "@/components/ui/stepper";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -454,17 +455,7 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
           </DialogDescription>
         </DialogHeader>
 
-        {/* Progress */}
-        <div className="flex items-center gap-1 mb-2">
-          {STEPS.map((label, i) => (
-            <div key={i} className="flex-1">
-              <div className={`h-1.5 rounded-full transition-colors ${i <= step ? "bg-primary" : "bg-muted"}`} />
-              <p className={`text-xs mt-1 text-center ${i === step ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
-                {label}
-              </p>
-            </div>
-          ))}
-        </div>
+        <Stepper steps={STEPS.map((label) => ({ label }))} current={step} onStepClick={setStep} label="שלבי הטופס" className="mb-2" />
 
         <div className="space-y-4 py-2">
           {/* Step 0: Personal */}

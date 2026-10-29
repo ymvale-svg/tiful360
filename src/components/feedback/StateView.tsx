@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { AlertCircle, Inbox, RotateCw } from "lucide-react";
+import { createElement, type ReactNode } from "react";
+import { AlertCircle, Inbox, RotateCw, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -10,16 +10,42 @@ interface EmptyProps {
   /** The first thing to do, or "נקה סינון" when filters hid everything. */
   action?: ReactNode;
   icon?: ReactNode;
+  /** Up to three icons fanned out as cards; takes precedence over `icon`. */
+  icons?: LucideIcon[];
   className?: string;
 }
 
-/** An empty state that says why the list is empty and what to do next. */
-export function EmptyState({ title, description, action, icon, className }: EmptyProps) {
+const TILE = "grid h-12 w-12 place-items-center rounded-xl bg-card text-muted-foreground shadow-lg ring-1 ring-border transition-transform duration-500 group-hover:duration-200 motion-reduce:transition-none";
+
+/**
+ * An empty state that says why the list is empty and what to do next. The fanned icon cards are
+ * adapted from "Empty State" by serafimcloud on 21st.dev; they spread apart on hover.
+ */
+export function EmptyState({ title, description, action, icon, icons, className }: EmptyProps) {
+  const [a, b, c] = icons ?? [];
   return (
-    <div className={cn("flex flex-col items-center justify-center gap-2 px-6 py-10 text-center", className)}>
-      <span className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary" aria-hidden="true">
-        {icon ?? <Inbox className="h-6 w-6" />}
-      </span>
+    <div className={cn("group flex flex-col items-center justify-center gap-2 px-6 py-10 text-center", className)}>
+      {icons && icons.length >= 3 ? (
+        <div className="isolate mb-3 flex justify-center" aria-hidden="true">
+          <span className={cn(TILE, "relative left-2.5 top-1.5 -rotate-6 group-hover:-translate-x-4 group-hover:-rotate-12 group-hover:-translate-y-0.5")}>
+            {createElement(a, { className: "h-6 w-6" })}
+          </span>
+          <span className={cn(TILE, "relative z-10 text-primary group-hover:-translate-y-0.5")}>
+            {createElement(b, { className: "h-6 w-6" })}
+          </span>
+          <span className={cn(TILE, "relative right-2.5 top-1.5 rotate-6 group-hover:translate-x-4 group-hover:rotate-12 group-hover:-translate-y-0.5")}>
+            {createElement(c, { className: "h-6 w-6" })}
+          </span>
+        </div>
+      ) : a ? (
+        <span className={cn(TILE, "mb-3 text-primary group-hover:-translate-y-0.5")} aria-hidden="true">
+          {createElement(a, { className: "h-6 w-6" })}
+        </span>
+      ) : (
+        <span className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary" aria-hidden="true">
+          {icon ?? <Inbox className="h-6 w-6" />}
+        </span>
+      )}
       <p className="text-sm font-semibold text-foreground">{title}</p>
       {description && <p className="max-w-[40ch] text-sm text-muted-foreground">{description}</p>}
       {action && <div className="mt-2">{action}</div>}

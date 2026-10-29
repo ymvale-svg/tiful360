@@ -1,4 +1,9 @@
 import { RowContextMenu, copyAction } from "@/components/context/RowContextMenu";
+import { ActiveFilters } from "@/components/ui/active-filters";
+import { TicketBoard, type BoardStatus } from "@/components/TicketBoard";
+import { usePersistentFilter } from "@/hooks/usePersistentFilter";
+import { LayoutList, Kanban } from "lucide-react";
+import { EMPTY_ICONS } from "@/components/feedback/emptyIcons";
 import { useEffect, useMemo, useState } from "react";
 import {
   Wrench, CheckCircle2, User, Timer, ChevronLeft, Plus, Package,
@@ -156,6 +161,11 @@ function EditSlaDialog({ ticket, open, onOpenChange, holidays }: { ticket: any; 
   );
 }
 
+type TicketRow = NonNullable<ReturnType<typeof useITTickets>["data"]>[number];
+
+const STATUS_FILTER_LABELS: Record<string, string> = { open: "נפתחו", in_progress: "בטיפול", done: "טופלו", all: "הכל" };
+const FORWARD_FILTER_LABELS: Record<string, string> = { it: "נשלח לאיש IT", mesimon: "נשלח למשימון", none: "ללא העברה" };
+
 export default function ITTickets() {
   const navigate = useNavigate();
   const { data: tickets, isLoading, error: ticketsError, refetch: refetchTickets } = useITTickets();
@@ -167,6 +177,7 @@ export default function ITTickets() {
   const holidays = useCompanyHolidaySet();
   const [statusFilter, setStatusFilter] = useState<string>("open_all");
   const [forwardFilter, setForwardFilter] = useState<string>("any");
+  const [view, setView] = usePersistentFilter<"list" | "board">("tickets:view", "list");
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Deep link from email: /it-tickets?ticket=<id|ticket_code> — and from header search / open-tickets card: ?selected=<id>
@@ -185,6 +196,7 @@ export default function ITTickets() {
     if (match) {
       setSelectedId(match.id);
       setStatusFilter("all");
+      setView("list");
       clearParam();
       return;
     }
@@ -224,8 +236,9 @@ export default function ITTickets() {
     if (value === "none") return byStatus.filter((t: any) => !hasItForward(t) && !t.mesimon_task_id).length;
     return byStatus.length;
   };
-  const changeStatusFilter = (value: unknown) => setStatusFilter(validateTicketFilter(value));
-  const openVisibleTicket = (value: unknown) => setSelectedId(visibleTicketId(value, filtered));
+  // The status filter only exists in the list view, so an agent changing it brings that view up.
+  const changeStatusFilter = (value: unknown) => { setStatusFilter(validateTicketFilter(value)); setView("list"); };
+  const openVisibleTicket = (value: unknown) => { setSelectedId(visibleTicketId(value, filtered)); setView("list"); };
   useWebMCP({
     name: "read_visible_service_tickets",
     description: "קרא את הקריאות המוצגות במסך בהתאם לחברה ולסינון הנוכחי.",
@@ -352,6 +365,26 @@ export default function ITTickets() {
     }
   };
 
+  /** Board moves: closing still goes through the confirm dialog, everything else applies with undo. */
+  const [movingId, setMovingId] = useState<string | null>(null);
+  const moveTicket = async (ticket: TicketRow, status: BoardStatus) => {
+    if (status === "done") {
+      setSelectedId(ticket.id);
+      setDoneNote("");
+      setDoneNotify(true);
+      setDoneOpen(true);
+      return;
+    }
+    setMovingId(ticket.id);
+    try {
+      await applyStatus(ticket, status);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "שגיאה בעדכון הסטטוס");
+    } finally {
+      setMovingId(null);
+    }
+  };
+
   const confirmDone = async () => {
     if (!selectedTicket) return;
     try {
@@ -374,7 +407,26 @@ export default function ITTickets() {
           <p className="page-subtitle">קריאות עובדים בטיפול מחלקת התפעול</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <div className="inline-flex rounded-lg border border-border bg-card p-1" role="group" aria-label="תצוגה">
+            {([
+              { v: "list", label: "רשימה", icon: LayoutList },
+              { v: "board", label: "לוח", icon: Kanban },
+            ] as const).map((o) => (
+              <button
+                key={o.v}
+                type="button"
+                aria-pressed={view === o.v}
+                onClick={() => { setView(o.v); if (o.v === "board") setSelectedId(null); }}
+                className={cn(
+                  "inline-flex min-h-9 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [@media(pointer:coarse)]:min-h-11",
+                  view === o.v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+              >
+                <o.icon className="h-4 w-4" aria-hidden="true" />{o.label}
+              </button>
+            ))}
+          </div>
+          {view === "list" && <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-40" aria-label="סינון לפי סטטוס"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="open_all">פתוחות ובטיפול</SelectItem>
@@ -383,7 +435,7 @@ export default function ITTickets() {
               <SelectItem value="done">טופלו</SelectItem>
               <SelectItem value="all">הכל</SelectItem>
             </SelectContent>
-          </Select>
+          </Select>}
           <ExportExcelButton
             disabled={!filtered.length}
             onClick={() => {
@@ -423,6 +475,23 @@ export default function ITTickets() {
         <div className="bg-card rounded-xl border border-border/50">
           <StateView loading={isLoading} error={ticketsError} onRetry={() => { void refetchTickets(); }} label="את קריאות השירות">{null}</StateView>
         </div>
+      ) : view === "board" ? (
+        <TicketBoard
+          tickets={(tickets ?? []).filter((t) =>
+            forwardFilter === "it" ? hasItForward(t) : forwardFilter === "mesimon" ? !!t.mesimon_task_id : forwardFilter === "none" ? !hasItForward(t) && !t.mesimon_task_id : true)}
+          busyId={movingId}
+          onOpen={(t) => { setView("list"); setSelectedId(t.id); }}
+          onMove={(t, status) => { void moveTicket(t, status); }}
+          priorityLabel={(p) => PRIORITY_LABELS[p] ?? p}
+          priorityClass={(p) => priorityColors[p] ?? ""}
+          renderMeta={(t) => (
+            <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+              {subjectLabel(t.subject_category ?? t.ticket_type)} ·
+              <EmployeeLink employeeId={t.employee_id} name={t.employees?.full_name} />
+              {t.status !== "done" && <SlaBadge deadline={t.sla_deadline} done={false} holidays={holidays} />}
+            </span>
+          )}
+        />
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(20rem,26rem)_minmax(0,1fr)] gap-6">
           {/* Ticket list */}
@@ -452,6 +521,14 @@ export default function ITTickets() {
                 );
               })}
             </div>
+            <ActiveFilters
+              summary={`${filtered.length} קריאות`}
+              onClearAll={clearFilters}
+              filters={[
+                ...(statusFilter !== "open_all" ? [{ id: "status", label: "סטטוס", value: STATUS_FILTER_LABELS[statusFilter] ?? statusFilter, onRemove: () => setStatusFilter("open_all") }] : []),
+                ...(forwardFilter !== "any" ? [{ id: "forward", label: "העברה", value: FORWARD_FILTER_LABELS[forwardFilter] ?? forwardFilter, onRemove: () => setForwardFilter("any") }] : []),
+              ]}
+            />
             {filtered.map((ticket: any) => (
               <RowContextMenu key={ticket.id} actions={[
                 { label: "פתח קריאה", onSelect: () => openVisibleTicket(ticket.id) },
@@ -515,13 +592,14 @@ export default function ITTickets() {
                 isEmpty
                 empty={filtersActive
                   ? {
+                      icons: EMPTY_ICONS.noMatch,
                       title: "אין קריאות שתואמות לסינון",
                       description: (tickets ?? []).length ? `יש ${(tickets ?? []).length} קריאות בסך הכל.` : undefined,
                       action: <Button variant="outline" onClick={clearFilters}>נקה סינון</Button>,
                     }
                   : (tickets ?? []).length
-                    ? { title: "אין קריאות פתוחות", description: "כל הקריאות טופלו.", action: <Button variant="outline" onClick={() => setStatusFilter("all")}>הצג את כל הקריאות</Button> }
-                    : { title: "עדיין אין קריאות שירות", description: "קריאות שעובדים פותחים בפורטל יופיעו כאן.", action: <Button variant="outline" onClick={() => setNewOpen(true)}>פתיחת קריאה</Button> }}
+                    ? { icons: EMPTY_ICONS.ticketsDone, title: "אין קריאות פתוחות", description: "כל הקריאות טופלו.", action: <Button variant="outline" onClick={() => setStatusFilter("all")}>הצג את כל הקריאות</Button> }
+                    : { icons: EMPTY_ICONS.tickets, title: "עדיין אין קריאות שירות", description: "קריאות שעובדים פותחים בפורטל יופיעו כאן.", action: <Button variant="outline" onClick={() => setNewOpen(true)}>פתיחת קריאה</Button> }}
               >
                 {null}
               </StateView>

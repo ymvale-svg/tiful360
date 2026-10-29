@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { SearchInput } from "@/components/ui/search-input";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Plus, Search, Zap, MoreHorizontal, Package, UserRound, FolderTree, FileSignature, Ticket } from "lucide-react";
+import { Plus, Zap, MoreHorizontal, Package, UserRound, FolderTree, FileSignature, Ticket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
@@ -208,29 +209,27 @@ export default function Assets() {
                       : "border-border shadow-sm hover:shadow"
                   )}
                 >
-                  <div className="flex flex-1 min-w-[12rem] items-center gap-3">
-                  <Search className="w-5 h-5 text-muted-foreground shrink-0" aria-hidden="true" />
-                  <input
+                  <SearchInput
                     ref={searchInputRef}
-                    type="search"
+                    wrapperClassName="flex-1 min-w-[12rem] w-auto border-0 bg-transparent px-1 shadow-none focus-within:ring-0"
+                    label="חיפוש גלובלי"
                     role="combobox"
-                    aria-label="חיפוש גלובלי"
                     aria-autocomplete="list"
                     aria-expanded={resultsOpen}
                     aria-controls="global-search-results"
                     aria-activedescendant={resultsOpen && flatResults[activeIndex] ? flatResults[activeIndex].id : undefined}
                     value={globalSearch}
-                    onChange={(e) => { setGlobalSearch(e.target.value); setSearchFocused(true); }}
+                    onValueChange={(v) => { setGlobalSearch(v); setSearchFocused(true); }}
                     onKeyDown={onSearchKeyDown}
                     onFocus={() => setSearchFocused(true)}
                     onBlur={() => setSearchFocused(false)}
                     placeholder="חיפוש פריט, עובד או קטגוריה (שם / קוד / מס׳ סידורי / מס׳ פוליסה)..."
-                    className="bg-transparent text-base outline-none w-full placeholder:text-muted-foreground/70"
+                    trailing={
+                      <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded border border-border bg-muted/50 text-xs font-mono text-muted-foreground shrink-0">
+                        ⌘K
+                      </kbd>
+                    }
                   />
-                  <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded border border-border bg-muted/50 text-xs font-mono text-muted-foreground shrink-0">
-                    ⌘K
-                  </kbd>
-                  </div>
 
                   <div className="flex w-full sm:w-auto items-center gap-2 shrink-0 sm:pl-2 sm:border-r sm:border-border sm:pr-3">
                     <Button

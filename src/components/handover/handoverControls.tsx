@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, type ReactNode } from "react";
 import { Check, Images, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Stepper } from "@/components/ui/stepper";
 
 export type HandoverStep = "details" | "media" | "sign";
 
@@ -12,18 +13,7 @@ export function StepBar({ step, withMedia = true }: { step: HandoverStep; withMe
     { key: "sign", label: "חתימות" },
   ];
   const idx = steps.findIndex((s) => s.key === step);
-  return (
-    <ol className="flex items-center gap-1.5 py-1" aria-label={`שלב ${idx + 1} מתוך ${steps.length}`}>
-      {steps.map((s, i) => (
-        <li key={s.key} className="flex-1 flex items-center gap-1.5" aria-current={i === idx ? "step" : undefined}>
-          <div className={cn("flex-1 h-1.5 rounded-full", i <= idx ? "bg-primary" : "bg-muted")} aria-hidden="true" />
-          <span className={cn("text-xs whitespace-nowrap", i === idx ? "text-primary font-medium" : "text-muted-foreground")}>
-            {s.label}
-          </span>
-        </li>
-      ))}
-    </ol>
-  );
+  return <Stepper steps={steps} current={idx} label="שלבי הפרוטוקול" className="py-1" />;
 }
 
 /** One option of a single-choice group: selection is exposed with aria-pressed and a check mark, not only the border colour. */

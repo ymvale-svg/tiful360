@@ -1,4 +1,5 @@
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
+import { AttendanceHeatmap } from "@/components/attendance/AttendanceHeatmap";
 import {
   ArrowRight, Shield, Key, Clock, AlertTriangle, UserMinus,
   FileText, RefreshCw, Package, User, Mail, Phone, Calendar, Building2, IdCard,
@@ -575,6 +576,9 @@ export default function EmployeeDetail() {
                 </div>
               )}
             </div>
+            {(employee as { tracks_attendance?: boolean | null }).tracks_attendance !== false && (
+              <AttendanceHeatmap employeeId={employee.id} leaves={leaveRequests} />
+            )}
           </div>
         </div>
         </div>

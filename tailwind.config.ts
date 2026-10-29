@@ -99,6 +99,11 @@ export default {
         card: "var(--shadow-card)",
       },
       keyframes: {
+        // A light travelling right to left (reading direction) along a focused search field's bottom edge.
+        beam: {
+          from: { transform: "translateX(100%)" },
+          to: { transform: "translateX(-250%)" },
+        },
         "accordion-down": {
           from: { height: "0" },
           to: { height: "var(--radix-accordion-content-height)" },
@@ -126,6 +131,7 @@ export default {
         "slide-in": "slide-in 0.3s ease-out",
         "fade-in": "fade-in 0.2s ease-out",
         "pulse-dot": "pulse-dot 2s ease-in-out infinite",
+        beam: "beam 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite",
       },
     },
   },

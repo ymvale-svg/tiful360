@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
+import { SearchInput } from "@/components/ui/search-input";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
 import { CreateTax101BatchDialog } from "./CreateTax101BatchDialog";
 import { useCompanyTax101Forms, useSendTax101Invite, useDeleteTax101 } from "@/hooks/useTax101";
 import { useCompany } from "@/hooks/useCompany";
@@ -106,11 +107,13 @@ export function Tax101AdminTab() {
             <option value="signed">נחתם</option>
             <option value="sent">נשלח לשכר</option>
           </select>
-          <Input
+          <SearchInput
+            size="sm"
+            wrapperClassName="max-w-xs"
+            label="חיפוש עובד"
             placeholder="חיפוש עובד..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-8 max-w-xs text-sm"
+            onValueChange={setSearch}
           />
         </div>
 

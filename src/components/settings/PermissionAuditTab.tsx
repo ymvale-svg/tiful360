@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { SearchInput } from "@/components/ui/search-input";
 import { useQuery } from "@tanstack/react-query";
 import { FileDown, FileSpreadsheet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -129,7 +130,7 @@ export function PermissionAuditTab() {
               {Object.entries(AUDIT_ACTION_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
           </div>
-          <div className="text-sm space-y-1 flex-1 min-w-[180px]"><label htmlFor="audit-search" className="block">חיפוש (מבצע / משתמש)</label><Input id="audit-search" type="search" value={search} onChange={(e) => setSearch(e.target.value)} /></div>
+          <div className="text-sm space-y-1 flex-1 min-w-[180px]"><span className="block" aria-hidden="true">חיפוש (מבצע / משתמש)</span><SearchInput size="sm" label="חיפוש (מבצע / משתמש)" placeholder="שם מבצע או משתמש" value={search} onValueChange={setSearch} /></div>
           <Button variant="outline" disabled={!rows.length} onClick={() => exportToExcel(rows, logHeaders, `לוג הרשאות ${from} עד ${to}`)}><FileSpreadsheet className="w-4 h-4" aria-hidden="true" />אקסל</Button>
           <Button variant="outline" disabled={!rows.length || (!!pdfBusy && pdfBusy !== "log")} loading={pdfBusy === "log"} loadingText="מכין PDF…" onClick={() => makePdf("log", `לוג הרשאות ${from} – ${to}`, logHeaders.map((h) => h.label), rows.map((r) => logHeaders.map((h) => (r as any)[h.key])), `לוג הרשאות ${from} עד ${to}`)}><FileDown className="w-4 h-4" aria-hidden="true" />PDF</Button>
         </div>

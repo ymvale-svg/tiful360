@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { SearchInput } from "@/components/ui/search-input";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -7,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Package, AlertCircle, Users, User, Search, Copy, CalendarIcon, X, Plus as PlusIcon, FileSignature } from "lucide-react";
+import { Package, AlertCircle, Users, User, Copy, CalendarIcon, X, Plus as PlusIcon, FileSignature } from "lucide-react";
 import { HandoverFlow } from "@/components/handover/HandoverFlow";
 import { format } from "date-fns";
 import { useCreateAsset } from "@/hooks/useMutations";
@@ -1244,16 +1245,13 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                 </div>
 
                 <div className="grid grid-cols-[1fr_200px] gap-2 mb-2">
-                  <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2">
-                    <Search className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-                    <input
-                      aria-label="חיפוש עובד"
-                      value={empSearch}
-                      onChange={(e) => setEmpSearch(e.target.value)}
-                      placeholder="חיפוש עובד..."
-                      className="bg-transparent text-sm outline-none w-full"
-                    />
-                  </div>
+                  <SearchInput
+                    size="sm"
+                    label="חיפוש עובד"
+                    placeholder="חיפוש עובד..."
+                    value={empSearch}
+                    onValueChange={setEmpSearch}
+                  />
                   <SearchableSelect
                     value={empDeptFilter}
                     onChange={setEmpDeptFilter}

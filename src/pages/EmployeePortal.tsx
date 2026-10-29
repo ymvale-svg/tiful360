@@ -1,10 +1,29 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { SearchInput } from "@/components/ui/search-input";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Package, Megaphone, Phone, ExternalLink,
-  FileText, CalendarDays, AlertCircle, LogOut, Cake, PartyPopper,
-  Box, Wifi, LayoutDashboard, Wrench, Search, X, ArrowRight, ChevronLeft,
-  Thermometer, ClockAlert, Plus, UserX, Inbox, CheckCircle2,
+  Package,
+  Megaphone,
+  Phone,
+  ExternalLink,
+  FileText,
+  CalendarDays,
+  AlertCircle,
+  LogOut,
+  Cake,
+  PartyPopper,
+  Box,
+  Wifi,
+  LayoutDashboard,
+  Wrench,
+  ArrowRight,
+  ChevronLeft,
+  Thermometer,
+  ClockAlert,
+  Plus,
+  UserX,
+  Inbox,
+  CheckCircle2,
 } from "lucide-react";
 import { MyTicketsTab } from "@/components/portal/MyTicketsTab";
 import portalLogo from "@/assets/portal-logo.png.asset.json";
@@ -791,27 +810,12 @@ export default function EmployeePortal() {
         {/* ===== MORE → CONTACTS ===== */}
         {loc.tab === "more" && loc.view === "contacts" && (
           <div className="space-y-3 animate-fade-in">
-            <div className="relative">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" aria-hidden="true" />
-              <input
-                type="search"
-                value={contactSearch}
-                onChange={(e) => setContactSearch(e.target.value)}
-                placeholder="חפש לפי שם, תפקיד, מחלקה, טלפון או דוא״ל..."
-                className="w-full min-h-11 pr-9 pl-12 py-2.5 bg-card border border-border/50 rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground"
-                aria-label="חיפוש אנשי קשר"
-              />
-              {contactSearch && (
-                <button
-                  type="button"
-                  onClick={() => setContactSearch("")}
-                  className="absolute left-0.5 top-1/2 -translate-y-1/2 h-11 w-11 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  aria-label="נקה חיפוש"
-                >
-                  <X className="w-4 h-4" aria-hidden="true" />
-                </button>
-              )}
-            </div>
+            <SearchInput
+              label="חיפוש אנשי קשר"
+              placeholder="חפש לפי שם, תפקיד, מחלקה, טלפון או דוא״ל..."
+              value={contactSearch}
+              onValueChange={setContactSearch}
+            />
             <StateView
               loading={contactsQuery.isLoading}
               error={contactsQuery.error}

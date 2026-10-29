@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { SearchInput } from "@/components/ui/search-input";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
@@ -13,8 +14,17 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useConfirm } from "@/components/feedback/ConfirmDialog";
 import {
-  FileText, Save, RotateCcw, Eye, Plus, Search, ChevronLeft, ChevronDown,
-  Building2, ListTree, Trash2, AlertCircle,
+  FileText,
+  Save,
+  RotateCcw,
+  Eye,
+  Plus,
+  ChevronLeft,
+  ChevronDown,
+  Building2,
+  ListTree,
+  Trash2,
+  AlertCircle,
 } from "lucide-react";
 import {
   PROTOCOL_TYPES,
@@ -220,17 +230,13 @@ function ScopeTree({
         <Plus className="w-4 h-4" aria-hidden="true" /> פרוטוקול חדש
       </Button>
 
-      <div className="relative">
-        <Search className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" aria-hidden="true" />
-        <Input
-          type="search"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="חיפוש קטגוריה או פרוטוקול"
-          aria-label="חיפוש בעץ השיוך"
-          className="h-10 pr-8 text-sm"
-        />
-      </div>
+      <SearchInput
+        size="sm"
+        label="חיפוש בעץ השיוך"
+        placeholder="חיפוש קטגוריה או פרוטוקול"
+        value={q}
+        onValueChange={setQ}
+      />
 
       <div className="max-h-[60vh] overflow-y-auto pl-1 space-y-1">
         {/* Company defaults branch */}
