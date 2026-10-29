@@ -25,7 +25,6 @@ export function useCompanyAttendanceCorrections() {
       if (error) throw error;
       return data ?? [];
     },
-    enabled: !!activeCompanyId,
   });
 }
 
