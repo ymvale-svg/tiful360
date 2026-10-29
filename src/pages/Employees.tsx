@@ -2,8 +2,8 @@ import { RowContextMenu, copyAction, openInNewTab } from "@/components/context/R
 import { useState, useMemo, useEffect } from "react";
 import { usePersistentFilter } from "@/hooks/usePersistentFilter";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Search, Plus, UserMinus, Mail, Send, ShieldCheck, ShieldAlert, UserCheck, UserX } from "lucide-react";
-import { ExportExcelButton, ImportExcelButton } from "@/components/ExcelActionButtons";
+import { Search, Plus, UserMinus, Mail, Send, ShieldCheck, ShieldAlert, UserCheck, UserX, Download } from "lucide-react";
+import { ImportExcelButton } from "@/components/ExcelActionButtons";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -17,6 +17,8 @@ import { ImportExcelDialog } from "@/components/ImportExcelDialog";
 import { UsersAndRolesTab } from "@/components/UsersAndRolesTab";
 import { useAuth } from "@/hooks/useAuth";
 import { exportToExcel } from "@/lib/exportExcel";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { EMPLOYEE_CONTACT_HEADERS, buildEmployeeContactRows } from "@/lib/employeeContactExport";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { useToast } from "@/hooks/use-toast";
@@ -96,12 +98,12 @@ export default function Employees() {
   const { data: fullRows } = useQuery({
     queryKey: ["employees-full", activeCompanyId],
     queryFn: async () => {
-      let q = supabase.from("employees").select("id,email,linked_user_id,exclude_from_contacts,direct_manager_id");
+      let q = supabase.from("employees").select("id,email,phone,linked_user_id,exclude_from_contacts,direct_manager_id");
       if (activeCompanyId) q = q.eq("company_id", activeCompanyId);
       const { data, error } = await q;
       if (error) throw error;
       return data as Array<{
-        id: string; email: string | null; linked_user_id: string | null;
+        id: string; email: string | null; phone: string | null; linked_user_id: string | null;
         exclude_from_contacts: boolean | null; direct_manager_id: string | null;
       }>;
     },
