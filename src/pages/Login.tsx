@@ -213,13 +213,11 @@ export default function Login() {
             </div>
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-1 text-center">
             <h1 id="login-heading" className="text-xl font-bold">{mode === "forgot" ? "איפוס סיסמה" : "ברוכים הבאים"}</h1>
-            <p className="text-sm text-muted-foreground">
-              {mode === "forgot"
-                ? "נשלח אליכם קישור להגדרת סיסמה חדשה. מתאים גם לכניסה ראשונה."
-                : "התחברו לחשבון שהוקם עבורכם על ידי מנהל המערכת."}
-            </p>
+            {mode === "forgot" && (
+              <p className="text-sm text-muted-foreground">נשלח אליכם קישור להגדרת סיסמה חדשה. מתאים גם לכניסה ראשונה.</p>
+            )}
           </div>
 
           {authError && (
