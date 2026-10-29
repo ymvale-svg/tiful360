@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
-import { Mail, Lock, Eye, EyeOff, Users, Package, Clock4, ShieldCheck, ArrowRight } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import logoImg from "@/assets/logo.svg";
 import { LineFieldBackground } from "@/components/backgrounds/LineFieldBackground";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -192,28 +192,15 @@ export default function Login() {
     <main className="relative isolate min-h-screen bg-muted/40 flex items-center justify-center p-4 sm:p-6">
       <LineFieldBackground />
       <div className="relative grid w-full max-w-4xl overflow-hidden rounded-2xl border border-border bg-card shadow-xl md:min-h-[480px] md:grid-cols-[1fr_1.1fr]">
-        <aside className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-b from-primary to-primary/85 p-10 text-primary-foreground md:flex" aria-label="על המערכת">
+        <aside className="relative hidden flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-primary to-primary/85 p-10 text-center text-primary-foreground md:flex" aria-label="תפעול 360">
           <div className="pointer-events-none absolute -top-24 -left-24 h-64 w-64 rounded-full bg-primary-foreground/10 blur-3xl" aria-hidden="true" />
           <div className="pointer-events-none absolute -bottom-32 -right-20 h-72 w-72 rounded-full bg-primary-foreground/10 blur-3xl" aria-hidden="true" />
 
-          <div className="relative flex items-center gap-3">
-            <img src={logoImg} alt="" className="h-10 w-10 rounded-xl bg-primary-foreground/95 object-contain p-1" />
-            <span className="text-base font-semibold">תפעול 360</span>
+          <div className="relative flex flex-col items-center gap-4">
+            <img src={logoImg} alt="" className="h-20 w-20 rounded-2xl bg-primary-foreground/95 object-contain p-2 shadow-lg" />
+            <p className="text-2xl font-bold">תפעול 360</p>
+            <p className="text-[28px] font-bold leading-tight text-balance">זה כל מה שעובד צריך</p>
           </div>
-
-          <div className="relative mt-10 space-y-6">
-            <h2 className="max-w-[16ch] text-[28px] font-bold leading-tight text-balance">כל התפעול של החברה, במקום אחד.</h2>
-            <ul className="space-y-3 text-sm text-primary-foreground/90">
-              <li className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-lg bg-primary-foreground/15" aria-hidden="true"><Users className="h-4 w-4" /></span>עובדים, קליטה ועזיבה</li>
-              <li className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-lg bg-primary-foreground/15" aria-hidden="true"><Package className="h-4 w-4" /></span>ציוד, הרשאות ופרוטוקולי מסירה</li>
-              <li className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-lg bg-primary-foreground/15" aria-hidden="true"><Clock4 className="h-4 w-4" /></span>נוכחות, חופשות ותלושי שכר</li>
-            </ul>
-          </div>
-
-          <p className="relative mt-10 flex items-center gap-2 text-xs text-primary-foreground/75">
-            <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-            כניסה מאובטחת למשתמשים מורשים בלבד
-          </p>
         </aside>
 
         <section aria-labelledby="login-heading" className="flex flex-col justify-center gap-5 p-6 sm:p-10">
@@ -222,7 +209,7 @@ export default function Login() {
             <img src={logoImg} alt="" className="h-11 w-11 rounded-xl object-contain" />
             <div>
               <p className="text-base font-bold">תפעול 360</p>
-              <p className="text-xs text-muted-foreground">ניהול עובדים, שכר, נוכחות וציוד</p>
+              <p className="text-xs text-muted-foreground">זה כל מה שעובד צריך</p>
             </div>
           </div>
 
@@ -377,7 +364,6 @@ export default function Login() {
             </form>
           )}
 
-          <p className="text-xs text-muted-foreground md:hidden">כניסה מאובטחת למשתמשים מורשים בלבד</p>
         </section>
       </div>
     </main>
