@@ -245,6 +245,35 @@ export default function Employees() {
     setSearchParams(sp, { replace: true });
   };
 
+  const exportFullList = () => {
+    if (!employees?.length) return;
+    exportToExcel(
+      employees.map((e) => ({
+        ...e,
+        status_label: statusLabels[e.status as EmployeeStatus] ?? e.status,
+        start_date_fmt: new Date(e.start_date).toLocaleDateString("en-GB"),
+      })),
+      [
+        { key: "employee_code", label: "מזהה עובד" },
+        { key: "full_name", label: "שם מלא" },
+        { key: "role", label: "תפקיד" },
+        { key: "department", label: "מחלקה" },
+        { key: "start_date_fmt", label: "תאריך התחלה" },
+        { key: "status_label", label: "סטטוס" },
+      ],
+      "רשימת_עובדים",
+    );
+  };
+
+  const exportContactList = () => {
+    if (!filtered.length) return;
+    exportToExcel(
+      buildEmployeeContactRows(filtered, fullById),
+      EMPLOYEE_CONTACT_HEADERS,
+      "רשימת_קשר_עובדים",
+    );
+  };
+
   return (
     <TooltipProvider>
       <div className="space-y-6 animate-fade-in">
@@ -263,24 +292,37 @@ export default function Employees() {
             <div className="flex items-start justify-between">
               <div />
               <div className="flex gap-2">
-                <ExportExcelButton
-                  disabled={!employees?.length}
-                  onClick={() => {
-                    if (!employees?.length) return;
-                    exportToExcel(employees.map(e => ({
-                      ...e,
-                      status_label: statusLabels[e.status as EmployeeStatus] ?? e.status,
-                      start_date_fmt: new Date(e.start_date).toLocaleDateString("en-GB"),
-                    })), [
-                      { key: "employee_code", label: "מזהה עובד" },
-                      { key: "full_name", label: "שם מלא" },
-                      { key: "role", label: "תפקיד" },
-                      { key: "department", label: "מחלקה" },
-                      { key: "start_date_fmt", label: "תאריך התחלה" },
-                      { key: "status_label", label: "סטטוס" },
-                    ], "רשימת_עובדים");
-                  }}
-                />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="gap-2"
+                      disabled={!employees?.length}
+                      aria-label="ייצוא רשימת עובדים"
+                    >
+                      <Download className="w-4 h-4" />
+                      ייצוא
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-72">
+                    <DropdownMenuItem onClick={exportFullList}>
+                      <div className="space-y-0.5">
+                        <div>רשימה מלאה</div>
+                        <div className="text-xs text-muted-foreground">
+                          מזהה, שם, תפקיד, מחלקה, תאריך התחלה, סטטוס
+                        </div>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={exportContactList}>
+                      <div className="space-y-0.5">
+                        <div>רשימת קשר — שם, מחלקה, טלפון, מייל</div>
+                        <div className="text-xs text-muted-foreground">
+                          {filtered.length} עובדים לפי הסינון הנוכחי
+                        </div>
+                      </div>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <ImportExcelButton onClick={() => setImportOpen(true)} />
                 <Button className="gap-2" onClick={() => setAddOpen(true)}>
                   <Plus className="w-4 h-4" />
