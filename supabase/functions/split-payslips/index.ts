@@ -233,10 +233,12 @@ Deno.serve(async (req) => {
 
     let binary: Uint8Array;
     if (pdf_storage_path) {
-      // Only an upload inside this company's folder may be read; the service
-      // role would otherwise let a caller pull another tenant's file.
+      // Only a fresh upload from PayslipsUploadDialog may be read (and then
+      // removed); the service role would otherwise let a caller pull or delete
+      // any payslip, including another tenant's.
       const storagePath = String(pdf_storage_path);
-      if (!storagePath.startsWith(`${company_id}/`) || storagePath.includes('..')) {
+      const uploadPattern = /^(.+)\/\d{4}-\d{2}\/_source_upload_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.pdf$/;
+      if (uploadPattern.exec(storagePath)?.[1] !== String(company_id)) {
         return new Response(JSON.stringify({ error: 'Invalid storage path' }), {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });

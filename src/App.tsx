@@ -12,6 +12,7 @@ import { CompanyProvider } from "@/hooks/useCompany";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PwaUpdatePrompt } from "@/components/PwaUpdatePrompt";
 import { OAuthReturnRedirect } from "@/components/OAuthReturnRedirect";
+import { SplashScreen } from "@/components/SplashScreen";
 
 // Eager: critical entry pages and frequently-used screens (avoids Suspense flash on navigation)
 import Login from "@/pages/Login";
@@ -53,12 +54,6 @@ import { ThemeProvider } from "next-themes";
 
 const queryClient = new QueryClient();
 
-const PageLoader = () => (
-  <div className="min-h-screen flex items-center justify-center bg-background" role="status" aria-busy="true">
-    <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin motion-reduce:animate-none" aria-hidden="true" />
-    <span className="sr-only">טוען…</span>
-  </div>
-);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -76,7 +71,7 @@ const App = () => (
         <AuthProvider>
           <CompanyProvider>
             <OAuthReturnRedirect />
-            <Suspense fallback={<PageLoader />}>
+            <Suspense fallback={<SplashScreen />}>
               <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />

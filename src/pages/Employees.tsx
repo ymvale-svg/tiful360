@@ -5,8 +5,8 @@ import { EMPTY_ICONS } from "@/components/feedback/emptyIcons";
 import { useState, useMemo, useEffect } from "react";
 import { usePersistentFilter } from "@/hooks/usePersistentFilter";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Search, Plus, UserMinus, Mail, Send, ShieldCheck, ShieldAlert, UserCheck, UserX } from "lucide-react";
-import { ExportExcelButton, ImportExcelButton } from "@/components/ExcelActionButtons";
+import { Search, Plus, UserMinus, Mail, Send, ShieldCheck, ShieldAlert, UserCheck, UserX, Download } from "lucide-react";
+import { ImportExcelButton } from "@/components/ExcelActionButtons";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -20,6 +20,8 @@ import { ImportExcelDialog } from "@/components/ImportExcelDialog";
 import { UsersAndRolesTab } from "@/components/UsersAndRolesTab";
 import { useAuth } from "@/hooks/useAuth";
 import { exportToExcel } from "@/lib/exportExcel";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { EMPLOYEE_CONTACT_HEADERS, buildEmployeeContactRows } from "@/lib/employeeContactExport";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { useToast } from "@/hooks/use-toast";
@@ -99,12 +101,12 @@ export default function Employees() {
   const { data: fullRows } = useQuery({
     queryKey: ["employees-full", activeCompanyId],
     queryFn: async () => {
-      let q = supabase.from("employees").select("id,email,linked_user_id,exclude_from_contacts,direct_manager_id");
+      let q = supabase.from("employees").select("id,email,phone,linked_user_id,exclude_from_contacts,direct_manager_id");
       if (activeCompanyId) q = q.eq("company_id", activeCompanyId);
       const { data, error } = await q;
       if (error) throw error;
       return data as Array<{
-        id: string; email: string | null; linked_user_id: string | null;
+        id: string; email: string | null; phone: string | null; linked_user_id: string | null;
         exclude_from_contacts: boolean | null; direct_manager_id: string | null;
       }>;
     },
@@ -248,6 +250,35 @@ export default function Employees() {
     setSearchParams(sp, { replace: true });
   };
 
+  const exportFullList = () => {
+    if (!employees?.length) return;
+    exportToExcel(
+      employees.map((e) => ({
+        ...e,
+        status_label: statusLabels[e.status as EmployeeStatus] ?? e.status,
+        start_date_fmt: new Date(e.start_date).toLocaleDateString("en-GB"),
+      })),
+      [
+        { key: "employee_code", label: "מזהה עובד" },
+        { key: "full_name", label: "שם מלא" },
+        { key: "role", label: "תפקיד" },
+        { key: "department", label: "מחלקה" },
+        { key: "start_date_fmt", label: "תאריך התחלה" },
+        { key: "status_label", label: "סטטוס" },
+      ],
+      "רשימת_עובדים",
+    );
+  };
+
+  const exportContactList = () => {
+    if (!filtered.length) return;
+    exportToExcel(
+      buildEmployeeContactRows(filtered, fullById),
+      EMPLOYEE_CONTACT_HEADERS,
+      "רשימת_קשר_עובדים",
+    );
+  };
+
   return (
     <TooltipProvider>
       <div className="space-y-6 animate-fade-in">
@@ -266,24 +297,37 @@ export default function Employees() {
             <div className="flex items-start justify-between">
               <div />
               <div className="flex gap-2">
-                <ExportExcelButton
-                  disabled={!employees?.length}
-                  onClick={() => {
-                    if (!employees?.length) return;
-                    exportToExcel(employees.map(e => ({
-                      ...e,
-                      status_label: statusLabels[e.status as EmployeeStatus] ?? e.status,
-                      start_date_fmt: new Date(e.start_date).toLocaleDateString("en-GB"),
-                    })), [
-                      { key: "employee_code", label: "מזהה עובד" },
-                      { key: "full_name", label: "שם מלא" },
-                      { key: "role", label: "תפקיד" },
-                      { key: "department", label: "מחלקה" },
-                      { key: "start_date_fmt", label: "תאריך התחלה" },
-                      { key: "status_label", label: "סטטוס" },
-                    ], "רשימת_עובדים");
-                  }}
-                />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="gap-2"
+                      disabled={!employees?.length}
+                      aria-label="ייצוא רשימת עובדים"
+                    >
+                      <Download className="w-4 h-4" />
+                      ייצוא
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-72">
+                    <DropdownMenuItem onClick={exportFullList}>
+                      <div className="space-y-0.5">
+                        <div>רשימה מלאה</div>
+                        <div className="text-xs text-muted-foreground">
+                          מזהה, שם, תפקיד, מחלקה, תאריך התחלה, סטטוס
+                        </div>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={exportContactList}>
+                      <div className="space-y-0.5">
+                        <div>רשימת קשר — שם, מחלקה, טלפון, מייל</div>
+                        <div className="text-xs text-muted-foreground">
+                          {filtered.length} עובדים לפי הסינון הנוכחי
+                        </div>
+                      </div>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <ImportExcelButton onClick={() => setImportOpen(true)} />
                 <Button className="gap-2" onClick={() => setAddOpen(true)}>
                   <Plus className="w-4 h-4" />

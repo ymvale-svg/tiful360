@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
 import { Mail, Lock, Eye, EyeOff, Users, Package, Clock4, ShieldCheck, ArrowRight } from "lucide-react";
-import logoImg from "@/assets/logo.png";
+import logoImg from "@/assets/logo.svg";
+import { LineFieldBackground } from "@/components/backgrounds/LineFieldBackground";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { translateAuthError } from "@/lib/authErrors";
@@ -188,8 +189,9 @@ export default function Login() {
   // the form on wide screens, a compact brand header on phones. Google and the email form share
   // one screen, so signing in with a password is one step instead of two.
   return (
-    <main className="min-h-screen bg-muted/40 flex items-center justify-center p-4 sm:p-6">
-      <div className="grid w-full max-w-4xl overflow-hidden rounded-2xl border border-border bg-card shadow-xl md:min-h-[480px] md:grid-cols-[1fr_1.1fr]">
+    <main className="relative isolate min-h-screen bg-muted/40 flex items-center justify-center p-4 sm:p-6">
+      <LineFieldBackground />
+      <div className="relative grid w-full max-w-4xl overflow-hidden rounded-2xl border border-border bg-card shadow-xl md:min-h-[480px] md:grid-cols-[1fr_1.1fr]">
         <aside className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-b from-primary to-primary/85 p-10 text-primary-foreground md:flex" aria-label="על המערכת">
           <div className="pointer-events-none absolute -top-24 -left-24 h-64 w-64 rounded-full bg-primary-foreground/10 blur-3xl" aria-hidden="true" />
           <div className="pointer-events-none absolute -bottom-32 -right-20 h-72 w-72 rounded-full bg-primary-foreground/10 blur-3xl" aria-hidden="true" />

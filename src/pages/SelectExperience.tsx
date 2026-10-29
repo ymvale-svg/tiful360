@@ -1,57 +1,34 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { LayoutDashboard, UserRound, Loader2 } from "lucide-react";
+import { LayoutDashboard, UserRound } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { hasDualAccess } from "@/lib/dualAccess";
-
-function getOpsRoute(opts: {
-  isSuperAdmin: boolean;
-  isAdmin: boolean;
-  isPayroll: boolean;
-  isOperations: boolean;
-  isIT: boolean;
-  isDirectManager: boolean;
-}): string {
-  if (opts.isSuperAdmin || opts.isAdmin) return "/";
-  if (opts.isPayroll) return "/leave-requests";
-  if (opts.isOperations) return "/employees";
-  if (opts.isIT) return "/it-tickets";
-  if (opts.isDirectManager) return "/leave-requests";
-  return "/";
-}
+import { landingRoute, opsHomeRoute, setStoredExperience } from "@/lib/landingRoute";
+import { SplashScreen } from "@/components/SplashScreen";
 
 export default function SelectExperience() {
-  const auth = useAuth();
-  const { loading, roles } = auth;
+  const { loading, roles } = useAuth();
   const navigate = useNavigate();
 
   // If the user is not dual-role, route them to their natural home.
   useEffect(() => {
     if (loading) return;
     if (!hasDualAccess(roles)) {
-      if (roles.includes("employee") && roles.length === 1) {
-        navigate("/portal", { replace: true });
-      } else {
-        navigate(getOpsRoute(auth), { replace: true });
-      }
+      navigate(landingRoute(roles), { replace: true });
     }
-  }, [loading, roles, navigate, auth]);
+  }, [loading, roles, navigate]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
+    return <SplashScreen />;
   }
 
   const goOps = () => {
-    sessionStorage.setItem("activeExperience", "ops");
-    navigate(getOpsRoute(auth), { replace: true });
+    setStoredExperience("ops");
+    navigate(opsHomeRoute(roles), { replace: true });
   };
 
   const goPortal = () => {
-    sessionStorage.setItem("activeExperience", "portal");
+    setStoredExperience("portal");
     navigate("/portal", { replace: true });
   };
 

@@ -15,6 +15,7 @@ import { AttendanceMissingCard } from "@/components/dashboard/AttendanceMissingC
 import { Tax101StatusCard } from "@/components/dashboard/Tax101StatusCard";
 import { CustomizeDashboardDialog } from "@/components/dashboard/CustomizeDashboardDialog";
 import { hasDualAccess } from "@/lib/dualAccess";
+import { landingExperience } from "@/lib/landingRoute";
 import { resolveDashboardConfig, type KpiKey, type WidgetKey } from "@/lib/dashboardConfig";
 import { useDashboardPrefs, applyWidgetOrder } from "@/hooks/useDashboardPrefs";
 import { cn } from "@/lib/utils";
@@ -55,10 +56,10 @@ export default function Dashboard() {
     return <Navigate to="/portal" replace />;
   }
 
-  // Dual-access users (employee + ops role) should pick an experience first
-  // unless they already chose one in this session.
-  if (hasDualAccess(roles) && sessionStorage.getItem("activeExperience") !== "ops") {
-    return <Navigate to="/select-experience" replace />;
+  // Dual-access users (employee + ops role) land by device unless they switched in this
+  // session: phones open the portal, computers stay in the organisation system.
+  if (hasDualAccess(roles) && landingExperience() === "portal") {
+    return <Navigate to="/portal" replace />;
   }
 
   const config = resolveDashboardConfig(roles);

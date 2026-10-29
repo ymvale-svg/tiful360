@@ -3,10 +3,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 
-const SELECT = `*,
-  employee:employees!attendance_corrections_employee_id_fkey(id, full_name, employee_code, department, role, email),
-  manager:employees!attendance_corrections_manager_id_fkey(id, full_name, email)
-`;
+const SELECT = "*";
+
+/** attendance_corrections has no FK to employees, so attach employee/manager manually. */
+async function attachPeople(rows: any[]): Promise<any[]> {
+  const ids = Array.from(new Set(rows.flatMap((r) => [r.employee_id, r.manager_id]).filter(Boolean)));
+  if (!ids.length) return rows.map((r) => ({ ...r, employee: null, manager: null }));
+  const { data } = await supabase
+    .from("employees")
+    .select("id, full_name, employee_code, department, role, email")
+    .in("id", ids);
+  const map = new Map((data ?? []).map((e: any) => [e.id, e]));
+  return rows.map((r) => ({ ...r, employee: map.get(r.employee_id) ?? null, manager: map.get(r.manager_id) ?? null }));
+}
 
 export type AttendanceCorrectionStatus = "pending" | "approved" | "rejected" | "cancelled";
 
@@ -23,9 +32,8 @@ export function useCompanyAttendanceCorrections() {
         .eq("company_id", activeCompanyId)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data ?? [];
+      return attachPeople(data ?? []);
     },
-    enabled: !!activeCompanyId,
   });
 }
 
@@ -41,7 +49,7 @@ export function useMyAttendanceCorrections(employeeId?: string) {
         .eq("employee_id", employeeId)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data ?? [];
+      return attachPeople(data ?? []);
     },
     enabled: !!employeeId,
   });
