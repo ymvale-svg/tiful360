@@ -1,5 +1,6 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate, useLocation } from "react-router-dom";
+import { SplashScreen } from "@/components/SplashScreen";
 
 type AppRole = "admin" | "it_manager" | "employee" | "super_admin" | "direct_manager" | "payroll" | "hr" | "operations" | "finance" | "legal" | "secretariat" | "ceo";
 
@@ -13,14 +14,7 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
   const location = useLocation();
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">טוען...</p>
-        </div>
-      </div>
-    );
+    return <SplashScreen />;
   }
 
   if (!session) {

@@ -3,9 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
-import { Building2, Loader2, LogOut, RotateCw, AlertCircle } from "lucide-react";
+import { Building2, LogOut, RotateCw, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { hasDualAccess } from "@/lib/dualAccess";
+import { landingRoute } from "@/lib/landingRoute";
+import { SplashScreen } from "@/components/SplashScreen";
 
 interface CompanyOption {
   id: string;
@@ -13,28 +14,8 @@ interface CompanyOption {
   logo_url: string | null;
 }
 
-// Returns the appropriate landing path for the user's primary role.
-function getDefaultRoute(opts: {
-  isSuperAdmin: boolean;
-  isAdmin: boolean;
-  isPayroll: boolean;
-  isOperations: boolean;
-  isIT: boolean;
-  isDirectManager: boolean;
-  isEmployee: boolean;
-}): string {
-  if (opts.isSuperAdmin || opts.isAdmin) return "/";
-  if (opts.isPayroll) return "/leave-requests";
-  if (opts.isOperations) return "/employees";
-  if (opts.isIT) return "/it-tickets";
-  if (opts.isDirectManager) return "/leave-requests";
-  if (opts.isEmployee) return "/portal";
-  return "/portal";
-}
-
 export default function SelectCompany() {
-  const auth = useAuth();
-  const { user, loading: authLoading, isSuperAdmin, roles } = auth;
+  const { user, loading: authLoading, isSuperAdmin, roles } = useAuth();
   const { setActiveCompanyId } = useCompany();
   const navigate = useNavigate();
   const [companies, setCompanies] = useState<CompanyOption[]>([]);
@@ -48,8 +29,8 @@ export default function SelectCompany() {
     navigate("/login", { replace: true });
   };
 
-  const dual = hasDualAccess(roles);
-  const defaultRoute = dual ? "/select-experience" : getDefaultRoute(auth);
+  // No experience picker: phones open the portal, computers the organisation system.
+  const defaultRoute = landingRoute(roles);
 
   useEffect(() => {
     if (authLoading) return;
@@ -107,10 +88,7 @@ export default function SelectCompany() {
   // Still loading or auto-redirecting
   if (authLoading || loading || companies.length === 1) {
     return (
-      <div role="status" className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" aria-hidden="true" />
-        <span className="sr-only">טוען את החברות שלך…</span>
-      </div>
+      <SplashScreen message="טוען את החברות שלך…" />
     );
   }
 
