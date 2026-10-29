@@ -12,7 +12,7 @@ export function unwrapComponent(mod: unknown) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (m && typeof m === "object" && "default" in m ? m.default : m) as any;
 }
-const SignatureCanvasView = unwrapComponent(SignatureCanvas);
+export const SignatureCanvasView = unwrapComponent(SignatureCanvas);
 import { Button } from "@/components/ui/button";
 import { Eraser } from "lucide-react";
 
