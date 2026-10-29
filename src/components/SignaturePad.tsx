@@ -7,7 +7,12 @@ import SignatureCanvas from "react-signature-canvas";
 // optimized copy hands that whole object to the default import — so unwrap it,
 // otherwise React receives an object and the entire screen crashes to blank.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const SignatureCanvasView = ((SignatureCanvas as any)?.default ?? SignatureCanvas) as any;
+export function unwrapComponent(mod: unknown) {
+  const m = mod as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (m && typeof m === "object" && "default" in m ? m.default : m) as any;
+}
+const SignatureCanvasView = unwrapComponent(SignatureCanvas);
 import { Button } from "@/components/ui/button";
 import { Eraser } from "lucide-react";
 
