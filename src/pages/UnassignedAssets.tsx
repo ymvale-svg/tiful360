@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
+import { SearchInput } from "@/components/ui/search-input";
 import { ActiveFilters } from "@/components/ui/active-filters";
 import { BulkActionBar } from "@/components/ui/bulk-action-bar";
 import { EMPTY_ICONS } from "@/components/feedback/emptyIcons";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, FileSignature, Search, Package, Layers, X } from "lucide-react";
+import { ArrowRight, FileSignature, Package, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -153,16 +154,14 @@ export default function UnassignedAssets() {
 
       {/* Filters */}
       <div className="bg-card border border-border rounded-2xl p-3 flex flex-wrap items-center gap-2">
-        <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-[220px]">
-          <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="חיפוש שם / קוד / מס׳ סידורי"
-            className="pr-9"
-            aria-label="חיפוש פריטים"
-          />
-        </div>
+        <SearchInput
+          size="sm"
+          wrapperClassName="sm:w-auto sm:flex-1 sm:min-w-[220px]"
+          label="חיפוש פריטים"
+          placeholder="חיפוש שם / קוד / מס׳ סידורי"
+          value={q}
+          onValueChange={setQ}
+        />
 
         <Select
           value={domain}

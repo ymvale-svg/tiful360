@@ -1,9 +1,27 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { SearchInput } from "@/components/ui/search-input";
 import { useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  Plus, GripVertical, Trash2, Save, Pencil, Search, ArrowRight,
-  Type, Hash, Calendar, List, ListChecks, Settings2, Check, X, ChevronLeft, ChevronDown, ChevronUp, Square, Users,
+  Plus,
+  GripVertical,
+  Trash2,
+  Save,
+  Pencil,
+  ArrowRight,
+  Type,
+  Hash,
+  Calendar,
+  List,
+  ListChecks,
+  Settings2,
+  Check,
+  X,
+  ChevronLeft,
+  ChevronDown,
+  ChevronUp,
+  Square,
+  Users,
 } from "lucide-react";
 import { ManageGroupsDialog } from "@/components/ManageGroupsDialog";
 import { SubCategoryFieldsChecklist } from "@/components/SubCategoryFieldsInline";
@@ -201,10 +219,14 @@ export default function CategoryManager() {
             <span className="text-muted-foreground">{"\n"}</span>
           </p>
         </div>
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="חיפוש קטגוריה או תת-קטגוריה..." aria-label="חיפוש בהיררכיה" className="w-full h-10 pr-10 pl-3 rounded-lg border border-border bg-card text-sm outline-none focus:ring-2 focus:ring-primary/25" />
-        </div>
+        <SearchInput
+          size="sm"
+          wrapperClassName="sm:w-72"
+          label="חיפוש בהיררכיה"
+          placeholder="חיפוש קטגוריה או תת-קטגוריה..."
+          value={search}
+          onValueChange={setSearch}
+        />
       </div>
 
       {isLoading ? (

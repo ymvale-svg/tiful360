@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
+import { SearchInput } from "@/components/ui/search-input";
 import { ActiveFilters } from "@/components/ui/active-filters";
 import { EMPTY_ICONS } from "@/components/feedback/emptyIcons";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { UserPlus, Search, Send, UserRound, AlertCircle, ListChecks } from "lucide-react";
+import { UserPlus, Send, UserRound, AlertCircle, ListChecks } from "lucide-react";
 import { EmptyState, ListSkeleton } from "@/components/feedback/StateView";
 import { NewOnboardingDialog } from "@/components/onboarding/NewOnboardingDialog";
 import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
@@ -64,17 +65,13 @@ export default function Onboarding() {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
-          <input
-            type="search"
-            aria-label="חיפוש תהליכי קליטה לפי שם או מזהה עובד"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="חיפוש לפי שם או מזהה עובד"
-            className="w-full min-h-11 pr-9 pl-3 py-2 bg-card border border-border rounded-lg text-base outline-none focus:ring-2 focus:ring-primary/30"
-          />
-        </div>
+        <SearchInput
+          wrapperClassName="flex-1"
+          label="חיפוש תהליכי קליטה לפי שם או מזהה עובד"
+          placeholder="חיפוש לפי שם או מזהה עובד"
+          value={query}
+          onValueChange={setQuery}
+        />
         <div className="grid grid-cols-3 sm:flex gap-1.5 w-full sm:w-auto">
           {(["all", "draft", "sent", "in_progress", "done"] as const).map((s) => (
             <button

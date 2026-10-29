@@ -1,4 +1,5 @@
 import { formatDateDMY } from "@/lib/utils";
+import { SearchInput } from "@/components/ui/search-input";
 import { BulkActionBar } from "@/components/ui/bulk-action-bar";
 import { EMPTY_ICONS } from "@/components/feedback/emptyIcons";
 import { useNextInsurancePayments } from "@/hooks/useInsurancePayments";
@@ -521,17 +522,12 @@ export default function AssetsDomainPage() {
 
       {/* Search + category chips + sort */}
       <div className="space-y-3">
-        <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
-          <Search className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="חיפוש (שם / קוד / מס׳ סידורי / עובד / תת-קטגוריה)..."
-            className="min-h-10 bg-transparent text-base outline-none w-full placeholder:text-muted-foreground"
-            aria-label="חיפוש"
-          />
-        </div>
+        <SearchInput
+          label="חיפוש פריטים"
+          placeholder="חיפוש (שם / קוד / מס׳ סידורי / עובד / תת-קטגוריה)..."
+          value={search}
+          onValueChange={setSearch}
+        />
 
         {!isDrilled && (
           <div className="flex flex-wrap items-center justify-between gap-2">

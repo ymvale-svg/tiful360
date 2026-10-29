@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { SearchInput } from "@/components/ui/search-input";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
-import { Users, ShieldCheck, ShieldOff, Ban, CheckCircle, RefreshCw, Upload, UserPlus, Search, Send, X } from "lucide-react";
+import { Users, ShieldCheck, ShieldOff, Ban, CheckCircle, RefreshCw, Upload, UserPlus, Send } from "lucide-react";
 import { ImportExcelDialog } from "@/components/ImportExcelDialog";
 import { InviteExternalUserDialog } from "@/components/InviteExternalUserDialog";
 import { format } from "date-fns";
@@ -267,27 +268,13 @@ export function UsersAndRolesTab() {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2 max-w-md">
-        <Search className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-        <input
-          type="search"
-          aria-label="חיפוש משתמשים"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="חפש לפי שם, דוא״ל, טלפון או תפקיד..."
-          className="bg-transparent text-sm outline-none w-full"
-        />
-        {search && (
-          <button
-            type="button"
-            onClick={() => setSearch("")}
-            className="text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded p-0.5"
-            aria-label="נקה חיפוש"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
-      </div>
+      <SearchInput
+        wrapperClassName="max-w-md"
+        label="חיפוש משתמשים"
+        placeholder="חפש לפי שם, דוא״ל, טלפון או תפקיד..."
+        value={search}
+        onValueChange={setSearch}
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>

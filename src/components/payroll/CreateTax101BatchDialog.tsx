@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { SearchInput } from "@/components/ui/search-input";
 import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,7 @@ import { useCompany } from "@/hooks/useCompany";
 import { supabase } from "@/integrations/supabase/client";
 import { useCreateTax101Batch } from "@/hooks/useTax101";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Loader2, Search } from "lucide-react";
+import { FileText, Loader2 } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -157,15 +158,13 @@ export function CreateTax101BatchDialog({ open, onOpenChange }: Props) {
             </div>
           </div>
 
-          <div className="relative">
-            <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="חיפוש שם או קוד עובד..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pr-9"
-            />
-          </div>
+          <SearchInput
+            size="sm"
+            label="חיפוש עובדים"
+            placeholder="חיפוש שם או קוד עובד..."
+            value={search}
+            onValueChange={setSearch}
+          />
 
           <div className="border border-border rounded-lg overflow-hidden">
             <div className="bg-muted/40 px-3 py-2 flex items-center justify-between text-xs">

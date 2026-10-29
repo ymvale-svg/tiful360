@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
+import { SearchInput } from "@/components/ui/search-input";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, Download, Plus, Search, Ticket } from "lucide-react";
+import { ArrowRight, Download, Plus, Ticket } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
 import { useAssets, useEmployees } from "@/hooks/useData";
 import { useAssetGroups } from "@/hooks/useAssetGroups";
 import { usePersistentFilter } from "@/hooks/usePersistentFilter";
@@ -392,17 +393,12 @@ export default function VehicleSubscriptions() {
       </div>
 
       <div className="bg-card border border-border rounded-xl p-3 flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-[12rem]">
-          <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-          <Input
-            type="search"
-            aria-label="חיפוש לפי שם עובד או מס' רכב"
-            value={filters.q}
-            onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-            placeholder="חיפוש לפי שם עובד או מס' רכב"
-            className="pr-9"
-          />
-        </div>
+        <SearchInput
+          wrapperClassName="flex-1 min-w-[12rem] w-auto"
+          label="חיפוש לפי שם עובד או מס' רכב"
+          value={filters.q}
+          onValueChange={(q) => setFilters({ ...filters, q })}
+        />
         <select aria-label="סינון לפי מנוי" className={selectClass} value={filters.coverage} onChange={(e) => setFilters({ ...filters, coverage: e.target.value })}>
           <option value="all">כל הרכבים</option>
           <option value="with">עם מנוי</option>

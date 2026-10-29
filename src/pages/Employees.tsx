@@ -1,11 +1,12 @@
 import { RowContextMenu, copyAction, openInNewTab } from "@/components/context/RowContextMenu";
+import { SearchInput } from "@/components/ui/search-input";
 import { ActiveFilters } from "@/components/ui/active-filters";
 import { BulkActionBar } from "@/components/ui/bulk-action-bar";
 import { EMPTY_ICONS } from "@/components/feedback/emptyIcons";
 import { useState, useMemo, useEffect } from "react";
 import { usePersistentFilter } from "@/hooks/usePersistentFilter";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Search, Plus, UserMinus, Mail, Send, ShieldCheck, ShieldAlert, UserCheck, UserX, Download } from "lucide-react";
+import { Plus, UserMinus, Mail, Send, ShieldCheck, ShieldAlert, UserCheck, UserX, Download } from "lucide-react";
 import { ImportExcelButton } from "@/components/ExcelActionButtons";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -338,17 +339,13 @@ export default function Employees() {
 
             {/* Filters */}
             <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 min-h-11 w-full sm:w-72">
-                <Search className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-                <input
-                  type="search"
-                  aria-label="חיפוש עובדים"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="חיפוש לפי שם, מזהה, תפקיד..."
-                  className="bg-transparent text-base outline-none w-full"
-                />
-              </div>
+              <SearchInput
+                wrapperClassName="sm:w-72"
+                label="חיפוש עובדים"
+                placeholder="חיפוש לפי שם, מזהה, תפקיד..."
+                value={search}
+                onValueChange={setSearch}
+              />
 
               <div className="flex items-center gap-1 bg-card border border-border rounded-lg p-1 max-w-full overflow-x-auto">
                 {(["all", "active", "onboarding", "leaving", "inactive"] as const).map((s) => (

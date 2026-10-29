@@ -1,8 +1,9 @@
 import { useState, useMemo } from "react";
+import { SearchInput } from "@/components/ui/search-input";
 import { useTeamLeaveRequests } from "@/hooks/useLeaveRequests";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, Stethoscope, Paperclip, CalendarPlus, Clock, Archive, Search, CheckCircle2, XCircle, Ban } from "lucide-react";
+import { CalendarDays, Stethoscope, Paperclip, CalendarPlus, Clock, Archive, CheckCircle2, XCircle, Ban } from "lucide-react";
 import { StateView } from "@/components/feedback/StateView";
 import { ExportExcelButton } from "@/components/ExcelActionButtons";
 import { buildGoogleCalendarUrl } from "@/lib/googleCalendar";
@@ -132,17 +133,14 @@ export default function LeaveRequests() {
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 min-h-10 w-full sm:w-64 sm:mr-auto">
-          <Search className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-          <input
-            type="search"
-            aria-label="חיפוש בקשות לפי עובד, מחלקה או סיבה"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="חיפוש עובד, מחלקה או סיבה"
-            className="bg-transparent text-base sm:text-sm outline-none w-full"
-          />
-        </div>
+        <SearchInput
+          size="sm"
+          wrapperClassName="sm:w-64 sm:mr-auto"
+          label="חיפוש בקשות לפי עובד, מחלקה או סיבה"
+          placeholder="חיפוש עובד, מחלקה או סיבה"
+          value={query}
+          onValueChange={setQuery}
+        />
       </div>
 
       {tab === "sick" && (
