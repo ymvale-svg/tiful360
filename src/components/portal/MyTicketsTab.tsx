@@ -19,7 +19,7 @@ interface Props {
 const STATUS_ICONS: Record<string, typeof CheckCircle2> = { open: CircleDot, in_progress: Loader, done: CheckCircle2 };
 
 /** Status as text + icon, never colour alone. */
-function StatusChip({ status }: { status: string }) {
+export function StatusChip({ status }: { status: string }) {
   const Icon = STATUS_ICONS[status] ?? CircleDot;
   return (
     <span className={cn("inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border font-medium", STATUS_CLASSES[status])}>

@@ -1,12 +1,14 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Package, Megaphone, Phone, ExternalLink,
+  Package, Megaphone, Phone,
   FileText, CalendarDays, AlertCircle, LogOut, Cake, PartyPopper,
   Box, Wifi, LayoutDashboard, Wrench, Search, X, ArrowRight, ChevronLeft,
   Thermometer, ClockAlert, Plus, UserX, Inbox, CheckCircle2,
 } from "lucide-react";
 import { MyTicketsTab } from "@/components/portal/MyTicketsTab";
+import { PortalAppLauncher } from "@/components/portal/PortalAppLauncher";
+import { PortalTicketsSummary } from "@/components/portal/PortalTicketsSummary";
 import portalLogo from "@/assets/portal-logo.png.asset.json";
 import { hasDualAccess } from "@/lib/dualAccess";
 import { Button } from "@/components/ui/button";
@@ -93,6 +95,7 @@ export default function EmployeePortal() {
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [leaveType, setLeaveType] = useState<"vacation" | "sick">("vacation");
   const [ticketOpen, setTicketOpen] = useState(false);
+  const [ticketInitial, setTicketInitial] = useState<{ subject?: string; title?: string; description?: string } | null>(null);
   const [correctionOpen, setCorrectionOpen] = useState(false);
   const [punchingDir, setPunchingDir] = useState<"in" | "out" | null>(null);
   const [contactSearch, setContactSearch] = useState("");
@@ -238,22 +241,6 @@ export default function EmployeePortal() {
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [myEmployee?.id, qc]);
-
-  // Fetch portal links from DB
-  const { data: portalLinks = [] } = useQuery({
-    queryKey: ["portal_links", activeCompanyId],
-    queryFn: async () => {
-      if (!activeCompanyId) return [];
-      const { data, error } = await supabase
-        .from("portal_links")
-        .select("*")
-        .eq("company_id", activeCompanyId)
-        .order("sort_order");
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!activeCompanyId,
-  });
 
   // Fetch merged company contacts (employees + external) via secure hook
   const contactsQuery = useCompanyContacts();
@@ -491,6 +478,17 @@ export default function EmployeePortal() {
     return render(myEmployee);
   };
 
+  const openTicket = (initial: typeof ticketInitial = null) => {
+    setTicketInitial(initial);
+    setTicketOpen(true);
+  };
+  /** An access request is an ordinary service ticket ("תוכנות"), so it follows the usual routing. */
+  const requestAccess = (systemName?: string) => openTicket({
+    subject: "software",
+    title: systemName ? `בקשת גישה: ${systemName}` : "בקשת גישה למערכת",
+    description: `מערכת: ${systemName ?? ""}\nלמה נדרשת הגישה: `,
+  });
+
   const sectionTitle = loc.tab === "more" && loc.view ? MORE_VIEW_LABELS[loc.view] : TAB_TITLES[loc.tab];
 
   return (
@@ -509,93 +507,92 @@ export default function EmployeePortal() {
         <ThemeToggle />
       </header>
 
-      <main id="main-content" tabIndex={-1} className={cn("max-w-2xl md:max-w-3xl mx-auto px-4 py-4 space-y-4 overflow-x-hidden focus:outline-none", PORTAL_TABBAR_SPACE)}>
+      <main id="main-content" tabIndex={-1} className={cn("max-w-2xl md:max-w-3xl mx-auto", loc.tab === "home" && "lg:max-w-6xl", "px-4 py-4 space-y-4 overflow-x-hidden focus:outline-none", PORTAL_TABBAR_SPACE)}>
         <PortalTabBar active={loc.tab} onSelect={(tab) => go({ tab })} badges={{ home: pendingActions }} />
 
         <h1 className={cn("text-lg font-bold", loc.tab === "home" && "sr-only")}>{loc.tab === "home" ? `${portalName} — בית` : sectionTitle}</h1>
 
         {/* ===== HOME ===== */}
         {loc.tab === "home" && (
-          <div className="space-y-4 animate-fade-in">
-            {employeeLoading ? (
-              <ListSkeleton rows={2} className="rounded-2xl border border-border/50" />
-            ) : myEmployee ? (
-              <PortalClockCard
-                punches={myPunches}
-                canRemotePunch={!!myEmployee.can_remote_punch}
-                punchingDir={punchingDir}
-                onPunch={(d) => { void handlePunch(d); }}
-                onOpenAttendance={() => go({ tab: "attendance" })}
+          <div className="animate-fade-in space-y-4 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-5 lg:space-y-0">
+            <div className="min-w-0 space-y-4">
+              {employeeLoading ? (
+                <ListSkeleton rows={2} className="rounded-2xl border border-border/50" />
+              ) : myEmployee ? (
+                <PortalClockCard
+                  punches={myPunches}
+                  canRemotePunch={!!myEmployee.can_remote_punch}
+                  punchingDir={punchingDir}
+                  onPunch={(d) => { void handlePunch(d); }}
+                  onOpenAttendance={() => go({ tab: "attendance" })}
+                />
+              ) : null}
+
+              <section aria-labelledby="portal-waiting-title" className="space-y-3">
+                <h2 id="portal-waiting-title" className="font-semibold">מחכה לך</h2>
+                {myEmployee && <Tax101Banner employee={myEmployee} />}
+                {myEmployee && <PendingHandoverForms employeeId={myEmployee.id} />}
+                {freshAnnouncements.length > 0 && (
+                  <div className="bg-card rounded-xl border border-border/50 p-4">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <h3 className="font-semibold text-sm flex items-center gap-2">
+                        <Megaphone className="w-4 h-4 text-primary" aria-hidden="true" />
+                        הודעות חדשות ({freshAnnouncements.length})
+                      </h3>
+                      <Button variant="ghost" className="min-h-11 gap-1 text-primary" onClick={() => go({ tab: "more", view: "news" })}>
+                        לכל ההודעות <ChevronLeft aria-hidden="true" />
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      {freshAnnouncements.slice(0, 3).map((ann: any) => <AnnouncementCard key={ann.id} item={ann} compact />)}
+                    </div>
+                  </div>
+                )}
+                {!employeeLoading && !pendingActions && !freshAnnouncements.length && (
+                  <p className="flex items-center gap-2 rounded-xl border border-border/50 bg-card p-4 text-sm text-muted-foreground">
+                    <CheckCircle2 className="w-4 h-4 text-success shrink-0" aria-hidden="true" />
+                    {myEmployee ? "אין משימות פתוחות — הכל מעודכן." : "אין הודעות חדשות."}
+                  </p>
+                )}
+                {!employeeLoading && !myEmployee && !employeeQuery.error && <NotLinked />}
+              </section>
+
+              <PortalAppLauncher
+                companyId={activeCompanyId}
+                employeeId={myEmployee?.id}
+                userId={user?.id}
+                loading={employeeLoading}
+                onRequestAccess={myEmployee ? requestAccess : undefined}
               />
-            ) : null}
+            </div>
 
-            <section aria-labelledby="portal-waiting-title" className="space-y-3">
-              <h2 id="portal-waiting-title" className="font-semibold">מחכה לך</h2>
-              {myEmployee && <Tax101Banner employee={myEmployee} />}
-              {myEmployee && <PendingHandoverForms employeeId={myEmployee.id} />}
-              {freshAnnouncements.length > 0 && (
-                <div className="bg-card rounded-xl border border-border/50 p-4">
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <h3 className="font-semibold text-sm flex items-center gap-2">
-                      <Megaphone className="w-4 h-4 text-primary" aria-hidden="true" />
-                      הודעות חדשות ({freshAnnouncements.length})
-                    </h3>
-                    <Button variant="ghost" className="min-h-11 gap-1 text-primary" onClick={() => go({ tab: "more", view: "news" })}>
-                      לכל ההודעות <ChevronLeft aria-hidden="true" />
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    {freshAnnouncements.slice(0, 3).map((ann: any) => <AnnouncementCard key={ann.id} item={ann} compact />)}
-                  </div>
-                </div>
+            <aside aria-label="מעקב" className="space-y-4">
+              {myEmployee && (
+                <PortalTicketsSummary employeeId={myEmployee.id} onOpenAll={() => go({ tab: "requests" })} onNew={() => openTicket()} />
               )}
-              {!employeeLoading && !pendingActions && !freshAnnouncements.length && (
-                <p className="flex items-center gap-2 rounded-xl border border-border/50 bg-card p-4 text-sm text-muted-foreground">
-                  <CheckCircle2 className="w-4 h-4 text-success shrink-0" aria-hidden="true" />
-                  {myEmployee ? "אין משימות פתוחות — הכל מעודכן." : "אין הודעות חדשות."}
-                </p>
+
+              {processedBirthdays.length > 0 && (
+                <section aria-labelledby="portal-bdays-title" className="bg-gradient-to-l from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-xl border border-amber-200/50 dark:border-amber-800/50 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Cake className="w-4 h-4 text-amber-600" aria-hidden="true" />
+                    <h2 id="portal-bdays-title" className="font-semibold text-sm text-amber-800 dark:text-amber-300">ימי הולדת החודש</h2>
+                  </div>
+                  <ul className="flex flex-wrap gap-2">
+                    {processedBirthdays.map((emp) => {
+                      const prefix = emp.isToday ? "היום!" : emp.isTomorrow ? "מחר" : null;
+                      const dateText = prefix ? `${prefix} · ${emp.label}` : emp.label;
+                      return (
+                        <li key={emp.id} className="flex items-center gap-2 bg-white/60 dark:bg-white/10 rounded-lg px-3 py-1.5">
+                          <PartyPopper className="w-3.5 h-3.5 text-amber-600 shrink-0" aria-hidden="true" />
+                          <span className="text-xs font-medium">{emp.full_name}</span>
+                          <span className="text-xs text-muted-foreground">— {dateText}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
               )}
-              {!employeeLoading && !myEmployee && !employeeQuery.error && <NotLinked />}
-            </section>
-
-            {processedBirthdays.length > 0 && (
-              <section aria-labelledby="portal-bdays-title" className="bg-gradient-to-l from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-xl border border-amber-200/50 dark:border-amber-800/50 p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Cake className="w-4 h-4 text-amber-600" aria-hidden="true" />
-                  <h2 id="portal-bdays-title" className="font-semibold text-sm text-amber-800 dark:text-amber-300">ימי הולדת החודש</h2>
-                </div>
-                <ul className="flex flex-wrap gap-2">
-                  {processedBirthdays.map((emp) => {
-                    const prefix = emp.isToday ? "היום!" : emp.isTomorrow ? "מחר" : null;
-                    const dateText = prefix ? `${prefix} · ${emp.label}` : emp.label;
-                    return (
-                      <li key={emp.id} className="flex items-center gap-2 bg-white/60 dark:bg-white/10 rounded-lg px-3 py-1.5">
-                        <PartyPopper className="w-3.5 h-3.5 text-amber-600 shrink-0" aria-hidden="true" />
-                        <span className="text-xs font-medium">{emp.full_name}</span>
-                        <span className="text-xs text-muted-foreground">— {dateText}</span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </section>
-            )}
-
-            {portalLinks.length > 0 && (
-              <section aria-label="קישורים מהירים" className="flex flex-wrap gap-2">
-                {portalLinks.map((link) => (
-                  <a
-                    key={link.id}
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 min-h-11 px-3 bg-card border border-border/50 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-                    {link.label}
-                  </a>
-                ))}
-              </section>
-            )}
+            </aside>
           </div>
         )}
 
@@ -637,7 +634,7 @@ export default function EmployeePortal() {
                   {[
                     { label: "חופשה", icon: CalendarDays, onClick: () => { setLeaveType("vacation"); setLeaveOpen(true); } },
                     { label: "דיווח מחלה", icon: Thermometer, onClick: () => { setLeaveType("sick"); setLeaveOpen(true); } },
-                    { label: "קריאת שירות", icon: Wrench, onClick: () => setTicketOpen(true) },
+                    { label: "קריאת שירות", icon: Wrench, onClick: () => openTicket() },
                     { label: "תיקון נוכחות", icon: ClockAlert, onClick: () => setCorrectionOpen(true) },
                   ].map((tile) => (
                     <button
@@ -983,6 +980,7 @@ export default function EmployeePortal() {
             employeeId={myEmployee.id}
             employeeName={myEmployee.full_name}
             employeePhone={myEmployee.phone}
+            initial={ticketInitial}
           />
           <AttendanceCorrectionDialog
             open={correctionOpen}

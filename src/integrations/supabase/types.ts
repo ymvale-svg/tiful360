@@ -2937,32 +2937,82 @@ export type Database = {
           },
         ]
       }
+      portal_app_favorites: {
+        Row: {
+          created_at: string
+          item_key: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          item_key: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          item_key?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       portal_links: {
         Row: {
+          access_mode: string
+          asset_category_id: string | null
+          asset_group_id: string | null
+          category: string | null
           company_id: string | null
           created_at: string
+          description: string | null
           id: string
           label: string
           sort_order: number
+          updated_at: string
           url: string
         }
         Insert: {
+          access_mode?: string
+          asset_category_id?: string | null
+          asset_group_id?: string | null
+          category?: string | null
           company_id?: string | null
           created_at?: string
+          description?: string | null
           id?: string
           label: string
           sort_order?: number
+          updated_at?: string
           url: string
         }
         Update: {
+          access_mode?: string
+          asset_category_id?: string | null
+          asset_group_id?: string | null
+          category?: string | null
           company_id?: string | null
           created_at?: string
+          description?: string | null
           id?: string
           label?: string
           sort_order?: number
+          updated_at?: string
           url?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "portal_links_asset_category_id_fkey"
+            columns: ["asset_category_id"]
+            isOneToOne: false
+            referencedRelation: "asset_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_links_asset_group_id_fkey"
+            columns: ["asset_group_id"]
+            isOneToOne: false
+            referencedRelation: "asset_groups"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "portal_links_company_id_fkey"
             columns: ["company_id"]

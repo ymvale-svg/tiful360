@@ -162,6 +162,13 @@
       "when": 1793028142251,
       "tag": "0022_guides_topic_optional",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1793270000000,
+      "tag": "0023_portal_app_launcher",
+      "breakpoints": true
     }
   ]
 }

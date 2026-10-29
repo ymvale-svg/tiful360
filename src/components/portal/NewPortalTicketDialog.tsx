@@ -24,9 +24,11 @@ interface Props {
   employeeId: string;
   employeeName?: string | null;
   employeePhone?: string | null;
+  /** Pre-fills a fresh form, e.g. an access request from the systems launcher. */
+  initial?: { subject?: string; title?: string; description?: string } | null;
 }
 
-export function NewPortalTicketDialog({ open, onOpenChange, employeeId, employeeName, employeePhone }: Props) {
+export function NewPortalTicketDialog({ open, onOpenChange, employeeId, employeeName, employeePhone, initial }: Props) {
   const { activeCompanyId } = useCompany();
   const createTicket = useCreateServiceTicket();
   const { data: assets } = useEmployeeAssetOptions(open ? employeeId : null);
@@ -48,6 +50,15 @@ export function NewPortalTicketDialog({ open, onOpenChange, employeeId, employee
   useEffect(() => {
     if (open && employeePhone && !phone) setPhone(employeePhone);
   }, [open, employeePhone, phone]);
+
+  // Apply the pre-fill when the dialog opens, never over something the user already typed.
+  useEffect(() => {
+    if (!open || !initial || title.trim() || description.trim()) return;
+    if (initial.subject) setSubject(initial.subject);
+    if (initial.title) setTitle(initial.title.slice(0, 120));
+    if (initial.description) setDescription(initial.description);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initial]);
 
   const reset = () => {
     setSubject("computing");

@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Link2, Phone, Plus, Trash2, Users, ExternalLink } from "lucide-react";
+import { Phone, Plus, Trash2, Users, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCompany } from "@/hooks/useCompany";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PortalLearningManager } from "@/components/settings/PortalLearningManager";
+import { PortalAppsCatalogManager } from "@/components/settings/PortalAppsCatalogManager";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/feedback/FormField";
 import { IconButton } from "@/components/feedback/IconButton";
@@ -22,103 +23,8 @@ export function PortalSettingsTab() {
   return (
     <div className="space-y-6">
       <PortalLearningManager companyId={activeCompanyId} />
-      <LinksManager companyId={activeCompanyId} />
+      <PortalAppsCatalogManager companyId={activeCompanyId} />
       <ContactsManager companyId={activeCompanyId} />
-    </div>
-  );
-}
-
-function LinksManager({ companyId }: { companyId: string }) {
-  const { toast } = useToast();
-  const confirm = useConfirm();
-  const queryClient = useQueryClient();
-  const [newLabel, setNewLabel] = useState("");
-  const [newUrl, setNewUrl] = useState("");
-
-  const { data: links = [] } = useQuery({
-    queryKey: ["portal_links", companyId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("portal_links")
-        .select("*")
-        .eq("company_id", companyId)
-        .order("sort_order");
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const addLink = useMutation({
-    mutationFn: async () => {
-      if (!newLabel || !newUrl) throw new Error("נא למלא שם וכתובת");
-      const { error } = await supabase.from("portal_links").insert({
-        company_id: companyId,
-        label: newLabel,
-        url: newUrl,
-        sort_order: links.length,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["portal_links"] });
-      setNewLabel("");
-      setNewUrl("");
-      toast({ title: "קישור נוסף" });
-    },
-    onError: (e: any) => toast({ title: "שגיאה", description: e.message, variant: "destructive" }),
-  });
-
-  const deleteLink = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("portal_links").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["portal_links"] });
-      toast({ title: "הקישור הוסר" });
-    },
-  });
-  const removeLink = (link: { id: string; label: string }) => confirm({
-    title: `להסיר את הקישור "${link.label}"?`,
-    description: "הקישור ייעלם מהפורטל של כל העובדים.",
-    confirmLabel: "הסר קישור",
-    destructive: true,
-    onConfirm: () => deleteLink.mutateAsync(link.id),
-  });
-
-  return (
-    <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 space-y-4">
-      <div className="flex items-center gap-3 mb-2">
-        <Link2 className="w-5 h-5 text-primary" aria-hidden="true" />
-        <h3 className="font-semibold">קישורים מהירים בפורטל</h3>
-      </div>
-
-      <div className="space-y-2">
-        {links.map((link) => (
-          <div key={link.id} className="flex items-center gap-2 p-2 rounded-lg border border-border/50 bg-background">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{link.label}</p>
-              <p className="text-xs text-muted-foreground truncate" dir="ltr">{link.url}</p>
-            </div>
-            <IconButton label={`הסר את הקישור ${link.label}`} className="shrink-0 text-destructive" onClick={() => { void removeLink(link); }}>
-              <Trash2 className="w-4 h-4" />
-            </IconButton>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex flex-col sm:flex-row sm:items-end gap-2 pt-2 border-t border-border/50">
-        <FormField label="שם הקישור" id="portal-link-label" className="flex-1">
-          <Input value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder="למשל: מערכת שכר" />
-        </FormField>
-        <FormField label="כתובת" id="portal-link-url" className="flex-1">
-          <Input type="url" value={newUrl} onChange={(e) => setNewUrl(e.target.value)} placeholder="https://..." dir="ltr" className="font-mono" />
-        </FormField>
-        <Button className="gap-1.5 shrink-0" onClick={() => addLink.mutate()} loading={addLink.isPending} loadingText="מוסיף…">
-          <Plus className="w-4 h-4" aria-hidden="true" />
-          הוסף
-        </Button>
-      </div>
     </div>
   );
 }
