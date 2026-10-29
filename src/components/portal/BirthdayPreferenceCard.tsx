@@ -157,7 +157,7 @@ export function BirthdayPreferenceCard({ employee }: Props) {
       )}
 
       <div className="pt-1">
-        <Button onClick={() => save.mutate()} loading={save.isPending} loadingText="שומר…">
+        <Button onClick={() => save.mutateAsync()} loading={save.isPending} loadingText="שומר…" successText="נשמר">
           שמור
         </Button>
       </div>

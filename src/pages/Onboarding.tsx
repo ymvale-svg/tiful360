@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { ActiveFilters } from "@/components/ui/active-filters";
+import { EMPTY_ICONS } from "@/components/feedback/emptyIcons";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { UserPlus, Search, Send, UserRound, AlertCircle, ListChecks } from "lucide-react";
@@ -107,15 +109,27 @@ export default function Onboarding() {
             <Button size="sm" variant="outline" onClick={() => void refetch()}>נסה שוב</Button>
           </div>
         )}
+        {!isLoading && !isError && processes.length > 0 && (
+          <ActiveFilters
+            summary={`${filtered.length} מתוך ${processes.length} תהליכים`}
+            onClearAll={() => { setQuery(""); setStatusFilter("all"); }}
+            filters={[
+              ...(query.trim() ? [{ id: "q", label: "חיפוש", value: query.trim(), onRemove: () => setQuery("") }] : []),
+              ...(statusFilter !== "all" ? [{ id: "status", label: "סטטוס", value: ONBOARDING_STATUS_LABEL[statusFilter], onRemove: () => setStatusFilter("all") }] : []),
+            ]}
+          />
+        )}
         {!isLoading && !isError && filtered.length === 0 && (
           processes.length > 0 ? (
             <EmptyState
+              icons={EMPTY_ICONS.noMatch}
               title="אין תהליכי קליטה שתואמים לסינון"
               description={[query.trim() && `חיפוש "${query.trim()}"`, statusFilter !== "all" && `סטטוס "${ONBOARDING_STATUS_LABEL[statusFilter]}"`].filter(Boolean).join(" ו")}
               action={<Button size="sm" variant="outline" onClick={() => { setQuery(""); setStatusFilter("all"); }}>נקה סינון</Button>}
             />
           ) : (
             <EmptyState
+              icons={EMPTY_ICONS.onboarding}
               title="עדיין אין תהליכי קליטה"
               description="פתחו תהליך קליטה לעובד חדש כדי לרכז את הצרכים, הציוד והגישות שלו."
               action={<Button size="sm" className="gap-1.5" onClick={() => setDialogOpen(true)}><UserPlus className="w-4 h-4" />תהליך קליטה חדש</Button>}

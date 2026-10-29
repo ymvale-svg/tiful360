@@ -1,4 +1,5 @@
 import { Clock, AlertTriangle, OctagonAlert, Info, Package, User, Bell } from "lucide-react";
+import { EMPTY_ICONS } from "@/components/feedback/emptyIcons";
 import { StateView } from "@/components/feedback/StateView";
 import { daysUntil, relativeDay } from "@/lib/alertGroups";
 import { useAlerts } from "@/hooks/useData";
@@ -60,7 +61,7 @@ export default function Alerts() {
         onRetry={() => void refetch()}
         label="התראות"
         isEmpty={!alerts?.length}
-        empty={{ title: "אין התראות פתוחות", description: "תפוגות, ציוד ללא שיוך ועובדים בתהליך עזיבה יופיעו כאן.", icon: <Bell className="h-6 w-6" /> }}
+        empty={{ title: "אין התראות פתוחות", description: "תפוגות, ציוד ללא שיוך ועובדים בתהליך עזיבה יופיעו כאן.", icons: EMPTY_ICONS.alerts }}
       >
         <ul className="space-y-3">
           {(alerts ?? []).map((alert) => {

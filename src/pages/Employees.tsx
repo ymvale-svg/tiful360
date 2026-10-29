@@ -1,4 +1,7 @@
 import { RowContextMenu, copyAction, openInNewTab } from "@/components/context/RowContextMenu";
+import { ActiveFilters } from "@/components/ui/active-filters";
+import { BulkActionBar } from "@/components/ui/bulk-action-bar";
+import { EMPTY_ICONS } from "@/components/feedback/emptyIcons";
 import { useState, useMemo, useEffect } from "react";
 import { usePersistentFilter } from "@/hooks/usePersistentFilter";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -129,12 +132,14 @@ export default function Employees() {
   ].filter(Boolean).join(" ו");
   const emptyState = hasFilters && (employees ?? []).length > 0 ? (
     <EmptyState
+      icons={EMPTY_ICONS.noMatch}
       title="אין עובדים שתואמים לסינון"
       description={`מסונן לפי ${filterSummary}. ${(employees ?? []).length} עובדים רשומים בסך הכל.`}
       action={<Button variant="outline" size="sm" onClick={clearFilters}>נקה סינון</Button>}
     />
   ) : (
     <EmptyState
+      icons={EMPTY_ICONS.employees}
       title="עדיין אין עובדים"
       description="הוסיפו עובד חדש או ייבאו רשימה מאקסל."
       action={<Button size="sm" className="gap-2" onClick={() => setAddOpen(true)}><Plus className="w-4 h-4" />עובד חדש</Button>}
@@ -319,21 +324,25 @@ export default function Employees() {
                 ))}
               </div>
 
-              {canManageUsers && selected.size > 0 && (
-                <div className="flex items-center gap-2 mr-auto">
-                  <span className="text-sm text-muted-foreground">{selected.size} נבחרו</span>
-                  <Button
-                    size="sm"
-                    className="gap-2"
-                    onClick={handleBulkInvite}
-                    disabled={inviteMutation.isPending}
-                  >
-                    <Send className="w-4 h-4" />
-                    שלח הזמנות ({selected.size})
-                  </Button>
-                </div>
-              )}
             </div>
+
+            <ActiveFilters
+              summary={`${filtered.length} מתוך ${(employees ?? []).length} עובדים`}
+              onClearAll={clearFilters}
+              filters={[
+                ...(search ? [{ id: "search", label: "חיפוש", value: search, onRemove: () => setSearch("") }] : []),
+                ...(statusFilter !== "all" ? [{ id: "status", label: "סטטוס", value: statusLabels[statusFilter], onRemove: () => setStatusFilter("all") }] : []),
+              ]}
+            />
+
+            {canManageUsers && (
+              <BulkActionBar count={selected.size} noun="עובדים" onClear={() => setSelected(new Set())}>
+                <Button size="sm" className="gap-2" onClick={handleBulkInvite} loading={inviteMutation.isPending} loadingText="שולח…">
+                  <Send className="w-4 h-4" aria-hidden="true" />
+                  שלח הזמנות
+                </Button>
+              </BulkActionBar>
+            )}
 
             {/* Mobile: one card per employee with the identifying fields. */}
             <div className="sm:hidden space-y-2">

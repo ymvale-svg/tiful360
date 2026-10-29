@@ -1,4 +1,7 @@
 import { useMemo, useState } from "react";
+import { ActiveFilters } from "@/components/ui/active-filters";
+import { BulkActionBar } from "@/components/ui/bulk-action-bar";
+import { EMPTY_ICONS } from "@/components/feedback/emptyIcons";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, FileSignature, Search, Package, Layers, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -220,26 +223,22 @@ export default function UnassignedAssets() {
         </Select>
       </div>
 
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="text-sm text-muted-foreground" aria-live="polite">{isLoading ? "" : `${rows.length} פריטים לא משויכים`}</div>
-        {selectedAssets.length > 0 && (
-          <div className="flex items-center gap-2 bg-primary/5 border border-primary/20 rounded-full px-3 py-1.5">
-            <span className="text-sm font-medium">{selectedAssets.length} פריטים נבחרו</span>
-            <Button size="sm" className="gap-1.5 rounded-full" onClick={() => setMultiOpen(true)}>
-              <Layers className="w-4 h-4" /> מסירה מרובה
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="rounded-full"
-              onClick={() => setSelectedIds([])}
-              aria-label="נקה בחירה"
-            >
-              <X className="w-4 h-4" aria-hidden="true" />
-            </Button>
-          </div>
-        )}
-      </div>
+      <ActiveFilters
+        summary={<span aria-live="polite">{isLoading ? "" : `${rows.length} פריטים לא משויכים`}</span>}
+        onClearAll={clearFilters}
+        filters={[
+          ...(q.trim() ? [{ id: "q", label: "חיפוש", value: q.trim(), onRemove: () => setQ("") }] : []),
+          ...(categoryId !== "all" ? [{ id: "cat", label: "קטגוריה", value: catById.get(categoryId)?.category_name ?? "", onRemove: () => { setCategoryId("all"); setGroupId("all"); } }] : []),
+          ...(groupId !== "all" ? [{ id: "group", label: "תת-קטגוריה", value: visibleGroups.find((g) => g.id === groupId)?.name ?? "", onRemove: () => setGroupId("all") }] : []),
+          ...(status !== "all" ? [{ id: "status", label: "סטטוס", value: statusLabels[status as keyof typeof statusLabels] ?? status, onRemove: () => setStatus("all") }] : []),
+        ]}
+      />
+
+      <BulkActionBar count={selectedAssets.length} onClear={() => setSelectedIds([])}>
+        <Button size="sm" className="gap-1.5" onClick={() => setMultiOpen(true)}>
+          <Layers className="w-4 h-4" aria-hidden="true" /> מסירה מרובה
+        </Button>
+      </BulkActionBar>
 
       {isLoading ? (
         <div role="status" aria-busy="true" className="bg-card border border-border rounded-2xl">
@@ -250,11 +249,13 @@ export default function UnassignedAssets() {
         <div className="bg-card border border-border rounded-2xl">
           {filtersActive ? (
             <EmptyState
+              icons={EMPTY_ICONS.noMatch}
               title="לא נמצאו פריטים לא משויכים בהתאם לסינון"
               action={<Button variant="outline" onClick={clearFilters}>נקה סינון</Button>}
             />
           ) : (
             <EmptyState
+              icons={EMPTY_ICONS.allAssigned}
               title={`כל הפריטים ב${DOMAIN_META[domain].title} משויכים`}
               description="אין פריטים שממתינים למסירה בדומיין הזה. אפשר לבחור דומיין אחר."
             />

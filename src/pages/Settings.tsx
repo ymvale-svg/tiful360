@@ -95,7 +95,7 @@ function EmailsSettings({
           dir="ltr"
         />
       </FormField>
-      <Button className="gap-1.5" onClick={() => updateMutation.mutate()} disabled={!loaded} loading={updateMutation.isPending} loadingText="שומר…">
+      <Button className="gap-1.5" onClick={() => updateMutation.mutateAsync()} disabled={!loaded} loading={updateMutation.isPending} loadingText="שומר…" successText="נשמר">
         <Save className="w-4 h-4" aria-hidden="true" />
         שמור שינויים
       </Button>
@@ -400,7 +400,7 @@ function GeneralSettings() {
       </FormField>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button className="gap-1.5" onClick={() => updateMutation.mutate()} disabled={uploading || !dirty} loading={updateMutation.isPending} loadingText="שומר…">
+        <Button className="gap-1.5" onClick={() => updateMutation.mutateAsync()} disabled={uploading || !dirty} loading={updateMutation.isPending} loadingText="שומר…" successText="נשמר">
           <Save className="w-4 h-4" aria-hidden="true" />
           שמור שינויים
         </Button>

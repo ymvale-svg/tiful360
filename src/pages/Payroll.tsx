@@ -279,9 +279,9 @@ function PayrollSettingsTab() {
           </FormField>
 
         </div>
-        <Button className="gap-1.5" onClick={() => updateHrMutation.mutate()} disabled={updateHrMutation.isPending}>
-          <Save className="w-4 h-4" />
-          {updateHrMutation.isPending ? "שומר..." : "שמור שינויים"}
+        <Button className="gap-1.5" onClick={() => updateHrMutation.mutateAsync()} loading={updateHrMutation.isPending} loadingText="שומר…" successText="נשמר">
+          <Save className="w-4 h-4" aria-hidden="true" />
+          שמור שינויים
         </Button>
       </div>
 
@@ -309,9 +309,9 @@ function PayrollSettingsTab() {
           </FormField>
 
         </div>
-        <Button className="gap-1.5" onClick={() => updatePayrollMutation.mutate()} disabled={updatePayrollMutation.isPending}>
-          <Save className="w-4 h-4" />
-          {updatePayrollMutation.isPending ? "שומר..." : "שמור שינויים"}
+        <Button className="gap-1.5" onClick={() => updatePayrollMutation.mutateAsync()} loading={updatePayrollMutation.isPending} loadingText="שומר…" successText="נשמר">
+          <Save className="w-4 h-4" aria-hidden="true" />
+          שמור שינויים
         </Button>
       </div>
 
