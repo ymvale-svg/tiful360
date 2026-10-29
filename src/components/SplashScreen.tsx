@@ -9,7 +9,7 @@ export function SplashScreen({ message = "טוען את המערכת…" }: { me
       <div className="boot-splash__mark" aria-hidden="true">
         <div className="boot-splash__ring boot-splash__ring--outer" />
         <div className="boot-splash__ring boot-splash__ring--inner" />
-        <img className="boot-splash__logo" src="/icon-192.png" alt="" />
+        <img className="boot-splash__logo" src="/logo.svg" alt="" />
       </div>
       <div className="boot-splash__text">
         <p className="boot-splash__title">תפעול 360</p>

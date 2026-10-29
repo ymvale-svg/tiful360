@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logo.svg";
 type Details = Awaited<ReturnType<typeof supabase.auth.oauth.getAuthorizationDetails>>["data"];
 export default function OAuthConsent() {
   const [params] = useSearchParams();

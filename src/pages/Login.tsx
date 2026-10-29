@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
-import logoImg from "@/assets/logo.png";
+import logoImg from "@/assets/logo.svg";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { translateAuthError } from "@/lib/authErrors";
@@ -186,7 +186,7 @@ export default function Login() {
     <main className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <img src={logoImg} alt="לוגו תפעול 360" className="w-16 h-16 rounded-2xl mx-auto mb-0 object-contain" />
+          <img src={logoImg} alt="לוגו תפעול 360" className="w-16 h-16 mx-auto mb-3 object-contain" />
           <h1 className="text-2xl font-bold">תפעול 360 — מערכת ניהול משאבים מרכזית</h1>
           <p className="text-sm text-muted-foreground mt-1">ניהול עובדים, שכר, נוכחות וציוד</p>
         </div>

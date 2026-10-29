@@ -14,6 +14,7 @@
 
     <!-- PWA: installable app for the employee portal -->
     <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -75,7 +76,7 @@
         mask: radial-gradient(circle, transparent 67%, #000 68%, #000 69.5%, transparent 70.5%);
         animation: boot-spin 4s cubic-bezier(.4,0,.6,1) infinite reverse;
       }
-      .boot-splash__logo { position: absolute; inset: 30%; width: 40%; height: 40%; object-fit: contain; border-radius: 12px; }
+      .boot-splash__logo { position: absolute; inset: 24%; width: 52%; height: 52%; object-fit: contain; }
       .boot-splash__text { text-align: center; animation: boot-rise .8s cubic-bezier(.4,0,.2,1) .3s both; }
       .boot-splash__title { margin: 0; font-size: 22px; font-weight: 700; line-height: 1.2; color: hsl(var(--foreground, var(--boot-fg))); }
       .boot-splash__subtitle { margin: 6px 0 0; font-size: 14px; line-height: 1.5; color: hsl(var(--muted-foreground, var(--boot-muted))); animation: boot-fade 3s cubic-bezier(.4,0,.6,1) 1.1s infinite; }
@@ -96,7 +97,7 @@
         <div class="boot-splash__mark" aria-hidden="true">
           <div class="boot-splash__ring boot-splash__ring--outer"></div>
           <div class="boot-splash__ring boot-splash__ring--inner"></div>
-          <img class="boot-splash__logo" src="/icon-192.png" alt="" />
+          <img class="boot-splash__logo" src="/logo.svg" alt="" />
         </div>
         <div class="boot-splash__text">
           <p class="boot-splash__title">תפעול 360</p>
