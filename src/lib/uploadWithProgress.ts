@@ -12,7 +12,15 @@ export interface UploadJob {
   detail?: string;
   /** Bulk jobs (imports, multi-row saves) show a count instead of upload stages. */
   kind?: "upload" | "batch";
+  /** File size in bytes, for "2.1MB מתוך 7.7MB". */
+  size?: number;
+  /** When bytes started moving (ms), for the time-remaining estimate. */
+  startedAt?: number;
+  /** Stops the transfer; the caller receives the "ההעלאה בוטלה" error. */
+  cancel?: () => void;
 }
+
+export const UPLOAD_CANCELLED = "ההעלאה בוטלה";
 
 let jobs: UploadJob[] = [];
 const listeners = new Set<() => void>();
@@ -39,7 +47,7 @@ export function translateUploadError(status: number, message = ""): string {
 interface Opts { contentType?: string; upsert?: boolean; cacheControl?: string }
 type Result = { data: { path: string; fullPath: string } | null; error: Error | null };
 
-function send(bucket: string, path: string, file: Blob, opts: Opts, token: string, onProgress: (p: number) => void): Promise<Result> {
+function send(bucket: string, path: string, file: Blob, opts: Opts, token: string, onProgress: (p: number) => void, onCancelable: (cancel: () => void) => void): Promise<Result> {
   return new Promise((resolve) => {
     const base = import.meta.env.VITE_SUPABASE_URL as string;
     const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
@@ -66,7 +74,8 @@ function send(bucket: string, path: string, file: Blob, opts: Opts, token: strin
       resolve({ data: null, error: err });
     };
     xhr.onerror = () => { clearTimeout(stall); resolve({ data: null, error: new Error(translateUploadError(0)) }); };
-    xhr.onabort = () => resolve({ data: null, error: new Error(stalled ? STALL_MSG : "ההעלאה בוטלה") });
+    xhr.onabort = () => resolve({ data: null, error: new Error(stalled ? STALL_MSG : UPLOAD_CANCELLED) });
+    onCancelable(() => xhr.abort());
     arm();
     xhr.send(file);
   });
@@ -77,7 +86,7 @@ const STALL_MSG = "ההעלאה נתקעה — החיבור איטי מדי. נ�
 const RESUMABLE_FROM = 6 * 1024 * 1024;
 
 /** Large files go in 6MB chunks with automatic resume, so a slow or flaky connection keeps progressing. */
-function sendResumable(bucket: string, path: string, file: Blob, opts: Opts, token: string, onProgress: (p: number) => void): Promise<Result> {
+function sendResumable(bucket: string, path: string, file: Blob, opts: Opts, token: string, onProgress: (p: number) => void, onCancelable: (cancel: () => void) => void): Promise<Result> {
   return new Promise((resolve) => {
     const base = import.meta.env.VITE_SUPABASE_URL as string;
     let stall: ReturnType<typeof setTimeout>;
@@ -98,6 +107,7 @@ function sendResumable(bucket: string, path: string, file: Blob, opts: Opts, tok
       },
     });
     const arm = () => { clearTimeout(stall); stall = setTimeout(() => { void upload.abort(); resolve({ data: null, error: new Error(STALL_MSG) }); }, STALL_MS * 2); };
+    onCancelable(() => { clearTimeout(stall); void upload.abort(); resolve({ data: null, error: new Error(UPLOAD_CANCELLED) }); });
     arm();
     upload.start();
   });
@@ -108,19 +118,22 @@ export async function uploadFile(bucket: string, path: string, file: Blob, opts:
   const id = `${bucket}/${path}/${Date.now()}`;
   const name = (file as File).name || path.split("/").pop() || "קובץ";
   const run = async (): Promise<Result> => {
-    uploadJobs.add({ id, name, stage: "prepare", percent: 0 });
+    uploadJobs.add({ id, name, stage: "prepare", percent: 0, size: file.size });
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token ?? (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string);
-    uploadJobs.update(id, { stage: "upload" });
+    uploadJobs.update(id, { stage: "upload", startedAt: Date.now() });
     const sender = file.size >= RESUMABLE_FROM ? sendResumable : send;
-    const res = await sender(bucket, path, file, opts, token, (p) => uploadJobs.update(id, { percent: p }));
+    const res = await sender(bucket, path, file, opts, token,
+      (p) => uploadJobs.update(id, { percent: p }),
+      (cancel) => uploadJobs.update(id, { cancel }));
     if (res.error) {
       // No retry from the progress card: the caller already got this error, so a re-upload started
       // here would never be linked to its record. The user retries from the screen that started it.
-      uploadJobs.update(id, { stage: "error", error: res.error.message });
+      if (res.error.message === UPLOAD_CANCELLED) uploadJobs.remove(id);
+      else uploadJobs.update(id, { stage: "error", error: res.error.message, cancel: undefined });
       return res;
     }
-    uploadJobs.update(id, { stage: "done", percent: 100 });
+    uploadJobs.update(id, { stage: "done", percent: 100, cancel: undefined });
     setTimeout(() => uploadJobs.remove(id), 4500);
     return res;
   };

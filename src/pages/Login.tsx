@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
-import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, Users, Package, Clock4, ShieldCheck, ArrowRight } from "lucide-react";
 import logoImg from "@/assets/logo.png";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -12,13 +12,13 @@ import { oauthReturnPath } from "@/lib/oauth-return-path";
 const UNAUTHORIZED_MESSAGE =
   "אין הרשאת גישה — האימייל שלך אינו רשום כמשתמש פעיל במערכת. פנה למנהל המערכת.";
 
-type Mode = "choose" | "password" | "forgot";
+type Mode = "signin" | "forgot";
 
 export default function Login() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [searchParams] = useSearchParams();
   // ?mode=forgot opens straight on "שכחתי סיסמה" (used by an expired reset link).
-  const [mode, setModeState] = useState<Mode>(() => (searchParams.get("mode") === "forgot" ? "forgot" : "choose"));
+  const [mode, setModeState] = useState<Mode>(() => (searchParams.get("mode") === "forgot" ? "forgot" : "signin"));
   /** Inline error for the form on screen (password / forgot), shown next to it instead of a fleeting toast. */
   const [formError, setFormError] = useState<string | null>(null);
   const setMode = (m: Mode) => { setFormError(null); setModeState(m); };
@@ -174,7 +174,7 @@ export default function Login() {
         description:
           "אם הכתובת רשומה במערכת, יישלח אליה מייל עם קישור להגדרת סיסמה חדשה. בדוק גם את תיקיית הספאם.",
       });
-      setMode("password");
+      setMode("signin");
     } catch (error: any) {
       setFormError(translateAuthError(error));
     } finally {
@@ -182,39 +182,72 @@ export default function Login() {
     }
   };
 
-  return (
-    <main className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <img src={logoImg} alt="לוגו תפעול 360" className="w-16 h-16 rounded-2xl mx-auto mb-0 object-contain" />
-          <h1 className="text-2xl font-bold">תפעול 360 — מערכת ניהול משאבים מרכזית</h1>
-          <p className="text-sm text-muted-foreground mt-1">ניהול עובדים, שכר, נוכחות וציוד</p>
-        </div>
+  const inputCls = "w-full min-h-11 pr-10 pl-3 py-2.5 bg-background border border-input rounded-lg text-sm outline-none transition-[border-color,box-shadow] focus:border-primary focus:ring-2 focus:ring-primary/20 aria-[invalid=true]:border-destructive";
 
-        <section aria-labelledby="login-heading" className="bg-card rounded-2xl border border-border shadow-card p-8">
-          <h2 id="login-heading" className="text-lg font-semibold mb-2 text-center">כניסה למערכת</h2>
-          <p className="text-sm text-muted-foreground text-center mb-6">
-            הכניסה מיועדת למשתמשים שהוקמו מראש על ידי מנהל המערכת בלבד.
+  // Split layout after "Sign In Split Screen" (felipemenezes098) on 21st.dev: a brand panel beside
+  // the form on wide screens, a compact brand header on phones. Google and the email form share
+  // one screen, so signing in with a password is one step instead of two.
+  return (
+    <main className="min-h-screen bg-muted/40 flex items-center justify-center p-4 sm:p-6">
+      <div className="grid w-full max-w-4xl overflow-hidden rounded-2xl border border-border bg-card shadow-xl md:min-h-[480px] md:grid-cols-[1fr_1.1fr]">
+        <aside className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-b from-primary to-primary/85 p-10 text-primary-foreground md:flex" aria-label="על המערכת">
+          <div className="pointer-events-none absolute -top-24 -left-24 h-64 w-64 rounded-full bg-primary-foreground/10 blur-3xl" aria-hidden="true" />
+          <div className="pointer-events-none absolute -bottom-32 -right-20 h-72 w-72 rounded-full bg-primary-foreground/10 blur-3xl" aria-hidden="true" />
+
+          <div className="relative flex items-center gap-3">
+            <img src={logoImg} alt="" className="h-10 w-10 rounded-xl bg-primary-foreground/95 object-contain p-1" />
+            <span className="text-base font-semibold">תפעול 360</span>
+          </div>
+
+          <div className="relative mt-10 space-y-6">
+            <h2 className="max-w-[16ch] text-[28px] font-bold leading-tight text-balance">כל התפעול של החברה, במקום אחד.</h2>
+            <ul className="space-y-3 text-sm text-primary-foreground/90">
+              <li className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-lg bg-primary-foreground/15" aria-hidden="true"><Users className="h-4 w-4" /></span>עובדים, קליטה ועזיבה</li>
+              <li className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-lg bg-primary-foreground/15" aria-hidden="true"><Package className="h-4 w-4" /></span>ציוד, הרשאות ופרוטוקולי מסירה</li>
+              <li className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-lg bg-primary-foreground/15" aria-hidden="true"><Clock4 className="h-4 w-4" /></span>נוכחות, חופשות ותלושי שכר</li>
+            </ul>
+          </div>
+
+          <p className="relative mt-10 flex items-center gap-2 text-xs text-primary-foreground/75">
+            <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+            כניסה מאובטחת למשתמשים מורשים בלבד
           </p>
+        </aside>
+
+        <section aria-labelledby="login-heading" className="flex flex-col justify-center gap-5 p-6 sm:p-10">
+          {/* Phones: the brand panel is hidden, so the form carries a compact brand header. */}
+          <div className="flex items-center gap-3 md:hidden">
+            <img src={logoImg} alt="" className="h-11 w-11 rounded-xl object-contain" />
+            <div>
+              <p className="text-base font-bold">תפעול 360</p>
+              <p className="text-xs text-muted-foreground">ניהול עובדים, שכר, נוכחות וציוד</p>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <h1 id="login-heading" className="text-xl font-bold">{mode === "forgot" ? "איפוס סיסמה" : "ברוכים הבאים"}</h1>
+            <p className="text-sm text-muted-foreground">
+              {mode === "forgot"
+                ? "נשלח אליכם קישור להגדרת סיסמה חדשה. מתאים גם לכניסה ראשונה."
+                : "התחברו לחשבון שהוקם עבורכם על ידי מנהל המערכת."}
+            </p>
+          </div>
 
           {authError && (
-            <p
-              role="alert"
-              className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive text-center"
-            >
+            <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {authError}
             </p>
           )}
 
-          {mode === "choose" && (
-            <div className="space-y-3">
+          {mode === "signin" && (
+            <>
               <Button
                 type="button"
                 variant="outline"
-                className="w-full gap-3 py-5"
+                className="w-full min-h-11 gap-3"
                 onClick={handleGoogleLogin}
-                disabled={googleLoading}
-                aria-busy={googleLoading}
+                loading={googleLoading}
+                loadingText="מתחבר…"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
@@ -222,113 +255,90 @@ export default function Login() {
                   <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                 </svg>
-                {googleLoading ? "מתחבר..." : "התחבר באמצעות חשבון Google"}
+                המשך עם Google
               </Button>
 
-              <div className="flex items-center gap-3 my-2">
-                <div className="h-px bg-border flex-1" />
-                <span className="text-xs text-muted-foreground">או</span>
-                <div className="h-px bg-border flex-1" />
+              <div className="flex items-center gap-3" aria-hidden="true">
+                <span className="h-px flex-1 bg-border" />
+                <span className="text-xs text-muted-foreground">או עם אימייל וסיסמה</span>
+                <span className="h-px flex-1 bg-border" />
               </div>
 
-              <Button
-                type="button"
-                variant="secondary"
-                className="w-full gap-3 py-5"
-                onClick={() => setMode("password")}
-              >
-                <Mail className="w-5 h-5" aria-hidden="true" />
-                התחבר עם שם משתמש וסיסמה
-              </Button>
-            </div>
-          )}
-
-          {mode === "password" && (
-            <form onSubmit={handleEmailLogin} className="space-y-4" noValidate aria-describedby={formError ? "login-form-error" : undefined}>
-              <div>
-                <label htmlFor="login-email" className="text-sm font-medium mb-1.5 block">אימייל</label>
-                <div className="relative">
-                  <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
-                  <input
-                    id="login-email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@example.com"
-                    className="w-full min-h-11 pr-10 pl-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 transition-all"
-                    required
-                    aria-invalid={formError && !email.trim() ? true : undefined}
-                    dir="ltr"
-                  />
+              <form onSubmit={handleEmailLogin} className="space-y-4" noValidate aria-describedby={formError ? "login-form-error" : undefined}>
+                <div className="space-y-1.5">
+                  <label htmlFor="login-email" className="text-sm font-medium block">אימייל</label>
+                  <div className="relative">
+                    <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                    <input
+                      id="login-email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="name@company.co.il"
+                      className={inputCls}
+                      required
+                      aria-invalid={formError && !email.trim() ? true : undefined}
+                      dir="ltr"
+                    />
+                  </div>
                 </div>
-              </div>
-              <div>
-                <label htmlFor="login-password" className="text-sm font-medium mb-1.5 block">סיסמה</label>
-                <div className="relative">
-                  <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
-                  <input
-                    id="login-password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full min-h-11 pr-10 pl-12 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 transition-all"
-                    required
-                    aria-invalid={formError ? true : undefined}
-                    dir="ltr"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute left-0 top-1/2 -translate-y-1/2 h-11 w-11 inline-flex items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
-                    aria-label={showPassword ? "הסתר סיסמה" : "הצג סיסמה"}
-                    aria-pressed={showPassword}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
-                  </button>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <label htmlFor="login-password" className="text-sm font-medium block">סיסמה</label>
+                    <button
+                      type="button"
+                      onClick={() => setMode("forgot")}
+                      className="min-h-8 rounded px-1 text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      שכחתי סיסמה / סיסמה ראשונה
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                    <input
+                      id="login-password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="current-password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className={inputCls.replace("pl-3", "pl-12")}
+                      required
+                      aria-invalid={formError ? true : undefined}
+                      dir="ltr"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute left-0 top-1/2 -translate-y-1/2 h-11 w-11 inline-flex items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
+                      aria-label={showPassword ? "הסתר סיסמה" : "הצג סיסמה"}
+                      aria-pressed={showPassword}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              {formError && (
-                <p id="login-form-error" role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                  {formError}
-                </p>
-              )}
+                {formError && (
+                  <p id="login-form-error" role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    {formError}
+                  </p>
+                )}
 
-              <Button type="submit" className="w-full min-h-11" loading={emailLoading} loadingText="מתחבר…">
-                התחבר
-              </Button>
-
-              <div className="flex items-center justify-between gap-2 text-sm">
-                <button
-                  type="button"
-                  onClick={() => setMode("forgot")}
-                  className="min-h-11 text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded text-right"
-                >
-                  שכחתי סיסמה / הגדרת סיסמה ראשונית
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMode("choose")}
-                  className="min-h-11 px-2 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
-                >
-                  חזרה
-                </button>
-              </div>
-            </form>
+                <Button type="submit" className="w-full min-h-11" loading={emailLoading} loadingText="מתחבר…">
+                  כניסה
+                </Button>
+              </form>
+            </>
           )}
 
           {mode === "forgot" && (
             <form onSubmit={handleForgotPassword} className="space-y-4" noValidate aria-describedby={formError ? "forgot-form-error" : undefined}>
-              <p className="text-sm text-muted-foreground">
-                הזן את כתובת האימייל שלך ונשלח אליך קישור להגדרת סיסמה חדשה. שימושי גם כניסה ראשונה לבחירת סיסמה.
-              </p>
-              <div>
-                <label htmlFor="forgot-email" className="text-sm font-medium mb-1.5 block">אימייל</label>
+              <div className="space-y-1.5">
+                <label htmlFor="forgot-email" className="text-sm font-medium block">אימייל</label>
                 <div className="relative">
                   <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
                   <input
@@ -338,8 +348,8 @@ export default function Login() {
                     autoComplete="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@example.com"
-                    className="w-full min-h-11 pr-10 pl-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+                    placeholder="name@company.co.il"
+                    className={inputCls}
                     required
                     aria-invalid={formError ? true : undefined}
                     dir="ltr"
@@ -354,17 +364,18 @@ export default function Login() {
               <Button type="submit" className="w-full min-h-11" loading={resetLoading} loadingText="שולח…">
                 שלח קישור לאיפוס סיסמה
               </Button>
-              <div className="text-sm text-center">
-                <button
-                  type="button"
-                  onClick={() => setMode("password")}
-                  className="min-h-11 px-2 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
-                >
-                  חזרה לכניסה
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setMode("signin")}
+                className="mx-auto flex min-h-11 items-center gap-1.5 rounded px-2 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                חזרה לכניסה
+              </button>
             </form>
           )}
+
+          <p className="text-xs text-muted-foreground md:hidden">כניסה מאובטחת למשתמשים מורשים בלבד</p>
         </section>
       </div>
     </main>
