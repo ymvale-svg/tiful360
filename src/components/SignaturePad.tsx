@@ -1,10 +1,12 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import SignatureCanvas from "react-signature-canvas";
 
-// react-signature-canvas ships class-component types that clash with
-// @types/react 18.3's JSX check (TS2786). Runtime is fine — cast only.
+// react-signature-canvas is a UMD bundle: the production build's CJS interop
+// hands back the module object ({ default: Component }) instead of the class,
+// which crashed every signing page with React error #130. Unwrap it here.
+// Its class-component types also clash with @types/react 18.3 (TS2786) — cast.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const SignatureCanvasView = SignatureCanvas as any;
+const SignatureCanvasView = ((SignatureCanvas as any)?.default ?? SignatureCanvas) as any;
 import { Button } from "@/components/ui/button";
 import { Eraser } from "lucide-react";
 
