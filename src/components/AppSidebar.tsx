@@ -25,7 +25,7 @@ import { useAlerts, useDashboardStats } from "@/hooks/useData";
 import { useEffect, useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import logoImg from "@/assets/logo.png";
+import logoImg from "@/assets/logo.svg";
 
 type AppRole = "admin" | "it_manager" | "employee" | "super_admin" | "direct_manager" | "payroll" | "hr" | "operations" | "finance" | "legal" | "secretariat" | "ceo";
 

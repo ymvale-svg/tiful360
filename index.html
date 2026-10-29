@@ -14,6 +14,7 @@
 
     <!-- PWA: installable app for the employee portal -->
     <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -34,10 +35,76 @@
     <meta name="twitter:title" content="תפעול 360 — ניהול משאבי אנוש, שכר ונכסים" />
     <meta name="twitter:description" content="פלטפורמה מקיפה לניהול עובדים, שכר, נוכחות, ציוד ותמיכת IT — תפעול ארגוני חכם במקום אחד." />
     <meta name="twitter:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/x06hZbR0GpXOuQKSMmq3s6BF9w13/social-images/social-1776690664210-logo-BdWPYv16-removebg-preview.webp" />
+
+    <!-- Startup splash (adapted from 21st.dev kokonutd "Loader"): pure CSS so it animates
+         before the JS bundle arrives. SplashScreen.tsx renders the same markup. -->
+    <script>
+      // Apply the saved theme (next-themes "theme" key) before first paint, so the
+      // splash is not shown light to dark-mode users.
+      try {
+        var t = localStorage.getItem("theme");
+        if (t === "dark" || ((!t || t === "system") && matchMedia("(prefers-color-scheme: dark)").matches)) {
+          document.documentElement.classList.add("dark");
+        }
+      } catch (e) {}
+    </script>
+    <style>
+      :root { --boot-bg: 210 20% 98%; --boot-fg: 220 25% 10%; --boot-muted: 215 15% 47%; --boot-primary: 215 90% 42%; }
+      @media (prefers-color-scheme: dark) {
+        :root { --boot-bg: 222 25% 8%; --boot-fg: 210 20% 95%; --boot-muted: 215 15% 55%; --boot-primary: 215 85% 55%; }
+      }
+      .boot-splash {
+        position: fixed; inset: 0; z-index: 60;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px;
+        padding: 24px;
+        background: hsl(var(--background, var(--boot-bg)));
+        color: hsl(var(--primary, var(--boot-primary)));
+        font-family: Heebo, system-ui, sans-serif;
+      }
+      .boot-splash__mark { position: relative; width: 136px; height: 136px; animation: boot-breathe 4s cubic-bezier(.4,0,.6,1) infinite; }
+      .boot-splash__ring { position: absolute; inset: 0; border-radius: 9999px; }
+      .boot-splash__ring--outer {
+        background: conic-gradient(from 0deg, transparent 0deg, currentColor 120deg, transparent 240deg);
+        -webkit-mask: radial-gradient(circle, transparent 60%, #000 61.5%, #000 64%, transparent 65.5%);
+        mask: radial-gradient(circle, transparent 60%, #000 61.5%, #000 64%, transparent 65.5%);
+        animation: boot-spin 2.5s cubic-bezier(.4,0,.6,1) infinite;
+      }
+      .boot-splash__ring--inner {
+        opacity: .4;
+        background: conic-gradient(from 180deg, transparent 0deg, currentColor 60deg, transparent 120deg);
+        -webkit-mask: radial-gradient(circle, transparent 67%, #000 68%, #000 69.5%, transparent 70.5%);
+        mask: radial-gradient(circle, transparent 67%, #000 68%, #000 69.5%, transparent 70.5%);
+        animation: boot-spin 4s cubic-bezier(.4,0,.6,1) infinite reverse;
+      }
+      .boot-splash__logo { position: absolute; inset: 24%; width: 52%; height: 52%; object-fit: contain; }
+      .boot-splash__text { position: relative; text-align: center; animation: boot-rise .8s cubic-bezier(.4,0,.2,1) .3s both; }
+      .boot-splash__title { margin: 0; font-size: 22px; font-weight: 700; line-height: 1.2; color: hsl(var(--foreground, var(--boot-fg))); }
+      .boot-splash__subtitle { margin: 6px 0 0; font-size: 14px; line-height: 1.5; color: hsl(var(--muted-foreground, var(--boot-muted))); animation: boot-fade 3s cubic-bezier(.4,0,.6,1) 1.1s infinite; }
+      @keyframes boot-spin { to { transform: rotate(360deg); } }
+      @keyframes boot-breathe { 50% { transform: scale(1.03); } }
+      @keyframes boot-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+      @keyframes boot-fade { 50% { opacity: .6; } }
+      @media (prefers-reduced-motion: reduce) {
+        .boot-splash__mark, .boot-splash__text, .boot-splash__subtitle { animation: none; }
+        .boot-splash__ring--outer, .boot-splash__ring--inner { animation-duration: 6s; animation-timing-function: linear; }
+      }
+    </style>
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="boot-splash" role="status" aria-live="polite">
+        <div class="boot-splash__mark" aria-hidden="true">
+          <div class="boot-splash__ring boot-splash__ring--outer"></div>
+          <div class="boot-splash__ring boot-splash__ring--inner"></div>
+          <img class="boot-splash__logo" src="/logo.svg" alt="" />
+        </div>
+        <div class="boot-splash__text">
+          <p class="boot-splash__title">תפעול 360</p>
+          <p class="boot-splash__subtitle">טוען את המערכת…</p>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
