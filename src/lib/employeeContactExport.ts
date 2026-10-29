@@ -22,13 +22,13 @@ export const EMPLOYEE_CONTACT_HEADERS: { key: keyof EmployeeContactRow; label: s
 type ContactSource = { phone?: string | null; email?: string | null };
 
 export function buildEmployeeContactRows<
-  T extends { id: string; full_name?: string | null; department?: string | null },
+  T extends { id: string | null; full_name?: string | null; department?: string | null },
 >(
   employees: readonly T[],
-  contactById: Map<string, ContactSource>,
+  contactById: { get(key: string): ContactSource | undefined },
 ): EmployeeContactRow[] {
   return employees.map((e) => {
-    const c = contactById.get(e.id);
+    const c = contactById.get(e.id ?? "");
     return {
       full_name: e.full_name ?? "",
       department: e.department ?? "",
