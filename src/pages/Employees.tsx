@@ -304,7 +304,7 @@ export default function Employees() {
                       ייצוא
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-72">
+                  <DropdownMenuContent align="start" className="w-72">
                     <DropdownMenuItem onClick={exportFullList}>
                       <div className="space-y-0.5">
                         <div>רשימה מלאה</div>
