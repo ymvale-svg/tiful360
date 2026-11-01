@@ -173,6 +173,10 @@ function extractFields(text: string, fallbackPeriod: { year: number; month: numb
   };
 }
 
+// Logs go to Supabase's log store, outside RLS: never log ID numbers, names, salaries or emails.
+// Refer to a payslip group by its first page number only.
+const groupLogRef = (group: { pageIndices?: number[] }) => `pages from ${group.pageIndices?.[0] ?? '?'}`;
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -393,13 +397,13 @@ Deno.serve(async (req) => {
             .from('payslips')
             .upload(path, bytes, { contentType: 'application/pdf', upsert: true });
           if (upErr) {
-            console.error('per-group upload failed:', group.idNumber, upErr);
+            console.error('per-group upload failed:', groupLogRef(group), upErr);
             return;
           }
           groupPdfPaths.set(groupIndex, path);
           groupPdfBytes.set(groupIndex, bytes);
         } catch (e) {
-          console.error('split failed for group:', group.idNumber, e);
+          console.error('split failed for group:', groupLogRef(group), e);
         }
       }));
       // yield to event loop
@@ -496,7 +500,7 @@ Deno.serve(async (req) => {
             }
             const args = JSON.parse(toolCall.function.arguments);
             aiResults.set(groupIndex, args);
-            console.log(`AI group ${groupIndex} (${groups[groupIndex].idNumber}):`, JSON.stringify(args));
+            console.log(`AI group ${groupIndex}: fields=${Object.keys(args ?? {}).join(',')}`);
           } catch (e) {
             console.error(`AI call failed for group ${groupIndex}:`, e instanceof Error ? e.message : e);
           }
@@ -566,7 +570,7 @@ Deno.serve(async (req) => {
         ].filter((v) => v != null).length;
         const status = filledCount >= 4 ? 'success' : (filledCount > 0 ? 'partial' : 'failed');
 
-        console.log(`group ${normalizedId}: vac=${group.primary.vacationBalance} sick=${group.primary.sickBalance} gross=${group.primary.grossSalary} net=${group.primary.netSalary} workDays=${group.primary.workDays} period=${recordMonth}/${recordYear} aiUsed=${aiUsed} status=${status} pdfPath=${groupPdfPath}`);
+        console.log(`group ${gi}: period=${recordMonth}/${recordYear} aiUsed=${aiUsed} status=${status} hasPdf=${groupPdfPath ? 'yes' : 'no'}`);
 
         if (matched) {
           const { data: prevEmp } = await admin.from('employees')
@@ -676,7 +680,7 @@ Deno.serve(async (req) => {
           });
         }
       } catch (e) {
-        console.error('Group failed:', group.idNumber, e);
+        console.error('Group failed:', groupLogRef(group), e);
         const failureMessage = e instanceof Error ? e.message : String(e);
         try {
           await admin.from('payslips').insert({
@@ -702,7 +706,7 @@ Deno.serve(async (req) => {
             created_by: user.id,
           });
         } catch (recordErr) {
-          console.error('Failed to record failed payslip row:', group.idNumber, recordErr);
+          console.error('Failed to record failed payslip row:', groupLogRef(group), recordErr);
         }
         failedCount++;
         failedPayslips.push({
@@ -799,7 +803,7 @@ Deno.serve(async (req) => {
           companyId: company_id,
         });
       } catch (e) {
-        console.error('payslip email failed for', n.to, e);
+        console.error('payslip email failed for employee', n.employee_id, e);
       }
     }
 
