@@ -31,6 +31,32 @@ const TYPE_LABEL: Record<string, string> = {
   odd: 'מספר החתמות אי-זוגי',
 }
 
+const MISSING_IN = 'חסרה כניסה'
+const MISSING_OUT = 'חסרה יציאה'
+
+// Derives what is missing from the formatted punch list
+// ("08:21 כניסה, 15:12 יציאה", ordered by time) by pairing entries with exits.
+export function describeGap(g: Pick<Gap, 'type' | 'punches'>): string {
+  if (g.type !== 'odd') return TYPE_LABEL[g.type] ?? g.type
+  const missing = new Set<string>()
+  let expectingOut = false
+  for (const part of (g.punches ?? '').split(',')) {
+    const p = part.trim()
+    if (!p) continue
+    if (p.endsWith('כניסה')) {
+      if (expectingOut) missing.add(MISSING_OUT)
+      expectingOut = true
+    } else if (p.endsWith('יציאה')) {
+      if (!expectingOut) missing.add(MISSING_IN)
+      expectingOut = false
+    } else {
+      return TYPE_LABEL.odd
+    }
+  }
+  if (expectingOut) missing.add(MISSING_OUT)
+  return missing.size ? [...missing].join(' / ') : TYPE_LABEL.odd
+}
+
 const Email = ({
   companyLogoUrl,
 
@@ -67,7 +93,7 @@ const Email = ({
                   <tr key={i} style={{ backgroundColor: i % 2 ? emailTheme.alternate : emailTheme.surface }}>
                     <td style={td as any}>{g.date}</td>
                     <td style={td as any}>{g.weekday}</td>
-                    <td style={td as any}>{TYPE_LABEL[g.type] ?? g.type}</td>
+                    <td style={td as any}>{describeGap(g)}</td>
                     <td style={td as any}>{g.punches || '—'}</td>
                   </tr>
                 ))}
