@@ -147,8 +147,25 @@ Deno.serve(async (req) => {
       );
 
     // Long-lived signed link to the stored protocol PDF.
+    // document_path comes from the client and is signed with the service role,
+    // so it must point at this process's own employee folder
+    // (<company_id>/<employee_id>/<file>, as written by useOnboardingProtocol).
     let documentUrl: string | null = null;
     if (document_path) {
+      const ownPrefix = `${(proc as any).company_id}/${(proc as any).employee_id}/`;
+      const rest = document_path.slice(ownPrefix.length);
+      if (
+        !document_path.startsWith(ownPrefix) ||
+        !rest ||
+        rest.includes("/") ||
+        rest.includes("\\") ||
+        rest.startsWith(".")
+      ) {
+        return new Response(JSON.stringify({ error: "invalid document_path" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       const { data: signed } = await supabase.storage
         .from("employee-documents")
         .createSignedUrl(document_path, 60 * 60 * 24 * 30);

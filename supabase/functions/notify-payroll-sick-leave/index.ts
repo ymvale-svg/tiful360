@@ -121,7 +121,7 @@ Deno.serve(async (req) => {
         });
         if (ok) enqueued.push(1);
       } catch (e) {
-        console.error("enqueue failed for", to, e);
+        console.error("enqueue failed", { request_id, error: e instanceof Error ? e.message : String(e) });
       }
     }
 
@@ -129,7 +129,7 @@ Deno.serve(async (req) => {
       .update({ payroll_notified_at: new Date().toISOString() })
       .eq("id", request_id);
 
-    return new Response(JSON.stringify({ enqueued: enqueued.length, recipients }), {
+    return new Response(JSON.stringify({ enqueued: enqueued.length, recipients: recipients.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {

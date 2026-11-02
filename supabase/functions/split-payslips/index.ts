@@ -176,6 +176,15 @@ function extractFields(text: string, fallbackPeriod: { year: number; month: numb
 // Logs go to Supabase's log store, outside RLS: never log ID numbers, names, salaries or emails.
 // Refer to a payslip group by its first page number only.
 const groupLogRef = (group: { pageIndices?: number[] }) => `pages from ${group.pageIndices?.[0] ?? '?'}`;
+// Log only the error code and message. Postgres errors carry `details` such as
+// "Failing row contains (...)", which can include ID numbers, names and salaries.
+const errLog = (e: unknown) => {
+  if (e && typeof e === 'object') {
+    const { code, message } = e as { code?: unknown; message?: unknown };
+    return { code: code ?? null, message: typeof message === 'string' ? message : String(e) };
+  }
+  return { code: null, message: String(e) };
+};
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -397,13 +406,13 @@ Deno.serve(async (req) => {
             .from('payslips')
             .upload(path, bytes, { contentType: 'application/pdf', upsert: true });
           if (upErr) {
-            console.error('per-group upload failed:', groupLogRef(group), upErr);
+            console.error('per-group upload failed:', groupLogRef(group), errLog(upErr));
             return;
           }
           groupPdfPaths.set(groupIndex, path);
           groupPdfBytes.set(groupIndex, bytes);
         } catch (e) {
-          console.error('split failed for group:', groupLogRef(group), e);
+          console.error('split failed for group:', groupLogRef(group), errLog(e));
         }
       }));
       // yield to event loop
@@ -680,7 +689,7 @@ Deno.serve(async (req) => {
           });
         }
       } catch (e) {
-        console.error('Group failed:', groupLogRef(group), e);
+        console.error('Group failed:', groupLogRef(group), errLog(e));
         const failureMessage = e instanceof Error ? e.message : String(e);
         try {
           await admin.from('payslips').insert({
@@ -706,7 +715,7 @@ Deno.serve(async (req) => {
             created_by: user.id,
           });
         } catch (recordErr) {
-          console.error('Failed to record failed payslip row:', groupLogRef(group), recordErr);
+          console.error('Failed to record failed payslip row:', groupLogRef(group), errLog(recordErr));
         }
         failedCount++;
         failedPayslips.push({
@@ -859,7 +868,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (e) {
-    console.error('split-payslips error:', e);
+    console.error('split-payslips error:', errLog(e));
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : 'Unknown error' }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
