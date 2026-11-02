@@ -3,6 +3,7 @@ import { SearchInput } from "@/components/ui/search-input";
 import { useTeamLeaveRequests } from "@/hooks/useLeaveRequests";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { LeaveAttachmentLink } from "@/components/LeaveAttachmentLink";
 import { CalendarDays, Stethoscope, Paperclip, CalendarPlus, Clock, Archive, CheckCircle2, XCircle, Ban } from "lucide-react";
 import { StateView } from "@/components/feedback/StateView";
 import { ExportExcelButton } from "@/components/ExcelActionButtons";
@@ -182,10 +183,10 @@ export default function LeaveRequests() {
                   {r.reason && <p className="text-sm text-muted-foreground mt-1">{r.reason}</p>}
                   {r.attachment_url && (
                     <Button asChild variant="outline" size="sm" className="mt-2 text-sm gap-1">
-                      <a href={r.attachment_url} target="_blank" rel="noopener noreferrer">
+                      <LeaveAttachmentLink value={r.attachment_url}>
                         <Paperclip className="w-3 h-3" aria-hidden="true" />
                         קובץ מצורף
-                      </a>
+                      </LeaveAttachmentLink>
                     </Button>
                   )}
                 </div>

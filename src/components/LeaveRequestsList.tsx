@@ -4,6 +4,7 @@ import { Calendar, CalendarPlus, Paperclip, Pencil, X } from "lucide-react";
 import { useCancelLeaveRequest } from "@/hooks/useLeaveRequests";
 import { useToast } from "@/hooks/use-toast";
 import { EditSickLeaveDialog } from "@/components/EditSickLeaveDialog";
+import { LeaveAttachmentLink } from "@/components/LeaveAttachmentLink";
 import { buildGoogleCalendarUrl } from "@/lib/googleCalendar";
 import { EmployeeLink } from "@/components/EmployeeLink";
 import { useConfirm } from "@/components/feedback/ConfirmDialog";
@@ -105,10 +106,10 @@ export function LeaveRequestsList({ requests, showEmployee, allowCancel }: Props
             )}
             {r.attachment_url && (
               <Button asChild variant="outline" size="sm" className="gap-1">
-                <a href={r.attachment_url} target="_blank" rel="noopener noreferrer">
+                <LeaveAttachmentLink value={r.attachment_url}>
                   <Paperclip className="w-3 h-3" aria-hidden="true" />
                   קובץ מצורף
-                </a>
+                </LeaveAttachmentLink>
               </Button>
             )}
 

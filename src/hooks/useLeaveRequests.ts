@@ -92,10 +92,8 @@ export function useCreateLeaveRequest() {
         const path = `${input.employee_id}/${crypto.randomUUID()}.${ext}`;
         const { error: upErr } = await uploadFile("leave-attachments", path, input.attachment_file, { upsert: false });
         if (upErr) throw upErr;
-        const { data } = await supabase.storage
-          .from("leave-attachments")
-          .createSignedUrl(path, 60 * 60 * 24 * 365);
-        attachment_url = data?.signedUrl ?? path;
+        // Store only the object path; viewers sign a short-lived URL on open.
+        attachment_url = path;
       }
 
       const { data: inserted, error } = await supabase
@@ -205,10 +203,8 @@ export function useUpdateSickLeaveRequest() {
         const path = `${input.employee_id}/${crypto.randomUUID()}.${ext}`;
         const { error: upErr } = await uploadFile("leave-attachments", path, input.attachment_file, { upsert: false });
         if (upErr) throw upErr;
-        const { data } = await supabase.storage
-          .from("leave-attachments")
-          .createSignedUrl(path, 60 * 60 * 24 * 365);
-        patch.attachment_url = data?.signedUrl ?? path;
+        // Store only the object path; viewers sign a short-lived URL on open.
+        patch.attachment_url = path;
       }
 
       const wasClosed = input.end_date != null;

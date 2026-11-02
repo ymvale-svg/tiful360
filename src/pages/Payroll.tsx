@@ -6,6 +6,7 @@ import { useCompany } from "@/hooks/useCompany";
 import { Wallet, FileText, Stethoscope, Calendar, Clock4, Upload, LayoutDashboard, FolderOpen, Settings as SettingsIcon, Save, Mail, Paperclip, AlertCircle, ClipboardList, UserPlus, MapPin, ChevronRight, FileDown, ExternalLink, CheckCircle2, Loader2, XCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { LeaveAttachmentLink } from "@/components/LeaveAttachmentLink";
 import { PayslipsUploadDialog } from "@/components/PayslipsUploadDialog";
 import { getPayslipSignedUrl, usePayslipBatches, useUnmatchedPayslips, useBatchPayslips, useDeletePayslip, useDeleteBatch } from "@/hooks/usePayslips";
 import { Trash2 } from "lucide-react";
@@ -501,10 +502,10 @@ function OverviewTab() {
                   </p>
                   {r.attachment_url && (
                     <Button asChild variant="outline" size="sm" className="gap-1">
-                      <a href={r.attachment_url} target="_blank" rel="noopener noreferrer">
+                      <LeaveAttachmentLink value={r.attachment_url}>
                         <Paperclip className="w-3 h-3" aria-hidden="true" />
                         אישור מחלה
-                      </a>
+                      </LeaveAttachmentLink>
                     </Button>
                   )}
                 </div>
@@ -532,10 +533,10 @@ function OverviewTab() {
                   </p>
                   {r.attachment_url && (
                     <Button asChild variant="outline" size="sm" className="gap-1">
-                      <a href={r.attachment_url} target="_blank" rel="noopener noreferrer">
+                      <LeaveAttachmentLink value={r.attachment_url}>
                         <Paperclip className="w-3 h-3" aria-hidden="true" />
                         קובץ מצורף
-                      </a>
+                      </LeaveAttachmentLink>
                     </Button>
                   )}
                 </div>
