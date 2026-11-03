@@ -135,7 +135,7 @@ export default function EmployeeDetail() {
   const nonVehicleAssets = employeeAssets.filter((a: any) => !isVehicleAsset(a));
   const { isAdmin, isSuperAdmin, isPayroll, isHR, isOperations, isFinance, user } = useAuth();
   const qc = useQueryClient();
-  const canEditRemotePunch = isSuperAdmin || isAdmin || isPayroll || isOperations || isFinance;
+  const canEditRemotePunch = isSuperAdmin || isAdmin || isPayroll || isHR || isOperations || isFinance;
   const [savingRemote, setSavingRemote] = useState(false);
   const [savingAttendance, setSavingAttendance] = useState(false);
 

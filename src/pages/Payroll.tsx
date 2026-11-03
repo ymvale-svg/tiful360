@@ -45,7 +45,7 @@ const HUB_TILES: HubTile[] = [
   { key: "onboarding", label: "קליטת עובדים", description: "תהליכי קליטה, טופס צרכים וצ'קליסט תפעול", icon: UserPlus, to: "/onboarding", roles: ["admin", "super_admin", "operations", "it_manager", "hr"] },
   { key: "map", label: "מפת נוכחות חיה", description: "מיקומי GPS של עובדים שהחתימו היום", icon: MapPin, to: "/attendance-map", roles: ["admin", "super_admin", "payroll", "hr", "direct_manager"] },
   { key: "tax101", label: "טפסי עובדים", description: "ניהול טפסי 101 ואישורים", icon: FileText },
-  { key: "batches", label: "ניהול תלושים", description: "העלאת אצוות תלושים ושיוך אוטומטי", icon: FolderOpen, roles: ["admin", "super_admin", "payroll"] },
+  { key: "batches", label: "ניהול תלושים", description: "העלאת אצוות תלושים ושיוך אוטומטי", icon: FolderOpen, roles: ["admin", "super_admin", "payroll", "hr"] },
   { key: "settings", label: "הגדרות שכר", description: "כתובות דיווח, דוחות אוטומטיים והרצה ידנית", icon: SettingsIcon, roles: ["admin", "super_admin", "payroll", "hr"] },
 ];
 

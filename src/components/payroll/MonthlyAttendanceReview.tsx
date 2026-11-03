@@ -40,8 +40,8 @@ function monthOptions() {
 
 export function MonthlyAttendanceReview() {
   const { activeCompanyId } = useCompany();
-  const { isPayroll, isSuperAdmin, hasRole } = useAuth() as any;
-  const canApprove = isPayroll || isSuperAdmin || hasRole?.("admin");
+  const { isPayroll, isHR, isSuperAdmin, hasRole } = useAuth() as any;
+  const canApprove = isPayroll || isHR || isSuperAdmin || hasRole?.("admin");
   const holidays = useCompanyHolidaySet();
   const { toast } = useToast();
   const qc = useQueryClient();

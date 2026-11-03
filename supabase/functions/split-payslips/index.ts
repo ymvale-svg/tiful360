@@ -230,7 +230,7 @@ Deno.serve(async (req) => {
     const roleSet = new Set((roles ?? []).map((r: any) => r.role));
     const isSuper = roleSet.has('super_admin');
     if (!isSuper) {
-      if (!(roleSet.has('admin') || roleSet.has('it_manager') || roleSet.has('payroll'))) {
+      if (!(roleSet.has('admin') || roleSet.has('it_manager') || roleSet.has('payroll') || roleSet.has('hr'))) {
         return new Response(JSON.stringify({ error: 'Forbidden' }), {
           status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
