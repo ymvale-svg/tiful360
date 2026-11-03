@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { AlertCircle, ArrowRight, ArrowLeft, Pencil, Check, X, Clock, Plus } from "lucide-react";
@@ -64,6 +65,7 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
   const { toast } = useToast();
   const holidays = useCompanyHolidaySet();
   const confirm = useConfirm();
+  const qc = useQueryClient();
   /** Over the monthly limit: the change goes to payroll as a request with a mandatory reason. */
   const [correctionFor, setCorrectionFor] = useState<{ id: string; d: Date } | null>(null);
 
@@ -172,14 +174,21 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
     if (!p?.employee_id) throw new Error("ההחתמה לא נמצאה");
     const day = ymd(new Date(p.punch_at));
     const time = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-    const { error } = await supabase.from("attendance_corrections").insert({
+    const { data, error } = await supabase.from("attendance_corrections").insert({
       company_id: p.company_id, employee_id: p.employee_id, correction_date: day,
       requested_check_in: p.direction === "out" ? null : time,
       requested_check_out: p.direction === "out" ? time : null,
       reason, initiated_by: "employee", status: "pending",
-    } as any);
+    } as any).select("status").single();
     if (error) throw new Error(error.message);
-    toast({ title: "בקשת התיקון נשלחה", description: "השעה תתעדכן לאחר אישור" });
+    // Companies with auto-approve apply the correction immediately (DB trigger).
+    if ((data as any)?.status === "approved") {
+      qc.invalidateQueries({ queryKey: ["attendance_punches"] });
+      toast({ title: "התיקון נשמר", description: "השעה עודכנה" });
+    } else {
+      toast({ title: "בקשת התיקון נשלחה", description: "השעה תתעדכן לאחר אישור" });
+    }
+    qc.invalidateQueries({ queryKey: ["my-attendance-corrections"] });
   };
 
   const save = async (id: string, iso: string, newTime: string) => {
