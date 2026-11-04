@@ -24,6 +24,7 @@ import { StateView } from "@/components/feedback/StateView";
 import { FormField } from "@/components/feedback/FormField";
 import { Input } from "@/components/ui/input";
 import { PayslipAssignConfirmDialog, type PendingPayslipAssign } from "@/components/payroll/PayslipAssignConfirmDialog";
+import { LEGACY_BY_PATH, legacyTarget, tabRoles } from "@/lib/screenAccess";
 
 const MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
 const TYPE_LABELS_PAYROLL: Record<string, string> = { vacation: "חופשה", sick: "מחלה", reserve: "מילואים", personal: "יום אישי", other: "אחר" };
@@ -34,7 +35,7 @@ type HubTile = {
   description: string;
   icon: typeof Wallet;
   to?: string;
-  roles?: string[];
+  roles?: readonly string[];
 };
 
 const HUB_TILES: HubTile[] = [
@@ -42,8 +43,8 @@ const HUB_TILES: HubTile[] = [
   { key: "reports", label: "דוחות נוכחות וחוסרים", description: "דוח חודשי מרוכז: חוסרים, היעדרויות, בקשות תיקון, מייל ו-PDF", icon: ClipboardList },
   { key: "attendance", label: "שעוני נוכחות", description: "החתמות, שעונים פיזיים והחתמות ללא שיוך", icon: Clock4 },
   { key: "michpal", label: "ייצוא למיכפל", description: "ייצוא נתוני נוכחות חודשיים לקובץ קליטה במיכפל (CSV)", icon: FileDown, roles: ["admin", "super_admin", "payroll", "hr"] },
-  { key: "onboarding", label: "קליטת עובדים", description: "תהליכי קליטה, טופס צרכים וצ'קליסט תפעול", icon: UserPlus, to: "/onboarding", roles: ["admin", "super_admin", "operations", "it_manager", "hr"] },
-  { key: "map", label: "מפת נוכחות חיה", description: "מיקומי GPS של עובדים שהחתימו היום", icon: MapPin, to: "/attendance-map", roles: ["admin", "super_admin", "payroll", "hr", "direct_manager"] },
+  { key: "onboarding", label: "קליטת עובדים", description: "תהליכי קליטה, טופס צרכים וצ'קליסט תפעול", icon: UserPlus, to: legacyTarget(LEGACY_BY_PATH["/onboarding"]), roles: tabRoles("employees", "onboarding") },
+  { key: "map", label: "מפת נוכחות חיה", description: "מיקומי GPS של עובדים שהחתימו היום", icon: MapPin, to: legacyTarget(LEGACY_BY_PATH["/attendance-map"]), roles: tabRoles("requests", "map") },
   { key: "tax101", label: "טפסי עובדים", description: "ניהול טפסי 101 ואישורים", icon: FileText },
   { key: "batches", label: "ניהול תלושים", description: "העלאת אצוות תלושים ושיוך אוטומטי", icon: FolderOpen, roles: ["admin", "super_admin", "payroll", "hr"] },
   { key: "settings", label: "הגדרות שכר", description: "כתובות דיווח, דוחות אוטומטיים והרצה ידנית", icon: SettingsIcon, roles: ["admin", "super_admin", "payroll", "hr"] },

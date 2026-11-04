@@ -30,7 +30,11 @@ const STATUS_META: Record<string, { label: string; className: string }> = {
   expired: { label: "פגה", className: "bg-muted text-muted-foreground border-border" },
 };
 
-export default function Announcements() {
+/**
+ * Announcements shown in the employee portal. Managed from portal management
+ * (Settings → פורטל עובדים), not a separate screen.
+ */
+export function AnnouncementsManager() {
   const { toast } = useToast();
   const { data: announcements = [], isLoading, error: loadError, refetch } = useCompanyAnnouncements();
   const { data: signature } = useSignatureDefaults();
@@ -120,11 +124,14 @@ export default function Announcements() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in" dir="rtl">
-      <div className="page-header flex flex-wrap items-start justify-between gap-3">
+    <section className="space-y-4" dir="rtl" aria-labelledby="portal-announcements-title">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="page-title">הודעות לפורטל העובדים</h1>
-          <p className="page-subtitle">פרסום, תזמון וניהול הודעות שמוצגות לעובדים בפורטל</p>
+          <h2 id="portal-announcements-title" className="text-lg font-semibold flex items-center gap-2">
+            <Megaphone className="w-5 h-5 text-primary" aria-hidden="true" />
+            הודעות לעובדים
+          </h2>
+          <p className="text-sm text-muted-foreground">פרסום, תזמון וניהול הודעות שמוצגות לעובדים בפורטל</p>
         </div>
         <Button className="gap-1.5" onClick={openNew}>
           <Plus className="w-4 h-4" aria-hidden="true" />
@@ -219,6 +226,6 @@ export default function Announcements() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </section>
   );
 }

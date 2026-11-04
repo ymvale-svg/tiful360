@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   UserMinus, Clock, SlidersHorizontal, OctagonAlert, AlertTriangle, Info,
 } from "lucide-react";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useLocation } from "react-router-dom";
 import { useDashboardStats, useAlerts, useEmployees, useActivityLog } from "@/hooks/useData";
 import { useAuth } from "@/hooks/useAuth";
 import { useDashboardTrends } from "@/hooks/useDashboardTrends";
@@ -24,9 +24,11 @@ import { EmptyState, ListSkeleton } from "@/components/feedback/StateView";
 import { ActivityTimeline } from "@/components/ui/activity-timeline";
 import { Skeleton } from "@/components/ui/skeleton";
 import { notificationCenter } from "@/lib/notificationCenter";
+import { AlertsPanel } from "@/components/dashboard/AlertsPanel";
+import { canAccess, hubPath, tabRoles } from "@/lib/screenAccess";
 
 export default function Dashboard() {
-  const { roles, loading, user } = useAuth();
+  const { roles, loading, user, isSuperAdmin } = useAuth();
   const { data: stats } = useDashboardStats();
   const { data: alerts } = useAlerts();
   const { data: employees } = useEmployees();
@@ -34,6 +36,15 @@ export default function Dashboard() {
   const { data: trends } = useDashboardTrends(stats);
   const { prefs, toggleHidden, toggleWide, setOrder, reset, isCustomized } = useDashboardPrefs(user?.id);
   const [customizeOpen, setCustomizeOpen] = useState(false);
+  const { hash } = useLocation();
+  const showAlertsPanel = canAccess(roles, isSuperAdmin, tabRoles("dashboard", "alerts"));
+
+  // The old /alerts screen redirects to /#alerts: scroll to the panel once it is rendered.
+  useEffect(() => {
+    if (hash !== "#alerts" || !showAlertsPanel) return;
+    const id = window.setTimeout(() => document.getElementById("alerts")?.scrollIntoView({ block: "start" }), 0);
+    return () => window.clearTimeout(id);
+  }, [hash, showAlertsPanel]);
 
   // Wait for roles to load before rendering — prevents flash of admin UI
   // for employee-only users before the redirect kicks in.
@@ -73,10 +84,10 @@ export default function Dashboard() {
   const leavingEmployees = employees?.filter(e => e.status === "leaving") ?? [];
 
   // Every number leads to the list behind it. Open alerts open the notification center, which
-  // every dashboard role can use (the /alerts page is admin and IT only).
+  // every dashboard role can use (the full alerts panel below is admin and IT only).
   const KPI_DEFS: Record<KpiKey, { label: string; value?: number; href?: string; linkLabel?: string; onOpen?: () => void }> = {
     activeEmployees: { label: "עובדים פעילים", value: stats?.activeEmployees, href: "/employees" },
-    onboardingEmployees: { label: "עובדים בקליטה", value: stats?.onboardingEmployees, href: "/onboarding" },
+    onboardingEmployees: { label: "עובדים בקליטה", value: stats?.onboardingEmployees, href: hubPath("/employees", "onboarding") },
     totalAssets: { label: "פריטי ציוד", value: stats?.totalAssets, href: "/assets" },
     openAlerts: { label: "התראות פתוחות", value: stats?.openAlerts, onOpen: () => notificationCenter.set(true), linkLabel: "לפתיחת ההתראות" },
     openTickets: { label: "קריאות שירות פתוחות", value: stats?.openTickets, href: "/it-tickets" },
@@ -253,6 +264,8 @@ export default function Dashboard() {
           ))}
         </div>
       )}
+
+      {showAlertsPanel && <AlertsPanel />}
 
       <CustomizeDashboardDialog
         open={customizeOpen}

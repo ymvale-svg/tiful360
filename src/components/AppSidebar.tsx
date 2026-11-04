@@ -6,34 +6,24 @@ import {
   Shield,
   UserCircle,
   Settings,
-  Building2,
   ChevronLeft,
   ChevronRight,
   Crown,
   Wallet,
-  Megaphone,
-  UserPlus,
-  MapPin,
-  Bell,
   CalendarDays,
-  ClipboardCheck,
-  PackageOpen,
-  Car,
-  Tags,
 } from "lucide-react";
 import { useAlerts, useDashboardStats } from "@/hooks/useData";
 import { useEffect, useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import logoImg from "@/assets/logo.svg";
-
-type AppRole = "admin" | "it_manager" | "employee" | "super_admin" | "direct_manager" | "payroll" | "hr" | "operations" | "finance" | "legal" | "secretariat" | "ceo";
+import { SCREEN_ROLES, canAccess, type AppRole, type RoleList } from "@/lib/screenAccess";
 
 interface NavItem {
   label: string;
   icon: any;
   path: string;
-  roles?: AppRole[];
+  roles?: RoleList;
   /** When true, the super-admin bypass does not apply (item is only for the listed roles). */
   strictRoles?: boolean;
   preload?: () => Promise<unknown>;
@@ -41,17 +31,13 @@ interface NavItem {
 
 // Preload functions for lazy chunks — triggered on hover for instant navigation
 const preload = {
+  requests: () => import("@/pages/Requests"),
   assets: () => import("@/pages/Assets"),
   itTickets: () => import("@/pages/ITTickets"),
   payroll: () => import("@/pages/Payroll"),
   settings: () => import("@/pages/Settings"),
   portal: () => import("@/pages/EmployeePortal"),
-  companies: () => import("@/pages/Companies"),
-  announcements: () => import("@/pages/Announcements"),
-  onboarding: () => import("@/pages/Onboarding"),
 };
-
-const ALL_OPS: AppRole[] = ["admin", "it_manager", "super_admin", "operations", "direct_manager", "payroll", "hr", "finance", "legal", "secretariat", "ceo"];
 
 type CountKey = "alerts" | "onboarding" | "tickets";
 
@@ -62,53 +48,35 @@ interface NavGroup {
 }
 
 /**
- * One fixed map for every role: roles hide items, they never move them. Paths match the routes
- * in App.tsx and their role lists, so every screen a user may open is reachable from here.
+ * One fixed map for every role: roles hide items, they never move them. Each item is a hub
+ * screen whose tabs carry their own role lists (src/lib/screenAccess.ts); merged screens are
+ * tabs, and their old URLs redirect to them.
  */
 export const navGroups: NavGroup[] = [
   {
     items: [
-      { label: "לוח בקרה", icon: LayoutDashboard, path: "/", roles: ["admin", "it_manager", "super_admin", "operations", "payroll", "hr", "finance"] },
-      { label: "התראות", icon: Bell, path: "/alerts", roles: ["admin", "it_manager", "super_admin"], count: "alerts" },
+      { label: "לוח בקרה", icon: LayoutDashboard, path: "/", roles: SCREEN_ROLES.dashboard, count: "alerts" },
     ],
   },
   {
     title: "אנשים",
     items: [
-      { label: "עובדים", icon: Users, path: "/employees", roles: ["admin", "super_admin", "operations", "payroll", "hr", "finance"] },
-      { label: "קליטת עובדים", icon: UserPlus, path: "/onboarding", roles: ["admin", "super_admin", "operations", "it_manager", "hr"], preload: preload.onboarding, count: "onboarding" },
-      { label: "בקשות חופשה", icon: CalendarDays, path: "/leave-requests", roles: ["admin", "super_admin", "direct_manager", "payroll", "hr"] },
-      { label: "תיקוני נוכחות", icon: ClipboardCheck, path: "/attendance-corrections", roles: ["admin", "super_admin", "direct_manager", "payroll", "hr"] },
-      { label: "מפת נוכחות", icon: MapPin, path: "/attendance-map", roles: ["admin", "super_admin", "payroll", "hr", "direct_manager"] },
-      { label: "שכר ונוכחות", icon: Wallet, path: "/payroll", roles: ["admin", "super_admin", "payroll", "hr"], preload: preload.payroll },
+      { label: "עובדים", icon: Users, path: "/employees", roles: SCREEN_ROLES.employees, count: "onboarding" },
+      { label: "נוכחות ובקשות", icon: CalendarDays, path: "/requests", roles: SCREEN_ROLES.requests, preload: preload.requests },
+      { label: "שכר ונוכחות", icon: Wallet, path: "/payroll", roles: SCREEN_ROLES.payroll, preload: preload.payroll },
     ],
   },
   {
-    title: "משאבים",
+    title: "משאבים ושירות",
     items: [
-      { label: "ציוד והרשאות", icon: Package, path: "/assets", roles: ["admin", "it_manager", "super_admin", "operations", "finance", "legal"], preload: preload.assets },
-      { label: "ממתינים לשיוך", icon: PackageOpen, path: "/assets-handover", roles: ["admin", "it_manager", "super_admin", "operations", "finance", "legal"] },
-      { label: "רכב ומנויים", icon: Car, path: "/assets-subscriptions", roles: ["admin", "super_admin", "operations", "finance", "payroll"] },
+      { label: "ציוד ומשאבים", icon: Package, path: "/assets", roles: SCREEN_ROLES.assets, preload: preload.assets },
+      { label: "קריאות שירות", icon: Shield, path: "/it-tickets", roles: SCREEN_ROLES.tickets, preload: preload.itTickets, count: "tickets" },
     ],
   },
   {
-    title: "שירות ותקשורת",
+    title: "מערכת",
     items: [
-      { label: "קריאות שירות", icon: Shield, path: "/it-tickets", roles: ALL_OPS, preload: preload.itTickets, count: "tickets" },
-      { label: "הודעות לעובדים", icon: Megaphone, path: "/announcements", roles: ["admin", "super_admin", "ceo", "operations", "secretariat", "hr"], preload: preload.announcements },
-    ],
-  },
-  {
-    title: "ניהול",
-    items: [
-      { label: "הגדרות", icon: Settings, path: "/settings", roles: ["admin", "super_admin"], preload: preload.settings },
-      { label: "קטגוריות ציוד", icon: Tags, path: "/categories", roles: ["admin", "super_admin", "operations", "legal"] },
-      { label: "ניהול חברות", icon: Building2, path: "/companies", roles: ["super_admin"], strictRoles: true, preload: preload.companies },
-    ],
-  },
-  {
-    title: "פורטל",
-    items: [
+      { label: "ניהול", icon: Settings, path: "/settings", roles: SCREEN_ROLES.settings, preload: preload.settings },
       { label: "פורטל עובדים", icon: UserCircle, path: "/portal", preload: preload.portal },
     ],
   },
@@ -116,10 +84,7 @@ export const navGroups: NavGroup[] = [
 
 /** Same rule the routes use: listed roles, with a super-admin bypass unless strictRoles. */
 export function canSeeNavItem(item: Pick<NavItem, "roles" | "strictRoles">, roles: readonly AppRole[], isSuperAdmin: boolean) {
-  if (!item.roles) return true;
-  if (item.strictRoles) return item.roles.some((r) => roles.includes(r));
-  if (isSuperAdmin) return true;
-  return item.roles.some((r) => roles.includes(r));
+  return canAccess(roles, isSuperAdmin, item.roles, item.strictRoles);
 }
 
 interface AppSidebarProps {

@@ -41,10 +41,10 @@ export function landingExperience(isPhone = isPhoneDevice()): Experience {
 const HOME_BY_ROLE: [AppRole, string][] = [
   ["super_admin", "/"],
   ["admin", "/"],
-  ["payroll", "/leave-requests"],
+  ["payroll", "/requests"],
   ["operations", "/employees"],
   ["it_manager", "/it-tickets"],
-  ["direct_manager", "/leave-requests"],
+  ["direct_manager", "/requests"],
 ];
 
 /** First screen of the organisation system for the user's primary role. */
