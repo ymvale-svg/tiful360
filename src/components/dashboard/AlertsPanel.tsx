@@ -21,15 +21,19 @@ const severityLabel: Record<string, string> = {
   critical: "קריטי", warning: "אזהרה", info: "מידע",
 };
 
-export default function Alerts() {
+/**
+ * Full list of open alerts, shown on the dashboard (the separate /alerts screen was merged here).
+ * The section carries id="alerts" so the old /alerts URL and "all alerts" links scroll to it.
+ */
+export function AlertsPanel() {
   const { data: alerts, isLoading, error, refetch } = useAlerts();
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="page-header flex items-start justify-between gap-3">
+    <section id="alerts" className="space-y-4 scroll-mt-20" aria-labelledby="alerts-panel-title">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="page-title">התראות</h1>
-          <p className="page-subtitle">
+          <h2 id="alerts-panel-title" className="text-lg font-semibold">כל ההתראות</h2>
+          <p className="text-sm text-muted-foreground">
             {alerts?.length ?? 0} התראות פעילות • {alerts?.filter(a => a.severity === "critical").length ?? 0} קריטיות
           </p>
         </div>
@@ -92,6 +96,6 @@ export default function Alerts() {
           })}
         </ul>
       </StateView>
-    </div>
+    </section>
   );
 }

@@ -18,22 +18,12 @@ import { useCompany } from "@/hooks/useCompany";
 import { Users, ShieldCheck, ShieldOff, Ban, CheckCircle, RefreshCw, Upload, UserPlus, Send } from "lucide-react";
 import { ImportExcelDialog } from "@/components/ImportExcelDialog";
 import { InviteExternalUserDialog } from "@/components/InviteExternalUserDialog";
+import { fetchManagedUsers as fetchUsers, type ManagedUser } from "@/lib/managedUsers";
+import { usePermissionGroups, useSetGroupMembership } from "@/hooks/usePermissionGroups";
+import { canGrantRoles } from "@/lib/permissionGroups";
 import { format } from "date-fns";
 import { he } from "date-fns/locale";
 
-interface ManagedUser {
-  id: string;
-  email: string | null;
-  phone: string | null;
-  full_name: string | null;
-  avatar_url: string | null;
-  provider: string;
-  created_at: string;
-  last_sign_in_at: string | null;
-  banned: boolean;
-  banned_until: string | null;
-  roles: string[];
-}
 
 const ROLE_LABELS: Record<string, string> = {
   super_admin: "סופר אדמין",
@@ -65,29 +55,7 @@ const ROLE_COLORS: Record<string, string> = {
   employee: "bg-secondary text-secondary-foreground border-secondary",
 };
 
-// Roles that operations users cannot grant or revoke
-const OPERATIONS_RESTRICTED_ROLES = new Set(["super_admin", "admin", "ceo", "payroll", "hr"]);
 
-async function fetchUsers(companyId: string | null): Promise<ManagedUser[]> {
-  const { data: { session } } = await supabase.auth.getSession();
-  const params = new URLSearchParams({ action: "list" });
-  if (companyId) params.set("company_id", companyId);
-  const res = await fetch(
-    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-users?${params}`,
-    {
-      headers: {
-        Authorization: `Bearer ${session?.access_token}`,
-        "Content-Type": "application/json",
-        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-      },
-    }
-  );
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || "Failed to fetch users");
-  }
-  return res.json();
-}
 
 export function UsersAndRolesTab() {
   const { toast } = useToast();
@@ -100,8 +68,10 @@ export function UsersAndRolesTab() {
 
   const canInviteUsers = isAdmin || isSuperAdmin || isHR || isPayroll || isOperations || isIT;
 
-  // Operations-only users (no admin/super_admin) cannot manage sensitive roles
-  const restrictRoles = isOperations && !isAdmin && !isSuperAdmin;
+  // Same callers the DB lets add/remove group members (can_manage_group_members).
+  const canManageMembers = isAdmin || isHR || isPayroll;
+  const { data: groups = [] } = usePermissionGroups(activeCompanyId);
+  const setMembership = useSetGroupMembership();
 
   const { data: users = [], isLoading, refetch } = useQuery({
     queryKey: ["managed-users", activeCompanyId],
@@ -113,7 +83,7 @@ export function UsersAndRolesTab() {
     if (!searchTerms.length) return users;
     return users.filter((u) =>
       searchTerms.every((term) =>
-        [u.full_name, u.email, u.phone, u.roles.map((r) => ROLE_LABELS[r] || r).join(" ")]
+        [u.full_name, u.email, u.phone, (u.groups ?? []).map((g) => g.name).join(" "), u.roles.map((r) => ROLE_LABELS[r] || r).join(" ")]
           .some((field) => (field ?? "").toLowerCase().includes(term))
       )
     );
@@ -127,32 +97,6 @@ export function UsersAndRolesTab() {
       if (activeCompanyId) q = q.eq("company_id", activeCompanyId);
       const { data } = await q;
       return new Set((data ?? []).map((e: any) => e.linked_user_id).filter(Boolean));
-    },
-  });
-
-  const roleMutation = useMutation({
-    mutationFn: async ({ user_id, role, remove }: { user_id: string; role: string; remove: boolean }) => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-users?action=set-role`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${session?.access_token}`,
-            "Content-Type": "application/json",
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-          body: JSON.stringify({ user_id, role, remove }),
-        }
-      );
-      if (!res.ok) throw new Error((await res.json()).error);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["managed-users"] });
-      toast({ title: "התפקיד עודכן בהצלחה" });
-    },
-    onError: (err: any) => {
-      toast({ title: "שגיאה בעדכון תפקיד", description: err.message, variant: "destructive" });
     },
   });
 
@@ -215,27 +159,37 @@ export function UsersAndRolesTab() {
 
   // Access changes are confirmed first: nothing is applied until the dialog is approved.
   type PendingAccessChange =
-    | { kind: "role"; userId: string; userName: string; role: string; remove: boolean }
+    | { kind: "group"; userId: string; userName: string; groupId: string; groupName: string; remove: boolean }
     | { kind: "ban"; userId: string; userName: string };
   const [pendingChange, setPendingChange] = useState<PendingAccessChange | null>(null);
-  const accessBusy = roleMutation.isPending || banMutation.isPending;
+  const accessBusy = setMembership.isPending || banMutation.isPending;
 
-  const handleRoleChange = (user: { id: string; full_name?: string | null; email?: string | null }, currentRoles: string[], newRole: string) => {
-    if (!newRole) return;
+  const handleGroupChange = (user: ManagedUser, groupId: string) => {
+    const group = groups.find((g) => g.id === groupId);
+    if (!group) return;
     setPendingChange({
-      kind: "role",
+      kind: "group",
       userId: user.id,
       userName: user.full_name || user.email || "המשתמש",
-      role: newRole,
-      remove: currentRoles.includes(newRole),
+      groupId,
+      groupName: group.name,
+      remove: (user.groups ?? []).some((g) => g.id === groupId),
     });
   };
 
   const confirmPendingChange = async () => {
     if (!pendingChange) return;
     try {
-      if (pendingChange.kind === "role") {
-        await roleMutation.mutateAsync({ user_id: pendingChange.userId, role: pendingChange.role, remove: pendingChange.remove });
+      if (pendingChange.kind === "group") {
+        try {
+          await setMembership.mutateAsync({
+            groupId: pendingChange.groupId, userId: pendingChange.userId, member: !pendingChange.remove,
+          });
+          toast({ title: pendingChange.remove ? "המשתמש הוסר מהקבוצה" : "המשתמש שויך לקבוצה" });
+        } catch (err: any) {
+          toast({ title: "שגיאה בעדכון הקבוצה", description: err.message, variant: "destructive" });
+          throw err;
+        }
       } else {
         await banMutation.mutateAsync({ user_id: pendingChange.userId, ban: true });
       }
@@ -245,14 +199,14 @@ export function UsersAndRolesTab() {
     }
   };
 
-  const pendingRoleLabel = pendingChange?.kind === "role" ? ROLE_LABELS[pendingChange.role] || pendingChange.role : "";
+  const pendingGroupName = pendingChange?.kind === "group" ? pendingChange.groupName : "";
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-foreground">משתמשים ותפקידים</h2>
-          <p className="text-sm text-muted-foreground">צפייה, שינוי תפקידים והשהיית חשבונות</p>
+          <p className="text-sm text-muted-foreground">צפייה, שיוך לקבוצות הרשאה והשהיית חשבונות בחברה הנוכחית</p>
         </div>
         <div className="flex items-center gap-2">
           {(isAdmin || isSuperAdmin || isHR || isPayroll) && (
@@ -271,7 +225,7 @@ export function UsersAndRolesTab() {
       <SearchInput
         wrapperClassName="max-w-md"
         label="חיפוש משתמשים"
-        placeholder="חפש לפי שם, דוא״ל, טלפון או תפקיד..."
+        placeholder="חפש לפי שם, דוא״ל, טלפון או קבוצה..."
         value={search}
         onValueChange={setSearch}
       />
@@ -315,7 +269,7 @@ export function UsersAndRolesTab() {
                 <TableHead className="text-start">משתמש</TableHead>
                 <TableHead className="text-start">סוג</TableHead>
                 <TableHead className="text-start">ספק אימות</TableHead>
-                <TableHead className="text-start">תפקידים</TableHead>
+                <TableHead className="text-start">קבוצות הרשאה</TableHead>
                 <TableHead className="text-start">כניסה אחרונה</TableHead>
                 <TableHead className="text-start">סטטוס</TableHead>
                 <TableHead className="text-start">פעולות</TableHead>
@@ -365,14 +319,16 @@ export function UsersAndRolesTab() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {u.roles.length === 0 ? (
-                          <span className="text-xs text-muted-foreground">ללא תפקיד</span>
-                        ) : (
-                          u.roles.map((r) => (
-                            <Badge key={r} variant="outline" className={`text-xs ${ROLE_COLORS[r] || ""}`}>
-                              {ROLE_LABELS[r] || r}
-                            </Badge>
-                          ))
+                        {u.roles.includes("super_admin") && (
+                          <Badge variant="outline" className={`text-xs ${ROLE_COLORS.super_admin}`}>{ROLE_LABELS.super_admin}</Badge>
+                        )}
+                        {(u.groups ?? []).map((g) => (
+                          <Badge key={g.id} variant="outline" className="text-xs">{g.name}</Badge>
+                        ))}
+                        {!u.roles.includes("super_admin") && (u.groups ?? []).length === 0 && (
+                          <span className="text-xs text-muted-foreground">
+                            {u.roles.includes("employee") ? "עובד בלבד" : "ללא הרשאות"}
+                          </span>
                         )}
                       </div>
                     </TableCell>
@@ -390,27 +346,29 @@ export function UsersAndRolesTab() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Select
-                          value=""
-                          onValueChange={(role) => handleRoleChange(u, u.roles, role)}
-                          disabled={accessBusy}
-                        >
-                          <SelectTrigger
-                            className="w-[130px] h-8 text-xs"
-                            aria-label={`שינוי תפקיד עבור ${u.full_name || u.email || "המשתמש"}`}
+                        {canManageMembers && (isSuperAdmin || u.id !== currentUser?.id) && groups.length > 0 && (
+                          <Select
+                            value=""
+                            onValueChange={(groupId) => handleGroupChange(u, groupId)}
+                            disabled={accessBusy}
                           >
-                            <SelectValue placeholder="שנה תפקיד" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.entries(ROLE_LABELS)
-                              .filter(([key]) => !restrictRoles || !OPERATIONS_RESTRICTED_ROLES.has(key))
-                              .map(([key, label]) => (
-                                <SelectItem key={key} value={key} className="text-xs">
-                                  {u.roles.includes(key) ? `הסר: ${label}` : `הוסף: ${label}`}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
+                            <SelectTrigger
+                              className="w-[150px] h-8 text-xs"
+                              aria-label={`שיוך לקבוצת הרשאה עבור ${u.full_name || u.email || "המשתמש"}`}
+                            >
+                              <SelectValue placeholder="שייך לקבוצה" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {groups
+                                .filter((g) => canGrantRoles(g.roles, isSuperAdmin))
+                                .map((g) => (
+                                  <SelectItem key={g.id} value={g.id} className="text-xs">
+                                    {(u.groups ?? []).some((ug) => ug.id === g.id) ? `הסר מ: ${g.name}` : `הוסף ל: ${g.name}`}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        )}
 
                         {canInviteUsers && u.email && !u.last_sign_in_at && !u.banned && (
                           <Button
@@ -466,18 +424,18 @@ export function UsersAndRolesTab() {
             <AlertDialogTitle>
               {pendingChange?.kind === "ban"
                 ? `להשהות את ${pendingChange.userName}?`
-                : pendingChange?.kind === "role" && pendingChange.remove
-                  ? `להסיר את התפקיד "${pendingRoleLabel}" מ-${pendingChange.userName}?`
-                  : pendingChange?.kind === "role"
-                    ? `להוסיף את התפקיד "${pendingRoleLabel}" ל-${pendingChange.userName}?`
+                : pendingChange?.kind === "group" && pendingChange.remove
+                  ? `להסיר את ${pendingChange.userName} מהקבוצה "${pendingGroupName}"?`
+                  : pendingChange?.kind === "group"
+                    ? `לשייך את ${pendingChange.userName} לקבוצה "${pendingGroupName}"?`
                     : ""}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {pendingChange?.kind === "ban"
                 ? "המשתמש לא יוכל להתחבר למערכת עד שיופעל מחדש."
-                : pendingChange?.kind === "role" && pendingChange.remove
-                  ? "ההרשאות של התפקיד יוסרו מהמשתמש מיד. השינוי נרשם ביומן ההרשאות."
-                  : "המשתמש יקבל את ההרשאות של התפקיד מיד. השינוי נרשם ביומן ההרשאות."}
+                : pendingChange?.kind === "group" && pendingChange.remove
+                  ? "ההרשאות של הקבוצה יוסרו מהמשתמש בחברה זו מיד. השינוי נרשם ביומן ההרשאות."
+                  : "המשתמש יקבל את ההרשאות של הקבוצה בחברה זו מיד. השינוי נרשם ביומן ההרשאות."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -485,7 +443,7 @@ export function UsersAndRolesTab() {
             <AlertDialogAction
               disabled={accessBusy}
               className={
-                pendingChange?.kind === "ban" || (pendingChange?.kind === "role" && pendingChange.remove)
+                pendingChange?.kind === "ban" || (pendingChange?.kind === "group" && pendingChange.remove)
                   ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   : undefined
               }
@@ -498,9 +456,9 @@ export function UsersAndRolesTab() {
                 ? "מעדכן..."
                 : pendingChange?.kind === "ban"
                   ? "השהה משתמש"
-                  : pendingChange?.kind === "role" && pendingChange.remove
-                    ? "הסר תפקיד"
-                    : "הוסף תפקיד"}
+                  : pendingChange?.kind === "group" && pendingChange.remove
+                    ? "הסר מהקבוצה"
+                    : "שייך לקבוצה"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

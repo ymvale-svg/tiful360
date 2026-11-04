@@ -15,7 +15,7 @@ export function OnboardingCard() {
           <UserPlus className="w-4 h-4 text-primary" />
           עובדים בקליטה
         </h2>
-        <Link to="/onboarding" className="text-xs text-primary hover:underline">הכל</Link>
+        <Link to="/employees?tab=onboarding" className="text-xs text-primary hover:underline">הכל</Link>
       </div>
       <div className="divide-y divide-border/50">
         {active.slice(0, 4).map((p) => {
@@ -26,7 +26,7 @@ export function OnboardingCard() {
           return (
             <Link
               key={p.id}
-              to="/onboarding"
+              to="/employees?tab=onboarding"
               className="p-4 flex items-center gap-3 hover:bg-muted/30 transition-colors"
             >
               <div className="flex-1 min-w-0">

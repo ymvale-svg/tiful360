@@ -1,9 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { SearchInput } from "@/components/ui/search-input";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Plus, Zap, MoreHorizontal, Package, UserRound, FolderTree, FileSignature, Ticket } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useAssets, useEmployees, useAssetCategories } from "@/hooks/useData";
 import { AddAssetDialog } from "@/components/AddAssetDialog";
@@ -16,6 +15,13 @@ import { getDomain, domainKeyToSlug } from "@/lib/assetDomains";
 
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useHubTab } from "@/hooks/useHubTab";
+import { HubTabBar } from "@/components/hub/HubTabBar";
+import { ListSkeleton } from "@/components/feedback/StateView";
+
+// Merged screens: hand-over of unassigned items and vehicle subscriptions are tabs here.
+const UnassignedAssets = lazy(() => import("@/pages/UnassignedAssets"));
+const VehicleSubscriptions = lazy(() => import("@/pages/VehicleSubscriptions"));
 
 const assetStatusLabels: Record<string, string> = {
   in_use: "בשימוש", in_stock: "במלאי", in_repair: "בתיקון", lost: "אבד",
@@ -30,7 +36,8 @@ export default function Assets() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [searchFocused, setSearchFocused] = useState(false);
 
-  const activeTab = searchParams.get("tab") === "categories" ? "categories" : "assets";
+  const { tabs, active: activeTab, setActive: setActiveTab } = useHubTab("assets");
+  const canOpenTab = (key: string) => tabs.some((t) => t.key === key);
 
   const [addOpen, setAddOpen] = useState(false);
   const [addCategoryId, setAddCategoryId] = useState<string | undefined>(undefined);
@@ -183,13 +190,10 @@ export default function Assets() {
 
   return (
     <div className="space-y-6 animate-fade-in" dir="rtl">
-      <Tabs value={activeTab} onValueChange={(v) => setSearchParams(v === "assets" ? {} : { tab: v })} dir="rtl">
-        <TabsList>
-          <TabsTrigger value="assets">משאבים</TabsTrigger>
-          <TabsTrigger value="categories">קטגוריות</TabsTrigger>
-        </TabsList>
+      <HubTabBar tabs={tabs} active={activeTab} onChange={setActiveTab} label="ציוד ומשאבים" />
 
-        <TabsContent value="assets" className="space-y-5 mt-4">
+      {activeTab === "assets" && (
+        <div className="space-y-5" role="tabpanel" aria-label="משאבים">
 
 
               <div className="flex items-start justify-between flex-wrap gap-3">
@@ -244,20 +248,22 @@ export default function Assets() {
                       size="sm"
                       variant="secondary"
                       className="hidden md:inline-flex gap-1.5 rounded-full"
-                      onClick={() => navigate("/assets-handover")}
+                      onClick={() => setActiveTab("handover")}
                     >
                       <FileSignature className="w-4 h-4" />
                       בצע מסירה
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      className="hidden md:inline-flex gap-1.5 rounded-full"
-                      onClick={() => navigate("/assets-subscriptions")}
-                    >
-                      <Ticket className="w-4 h-4" />
-                      מנויים ואגרות
-                    </Button>
+                    {canOpenTab("subscriptions") && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="hidden md:inline-flex gap-1.5 rounded-full"
+                        onClick={() => setActiveTab("subscriptions")}
+                      >
+                        <Ticket className="w-4 h-4" />
+                        מנויים ואגרות
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="outline"
@@ -275,12 +281,14 @@ export default function Assets() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48">
                         {/* Secondary toolbar actions collapse into this menu on narrow screens. */}
-                        <DropdownMenuItem className="md:hidden" onClick={() => navigate("/assets-handover")}>
+                        <DropdownMenuItem className="md:hidden" onClick={() => setActiveTab("handover")}>
                           בצע מסירה
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="md:hidden" onClick={() => navigate("/assets-subscriptions")}>
-                          מנויים ואגרות
-                        </DropdownMenuItem>
+                        {canOpenTab("subscriptions") && (
+                          <DropdownMenuItem className="md:hidden" onClick={() => setActiveTab("subscriptions")}>
+                            מנויים ואגרות
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem className="md:hidden" onClick={() => setQuickAssignOpen(true)}>
                           שיוך מהיר
                         </DropdownMenuItem>
@@ -312,10 +320,14 @@ export default function Assets() {
                         <DropdownMenuItem onClick={() => setImportOpen(true)}>
                           ייבוא מאקסל
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => setSearchParams({ tab: "categories" })}>
-                          ניהול קטגוריות
-                        </DropdownMenuItem>
+                        {canOpenTab("categories") && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => setActiveTab("categories")}>
+                              ניהול קטגוריות
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -373,12 +385,24 @@ export default function Assets() {
               />
 
 
-        </TabsContent>
+        </div>
+      )}
 
-        <TabsContent value="categories" className="mt-4">
-          <CategoryManager />
-        </TabsContent>
-      </Tabs>
+      {activeTab === "handover" && (
+        <Suspense fallback={<ListSkeleton rows={5} />}>
+          <div role="tabpanel" aria-label="ממתינים לשיוך"><UnassignedAssets /></div>
+        </Suspense>
+      )}
+
+      {activeTab === "subscriptions" && (
+        <Suspense fallback={<ListSkeleton rows={5} />}>
+          <div role="tabpanel" aria-label="רכב ומנויים"><VehicleSubscriptions /></div>
+        </Suspense>
+      )}
+
+      {activeTab === "categories" && (
+        <div role="tabpanel" aria-label="קטגוריות"><CategoryManager /></div>
+      )}
 
       <AddAssetDialog open={addOpen} onOpenChange={(v) => { setAddOpen(v); if (!v) { setAddCategoryId(undefined); setAddTemplateName(undefined); } }} defaultCategoryId={addCategoryId} defaultAssetName={addTemplateName} />
       <ImportAssetsExcelDialog open={importOpen} onOpenChange={setImportOpen} />

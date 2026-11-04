@@ -83,6 +83,45 @@ Deno.serve(async (req) => {
       "legal",
     ]);
 
+    // Management roles are granted per company through the company's default permission
+    // group; a DB trigger derives user_roles from group memberships. Only the platform role
+    // (super_admin) and the portal role (employee) are written to user_roles directly.
+    const PLATFORM_ROLES = new Set(["super_admin", "employee"]);
+    const json = (body: unknown, status = 200) =>
+      new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+    const setRoleInCompany = async (userId: string, companyId: string | null, role: string, remove: boolean) => {
+      if (PLATFORM_ROLES.has(role)) {
+        if (remove) {
+          await adminClient.from("user_roles").delete().eq("user_id", userId).eq("role", role);
+        } else {
+          await adminClient.from("user_roles").upsert({ user_id: userId, role }, { onConflict: "user_id,role" });
+        }
+        return `תפקיד: ${role}`;
+      }
+      if (!companyId) throw new Error("company_id required for this role");
+      const { data: group, error: groupErr } = await adminClient
+        .from("permission_groups")
+        .select("id, name")
+        .eq("company_id", companyId)
+        .eq("system_key", role)
+        .maybeSingle();
+      if (groupErr) throw groupErr;
+      if (!group) throw new Error("default permission group not found");
+      if (remove) {
+        const { error } = await adminClient.from("permission_group_members").delete()
+          .eq("group_id", group.id).eq("user_id", userId);
+        if (error) throw error;
+      } else {
+        const { error } = await adminClient.from("permission_group_members").upsert(
+          { group_id: group.id, user_id: userId, company_id: companyId, added_by: caller.id },
+          { onConflict: "group_id,user_id" },
+        );
+        if (error) throw error;
+      }
+      return `קבוצה: ${group.name}`;
+    };
+
     // Helper: get caller's company IDs
     const getCallerCompanyIds = async () => {
       const { data } = await adminClient
@@ -112,6 +151,13 @@ Deno.serve(async (req) => {
       if (error) throw error;
 
       const { data: allRoles } = await adminClient.from("user_roles").select("*");
+      // Group memberships of the requested company only — companies are fully separate.
+      const { data: memberships } = companyId
+        ? await adminClient
+            .from("permission_group_members")
+            .select("user_id, permission_groups(id, name, roles)")
+            .eq("company_id", companyId)
+        : { data: [] as any[] };
 
       // Get user IDs that belong to the requested company
       let companyUserIds: Set<string> | null = null;
@@ -166,14 +212,22 @@ Deno.serve(async (req) => {
         last_sign_in_at: u.last_sign_in_at,
         banned: u.banned_until ? (new Date(u.banned_until) > new Date()) : false,
         banned_until: u.banned_until,
-        roles: allRoles?.filter((r: any) => r.user_id === u.id).map((r: any) => r.role) || [],
+        roles: companyId
+          ? Array.from(new Set([
+              ...(allRoles ?? []).filter((r: any) => r.user_id === u.id && PLATFORM_ROLES.has(r.role)).map((r: any) => r.role),
+              ...(memberships ?? []).filter((m: any) => m.user_id === u.id).flatMap((m: any) => m.permission_groups?.roles ?? []),
+            ]))
+          : allRoles?.filter((r: any) => r.user_id === u.id).map((r: any) => r.role) || [],
+        groups: (memberships ?? [])
+          .filter((m: any) => m.user_id === u.id && m.permission_groups)
+          .map((m: any) => ({ id: m.permission_groups.id, name: m.permission_groups.name })),
       }));
 
       return new Response(JSON.stringify(enriched), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (req.method === "POST" && action === "set-role") {
-      const { user_id, role, remove } = await req.json();
+      const { user_id, role, remove, company_id } = await req.json();
       if (!user_id || !role) {
         return new Response(JSON.stringify({ error: "user_id and role required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
@@ -200,13 +254,22 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: "No access to this user" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      if (remove) {
-        await adminClient.from("user_roles").delete().eq("user_id", user_id).eq("role", role);
-        await audit({ target_user_id: user_id, action: "user_roles_delete", details: `תפקיד: ${role}` });
-      } else {
-        await adminClient.from("user_roles").upsert({ user_id, role }, { onConflict: "user_id,role" });
-        await audit({ target_user_id: user_id, action: "user_roles_insert", details: `תפקיד: ${role}` });
+      if (!PLATFORM_ROLES.has(role)) {
+        if (!company_id) return json({ error: "company_id required" }, 400);
+        if (!callerIsSuperAdmin && !(await getCallerCompanyIds()).includes(company_id)) {
+          return json({ error: "No access to this company" }, 403);
+        }
       }
+
+      const details = await setRoleInCompany(user_id, company_id ?? null, role, !!remove);
+      await audit({
+        target_user_id: user_id,
+        company_id: PLATFORM_ROLES.has(role) ? null : company_id,
+        action: PLATFORM_ROLES.has(role)
+          ? (remove ? "user_roles_delete" : "user_roles_insert")
+          : (remove ? "permission_group_members_delete" : "permission_group_members_insert"),
+        details,
+      });
 
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -312,11 +375,8 @@ Deno.serve(async (req) => {
               { user_id: userId, company_id, role: default_role as any },
               { onConflict: "user_id,company_id" },
             );
-            // Grant app role
-            await adminClient.from("user_roles").upsert(
-              { user_id: userId, role: default_role as any },
-              { onConflict: "user_id,role" },
-            );
+            // Grant the role in this company (default group, or user_roles for employee)
+            await setRoleInCompany(userId, company_id, default_role, false);
             await audit({ target_user_id: userId, company_id, action: "user_invited", details: `הזמנת עובד · תפקיד: ${default_role}` });
             // Link employee record if provided
             if (emp.employee_id) {
@@ -401,18 +461,13 @@ Deno.serve(async (req) => {
         userId = invited.user.id;
       }
 
-      // Assign role (NOT employee — external user)
-      await adminClient.from("user_roles").upsert(
-        { user_id: userId!, role: role as any },
-        { onConflict: "user_id,role" },
-      );
-
-      // Grant access to each requested company
+      // Grant access to each requested company, then the role there (NOT employee — external user)
       for (const cid of company_ids) {
         await adminClient.from("user_company_access").upsert(
           { user_id: userId!, company_id: cid, role: role as any },
           { onConflict: "user_id,company_id" },
         );
+        await setRoleInCompany(userId!, cid, role, false);
         await audit({ target_user_id: userId!, company_id: cid, action: "user_invited", details: `הזמנת משתמש חיצוני · תפקיד: ${role}` });
       }
 

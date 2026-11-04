@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate, useLocation } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -13,6 +13,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PwaUpdatePrompt } from "@/components/PwaUpdatePrompt";
 import { OAuthReturnRedirect } from "@/components/OAuthReturnRedirect";
 import { SplashScreen } from "@/components/SplashScreen";
+import { LEGACY_REDIRECTS, SCREEN_ROLES, legacyTarget, type LegacyRedirect } from "@/lib/screenAccess";
 
 // Eager: critical entry pages and frequently-used screens (avoids Suspense flash on navigation)
 import Login from "@/pages/Login";
@@ -22,37 +23,34 @@ import Employees from "@/pages/Employees";
 import EmployeeDetail from "@/pages/EmployeeDetail";
 
 // Lazy: less-frequent pages — split into separate chunks loaded on demand
-// AttendanceMap is here rather than in the eager list above because it is the
-// only page importing leaflet, and a map screen is a specialist destination.
-const AttendanceMap = lazy(() => import("@/pages/AttendanceMap"));
+// Merged screens (leave, corrections, map, onboarding, hand-over, subscriptions, categories,
+// companies, announcements, alerts) are tabs of the hubs below and load their own chunks.
 const Assets = lazy(() => import("@/pages/Assets"));
 const AssetsDomainPage = lazy(() => import("@/pages/AssetsDomainPage"));
-const UnassignedAssets = lazy(() => import("@/pages/UnassignedAssets"));
-const VehicleSubscriptions = lazy(() => import("@/pages/VehicleSubscriptions"));
 const ITTickets = lazy(() => import("@/pages/ITTickets"));
-const Alerts = lazy(() => import("@/pages/Alerts"));
+const Requests = lazy(() => import("@/pages/Requests"));
 const EmployeePortal = lazy(() => import("@/pages/EmployeePortal"));
 const Settings = lazy(() => import("@/pages/Settings"));
-const CategoryManager = lazy(() => import("@/pages/CategoryManager"));
-const Companies = lazy(() => import("@/pages/Companies"));
 const SelectCompany = lazy(() => import("@/pages/SelectCompany"));
 const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 const Welcome = lazy(() => import("@/pages/Welcome"));
 const SignHandover = lazy(() => import("@/pages/SignHandover"));
 const SignOffboarding = lazy(() => import("@/pages/SignOffboarding"));
 const SelectExperience = lazy(() => import("@/pages/SelectExperience"));
-const LeaveRequests = lazy(() => import("@/pages/LeaveRequests"));
-const AttendanceCorrections = lazy(() => import("@/pages/AttendanceCorrections"));
 const Payroll = lazy(() => import("@/pages/Payroll"));
-const Onboarding = lazy(() => import("@/pages/Onboarding"));
 const Tax101TokenPage = lazy(() => import("@/pages/Tax101TokenPage"));
-const Announcements = lazy(() => import("@/pages/Announcements"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const OAuthConsent = lazy(() => import("@/pages/OAuthConsent"));
 
 import { ThemeProvider } from "next-themes";
 
 const queryClient = new QueryClient();
+
+/** Old URL of a merged screen → its hub tab, keeping the query string (e.g. links in emails). */
+function LegacyRedirectRoute({ redirect }: { redirect: LegacyRedirect }) {
+  const { search } = useLocation();
+  return <Navigate to={legacyTarget(redirect, search)} replace />;
+}
 
 
 const App = () => (
@@ -90,26 +88,17 @@ const App = () => (
                   </ProtectedRoute>
                 }>
                   <Route path="/" element={<Dashboard />} />
-                  <Route path="/employees" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations", "payroll", "hr", "finance"]}><Employees /></ProtectedRoute>} />
-                  <Route path="/employees/:id" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations", "direct_manager", "payroll", "hr", "finance"]}><EmployeeDetail /></ProtectedRoute>} />
-                  <Route path="/assets" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin", "operations", "finance", "legal"]}><Assets /></ProtectedRoute>} />
-                  <Route path="/assets-handover" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin", "operations", "finance", "legal"]}><UnassignedAssets /></ProtectedRoute>} />
-                  <Route path="/assets-subscriptions" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations", "finance", "payroll"]}><VehicleSubscriptions /></ProtectedRoute>} />
-                  <Route path="/assets/:domain/:itemId?" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin", "operations", "finance", "legal"]}><AssetsDomainPage /></ProtectedRoute>} />
-
-
-                  <Route path="/categories" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations", "legal"]}><CategoryManager /></ProtectedRoute>} />
-                  <Route path="/it-tickets" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin", "operations", "direct_manager", "payroll", "hr", "finance", "legal", "secretariat", "ceo"]}><ITTickets /></ProtectedRoute>} />
-                  <Route path="/alerts" element={<ProtectedRoute requiredRoles={["admin", "it_manager", "super_admin"]}><Alerts /></ProtectedRoute>} />
-                  <Route path="/user-management" element={<Navigate to="/employees?tab=users" replace />} />
-                  <Route path="/companies" element={<ProtectedRoute requiredRoles={["super_admin"]}><Companies /></ProtectedRoute>} />
-                  <Route path="/leave-requests" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "direct_manager", "payroll", "hr"]}><LeaveRequests /></ProtectedRoute>} />
-                  <Route path="/attendance-corrections" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "direct_manager", "payroll", "hr"]}><AttendanceCorrections /></ProtectedRoute>} />
-                  <Route path="/onboarding" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "operations", "it_manager", "hr"]}><Onboarding /></ProtectedRoute>} />
-                  <Route path="/payroll" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "payroll", "hr"]}><Payroll /></ProtectedRoute>} />
-                  <Route path="/attendance-map" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "payroll", "hr", "direct_manager"]}><AttendanceMap /></ProtectedRoute>} />
-                  <Route path="/announcements" element={<ProtectedRoute requiredRoles={["admin", "super_admin", "ceo", "operations", "secretariat", "hr"]}><Announcements /></ProtectedRoute>} />
-                  <Route path="/settings" element={<ProtectedRoute requiredRoles={["admin", "super_admin"]}><Settings /></ProtectedRoute>} />
+                  <Route path="/employees" element={<ProtectedRoute requiredRoles={SCREEN_ROLES.employees}><Employees /></ProtectedRoute>} />
+                  <Route path="/employees/:id" element={<ProtectedRoute requiredRoles={SCREEN_ROLES.employeeDetail}><EmployeeDetail /></ProtectedRoute>} />
+                  <Route path="/requests" element={<ProtectedRoute requiredRoles={SCREEN_ROLES.requests}><Requests /></ProtectedRoute>} />
+                  <Route path="/payroll" element={<ProtectedRoute requiredRoles={SCREEN_ROLES.payroll}><Payroll /></ProtectedRoute>} />
+                  <Route path="/assets" element={<ProtectedRoute requiredRoles={SCREEN_ROLES.assets}><Assets /></ProtectedRoute>} />
+                  <Route path="/assets/:domain/:itemId?" element={<ProtectedRoute requiredRoles={SCREEN_ROLES.assetDomain}><AssetsDomainPage /></ProtectedRoute>} />
+                  <Route path="/it-tickets" element={<ProtectedRoute requiredRoles={SCREEN_ROLES.tickets}><ITTickets /></ProtectedRoute>} />
+                  <Route path="/settings" element={<ProtectedRoute requiredRoles={SCREEN_ROLES.settings}><Settings /></ProtectedRoute>} />
+                  {LEGACY_REDIRECTS.map((r) => (
+                    <Route key={r.from} path={r.from} element={<LegacyRedirectRoute redirect={r} />} />
+                  ))}
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>

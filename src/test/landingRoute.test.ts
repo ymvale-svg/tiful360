@@ -25,7 +25,7 @@ describe("landingRoute", () => {
 
   it("sends dual-access users to the organisation system on a computer", () => {
     expect(landingRoute(["employee", "admin"], false)).toBe("/");
-    expect(landingRoute(["employee", "payroll"], false)).toBe("/leave-requests");
+    expect(landingRoute(["employee", "payroll"], false)).toBe("/requests");
   });
 
   it("sends dual-access users to the portal on a phone", () => {

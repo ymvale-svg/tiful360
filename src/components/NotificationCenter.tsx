@@ -263,7 +263,7 @@ function NotificationCenter() {
 
         {canSeeAlertsPage && (
           <div className="border-t border-border px-5 py-3">
-            <Link to="/alerts" onClick={() => setOpen(false)} className="text-sm font-medium text-primary hover:underline">
+            <Link to="/#alerts" onClick={() => setOpen(false)} className="text-sm font-medium text-primary hover:underline">
               לכל ההתראות ←
             </Link>
           </div>

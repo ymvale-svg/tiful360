@@ -45,7 +45,7 @@ export function LeaveStatusCard() {
           <CalendarDays className="w-4 h-4 text-primary" />
           בקשות חופשה ומחלה
         </h2>
-        <Link to="/leave-requests" className="text-xs text-primary hover:underline">הצג הכל</Link>
+        <Link to="/requests" className="text-xs text-primary hover:underline">הצג הכל</Link>
       </div>
       <div className="divide-y divide-border/50">
         {isLoading && <div className="p-6 text-center text-sm text-muted-foreground">טוען...</div>}

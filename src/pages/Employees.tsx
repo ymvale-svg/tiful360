@@ -3,9 +3,9 @@ import { SearchInput } from "@/components/ui/search-input";
 import { ActiveFilters } from "@/components/ui/active-filters";
 import { BulkActionBar } from "@/components/ui/bulk-action-bar";
 import { EMPTY_ICONS } from "@/components/feedback/emptyIcons";
-import { useState, useMemo, useEffect } from "react";
+import { lazy, Suspense, useState, useMemo } from "react";
 import { usePersistentFilter } from "@/hooks/usePersistentFilter";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Plus, UserMinus, Mail, Send, ShieldCheck, ShieldAlert, UserCheck, UserX, Download } from "lucide-react";
 import { ImportExcelButton } from "@/components/ExcelActionButtons";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,8 @@ import { useUpdateEmployee } from "@/hooks/useMutations";
 import { EmployeeSetupWizard } from "@/components/EmployeeSetupWizard";
 import { ImportExcelDialog } from "@/components/ImportExcelDialog";
 import { UsersAndRolesTab } from "@/components/UsersAndRolesTab";
+import { useHubTab } from "@/hooks/useHubTab";
+import { ListSkeleton } from "@/components/feedback/StateView";
 import { useAuth } from "@/hooks/useAuth";
 import { exportToExcel } from "@/lib/exportExcel";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -31,6 +33,9 @@ import { undoToast } from "@/components/feedback/undoToast";
 import { EmptyState, StateView } from "@/components/feedback/StateView";
 
 type EmployeeStatus = "active" | "onboarding" | "leaving" | "inactive";
+
+// Onboarding was its own screen; it is now a tab of the employees hub (own chunk).
+const Onboarding = lazy(() => import("@/pages/Onboarding"));
 
 const statusLabels: Record<EmployeeStatus, string> = {
   active: "פעיל",
@@ -82,15 +87,8 @@ export default function Employees() {
   const navigate = useNavigate();
   const { isAdmin, isSuperAdmin, isHR, isPayroll, isOperations, isIT } = useAuth();
   const canManageUsers = isAdmin || isSuperAdmin || isHR || isPayroll || isOperations || isIT;
-  const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = searchParams.get("tab") === "users" && canManageUsers ? "users" : "employees";
-  const [tab, setTab] = useState<"employees" | "users">(initialTab);
-
-  useEffect(() => {
-    const t = searchParams.get("tab");
-    if (t === "users" && tab !== "users") setTab("users");
-    if ((!t || t === "employees") && tab !== "employees") setTab("employees");
-  }, [searchParams]);
+  // Employees, onboarding and users are tabs of one hub; each tab keeps its own role list.
+  const { tabs, active: tab, setActive: switchTab } = useHubTab("employees");
 
   const [search, setSearch] = usePersistentFilter<string>("employees:search", "");
   const [statusFilter, setStatusFilter] = usePersistentFilter<EmployeeStatus | "all">("employees:status", "active");
@@ -243,14 +241,6 @@ export default function Employees() {
     });
   };
 
-  const switchTab = (v: string) => {
-    const newTab = v === "users" ? "users" : "employees";
-    setTab(newTab);
-    const sp = new URLSearchParams(searchParams);
-    if (newTab === "users") sp.set("tab", "users"); else sp.delete("tab");
-    setSearchParams(sp, { replace: true });
-  };
-
   const exportFullList = () => {
     if (!employees?.length) return;
     exportToExcel(
@@ -288,11 +278,12 @@ export default function Employees() {
           <p className="page-subtitle">{employees?.length ?? 0} עובדים רשומים במערכת</p>
         </div>
 
-        <Tabs value={tab} onValueChange={switchTab} dir="rtl">
-          <TabsList>
-            <TabsTrigger value="employees">עובדים</TabsTrigger>
-            {canManageUsers && <TabsTrigger value="users">משתמשים ותפקידים</TabsTrigger>}
-          </TabsList>
+        <Tabs value={tab ?? undefined} onValueChange={switchTab} dir="rtl">
+          {tabs.length > 1 && (
+            <TabsList aria-label="עובדים">
+              {tabs.map((t) => <TabsTrigger key={t.key} value={t.key}>{t.label}</TabsTrigger>)}
+            </TabsList>
+          )}
 
           <TabsContent value="employees" className="space-y-4 mt-4">
             <div className="flex items-start justify-between">
@@ -573,7 +564,15 @@ export default function Employees() {
             </div>
           </TabsContent>
 
-          {canManageUsers && (
+          {tab === "onboarding" && (
+            <TabsContent value="onboarding" className="mt-4">
+              <Suspense fallback={<ListSkeleton rows={5} />}>
+                <Onboarding />
+              </Suspense>
+            </TabsContent>
+          )}
+
+          {tab === "users" && (
             <TabsContent value="users" className="mt-4">
               <UsersAndRolesTab />
             </TabsContent>

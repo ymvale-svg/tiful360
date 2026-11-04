@@ -7,6 +7,7 @@ import { useAssets, useEmployees, useAssetCategories, useITTickets } from "@/hoo
 import { useAuth } from "@/hooks/useAuth";
 import { getDomain, domainKeyToSlug } from "@/lib/assetDomains";
 import { canSeeNavItem, navGroups } from "./AppSidebar";
+import { HUB_PATHS, HUB_TABS, allowedTabs, hubPath, type HubKey } from "@/lib/screenAccess";
 import { cn } from "@/lib/utils";
 import { clearRecent, pushRecent, readRecent, splitMatch, suggestTerms, type RecentHit } from "@/lib/searchHelpers";
 
@@ -75,10 +76,20 @@ export function GlobalSearch() {
     return domainKeyToSlug(getDomain(c as any));
   };
 
-  const pages = useMemo<Hit[]>(() => navGroups.flatMap((g) => g.items)
-    .filter((item) => canSeeNavItem(item, roles as any, isSuperAdmin))
-    .map((item) => ({ id: item.path, label: item.label, group: "pages" as const, to: item.path, icon: item.icon })),
-  [roles, isSuperAdmin]);
+  const pages = useMemo<Hit[]>(() => {
+    const items = navGroups.flatMap((g) => g.items).filter((item) => canSeeNavItem(item, roles as any, isSuperAdmin));
+    const screens: Hit[] = items.map((item) => ({ id: item.path, label: item.label, group: "pages" as const, to: item.path, icon: item.icon }));
+    // Merged screens are hub tabs: keep them findable by their own names (e.g. "בקשות חופשה").
+    const tabs: Hit[] = (Object.keys(HUB_TABS) as HubKey[]).flatMap((hub) => {
+      const path = HUB_PATHS[hub];
+      const icon = items.find((i) => i.path === path)?.icon;
+      if (!icon || hub === "dashboard") return [];
+      return allowedTabs(hub, roles, isSuperAdmin)
+        .filter((t) => !screens.some((p) => p.label === t.label))
+        .map((t) => ({ id: `${path}?tab=${t.key}`, label: t.label, group: "pages" as const, to: hubPath(path, t.key), icon }));
+    });
+    return [...screens, ...tabs];
+  }, [roles, isSuperAdmin]);
 
   const hits = useMemo<Hit[]>(() => {
     const q = term.trim().toLowerCase();
