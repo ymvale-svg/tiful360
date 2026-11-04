@@ -169,6 +169,13 @@
       "when": 1793280000000,
       "tag": "0023_portal_learning_bucket",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793784297409,
+      "tag": "0024_fix_employee_autoapprove_and_payroll_leave_files",
+      "breakpoints": true
     }
   ]
 }
