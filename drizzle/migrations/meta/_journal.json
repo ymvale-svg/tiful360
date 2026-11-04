@@ -183,6 +183,13 @@
       "when": 1793784322149,
       "tag": "0025_tighten_employee_correction_insert",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793787439873,
+      "tag": "0026_permission_groups",
+      "breakpoints": true
     }
   ]
 }
