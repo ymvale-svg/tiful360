@@ -39,8 +39,8 @@ type HubTile = {
 };
 
 const HUB_TILES: HubTile[] = [
-  { key: "overview", label: "סקירה", description: "תלושים אחרונים, מחלות, חופשות ותיקוני נוכחות", icon: LayoutDashboard },
   { key: "reports", label: "דוחות נוכחות וחוסרים", description: "דוח חודשי מרוכז: חוסרים, היעדרויות, בקשות תיקון, מייל ו-PDF", icon: ClipboardList },
+  { key: "overview", label: "סקירה", description: "תלושים אחרונים, מחלות, חופשות ותיקוני נוכחות", icon: LayoutDashboard },
   { key: "attendance", label: "שעוני נוכחות", description: "החתמות, שעונים פיזיים והחתמות ללא שיוך", icon: Clock4 },
   { key: "michpal", label: "ייצוא למיכפל", description: "ייצוא נתוני נוכחות חודשיים לקובץ קליטה במיכפל (CSV)", icon: FileDown, roles: ["admin", "super_admin", "payroll", "hr"] },
   { key: "onboarding", label: "קליטת עובדים", description: "תהליכי קליטה, טופס צרכים וצ'קליסט תפעול", icon: UserPlus, to: legacyTarget(LEGACY_BY_PATH["/onboarding"]), roles: tabRoles("employees", "onboarding") },
