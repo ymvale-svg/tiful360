@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, ReactNode, useCallback } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { rolesForCompany } from "@/lib/permissionGroups";
 
 export type AppRole = "admin" | "it_manager" | "employee" | "super_admin" | "direct_manager" | "payroll" | "hr" | "operations" | "finance" | "legal" | "secretariat" | "ceo";
 
@@ -8,7 +9,12 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  /** Roles in the active company: its group roles plus the platform/portal roles. */
   roles: AppRole[];
+  /** True until the signed-in user's roles have been fetched. */
+  rolesLoading: boolean;
+  /** Called by CompanyProvider so roles follow the active company (companies are separate). */
+  setRoleCompanyId: (companyId: string | null) => void;
   hasRole: (role: AppRole) => boolean;
   isAdmin: boolean;
   isIT: boolean;
@@ -29,6 +35,8 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   roles: [],
+  rolesLoading: true,
+  setRoleCompanyId: () => {},
   hasRole: () => false,
   isAdmin: false,
   isIT: false,
@@ -47,7 +55,16 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [roles, setRoles] = useState<AppRole[]>([]);
+  const [globalRoles, setGlobalRoles] = useState<AppRole[]>([]);
+  const [memberships, setMemberships] = useState<{ company_id: string; roles: AppRole[] }[] | null>(null);
+  const [rolesLoading, setRolesLoading] = useState(true);
+  const [roleCompanyId, setRoleCompanyId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem("activeCompanyId");
+    } catch {
+      return null;
+    }
+  });
   const [accessBlocked, setAccessBlocked] = useState(false);
 
   const checkAccess = useCallback(async () => {
@@ -56,20 +73,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const fetchRoles = useCallback(async (userId: string) => {
-    const { data } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId);
-    setRoles((data ?? []).map((r) => r.role as AppRole));
+    const [{ data }, groups] = await Promise.all([
+      supabase.from("user_roles").select("role").eq("user_id", userId),
+      (supabase.from("permission_group_members" as any) as any)
+        .select("company_id, permission_groups(roles)")
+        .eq("user_id", userId),
+    ]);
+    setGlobalRoles((data ?? []).map((r) => r.role as AppRole));
+    // Before the groups migration is applied the table is missing: fall back to user_roles.
+    setMemberships(
+      groups.error
+        ? null
+        : (groups.data ?? []).map((m: any) => ({ company_id: m.company_id, roles: m.permission_groups?.roles ?? [] })),
+    );
+    setRolesLoading(false);
+  }, []);
+
+  const clearRoles = useCallback(() => {
+    setGlobalRoles([]);
+    setMemberships(null);
+    setRolesLoading(false);
   }, []);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session?.user) {
+        // A fresh sign-in has no roles yet; token refreshes keep the current ones visible.
+        if (_event === "SIGNED_IN") setRolesLoading(true);
         setTimeout(() => { fetchRoles(session.user.id); checkAccess(); }, 0);
       } else {
-        setRoles([]);
+        clearRoles();
         setAccessBlocked(false);
       }
       setLoading(false);
@@ -80,21 +114,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session?.user) {
         fetchRoles(session.user.id);
         checkAccess();
+      } else {
+        setRolesLoading(false);
       }
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, [fetchRoles, checkAccess]);
+  }, [fetchRoles, checkAccess, clearRoles]);
+
+  const isSuperAdmin = globalRoles.includes("super_admin");
+  const roles = useMemo<AppRole[]>(() => {
+    if (isSuperAdmin || memberships === null || !roleCompanyId) return globalRoles;
+    return rolesForCompany(globalRoles, memberships, roleCompanyId);
+  }, [globalRoles, memberships, roleCompanyId, isSuperAdmin]);
 
   const hasRole = useCallback((role: AppRole) => roles.includes(role) || roles.includes("super_admin"), [roles]);
   const signOut = async () => {
     await supabase.auth.signOut();
-    setRoles([]);
+    clearRoles();
     setAccessBlocked(false);
   };
-
-  const isSuperAdmin = roles.includes("super_admin");
 
   return (
     <AuthContext.Provider
@@ -103,6 +143,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: session?.user ?? null,
         loading,
         roles,
+        rolesLoading,
+        setRoleCompanyId,
         hasRole,
         isAdmin: isSuperAdmin || roles.includes("admin"),
         isIT: isSuperAdmin || roles.includes("it_manager"),
