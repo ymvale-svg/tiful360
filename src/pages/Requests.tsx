@@ -7,14 +7,18 @@ import { useHubTab } from "@/hooks/useHubTab";
 const LeaveRequests = lazy(() => import("@/pages/LeaveRequests"));
 const AttendanceCorrections = lazy(() => import("@/pages/AttendanceCorrections"));
 const AttendanceMap = lazy(() => import("@/pages/AttendanceMap"));
+const MonthlyAttendanceReview = lazy(() =>
+  import("@/components/payroll/MonthlyAttendanceReview").then((m) => ({ default: m.MonthlyAttendanceReview })),
+);
 
 const TAB_CONTENT: Record<string, React.ComponentType> = {
+  reports: MonthlyAttendanceReview,
   leave: LeaveRequests,
   corrections: AttendanceCorrections,
   map: AttendanceMap,
 };
 
-/** Hub: leave requests, attendance corrections and the live attendance map. */
+/** Hub: attendance reports, leave requests, attendance corrections and the live attendance map. */
 export default function Requests() {
   const { tabs, active, setActive } = useHubTab("requests");
   const Content = active ? TAB_CONTENT[active] : null;

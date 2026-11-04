@@ -48,6 +48,7 @@ export const HUB_TABS = {
     { key: "users", label: "משתמשים ותפקידים", roles: ["admin", "super_admin", "operations", "payroll", "hr"] },
   ],
   requests: [
+    { key: "reports", label: "דוחות נוכחות וחוסרים", roles: ATTENDANCE_STAFF },
     { key: "leave", label: "בקשות חופשה", roles: ATTENDANCE_STAFF },
     { key: "corrections", label: "תיקוני נוכחות", roles: ATTENDANCE_STAFF },
     { key: "map", label: "מפת נוכחות", roles: ATTENDANCE_STAFF },
