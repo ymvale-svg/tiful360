@@ -218,6 +218,13 @@
       "when": 1793868339127,
       "tag": "0030_hr_edit_punch_time",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1793873427582,
+      "tag": "0031_allow_onboarding_employee_signup",
+      "breakpoints": true
     }
   ]
 }
