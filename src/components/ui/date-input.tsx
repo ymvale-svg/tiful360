@@ -27,14 +27,14 @@ function mask(raw: string): string {
   return out;
 }
 
-type Props = Omit<React.ComponentProps<"input">, "type">;
+type Props = React.ComponentProps<"input">;
 
 /**
  * Date field that always shows and accepts DD/MM/YYYY regardless of browser
  * language, while keeping value/onChange in ISO yyyy-mm-dd like a native date input.
  */
 export const DateInput = React.forwardRef<HTMLInputElement, Props>(
-  ({ className, value, defaultValue, onChange, onBlur, min, max, name, id, disabled, required, placeholder, style, ...rest }, ref) => {
+  ({ className, type: _type, value, defaultValue, onChange, onBlur, min, max, name, id, disabled, required, placeholder, style, ...rest }, ref) => {
     const iso = value !== undefined ? String(value ?? "") : undefined;
     const [text, setText] = React.useState(() => isoToDmy(iso ?? String(defaultValue ?? "")));
     const pickerRef = React.useRef<HTMLInputElement>(null);
