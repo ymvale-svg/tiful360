@@ -190,6 +190,13 @@
       "when": 1793787439873,
       "tag": "0026_permission_groups",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1793867761694,
+      "tag": "0027_hr_company_wide_employee_access",
+      "breakpoints": true
     }
   ]
 }
