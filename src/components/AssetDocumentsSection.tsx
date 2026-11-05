@@ -1,3 +1,4 @@
+import { DateInput } from "@/components/ui/date-input";
 import { useState } from "react";
 import { FileText, Upload, Trash2, Download, AlertCircle, Calendar, Eye, Archive, ArchiveRestore, ChevronDown, ChevronUp } from "lucide-react";
 import { DocumentPreviewDialog } from "@/components/DocumentPreviewDialog";
@@ -248,7 +249,7 @@ export function AssetDocumentsSection({ assetId }: Props) {
             </div>
             <div>
               <label htmlFor={`doc-expiry-${assetId}`} className="text-xs font-medium mb-1 block">תאריך תפוגה (אופציונלי)</label>
-              <input
+              <DateInput 
                 id={`doc-expiry-${assetId}`}
                 type="date"
                 value={expiryDate}
