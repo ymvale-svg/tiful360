@@ -481,7 +481,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                 <>
                   <SiteSelect
                     value={form.assigned_site_id}
-                    onChange={(v) => setForm({ ...form, assigned_site_id: v, container_id: "", ...(v ? { current_owner_id: "" } : {}) })}
+                    onChange={(v) => setForm({ ...form, assigned_site_id: v, container_id: "" })}
                     label="שיוך לאתר (במקום עובד)"
                   />
                   {form.assigned_site_id && (

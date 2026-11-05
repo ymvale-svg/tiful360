@@ -532,7 +532,6 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
       const patch: Record<string, any> = {
         assigned_site_id: siteId,
         container_id: containerId || null,
-        current_owner_id: null,
         status: "in_use",
       };
       if (isVehicle && odometer) patch.current_km = Number(odometer);
