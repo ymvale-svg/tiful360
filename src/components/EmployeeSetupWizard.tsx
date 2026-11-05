@@ -272,7 +272,18 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
       onOpenChange(false);
       reset();
     } catch (err: any) {
-      toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+      const msg = String(err?.message ?? "");
+      if (msg.includes("employees_id_number_key")) {
+        setErrors({ id_number: "תעודת זהות זו כבר רשומה במערכת" });
+        setStep(0);
+        toast({ title: "תעודת הזהות כבר קיימת", description: "עובד עם ת.ז. זו כבר רשום (ייתכן בחברה אחרת או כעובד לא פעיל). בדקו את המספר או פנו למנהל המערכת.", variant: "destructive" });
+      } else if (msg.includes("employees_employee_code_key")) {
+        setErrors({ employee_number: "מספר עובד זה כבר קיים" });
+        setStep(0);
+        toast({ title: "מספר העובד כבר קיים", description: "בחרו מספר עובד אחר", variant: "destructive" });
+      } else {
+        toast({ title: "שגיאה", description: msg, variant: "destructive" });
+      }
     } finally {
       setSubmitting(false);
     }
