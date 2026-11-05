@@ -454,7 +454,10 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
           <div className="space-y-4">
             <div className="bg-card border border-border rounded-xl p-5 space-y-3">
               <h2 className="text-sm font-semibold text-muted-foreground">בעלות נוכחית</h2>
-              {owner ? (
+              {!owner && !assignedSite && (
+                <p className="text-sm text-muted-foreground">הפריט במלאי — לא משויך לעובד או לאתר.</p>
+              )}
+              {owner && (
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
                     <User className="w-5 h-5" />
@@ -467,7 +470,8 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
                     {owner.phone && <div className="text-xs text-muted-foreground" dir="ltr">{owner.phone}</div>}
                   </div>
                 </div>
-              ) : assignedSite ? (
+              )}
+              {assignedSite && (
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
                     <MapPin className="w-5 h-5" />
@@ -481,8 +485,6 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
                     {assignedSite.phone && <div className="text-xs text-muted-foreground" dir="ltr">{assignedSite.phone}</div>}
                   </div>
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">הפריט במלאי — לא משויך לעובד או לאתר.</p>
               )}
             </div>
 

@@ -887,7 +887,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                   <label id="add-asset-owner-label" className="text-sm font-medium mb-1 block">שיוך לעובד</label>
                   <SearchableSelect
                     value={form.current_owner_id}
-                    onChange={(v) => setForm(prev => ({ ...prev, current_owner_id: v, ...(v ? { assigned_site_id: "", container_id: "" } : {}) }))}
+                    onChange={(v) => setForm(prev => ({ ...prev, current_owner_id: v }))}
                     options={[
                       { value: "", label: "במלאי (ללא שיוך)" },
                       ...activeEmployees.map(e => ({ value: e.id, label: `${e.full_name} (${e.employee_code})` })),
@@ -925,7 +925,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
             <div>
               <SiteSelect
                 value={form.assigned_site_id}
-                onChange={(v) => setForm(prev => ({ ...prev, assigned_site_id: v, container_id: "", ...(v ? { current_owner_id: "" } : {}) }))}
+                onChange={(v) => setForm(prev => ({ ...prev, assigned_site_id: v, container_id: "" }))}
                 label="שיוך לאתר (במקום עובד)"
               />
               {form.assigned_site_id && (
