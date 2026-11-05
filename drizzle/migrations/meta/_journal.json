@@ -225,6 +225,13 @@
       "when": 1793873427582,
       "tag": "0031_allow_onboarding_employee_signup",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1793873522578,
+      "tag": "0032_asset_groups_allow_hr",
+      "breakpoints": true
     }
   ]
 }
