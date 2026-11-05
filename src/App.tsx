@@ -13,6 +13,7 @@ import { CompanyProvider } from "@/hooks/useCompany";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PwaUpdatePrompt } from "@/components/PwaUpdatePrompt";
 import { OAuthReturnRedirect } from "@/components/OAuthReturnRedirect";
+import { SessionHomeRedirect } from "@/components/SessionHomeRedirect";
 import { SplashScreen } from "@/components/SplashScreen";
 import { LEGACY_REDIRECTS, SCREEN_ROLES, legacyTarget, type LegacyRedirect } from "@/lib/screenAccess";
 
@@ -70,6 +71,7 @@ const App = () => (
         <AuthProvider>
           <CompanyProvider>
             <OAuthReturnRedirect />
+            <SessionHomeRedirect />
             <Suspense fallback={<SplashScreen />}>
               <Routes>
                 <Route path="/login" element={<Login />} />
