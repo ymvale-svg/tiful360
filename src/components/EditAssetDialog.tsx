@@ -1,3 +1,4 @@
+import { DateInput } from "@/components/ui/date-input";
 import { useEffect, useMemo, useState } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -451,7 +452,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                     {isView ? (
                       <div className={readCls} dir="ltr">{form.expiry_date ? new Date(form.expiry_date).toLocaleDateString("en-GB") : display(null)}</div>
                     ) : (
-                      <input
+                      <DateInput 
                         id="edit-asset-expiry"
                         type="date"
                         value={form.expiry_date}

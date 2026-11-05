@@ -1,3 +1,4 @@
+import { DateInput } from "@/components/ui/date-input";
 import { useState } from "react";
 import {
   Dialog,
@@ -141,7 +142,7 @@ export function OffboardingDialog({
               {/* End date */}
               <div>
                 <label htmlFor="offboarding-end-date" className="text-sm font-medium mb-1.5 block">תאריך סיום עבודה</label>
-                <input
+                <DateInput 
                   id="offboarding-end-date"
                   type="date"
                   value={endDate}

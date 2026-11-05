@@ -1,3 +1,4 @@
+import { DateInput } from "@/components/ui/date-input";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { SearchInput } from "@/components/ui/search-input";
 import {
@@ -837,7 +838,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                 {showBuiltin("password_expires_at") && (
                 <div>
                   <label htmlFor="add-asset-pwd-expiry" className="text-sm font-medium mb-1 block">תוקף סיסמה</label>
-                  <input
+                  <DateInput 
                     id="add-asset-pwd-expiry"
                     type="date"
                     value={form.password_expires_at}
@@ -907,7 +908,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                   <label htmlFor="add-asset-expiry" className="text-sm font-medium mb-1 block">
                     {selectedCategory?.prefix === "CINS" ? "תוקף עד" : "תאריך תפוגה"}
                   </label>
-                  <input
+                  <DateInput 
                     id="add-asset-expiry"
                     type="date"
                     value={form.expiry_date}
@@ -983,7 +984,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                     <Users className="w-3 h-3" aria-hidden="true" /> פר עובד
                   </button>
                 </div>
-                <input
+                <DateInput 
                   id="add-asset-bulk-expiry"
                   type="date"
                   value={form.expiry_date}

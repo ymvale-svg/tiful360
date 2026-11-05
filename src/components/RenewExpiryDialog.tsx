@@ -1,3 +1,4 @@
+import { DateInput } from "@/components/ui/date-input";
 import { uploadFile } from "@/lib/uploadWithProgress";
 import { useEffect, useState } from "react";
 import {
@@ -207,7 +208,7 @@ export function RenewExpiryDialog({ open, onOpenChange, item }: Props) {
 
           <div>
             <label htmlFor="renewexpir-f1" className="text-sm font-medium mb-1 block">תאריך תוקף חדש</label>
-            <input id="renewexpir-f1"
+            <DateInput id="renewexpir-f1"
               type="date"
               value={newDate}
               onChange={(e) => setNewDate(e.target.value)}
