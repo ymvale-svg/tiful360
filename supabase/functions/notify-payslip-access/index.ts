@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.103.0";
 import { fmtDateTimeIL } from "../_shared/formatDate.ts";
 import { enqueueTransactionalEmail } from "../_shared/enqueueEmail.ts";
+import { payslipAuditRecipientIds } from "../_shared/payslipAuditRecipients.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -50,6 +51,23 @@ Deno.serve(async (req) => {
       return json({ skipped: "self access" });
     }
 
+    // The caller must be allowed to see this employee's company. Otherwise any
+    // signed-in user could write audit rows and trigger emails for any employee id.
+    const { data: viewerRoles } = await admin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", viewer.id);
+    const viewerIsSuper = (viewerRoles ?? []).some((r: { role: string }) => r.role === "super_admin");
+    if (!viewerIsSuper) {
+      const { data: access } = await admin
+        .from("user_company_access")
+        .select("company_id")
+        .eq("user_id", viewer.id)
+        .eq("company_id", employee.company_id)
+        .maybeSingle();
+      if (!access) return json({ error: "Forbidden" }, 403);
+    }
+
     const viewerName =
       (viewer.user_metadata as any)?.display_name ??
       (viewer.user_metadata as any)?.full_name ??
@@ -68,16 +86,26 @@ Deno.serve(async (req) => {
       details: `${viewerName} צפה בנתוני השכר של ${employee.full_name}${context ? ` (${context})` : ""}`,
     });
 
-    // Recipients: system admins + super admins (roles live in user_roles)
+    // Recipients: super admins, plus admins of this employee's company only.
+    // Roles live in user_roles (global); company membership in user_company_access.
     const { data: roleRows } = await admin
       .from("user_roles")
-      .select("user_id")
+      .select("user_id, role")
       .in("role", ["admin", "super_admin"]);
+    const { data: companyMembers } = await admin
+      .from("user_company_access")
+      .select("user_id")
+      .eq("company_id", employee.company_id);
+
+    const recipientIds = payslipAuditRecipientIds(
+      roleRows ?? [],
+      (companyMembers ?? []).map((m: { user_id: string }) => m.user_id),
+      viewer.id,
+    );
 
     const recipients: string[] = [];
-    for (const row of roleRows ?? []) {
-      if (row.user_id === viewer.id) continue;
-      const { data: u } = await admin.auth.admin.getUserById(row.user_id);
+    for (const userId of recipientIds) {
+      const { data: u } = await admin.auth.admin.getUserById(userId);
       const email = u?.user?.email;
       if (email && !recipients.includes(email)) recipients.push(email);
     }
