@@ -46,23 +46,41 @@ Deno.serve(async (req) => {
     const { data: callerRoles } = await anonClient.from("user_roles").select("role").eq("user_id", caller.id);
     const callerIsSuperAdmin = callerRoles?.some((r: any) => r.role === "super_admin");
     const isAdmin = callerRoles?.some((r: any) => r.role === "admin" || r.role === "super_admin");
-    const canManage = callerRoles?.some((r: any) =>
-      ["admin", "super_admin", "hr", "payroll"].includes(r.role)
-    );
+
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+
+    // Management roles count only in the company where they were granted: the caller's
+    // permission-group memberships of that company (same rule as the DB functions
+    // can_manage_group_members / can_manage_permission_groups). user_roles is the
+    // cross-company union, so an admin of company A who is a plain user in company B
+    // must not manage B through it.
+    const { data: callerGroupRows } = await adminClient
+      .from("permission_group_members")
+      .select("company_id, permission_groups(roles)")
+      .eq("user_id", caller.id);
+    const companiesWithRole = (roles: string[]) =>
+      new Set<string>(
+        (callerGroupRows ?? [])
+          .filter((m: any) => (m.permission_groups?.roles ?? []).some((r: string) => roles.includes(r)))
+          .map((m: any) => m.company_id),
+      );
+    const managedCompanyIds = companiesWithRole(["admin", "hr", "payroll"]);
+    // Operations / IT onboard new employees, so they may send employee invites only.
+    const inviteCompanyIds = companiesWithRole(["admin", "hr", "payroll", "operations", "it_manager"]);
+    const canManageIn = (companyId: string | null | undefined) =>
+      !!callerIsSuperAdmin || (!!companyId && managedCompanyIds.has(companyId));
+    const canInviteIn = (companyId: string | null | undefined) =>
+      !!callerIsSuperAdmin || (!!companyId && inviteCompanyIds.has(companyId));
+    const canManage = callerIsSuperAdmin || managedCompanyIds.size > 0;
 
     const url = new URL(req.url);
     const action = url.searchParams.get("action");
 
-    // Operations / IT onboard new employees, so they may send employee invites only.
-    const canInviteEmployees = canManage || callerRoles?.some((r: any) =>
-      ["operations", "it_manager"].includes(r.role)
-    );
+    const canInviteEmployees = callerIsSuperAdmin || inviteCompanyIds.size > 0;
     const allowed = action === "invite" || action === "resend-invite" ? canInviteEmployees : canManage;
     if (!allowed) {
       return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-
-    const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
     // Service-role writes skip the DB audit trigger, so every permission change
     // made here is recorded explicitly with the real caller as actor.
@@ -122,18 +140,10 @@ Deno.serve(async (req) => {
       return `קבוצה: ${group.name}`;
     };
 
-    // Helper: get caller's company IDs
-    const getCallerCompanyIds = async () => {
-      const { data } = await adminClient
-        .from("user_company_access")
-        .select("company_id")
-        .eq("user_id", caller.id);
-      return (data ?? []).map((a: any) => a.company_id);
-    };
-
-    // Helper: check if target user shares a company with caller
-    const isInCallerCompanies = async (targetUserId: string) => {
-      const callerCompanyIds = await getCallerCompanyIds();
+    // Helper: check if target user belongs to one of the given companies of the caller
+    // (managedCompanyIds / inviteCompanyIds — where the caller holds the needed role).
+    const isInCallerCompanies = async (targetUserId: string, companyIds: Set<string>) => {
+      const callerCompanyIds = [...companyIds];
       if (callerCompanyIds.length === 0) return false;
       const { data } = await adminClient
         .from("user_company_access")
@@ -162,14 +172,8 @@ Deno.serve(async (req) => {
       // Get user IDs that belong to the requested company
       let companyUserIds: Set<string> | null = null;
       if (companyId && !callerIsSuperAdmin) {
-        // Verify caller has access to this company
-        const { data: callerAccess } = await adminClient
-          .from("user_company_access")
-          .select("id")
-          .eq("user_id", caller.id)
-          .eq("company_id", companyId)
-          .limit(1);
-        if (!callerAccess || callerAccess.length === 0) {
+        // Verify caller manages this company (admin/hr/payroll there)
+        if (!canManageIn(companyId)) {
           return new Response(JSON.stringify({ error: "No access to this company" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
       }
@@ -181,11 +185,7 @@ Deno.serve(async (req) => {
           .eq("company_id", companyId);
         companyUserIds = new Set((companyAccess ?? []).map((a: any) => a.user_id));
       } else if (!callerIsSuperAdmin) {
-        const { data: callerCompanyAccess } = await adminClient
-          .from("user_company_access")
-          .select("company_id")
-          .eq("user_id", caller.id);
-        const callerCompanyIds = (callerCompanyAccess ?? []).map((a: any) => a.company_id);
+        const callerCompanyIds = [...managedCompanyIds];
         if (callerCompanyIds.length > 0) {
           const { data: companyUsers } = await adminClient
             .from("user_company_access")
@@ -250,13 +250,13 @@ Deno.serve(async (req) => {
       }
 
       // Non-super-admin can only manage roles for users in their companies
-      if (!callerIsSuperAdmin && !(await isInCallerCompanies(user_id))) {
+      if (!callerIsSuperAdmin && !(await isInCallerCompanies(user_id, managedCompanyIds))) {
         return new Response(JSON.stringify({ error: "No access to this user" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
       if (!PLATFORM_ROLES.has(role)) {
         if (!company_id) return json({ error: "company_id required" }, 400);
-        if (!callerIsSuperAdmin && !(await getCallerCompanyIds()).includes(company_id)) {
+        if (!canManageIn(company_id)) {
           return json({ error: "No access to this company" }, 403);
         }
       }
@@ -279,7 +279,7 @@ Deno.serve(async (req) => {
       const body = await req.json();
       const company_id: string | undefined = body.company_id;
       // Ops/IT may only invite plain employees; role escalation stays with admins.
-      const default_role: string = canManage ? (body.role || "employee") : "employee";
+      const default_role: string = canManageIn(company_id) ? (body.role || "employee") : "employee";
 
       // Same allowlist the other actions enforce. Without it, an admin/hr/payroll
       // caller could invite an address that already has an account — their own —
@@ -300,7 +300,10 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: "employees array required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // Verify caller has access to the company
+      // Verify caller may invite in this company (role held there) and has access to it
+      if (!canInviteIn(company_id)) {
+        return new Response(JSON.stringify({ error: "No access to this company" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
       if (!callerIsSuperAdmin) {
         const { data: callerAccess } = await adminClient
           .from("user_company_access")
@@ -433,7 +436,7 @@ Deno.serve(async (req) => {
           .eq("user_id", caller.id)
           .in("company_id", company_ids);
         const accessibleIds = new Set((callerAccess ?? []).map((a: any) => a.company_id));
-        if (company_ids.some((id) => !accessibleIds.has(id))) {
+        if (company_ids.some((id) => !accessibleIds.has(id) || !canManageIn(id))) {
           return new Response(JSON.stringify({ error: "No access to one or more companies" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
       }
@@ -480,7 +483,7 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: "user_id and email required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      if (!callerIsSuperAdmin && !(await isInCallerCompanies(user_id))) {
+      if (!callerIsSuperAdmin && !(await isInCallerCompanies(user_id, inviteCompanyIds))) {
         return new Response(JSON.stringify({ error: "No access to this user" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
@@ -530,8 +533,8 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: "Cannot ban yourself" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // Non-super-admin can only ban users in their companies
-      if (!callerIsSuperAdmin && !(await isInCallerCompanies(user_id))) {
+      // Non-super-admin can only ban users in companies they manage
+      if (!callerIsSuperAdmin && !(await isInCallerCompanies(user_id, managedCompanyIds))) {
         return new Response(JSON.stringify({ error: "No access to this user" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
