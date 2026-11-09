@@ -55,22 +55,17 @@ const SCHEMA: TableDef[] = [
       { name: "phone", type: "text", desc: "טלפון" },
       { name: "email", type: "text", desc: "אימייל" },
       { name: "direct_manager_id", type: "uuid", desc: "מזהה המנהל הישיר (FK ל-employees.id)" },
-      { name: "birth_date", type: "date", desc: "תאריך לידה" },
       { name: "vacation_balance", type: "number", desc: "יתרת ימי חופשה" },
       { name: "sick_balance", type: "number", desc: "יתרת ימי מחלה" },
       { name: "gender", type: "text", desc: "מגדר" },
-      { name: "city", type: "text", desc: "עיר מגורים" },
-      { name: "street", type: "text", desc: "רחוב" },
-      { name: "house_number", type: "text", desc: "מספר בית" },
-      { name: "marital_status", type: "text", desc: "מצב משפחתי" },
       { name: "is_israeli_resident", type: "boolean", desc: "תושב ישראל" },
-      { name: "health_fund_member", type: "boolean", desc: "חבר קופ\"ח" },
     ],
+    // ID number, address, birth date, marital status and health fund are edited
+    // only in the regular screens — never sent to or written by the AI assistant.
     writable: [
-      "full_name", "email", "phone", "department", "role", "id_number", "employee_code",
+      "full_name", "email", "phone", "department", "role", "employee_code",
       "start_date", "end_date", "status", "direct_manager_id", "sub_employer_id",
-      "birth_date", "gender", "city", "street", "house_number", "marital_status",
-      "is_israeli_resident", "health_fund_member", "vacation_balance", "sick_balance",
+      "gender", "is_israeli_resident", "vacation_balance", "sick_balance",
       "tracks_attendance", "attendance_notifications_disabled", "can_remote_punch",
       "exclude_from_contacts", "work_days",
     ],
@@ -174,13 +169,12 @@ const SCHEMA: TableDef[] = [
       { name: "start_date", type: "date", desc: "תאריך התחלה" },
       { name: "end_date", type: "date", desc: "תאריך סיום" },
       { name: "total_days", type: "number", desc: "סך ימים" },
-      { name: "reason", type: "text", desc: "סיבה" },
       { name: "status", type: "enum", desc: "סטטוס", enum: ["pending", "approved", "rejected", "canceled"] },
       { name: "manager_note", type: "text", desc: "הערת מנהל" },
       { name: "reviewed_at", type: "timestamptz", desc: "מתי אושר/נדחה" },
       { name: "created_at", type: "timestamptz", desc: "מתי נוצרה הבקשה" },
     ],
-    writable: ["employee_id", "request_type", "start_date", "end_date", "total_days", "reason", "status", "manager_note"],
+    writable: ["employee_id", "request_type", "start_date", "end_date", "total_days", "status", "manager_note"],
   },
   {
     table: "alerts",
@@ -220,6 +214,11 @@ const SCHEMA: TableDef[] = [
 
 function getTableDef(name: string): TableDef | undefined {
   return SCHEMA.find((t) => t.table === name);
+}
+
+// Columns returned to the model after insert/update — never the full row.
+function readableSelect(def: TableDef): string {
+  return def.columns.map((c) => c.name).join(",");
 }
 
 function schemaPromptBlock(): string {
@@ -365,7 +364,7 @@ const tools = [
     function: {
       name: "find_birthdays",
       description:
-        "מחזיר עובדים פעילים שיום ההולדת שלהם (יום/חודש בלבד, ללא תלות בשנת הלידה) חל בטווח נתון. תמיד השתמש בכלי זה לשאלות על ימי הולדת (\"מי חוגג היום\", \"ימי הולדת החודש\", \"בשבוע הקרוב\") — לעולם אל תשווה את birth_date כתאריך מלא.",
+        "מחזיר עובדים פעילים שיום ההולדת שלהם (יום/חודש בלבד, ללא תלות בשנת הלידה) חל בטווח נתון. תמיד השתמש בכלי זה לשאלות על ימי הולדת (\"מי חוגג היום\", \"ימי הולדת החודש\", \"בשבוע הקרוב\").",
       parameters: {
         type: "object",
         required: ["from_month", "from_day", "to_month", "to_day"],
@@ -508,7 +507,7 @@ function baseSystemPrompt(catalog: string): string {
 - אם אתה מרגיש שאתה כותב רשימה של שמות בלי שהרצת query_table שמחזיר אותם — עצור ומחק. במקום זה כתוב: "לא נמצאו תוצאות עבור X. ניסיתי: <השאילתות>."
 
 ## ימי הולדת — חובה להשתמש ב-\`find_birthdays\`
-- לשאלות על ימי הולדת ("מי חוגג היום/מחר/החודש/בשבוע הקרוב", "ימי הולדת ביולי", "מי נולד ב-15/8" וכו') — **חובה** להפעיל את \`find_birthdays\` עם טווח יום/חודש בלבד. אל תשווה \`birth_date\` כתאריך מלא ב-\`query_table\` — זה יחזיר 0 כי השנה שונה משנת הלידה.
+- לשאלות על ימי הולדת ("מי חוגג היום/מחר/החודש/בשבוע הקרוב", "ימי הולדת ביולי", "מי נולד ב-15/8" וכו') — **חובה** להפעיל את \`find_birthdays\` עם טווח יום/חודש בלבד. תאריך הלידה המלא אינו זמין ב-\`query_table\`.
 - דוגמאות:
   - "מי חוגג היום" → \`find_birthdays\` עם from=to=החודש והיום של היום.
   - "ימי הולדת החודש" → from=(חודש_נוכחי,1), to=(חודש_נוכחי, 31).
@@ -568,7 +567,6 @@ function baseSystemPrompt(catalog: string): string {
 
 ## חיפושים כלליים
 - העדף **ilike** על eq עבור טקסט בעברית.
-- "מי גר ב..." → employees \`city ilike '%X%'\`.
 - "המנהל של X" → קודם employees לפי שם, ואז employees נוסף לפי \`direct_manager_id\`.
 
 ## חוק ברזל — חיפוש עובד לפי שם (\`find_employee\`)
@@ -1014,7 +1012,7 @@ async function executeTool(name: string, args: any, supabase: any, companyId: st
         if (!companyId) return { error: "לא נבחרה חברה" };
         values["company_id"] = companyId;
       }
-      const { data, error } = await supabase.from(def.table).insert(values).select().single();
+      const { data, error } = await supabase.from(def.table).insert(values).select(readableSelect(def)).single();
       return error ? { error: error.message } : { success: true, row: data };
     }
 
@@ -1026,7 +1024,7 @@ async function executeTool(name: string, args: any, supabase: any, companyId: st
       for (const k of def.writable) {
         if (k in (args.values ?? {})) values[k] = args.values[k];
       }
-      const { data, error } = await supabase.from(def.table).update(values).eq("id", args.id).select().single();
+      const { data, error } = await supabase.from(def.table).update(values).eq("id", args.id).select(readableSelect(def)).single();
       return error ? { error: error.message } : { success: true, row: data };
     }
 
@@ -1117,7 +1115,9 @@ async function executeTool(name: string, args: any, supabase: any, companyId: st
         _to_day: td,
       });
       if (error) return { error: error.message };
-      return { count: data?.length ?? 0, results: data };
+      // Day/month only — the full birth date (with year) is not sent to the model.
+      const results = (data ?? []).map(({ birth_date: _omit, ...rest }: any) => rest);
+      return { count: results.length, results };
     }
 
     if (name === "send_email") {
