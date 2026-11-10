@@ -42,7 +42,9 @@ export const QUOTE_FIELD_NAMES: Array<keyof QuoteFields> = [
   "supplier_name", "model", "monthly_price", "km_per_year", "period_months", "delivery_date", "includes",
 ];
 
+// The Supabase client as the caller (supabase-js is not importable from Vitest here).
 // deno-lint-ignore no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Client = any;
 
 export interface Deps {

@@ -47,15 +47,15 @@ function makeDb(opts: { request?: unknown; suppliers?: unknown[]; updateRows?: n
 }
 
 let deps: Deps;
-let sendEmail: ReturnType<typeof vi.fn>;
-let aiJson: ReturnType<typeof vi.fn>;
+let sendEmail: ReturnType<typeof vi.fn<Deps["sendEmail"]>>;
+let aiJson: ReturnType<typeof vi.fn<Deps["aiJson"]>>;
 const post = (body: unknown, auth = "Bearer token") =>
   new Request("https://x/leasing-quotes", { method: "POST", headers: { Authorization: auth, "Content-Type": "application/json" }, body: JSON.stringify(body) });
 
 function setup(dbOpts: Parameters<typeof makeDb>[0] = {}) {
   const made = makeDb(dbOpts);
-  sendEmail = vi.fn().mockResolvedValue(true);
-  aiJson = vi.fn();
+  sendEmail = vi.fn<Deps["sendEmail"]>().mockResolvedValue(true);
+  aiJson = vi.fn<Deps["aiJson"]>();
   deps = {
     cors: { "Access-Control-Allow-Origin": "*" },
     getUser: async () => ({ id: "u1", email: "fleet@example.com" }),
