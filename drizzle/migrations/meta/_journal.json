@@ -246,6 +246,13 @@
       "when": 1794315279835,
       "tag": "0034_location_report_remote_only",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1794317613588,
+      "tag": "0035_document_location_report_remote_only",
+      "breakpoints": true
     }
   ]
 }
