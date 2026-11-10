@@ -4,6 +4,8 @@ import { useAssets, useAssetCategories, useEmployees } from "@/hooks/useData";
 import { getCategoryIcon, getCategoryColor } from "@/lib/categoryIcons";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StatusChip } from "@/components/feedback/StatusChip";
+import { StateView } from "@/components/feedback/StateView";
 import { ChevronLeft, ChevronRight, Pencil, FileSignature, UserMinus, Trash2, User, Building2, History, MapPin, Clock3, Ban, PlayCircle } from "lucide-react";
 import { useSites } from "@/hooks/useSites";
 import { useSiteContainers } from "@/hooks/useSiteContainers";
@@ -52,7 +54,7 @@ interface Props {
 }
 
 export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategories }: Props) {
-  const { data: assets, isLoading: assetsLoading } = useAssets();
+  const { data: assets, isLoading: assetsLoading, error: assetsError, refetch: refetchAssets } = useAssets();
   const { data: handoverForms } = useAssetHandoverForms(assetId);
   const { data: handoverDrafts = [] } = useAssetHandoverDrafts(assetId);
 
@@ -101,6 +103,21 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-20 w-full rounded-2xl" />
         <Skeleton className="h-64 w-full rounded-xl" />
+      </div>
+    );
+  }
+
+  if (!asset && assetsError) {
+    return (
+      <div className="space-y-4">
+        <button type="button" onClick={onBackToCategories} className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1">
+          <ChevronLeft className="w-4 h-4" aria-hidden="true" /> חזרה לנכסים
+        </button>
+        <div className="bg-card border border-border rounded-xl">
+          <StateView error={assetsError} onRetry={() => refetchAssets()} label="את פרטי הפריט">
+            {null}
+          </StateView>
+        </div>
       </div>
     );
   }
@@ -250,20 +267,15 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
               {asset.asset_name}
               {hasAnyExpiry && (
                 <span
-                  className={cn(
-                    "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border",
-                    allValid
-                      ? "bg-green-100 text-green-800 border-green-300 dark:bg-green-950 dark:text-green-300 dark:border-green-800"
-                      : "bg-red-100 text-red-800 border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-800"
-                  )}
                   title={
                     earliest
                       ? `${earliest.label}: ${earliest.date.toLocaleDateString("en-GB")}`
                       : ""
                   }
                 >
-                  <span aria-hidden="true" className={cn("w-2 h-2 rounded-full", allValid ? "bg-green-500" : "bg-red-500")} />
-                  {allValid ? "בתוקף" : "לא בתוקף"}
+                  <StatusChip tone={allValid ? "success" : "critical"} className="px-3 py-1 font-semibold">
+                    {allValid ? "בתוקף" : "לא בתוקף"}
+                  </StatusChip>
                 </span>
               )}
               {isInactive && (
@@ -306,7 +318,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
             ערוך
           </Button>
           <IconButton label="מחק פריט" onClick={() => { void handleDelete(); }}>
-            <Trash2 className="text-destructive" aria-hidden="true" />
+            <Trash2 className="text-destructive-text" aria-hidden="true" />
           </IconButton>
         </div>
       </div>
@@ -350,7 +362,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
                       <Field
                         label="תפוגה"
                         value={
-                          <span className={expired ? "text-destructive font-medium" : ""}>
+                          <span className={expired ? "text-destructive-text font-medium" : ""}>
                             {expiry.toLocaleDateString("en-GB")}
                             {expired && " (פג)"}
                           </span>
@@ -420,7 +432,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
               return (
                 <div key={draft.key} className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3">
                   <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <Clock3 className="h-4 w-4 shrink-0 text-warning" />
+                    <Clock3 className="h-4 w-4 shrink-0 text-warning-text" />
                     <div className="min-w-0">
                       <p className="text-sm font-medium">
                         {isMulti ? "תהליך מסירה מרובת פריטים במצב טיוטה" : direction === "return" ? "תהליך הזדכות במצב טיוטה" : "תהליך מסירה במצב טיוטה"}
@@ -497,7 +509,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
                 <p role="status" className="text-xs text-muted-foreground">טוען היסטוריה…</p>
               ) : historyError ? (
                 <div role="alert" className="space-y-2 text-xs">
-                  <p className="text-destructive">לא הצלחנו לטעון את ההיסטוריה.</p>
+                  <p className="text-destructive-text">לא הצלחנו לטעון את ההיסטוריה.</p>
                   <Button variant="outline" size="sm" onClick={() => { void refetchHistory(); }}>נסה שוב</Button>
                 </div>
               ) : !history || history.length === 0 ? (

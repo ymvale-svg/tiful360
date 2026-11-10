@@ -30,9 +30,12 @@ const assetStatusLabels: Record<string, string> = {
 };
 
 export default function Assets() {
-  const { data: assets } = useAssets();
-  const { data: employees } = useEmployees();
-  const { data: categories } = useAssetCategories();
+  const { data: assets, isLoading: assetsLoading, error: assetsError } = useAssets();
+  const { data: employees, isLoading: employeesLoading, error: employeesError } = useEmployees();
+  const { data: categories, isLoading: categoriesLoading, error: categoriesError } = useAssetCategories();
+  // "No results" is only true once every searched list has loaded.
+  const searchLoading = assetsLoading || employeesLoading || categoriesLoading;
+  const searchError = assetsError || employeesError || categoriesError;
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -343,7 +346,15 @@ export default function Assets() {
                     aria-label="תוצאות חיפוש"
                     className="absolute z-30 mt-2 w-full bg-card border border-border rounded-2xl shadow-2xl overflow-hidden max-h-[70vh] overflow-y-auto"
                   >
-                    {!hasResults ? (
+                    {!hasResults && searchLoading ? (
+                      <div role="presentation" className="px-4 py-8 text-center text-sm text-muted-foreground">
+                        <span role="status">טוען נתונים לחיפוש…</span>
+                      </div>
+                    ) : !hasResults && searchError ? (
+                      <div role="presentation" className="px-4 py-8 text-center text-sm text-destructive-text">
+                        <span role="alert">לא הצלחנו לטעון את הנתונים לחיפוש. רעננו את הדף ונסו שוב.</span>
+                      </div>
+                    ) : !hasResults ? (
                       <div role="presentation" className="px-4 py-8 text-center text-sm text-muted-foreground">
                         לא נמצאו תוצאות עבור "{globalSearch}"
                       </div>
@@ -352,11 +363,13 @@ export default function Assets() {
                         <div key={g.key} role="group" aria-labelledby={`gs-group-${g.key}`}>
                           <div id={`gs-group-${g.key}`} className="flex items-center gap-2 px-4 py-2 bg-muted/40 text-[0.8125rem] font-semibold text-muted-foreground uppercase tracking-wide">
                             <g.icon className="w-3.5 h-3.5" aria-hidden="true" />
-                            {g.label} <span className="font-normal">({g.items.length})</span>
+                            {g.label} <span className="font-normal tabular-nums">({g.items.length})</span>
                           </div>
                           {g.items.map((item) => {
                             const active = flatResults[activeIndex]?.id === item.id;
                             return (
+                              // Keyboard selection lives on the combobox input (arrows + Enter via aria-activedescendant).
+                              // eslint-disable-next-line jsx-a11y/click-events-have-key-events -- listbox option, keys handled by the combobox
                               <div
                                 key={item.id}
                                 id={item.id}

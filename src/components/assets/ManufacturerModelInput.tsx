@@ -11,6 +11,8 @@ interface Props {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  /** id of the text input, for `<label htmlFor>`. */
+  id?: string;
 }
 
 /**
@@ -24,6 +26,7 @@ export function ManufacturerModelInput({
   placeholder = "למשל: Apple MacBook Pro 16",
   className,
   disabled,
+  id,
 }: Props) {
   const { data: assets } = useAssets();
   const [open, setOpen] = useState(false);
@@ -51,6 +54,7 @@ export function ManufacturerModelInput({
   return (
     <div className="relative">
       <input
+        id={id}
         value={value}
         disabled={disabled}
         onChange={(e) => { onChange(e.target.value); setOpen(true); }}

@@ -60,6 +60,7 @@ export function CategoriesGrid({ onSelectCategory }: Props) {
             const s = stats.get(cat.id) ?? { count: 0, expiringSoon: 0, expired: 0 };
             return (
               <button
+                type="button"
                 key={cat.id}
                 onClick={() => onSelectCategory(cat.id)}
                 className={cn(
@@ -74,13 +75,14 @@ export function CategoriesGrid({ onSelectCategory }: Props) {
                     className={cn(
                       "absolute top-2 left-2 flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-full",
                       s.expired > 0
-                        ? "bg-destructive/15 text-destructive"
-                        : "bg-warning/15 text-warning"
+                        ? "bg-destructive/15 text-destructive-text"
+                        : "bg-warning/15 text-warning-text"
                     )}
                     title={s.expired > 0 ? `${s.expired} פגי תוקף` : `${s.expiringSoon} קרובים לפוג`}
                   >
-                    <AlertTriangle className="w-3 h-3" />
-                    {s.expired > 0 ? s.expired : s.expiringSoon}
+                    <AlertTriangle className="w-3 h-3" aria-hidden="true" />
+                    <span className="tabular-nums">{s.expired > 0 ? s.expired : s.expiringSoon}</span>
+                    <span className="sr-only">{s.expired > 0 ? "פגי תוקף" : "קרובים לפוג"}</span>
                   </span>
                 )}
                 <div className={cn(
@@ -90,7 +92,7 @@ export function CategoriesGrid({ onSelectCategory }: Props) {
                   <Icon className="w-10 h-10" strokeWidth={1.75} />
                 </div>
                 <div className="text-sm font-semibold text-center line-clamp-2 leading-tight">{cat.category_name}</div>
-                <div className="text-xs text-muted-foreground">{s.count} פריטים</div>
+                <div className="text-xs text-muted-foreground tabular-nums">{s.count} פריטים</div>
               </button>
             );
           })}

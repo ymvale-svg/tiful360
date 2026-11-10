@@ -40,8 +40,8 @@ export function TrainingDetailsPanel({ asset }: Props) {
   const expiryClass = (d?: string | null) => {
     const days = daysTo(d);
     if (days === null) return "text-muted-foreground";
-    if (days < 0) return "text-destructive font-semibold";
-    if (days <= 30) return "text-amber-600 dark:text-amber-400 font-semibold";
+    if (days < 0) return "text-destructive-text font-semibold";
+    if (days <= 30) return "text-warning-text font-semibold";
     return "text-foreground";
   };
   const expiryLabel = (d?: string | null) => {

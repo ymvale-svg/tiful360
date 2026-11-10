@@ -322,7 +322,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
           <div>
             <label htmlFor="edit-asset-name" className="text-sm font-medium mb-1 block">
               {selectedCategory?.prefix === "CINS" ? "שם הפוליסה" : "שם פריט"}
-              {!isView && <span className="text-destructive mr-1" aria-hidden="true">*</span>}
+              {!isView && <span className="text-destructive-text mr-1" aria-hidden="true">*</span>}
             </label>
             {isView ? (
               <div className={readCls}>{display(form.asset_name)}</div>
@@ -337,18 +337,22 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                   onChange={(e) => { setForm({ ...form, asset_name: e.target.value }); setErrors(({ asset_name: _, ...rest }) => rest); }}
                   className={cn(inputCls, errors.asset_name && "ring-2 ring-destructive/50")}
                 />
-                {errors.asset_name && <p id="edit-asset-name-error" role="alert" className="text-xs text-destructive mt-1">{errors.asset_name}</p>}
+                {errors.asset_name && <p id="edit-asset-name-error" role="alert" className="text-xs text-destructive-text mt-1">{errors.asset_name}</p>}
               </>
             )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div role="group" aria-labelledby="edit-asset-category-label" data-invalid={errors.category_id ? "true" : undefined}>
-              <label id="edit-asset-category-label" className="text-sm font-medium mb-1 block">קטגוריה</label>
+            <div data-invalid={errors.category_id ? "true" : undefined}>
+              <label id="edit-asset-category-label" htmlFor="edit-asset-category" className="text-sm font-medium mb-1 block">קטגוריה</label>
               {isView ? (
                 <div className={readCls}>{display(categoryName)}</div>
               ) : (
                 <SearchableSelect
+                  id="edit-asset-category"
+                  aria-required
+                  aria-invalid={errors.category_id ? true : undefined}
+                  aria-describedby={errors.category_id ? "edit-asset-category-error" : undefined}
                   value={form.category_id}
                   onChange={(v) => setForm({ ...form, category_id: v, group_id: "" })}
                   options={(categories ?? []).map(c => ({ value: c.id, label: c.category_name }))}
@@ -356,15 +360,18 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                   error={!!errors.category_id}
                 />
               )}
-              {!isView && errors.category_id && <p role="alert" className="text-xs text-destructive mt-1">{errors.category_id}</p>}
+              {!isView && errors.category_id && <p id="edit-asset-category-error" role="alert" className="text-xs text-destructive-text mt-1">{errors.category_id}</p>}
             </div>
             {(categoryGroups.length > 0 || (!isView && form.category_id)) && (
-              <div role="group" aria-labelledby="edit-asset-group-label" data-invalid={errors.group_id ? "true" : undefined}>
-                <label id="edit-asset-group-label" className="text-sm font-medium mb-1 block">תת-קטגוריה</label>
+              <div data-invalid={errors.group_id ? "true" : undefined}>
+                <label id="edit-asset-group-label" htmlFor="edit-asset-group" className="text-sm font-medium mb-1 block">תת-קטגוריה</label>
                 {isView ? (
                   <div className={readCls}>{display(categoryGroups.find(g => g.id === form.group_id)?.name)}</div>
                 ) : (
                   <SubCategorySelect
+                    id="edit-asset-group"
+                    aria-required={categoryGroups.length > 0}
+                    aria-describedby={errors.group_id ? "edit-asset-group-error" : undefined}
                     categoryId={form.category_id}
                     companyId={(selectedCategory as any)?.company_id ?? asset?.company_id ?? null}
                     defaultOwnerRole={(selectedCategory as any)?.default_owner_role ?? null}
@@ -373,16 +380,17 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                     error={!!errors.group_id}
                   />
                 )}
-                {!isView && errors.group_id && <p role="alert" className="text-xs text-destructive mt-1">{errors.group_id}</p>}
+                {!isView && errors.group_id && <p id="edit-asset-group-error" role="alert" className="text-xs text-destructive-text mt-1">{errors.group_id}</p>}
               </div>
             )}
             {(selectedCategory as any)?.is_assignable !== false && showField("condition", form.condition, !isView) && (
               <div>
-                <label className="text-sm font-medium mb-1 block">מצב הציוד</label>
+                <label htmlFor="edit-asset-condition" className="text-sm font-medium mb-1 block">מצב הציוד</label>
                 {isView ? (
                   <div className={readCls}>{display(conditionLabels[form.condition] ?? form.condition)}</div>
                 ) : (
                   <SearchableSelect
+                    id="edit-asset-condition"
                     value={form.condition}
                     onChange={(v) => setForm({ ...form, condition: v })}
                     options={[
@@ -399,11 +407,12 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
 
           {selectedCategory?.prefix !== "CINS" && selectedCategory?.prefix !== "CAR" && showField("manufacturer_model", form.manufacturer_model, !isView) && (
             <div>
-              <label className="text-sm font-medium mb-1 block">יצרן ומודל</label>
+              <label htmlFor="edit-asset-model" className="text-sm font-medium mb-1 block">יצרן ומודל</label>
               {isView ? (
                 <div className={readCls}>{display(form.manufacturer_model)}</div>
               ) : (
                 <ManufacturerModelInput
+                  id="edit-asset-model"
                   value={form.manufacturer_model}
                   onChange={(v) => setForm({ ...form, manufacturer_model: v })}
                   groupId={form.group_id || null}
@@ -438,7 +447,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                   </div>
                 ) : (
                   <div>
-                    <label className="text-sm font-medium mb-1 block">סוג נכס</label>
+                    <span className="text-sm font-medium mb-1 block">סוג נכס</span>
                     <div className="px-3 py-2 bg-primary/5 border border-primary/20 rounded-lg text-sm text-primary">
                       נכס מוסדי (לא משוייך לעובד)
                     </div>
@@ -471,7 +480,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
             <div>
               {isView ? (
                 <>
-                  <label className="text-sm font-medium mb-1 block">שיוך לאתר</label>
+                  <span className="text-sm font-medium mb-1 block">שיוך לאתר</span>
                   <div className={readCls}>
                     {siteName ?? <span className="text-muted-foreground">ללא שיוך לאתר</span>}
                     {containerName && <span className="block text-xs text-muted-foreground mt-0.5">מכולה: {containerName}</span>}
@@ -487,7 +496,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                   {form.assigned_site_id && (
                     <button
                       type="button"
-                      className="min-h-9 text-xs text-destructive hover:underline mt-1"
+                      className="min-h-9 text-xs text-destructive-text hover:underline mt-1"
                       onClick={() => setForm({ ...form, assigned_site_id: "", container_id: "" })}
                     >
                       הסר שיוך לאתר
@@ -646,7 +655,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
           </div>
 
           {!isView && Object.keys(errors).length > 0 && (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="text-sm text-destructive-text">
               {Object.keys(errors).length === 1 ? "יש שדה אחד לתיקון." : `יש ${Object.keys(errors).length} שדות לתיקון.`}
               {Object.entries(errors).filter(([k]) => k.startsWith("cf_")).map(([k, v]) => <span key={k} className="block text-xs">{v}</span>)}
             </p>

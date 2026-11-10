@@ -73,8 +73,8 @@ export function InsuranceDetailsPanel({ asset }: Props) {
   const expiryClass = (d?: string | null) => {
     const days = daysTo(d);
     if (days === null) return "text-muted-foreground";
-    if (days < 0) return "text-destructive font-semibold";
-    if (days <= 30) return "text-amber-600 dark:text-amber-400 font-semibold";
+    if (days < 0) return "text-destructive-text font-semibold";
+    if (days <= 30) return "text-warning-text font-semibold";
     return "text-foreground";
   };
   const expiryLabel = (d?: string | null) => {
@@ -271,7 +271,7 @@ export function InsuranceDetailsPanel({ asset }: Props) {
           <ShieldCheck className="w-4 h-4" /> פרטי ביטוח / רגולציה
         </h2>
         <div className="flex gap-2 items-center">
-        <input id={`policy-file-${asset.id}`} type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) handlePolicy(f); }} />
+        <input id={`policy-file-${asset.id}`} type="file" aria-label="קובץ פוליסה" accept="application/pdf,image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) handlePolicy(f); }} />
         <Popover open={pickerOpen} onOpenChange={(o) => { setPickerOpen(o); if (o) loadExistingDocs(); }}>
           <PopoverTrigger asChild>
             <Button size="sm" variant="outline" className="gap-1 text-xs" disabled={extracting}>
@@ -291,10 +291,15 @@ export function InsuranceDetailsPanel({ asset }: Props) {
               </button>
             ))}
             <div className="border-t border-border mt-1 pt-1">
-              <label htmlFor={`policy-file-${asset.id}`} onClick={() => setPickerOpen(false)}
-                className="w-full text-xs px-2 py-1.5 rounded hover:bg-muted flex items-center gap-2 cursor-pointer">
-                <FileUp className="w-3.5 h-3.5" /> העלה קובץ חדש
-              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  setPickerOpen(false);
+                  (document.getElementById(`policy-file-${asset.id}`) as HTMLInputElement | null)?.click();
+                }}
+                className="w-full text-right text-xs px-2 py-1.5 rounded hover:bg-muted flex items-center gap-2 cursor-pointer">
+                <FileUp className="w-3.5 h-3.5" aria-hidden="true" /> העלה קובץ חדש
+              </button>
             </div>
           </PopoverContent>
         </Popover>

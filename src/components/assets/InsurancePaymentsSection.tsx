@@ -75,7 +75,7 @@ export function InsurancePaymentsSection({ asset }: { asset: any }) {
           <div className="text-sm">
             <span className="font-semibold">לתשלום הבא: </span>
             {formatDateDMY(next.due_date)}{next.amount != null && ` · ₪${next.amount.toLocaleString()}`}
-            {next.due_date < today && <span className="text-destructive mr-2">(באיחור)</span>}
+            {next.due_date < today && <span className="text-destructive-text mr-2">(באיחור)</span>}
           </div>
           <Button size="sm" onClick={() => markPaid(next, true)}><Check className="w-4 h-4 ml-1" />שולם</Button>
         </div>

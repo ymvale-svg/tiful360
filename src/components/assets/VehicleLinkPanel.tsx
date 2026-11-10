@@ -1,4 +1,5 @@
 import { Car, AlertTriangle } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAssets } from "@/hooks/useData";
 import { useEmployeeVehicles } from "@/hooks/useVehicleSubscriptions";
 import { collectEmployeeVehicles, plateFromNotes, type LinkedVehicle } from "@/lib/vehicleLinkedGroups";
@@ -20,9 +21,10 @@ function label(v: LinkedVehicle): string {
  * belongs to — from inventory vehicles or the employee's personal vehicles.
  */
 export function VehicleLinkPanel({ asset, onOpenVehicle }: Props) {
-  const { data: assets } = useAssets();
+  const { data: assets, isLoading: assetsLoading, error: assetsError } = useAssets();
   const ownerId = asset?.current_owner_id as string | null;
-  const { data: personal } = useEmployeeVehicles(ownerId ?? undefined);
+  const { data: personal, isLoading: personalLoading, error: personalError } = useEmployeeVehicles(ownerId ?? undefined);
+  const loadError = assetsError || personalError;
   const vehicles = collectEmployeeVehicles(assets, personal, ownerId);
 
   const notedPlate = plateFromNotes(asset?.notes);
@@ -38,13 +40,23 @@ export function VehicleLinkPanel({ asset, onOpenVehicle }: Props) {
       </h2>
 
       {!ownerId ? (
-        <div className="flex items-start gap-2 text-sm rounded-lg border border-amber-300 bg-amber-50 text-amber-900 p-3 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800">
-          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+        <div className="flex items-start gap-2 text-sm rounded-lg border border-warning/40 bg-warning/10 text-foreground p-3">
+          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-warning-text" aria-hidden="true" />
           <span>המנוי אינו משויך לעובד, ולכן לא ניתן לזהות את הרכב. יש לבצע שיוך לעובד בעל רכב.</span>
         </div>
+      ) : assetsLoading || personalLoading ? (
+        <div role="status" aria-busy="true" className="space-y-2">
+          <span className="sr-only">טוען את רכבי העובד…</span>
+          <Skeleton className="h-10 w-full rounded-lg" />
+        </div>
+      ) : loadError ? (
+        <div role="alert" className="flex items-start gap-2 text-sm rounded-lg border border-destructive/40 bg-destructive/10 text-foreground p-3">
+          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-destructive-text" aria-hidden="true" />
+          <span>לא הצלחנו לטעון את רכבי העובד. בדקו את החיבור לאינטרנט ונסו שוב.</span>
+        </div>
       ) : vehicles.length === 0 ? (
-        <div className="flex items-start gap-2 text-sm rounded-lg border border-destructive/40 bg-destructive/10 text-destructive p-3">
-          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+        <div className="flex items-start gap-2 text-sm rounded-lg border border-destructive/40 bg-destructive/10 text-destructive-text p-3">
+          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
           <span>לא נמצא רכב המשויך לעובד — לא ניתן לקשר את המנוי לרכב. יש לשייך רכב לעובד תחילה.</span>
         </div>
       ) : (
@@ -73,7 +85,7 @@ export function VehicleLinkPanel({ asset, onOpenVehicle }: Props) {
             );
           })}
           {notedPlate && !matched && (
-            <li className="text-xs text-destructive">
+            <li className="text-xs text-destructive-text">
               במנוי רשום רכב {notedPlate}, אך הוא אינו מופיע ברכבי העובד.
             </li>
           )}

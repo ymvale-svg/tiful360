@@ -113,8 +113,11 @@ export function ImportAssetsExcelDialog({ open, onOpenChange }: Props) {
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const { toast } = useToast();
   const { activeCompanyId } = useCompany();
-  const { data: categories } = useAssetCategories();
-  const { data: existingAssets } = useAssets();
+  const { data: categories, isLoading: categoriesLoading, error: categoriesError } = useAssetCategories();
+  const { data: existingAssets, isLoading: assetsLoading, error: assetsError } = useAssets();
+  // The preview check compares against the system's categories and codes; it is only shown once both loaded.
+  const referenceLoading = categoriesLoading || assetsLoading;
+  const referenceError = categoriesError || assetsError;
   const queryClient = useQueryClient();
 
   // Checked in the preview, before anything is written.
@@ -169,7 +172,7 @@ export function ImportAssetsExcelDialog({ open, onOpenChange }: Props) {
   };
 
   const handleImport = async () => {
-    if (!activeCompanyId || validCount === 0) return;
+    if (!activeCompanyId || validCount === 0 || referenceLoading || referenceError) return;
     setImporting(true);
     // Rows that failed the preview check are reported, not sent.
     const errors: string[] = checks
@@ -257,12 +260,20 @@ export function ImportAssetsExcelDialog({ open, onOpenChange }: Props) {
             hint={fileName ? "לחצו או גררו קובץ אחר כדי להחליף" : "xlsx, xls, csv"}
           />
 
-          {rows.length > 0 && !result && (
+          {rows.length > 0 && !result && referenceLoading && (
+            <p role="status" aria-busy="true" className="text-sm text-muted-foreground">בודק את השורות מול הקטגוריות והמזהים במערכת…</p>
+          )}
+
+          {rows.length > 0 && !result && !referenceLoading && referenceError && (
+            <p role="alert" className="text-sm text-destructive-text">לא הצלחנו לטעון את הקטגוריות והמזהים הקיימים, ולכן אי אפשר לבדוק את הקובץ. סגרו ופתחו שוב את החלון.</p>
+          )}
+
+          {rows.length > 0 && !result && !referenceLoading && !referenceError && (
             <div className="space-y-3">
               <p className="text-sm font-medium">
-                נמצאו <span className="text-primary font-bold">{rows.length}</span> שורות
+                נמצאו <span className="text-primary font-bold tabular-nums">{rows.length}</span> שורות
                 {invalidCount > 0
-                  ? <> — <span className="text-success">{validCount} מוכנות לייבוא</span>, <span className="text-destructive">{invalidCount} עם בעיות שלא ייובאו</span></>
+                  ? <> — <span className="text-success-text">{validCount} מוכנות לייבוא</span>, <span className="text-destructive-text">{invalidCount} עם בעיות שלא ייובאו</span></>
                   : " — כולן מוכנות לייבוא"}
               </p>
               <div className="max-h-48 overflow-auto border border-border rounded-lg">
@@ -281,19 +292,19 @@ export function ImportAssetsExcelDialog({ open, onOpenChange }: Props) {
                     {/* Rows with problems first, so they are seen before importing. */}
                     {rows.map((r, i) => ({ r, i })).sort((a, b) => Number(checks[b.i].issues.length > 0) - Number(checks[a.i].issues.length > 0)).slice(0, 10).map(({ r, i }) => (
                       <tr key={i} className={`border-t border-border ${checks[i].issues.length ? "bg-destructive/5" : ""}`}>
-                        <td className="p-2 text-muted-foreground">{i + 1}</td>
+                        <td className="p-2 text-muted-foreground tabular-nums">{i + 1}</td>
                         <td className="p-2 font-mono">{r.asset_code}</td>
                         <td className="p-2">{r.asset_name}</td>
                         <td className="p-2">{r.category_name ?? "—"}</td>
                         <td className="p-2">{r.status ?? "במלאי"}</td>
                         <td className="p-2">
                           {checks[i].issues.length ? (
-                            <span className="inline-flex items-start gap-1 text-destructive">
+                            <span className="inline-flex items-start gap-1 text-destructive-text">
                               <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" aria-hidden="true" />
                               {checks[i].issues.join(", ")}
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 text-success">
+                            <span className="inline-flex items-center gap-1 text-success-text">
                               <CheckCircle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                               תקין
                             </span>
@@ -324,11 +335,11 @@ export function ImportAssetsExcelDialog({ open, onOpenChange }: Props) {
           {result && (
             <div className="space-y-3" role="status">
               <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
-                <CheckCircle className="w-8 h-8 text-success flex-shrink-0" aria-hidden="true" />
+                <CheckCircle className="w-8 h-8 text-success-text flex-shrink-0" aria-hidden="true" />
                 <div>
                   <p className="font-medium">{result.success} פריטים יובאו בהצלחה</p>
                   {result.failed > 0 && (
-                    <p className="text-sm text-destructive">{result.failed} שורות נכשלו</p>
+                    <p className="text-sm text-destructive-text">{result.failed} שורות נכשלו</p>
                   )}
                 </div>
               </div>
@@ -336,7 +347,7 @@ export function ImportAssetsExcelDialog({ open, onOpenChange }: Props) {
               {result.errors.length > 0 && (
                 <div className="max-h-32 overflow-auto border border-destructive/20 rounded-lg p-3 space-y-1">
                   {result.errors.map((err, i) => (
-                    <p key={i} className="text-xs text-destructive flex items-start gap-1">
+                    <p key={i} className="text-xs text-destructive-text flex items-start gap-1">
                       <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" aria-hidden="true" />
                       {err}
                     </p>

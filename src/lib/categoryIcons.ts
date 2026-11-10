@@ -11,7 +11,9 @@ export type CategoryColor = {
   ring: string;     // hover ring color
 };
 
-// Tailwind palette tokens (work in light & dark)
+// Decorative categorical icon tints (MASTER.md exception): twelve categories need distinct hues and no
+// semantic token fits, so these stay on the Tailwind palette. `text` colours the ICON only — never use
+// it for words (use text-foreground / text-muted-foreground), and never to signal status.
 const PALETTE: Record<string, CategoryColor> = {
   blue:    { bg: "bg-blue-500/15",    text: "text-blue-600 dark:text-blue-400",       ring: "hover:ring-blue-500/40" },
   emerald: { bg: "bg-emerald-500/15", text: "text-emerald-600 dark:text-emerald-400", ring: "hover:ring-emerald-500/40" },
