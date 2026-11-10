@@ -411,16 +411,16 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned, defa
   };
 
   /** One email with the combined protocol (recipient resolved server-side). */
-  const sendProtocolEmail = async (pdfUrl: string | null) => {
-    if (!employeeId) return;
+  const sendProtocolEmail = async (formId: string | undefined) => {
+    if (!employeeId || !formId) return;
     try {
       const { data, error } = await supabase.functions.invoke("send-handover-protocol-email", {
         body: {
           employeeId,
+          formId,
           idempotencyKey: `multi-handover-${Date.now()}`,
           templateData: {
             employeeName: employee?.full_name ?? "",
-            companyName: activeCompany?.name ?? "",
             itemName: `${assets.length} פריטים`,
             itemCode: assets.map((a) => a.asset_code).filter(Boolean).join(", "),
             direction: "handover",
@@ -429,8 +429,6 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned, defa
             issuedAt: formatDateTimeDMY(new Date()),
             fields: itemFields.map((f) => ({ label: f.label, value: String(f.value ?? "") })),
             notes: freeText || null,
-            pdfUrl,
-            portalUrl: "https://tiful360.com/portal",
           },
         },
       });
@@ -477,7 +475,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned, defa
         pdfUrl = await uploadFile(blob, "protocol.pdf", "application/pdf");
       }
 
-      await insertForms({
+      const signedRows = await insertForms({
         status: "signed",
         form_snapshot: { employee_signature: receiver, issuer_signature: issuer },
         signature_data: receiver,
@@ -490,7 +488,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned, defa
       setBusyStage("שומר את הפרוטוקול…");
       await applyAssetsUpdate();
       setBusyStage("שולח מייל לעובד…");
-      await sendProtocolEmail(pdfUrl);
+      await sendProtocolEmail(signedRows[0]?.id);
 
       toast({
         title: "הפרוטוקול נחתם ונשמר",
