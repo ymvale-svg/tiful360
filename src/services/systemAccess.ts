@@ -181,6 +181,8 @@ export async function listProcessGrants(db: Db, onboardingProcessId: string): Pr
 
 export interface RequestAccessResult {
   requestId: string;
+  /** The open onboarding the request joined (set by the DB when not given). */
+  onboardingProcessId?: string | null;
   ticketId: string;
   ticketCode: string;
   created: number;
@@ -337,4 +339,22 @@ export async function createScanKey(db: Db, systemId: string): Promise<string> {
 export async function revokeScanKey(db: Db, systemId: string) {
   const { error } = await db.rpc("revoke_system_access_scan_token", { _system_id: systemId });
   fail(error);
+}
+
+export interface LegacyImportResult {
+  applied: boolean;
+  systemsCreated: number;
+  resourcesCreated: number;
+  grants: number;
+  employees: number;
+  skipped: number;
+  bySystem: Record<string, { grants: number }>;
+}
+
+/** Existing access (digital-access assets and the old digital_access list) as active grants.
+ *  apply=false computes the same result and rolls it back, for a preview. */
+export async function importLegacyAccess(db: Db, companyId: string, apply: boolean): Promise<LegacyImportResult> {
+  const { data, error } = await db.rpc("import_legacy_system_access", { _company_id: companyId, _apply: apply });
+  fail(error);
+  return data as LegacyImportResult;
 }

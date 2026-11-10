@@ -8,6 +8,8 @@ const setGroupResource = vi.fn();
 const toast = vi.fn();
 const createKey = vi.fn();
 const revokeKey = vi.fn();
+const previewImport = vi.fn();
+const applyImport = vi.fn();
 let scanStatus: unknown = { connected: false, last_at: null, last_result: null, agent: null };
 
 const SYSTEM = {
@@ -37,6 +39,7 @@ vi.mock("@/hooks/useSystemAccess", () => ({
   useSetGroupResource: () => mutation(setGroupResource),
   useScanStatus: () => ({ data: scanStatus }),
   useScanKey: () => ({ create: mutation(createKey), revoke: mutation(revokeKey) }),
+  useLegacyAccessImport: () => ({ preview: mutation(previewImport), apply: mutation(applyImport) }),
 }));
 
 import { SystemsTab } from "@/components/systemAccess/SystemsTab";
@@ -86,6 +89,34 @@ describe("system access screens", () => {
   it("builds the PowerShell export line for the drive", () => {
     expect(treeExportCommand("S:\\")).toContain("-Path 'S:\\'");
     expect(treeExportCommand("")).toContain("-Path 'P:\\'");
+  });
+});
+
+describe("importing existing access", () => {
+  const RESULT = { applied: false, systemsCreated: 1, resourcesCreated: 2, grants: 5, employees: 3, skipped: 1,
+    bySystem: { "פריוריטי": { grants: 3 }, "כונן P": { grants: 2 } } };
+
+  it("previews per system and imports only after confirming", async () => {
+    previewImport.mockResolvedValue(RESULT);
+    applyImport.mockResolvedValue({ ...RESULT, applied: true });
+    render(<ConfirmProvider><SystemsTab /></ConfirmProvider>);
+    fireEvent.click(screen.getByRole("button", { name: /בדוק מה ייובא/ }));
+    const table = await screen.findByRole("table", { name: "הרשאות לייבוא לפי מערכת" });
+    expect(within(table).getByRole("rowheader", { name: "פריוריטי" })).toBeTruthy();
+    expect(screen.getByText(/5 הרשאות פעילות ל-3 עובדים · 1 כבר קיימות/)).toBeTruthy();
+    expect(applyImport).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "ייבא" }));
+    await waitFor(() => expect(applyImport).toHaveBeenCalled());
+    await waitFor(() => expect(toast).toHaveBeenCalledWith(expect.objectContaining({ title: "ההרשאות יובאו" })));
+  });
+
+  it("says when there is nothing new instead of asking", async () => {
+    previewImport.mockResolvedValue({ ...RESULT, grants: 0, employees: 0, skipped: 4, bySystem: {} });
+    render(<ConfirmProvider><SystemsTab /></ConfirmProvider>);
+    fireEvent.click(screen.getByRole("button", { name: /בדוק מה ייובא/ }));
+    await waitFor(() => expect(toast).toHaveBeenCalledWith(expect.objectContaining({ title: "אין מה לייבא" })));
+    expect(screen.queryByRole("button", { name: "ייבא" })).toBeNull();
+    expect(applyImport).not.toHaveBeenCalled();
   });
 });
 

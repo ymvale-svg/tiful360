@@ -24,6 +24,7 @@ import {
   createScanKey,
   getScanStatus,
   revokeScanKey,
+  importLegacyAccess,
   type GrantAction,
 } from "@/services/systemAccess";
 import type { AccessGroup, AccessPick, AccessResource, AccessSystem } from "@/domain/systemAccess/types";
@@ -154,6 +155,8 @@ function useInvalidateRequests() {
   return () => {
     qc.invalidateQueries({ queryKey: KEYS.requests });
     qc.invalidateQueries({ queryKey: ["it-tickets"] });
+    // A request can join an open onboarding and add to its checklist.
+    qc.invalidateQueries({ queryKey: ["onboarding-processes"] });
   };
 }
 
@@ -312,5 +315,22 @@ export function useScanKey(systemId: string | null) {
   return {
     create: useMutation({ mutationFn: () => createScanKey(supabase, systemId!), onSuccess: done }),
     revoke: useMutation({ mutationFn: () => revokeScanKey(supabase, systemId!), onSuccess: done }),
+  };
+}
+
+/** Preview and apply the one-time import of access that existed before this screen. */
+export function useLegacyAccessImport() {
+  const qc = useQueryClient();
+  const { activeCompanyId } = useCompany();
+  const run = (apply: boolean) => {
+    if (!activeCompanyId) throw new Error("לא נבחרה חברה");
+    return importLegacyAccess(supabase, activeCompanyId, apply);
+  };
+  return {
+    preview: useMutation({ mutationFn: () => run(false) }),
+    apply: useMutation({
+      mutationFn: () => run(true),
+      onSuccess: () => qc.invalidateQueries({ queryKey: ["system-access"] }),
+    }),
   };
 }

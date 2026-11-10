@@ -413,7 +413,8 @@ function NewAccessRequestDialog({ open, onOpenChange }: { open: boolean; onOpenC
       const res = await request.mutateAsync({ employeeId, picks: items, note });
       toast({
         title: "הבקשה נשלחה",
-        description: `${res.created} הרשאות · קריאה ${res.ticketCode}${res.skipped ? ` · ${res.skipped} כבר קיימות ולא נשלחו שוב` : ""}`,
+        description: `${res.created} הרשאות · קריאה ${res.ticketCode}${res.skipped ? ` · ${res.skipped} כבר קיימות ולא נשלחו שוב` : ""}${
+          res.onboardingProcessId ? " · צורפה לקליטה הפתוחה של העובד ותופיע בצ'קליסט שלה" : ""}`,
       });
       close();
     } catch (e) {
