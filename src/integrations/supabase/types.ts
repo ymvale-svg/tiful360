@@ -3499,6 +3499,190 @@ export type Database = {
         }
         Relationships: []
       }
+      system_access_group_resources: {
+        Row: {
+          company_id: string
+          group_id: string
+          level: string
+          resource_id: string
+        }
+        Insert: {
+          company_id: string
+          group_id: string
+          level?: string
+          resource_id: string
+        }
+        Update: {
+          company_id?: string
+          group_id?: string
+          level?: string
+          resource_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_access_group_resources_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "system_access_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_group_resources_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "system_access_resources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      system_access_groups: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string | null
+          external_name: string | null
+          id: string
+          is_active: boolean
+          name: string
+          system_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description?: string | null
+          external_name?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          system_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          external_name?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          system_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_access_groups_system_id_fkey"
+            columns: ["system_id"]
+            isOneToOne: false
+            referencedRelation: "system_access_systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      system_access_resources: {
+        Row: {
+          company_id: string
+          created_at: string
+          external_ref: string | null
+          id: string
+          is_active: boolean
+          missing_since: string | null
+          name: string
+          parent_id: string | null
+          path: string
+          sort_order: number
+          system_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          external_ref?: string | null
+          id?: string
+          is_active?: boolean
+          missing_since?: string | null
+          name: string
+          parent_id?: string | null
+          path: string
+          sort_order?: number
+          system_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          external_ref?: string | null
+          id?: string
+          is_active?: boolean
+          missing_since?: string | null
+          name?: string
+          parent_id?: string | null
+          path?: string
+          sort_order?: number
+          system_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_access_resources_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "system_access_resources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_resources_system_id_fkey"
+            columns: ["system_id"]
+            isOneToOne: false
+            referencedRelation: "system_access_systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      system_access_systems: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          owner_role: Database["public"]["Enums"]["app_role"]
+          owner_user_id: string | null
+          provisioning: string
+          resource_label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          owner_role?: Database["public"]["Enums"]["app_role"]
+          owner_user_id?: string | null
+          provisioning?: string
+          resource_label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          owner_role?: Database["public"]["Enums"]["app_role"]
+          owner_user_id?: string | null
+          provisioning?: string
+          resource_label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_access_systems_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tax_form_101: {
         Row: {
           access_token: string | null
@@ -4407,6 +4591,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      import_system_access_tree: {
+        Args: { _paths: string[]; _system_id: string }
+        Returns: Json
+      }
       is_company_admin: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
@@ -4614,6 +4802,14 @@ export type Database = {
       sync_user_roles_from_groups: {
         Args: { _user_id: string }
         Returns: undefined
+      }
+      system_access_can_manage: {
+        Args: { _company_id: string }
+        Returns: boolean
+      }
+      system_access_can_view: {
+        Args: { _company_id: string }
+        Returns: boolean
       }
       update_my_birthday_preference: {
         Args: {
