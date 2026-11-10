@@ -253,6 +253,55 @@
       "when": 1794317613588,
       "tag": "0035_document_location_report_remote_only",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794325081719,
+      "tag": "0036_onboarding_checklist_integrity",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1794325102001,
+      "tag": "0037_onboarding_fulfillment_tracks",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1794325184012,
+      "tag": "0038_system_access_catalog",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1794325276203,
+      "tag": "0039_system_access_requests",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1794325384204,
+      "tag": "0040_system_access_revocation",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1794325436350,
+      "tag": "0041_vehicle_leasing",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1794325480771,
+      "tag": "0042_system_access_tree_scan",
+      "breakpoints": true
     }
   ]
 }
