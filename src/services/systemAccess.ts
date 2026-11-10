@@ -313,3 +313,28 @@ export async function listEmployeeGrantHistory(db: Db, employeeId: string): Prom
   fail(error);
   return (data ?? []) as ProtocolGrant[];
 }
+
+export interface ScanStatus {
+  connected: boolean;
+  last_at: string | null;
+  last_result: { added: number; missing: number; returned: number; total: number } | null;
+  agent: string | null;
+}
+
+export async function getScanStatus(db: Db, systemId: string): Promise<ScanStatus | null> {
+  const { data, error } = await db.rpc("system_access_scan_status", { _system_id: systemId });
+  fail(error);
+  return (data ?? null) as ScanStatus | null;
+}
+
+/** A new scan key for the system (replaces any old one). The key is returned once and never stored. */
+export async function createScanKey(db: Db, systemId: string): Promise<string> {
+  const { data, error } = await db.rpc("create_system_access_scan_token", { _system_id: systemId });
+  fail(error);
+  return data as string;
+}
+
+export async function revokeScanKey(db: Db, systemId: string) {
+  const { error } = await db.rpc("revoke_system_access_scan_token", { _system_id: systemId });
+  fail(error);
+}

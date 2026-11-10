@@ -21,6 +21,9 @@ import {
   listEmployeeGrantHistory,
   listHeldGrants,
   requestRevocation,
+  createScanKey,
+  getScanStatus,
+  revokeScanKey,
   type GrantAction,
 } from "@/services/systemAccess";
 import type { AccessGroup, AccessPick, AccessResource, AccessSystem } from "@/domain/systemAccess/types";
@@ -293,4 +296,21 @@ export function useGenerateAccessProtocol() {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["employee-documents"] }),
   });
+}
+
+export function useScanStatus(systemId: string | null) {
+  return useQuery({
+    queryKey: ["system-access", "scan", systemId],
+    queryFn: () => getScanStatus(supabase, systemId!),
+    enabled: !!systemId,
+  });
+}
+
+export function useScanKey(systemId: string | null) {
+  const qc = useQueryClient();
+  const done = () => qc.invalidateQueries({ queryKey: ["system-access", "scan", systemId] });
+  return {
+    create: useMutation({ mutationFn: () => createScanKey(supabase, systemId!), onSuccess: done }),
+    revoke: useMutation({ mutationFn: () => revokeScanKey(supabase, systemId!), onSuccess: done }),
+  };
 }

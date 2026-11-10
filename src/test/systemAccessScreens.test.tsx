@@ -6,6 +6,9 @@ const saveSystem = vi.fn();
 const importTree = vi.fn();
 const setGroupResource = vi.fn();
 const toast = vi.fn();
+const createKey = vi.fn();
+const revokeKey = vi.fn();
+let scanStatus: unknown = { connected: false, last_at: null, last_result: null, agent: null };
 
 const SYSTEM = {
   id: "p", company_id: "c1", name: "כונן P", provisioning: "manual", owner_role: "it_manager",
@@ -32,6 +35,8 @@ vi.mock("@/hooks/useSystemAccess", () => ({
   useAccessGroups: () => ({ data: GROUPS }),
   useSaveAccessGroup: () => mutation(vi.fn()),
   useSetGroupResource: () => mutation(setGroupResource),
+  useScanStatus: () => ({ data: scanStatus }),
+  useScanKey: () => ({ create: mutation(createKey), revoke: mutation(revokeKey) }),
 }));
 
 import { SystemsTab } from "@/components/systemAccess/SystemsTab";
@@ -81,5 +86,28 @@ describe("system access screens", () => {
   it("builds the PowerShell export line for the drive", () => {
     expect(treeExportCommand("S:\\")).toContain("-Path 'S:\\'");
     expect(treeExportCommand("")).toContain("-Path 'P:\\'");
+  });
+});
+
+describe("automatic tree scan", () => {
+  it("creates a key after confirming and shows it once with the system id", async () => {
+    createKey.mockResolvedValue("a".repeat(64));
+    render(<ConfirmProvider><AccessTreeTab /></ConfirmProvider>);
+    fireEvent.click(screen.getByRole("button", { name: /חיבור סריקה אוטומטית/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "צור מפתח" }));
+    expect(await screen.findByText(`ACCESS_TREE_TOKEN=${"a".repeat(64)}`)).toBeTruthy();
+    expect(screen.getByText("ACCESS_TREE_SYSTEM_ID=p")).toBeTruthy();
+  });
+
+  it("shows the last scan and lets IT disconnect", async () => {
+    scanStatus = { connected: true, last_at: "2026-11-10T01:00:00Z", last_result: { added: 3, missing: 1, returned: 0, total: 214 }, agent: "FILESRV01" };
+    revokeKey.mockResolvedValue(undefined);
+    render(<ConfirmProvider><AccessTreeTab /></ConfirmProvider>);
+    expect(screen.getByText(/סריקה אחרונה 10\/11\/2026 03:00 מ-FILESRV01: 3 חדשות, 1 לא נמצאו, 214 בסך הכול/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "נתק" }));
+    const dialog = await screen.findByRole("alertdialog").catch(() => screen.findByRole("dialog"));
+    fireEvent.click(within(dialog).getByRole("button", { name: "נתק" }));
+    await waitFor(() => expect(revokeKey).toHaveBeenCalled());
+    scanStatus = { connected: false, last_at: null, last_result: null, agent: null };
   });
 });

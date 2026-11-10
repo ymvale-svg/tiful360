@@ -5,6 +5,7 @@ import { FileDrop } from "@/components/feedback/FileDrop";
 import { FormField } from "@/components/feedback/FormField";
 import { StateView } from "@/components/feedback/StateView";
 import { useConfirm } from "@/components/feedback/ConfirmDialog";
+import { TreeScanPanel } from "@/components/systemAccess/TreeScanPanel";
 import { useToast } from "@/hooks/use-toast";
 import {
   useAccessGroups,
@@ -221,6 +222,8 @@ function SystemTree({ system }: { system: AccessSystem }) {
             })}
           </ul>
         </StateView>
+
+        <TreeScanPanel system={system} />
 
         <div className="rounded-lg bg-muted/40 p-3 space-y-2">
           <h3 className="text-sm font-semibold">ייבוא עץ מהשרת</h3>

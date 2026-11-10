@@ -4,6 +4,7 @@ CREATE SCHEMA public; CREATE SCHEMA auth;
 DO $$ BEGIN CREATE ROLE authenticated; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE ROLE anon; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE ROLE service_role; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER ROLE service_role BYPASSRLS;
 GRANT USAGE ON SCHEMA public, auth TO authenticated, anon, service_role;
 CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('test.uid', true), '')::uuid $$;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;

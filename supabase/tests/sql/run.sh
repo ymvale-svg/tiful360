@@ -17,10 +17,12 @@ MIGRATIONS=(
   supabase/migrations/20261110120000_system_access_requests.sql
   supabase/migrations/20261110130000_system_access_revocation.sql
   supabase/migrations/20261110140000_vehicle_leasing.sql
+  supabase/migrations/20261110150000_system_access_tree_scan.sql
 )
 for test in supabase/tests/sql/*.sql; do
   [[ "$(basename "$test")" == 00_* ]] && continue
-  "${PSQL[@]}" -f supabase/tests/sql/00_stub_schema.sql >/dev/null 2>&1
+  "${PSQL[@]}" -f supabase/tests/sql/00_stub_schema.sql 2>&1 | grep -v -E "NOTICE|^$|drop cascades|DETAIL|and [0-9]+ other objects" || true
+  "${PSQL[@]}" -tc "select 1" >/dev/null
   for m in "${MIGRATIONS[@]}"; do "${PSQL[@]}" -f "$m" 2>&1 | grep -v NOTICE || true; done
   "${PSQL[@]}" -t -f "$test" | grep "all assertions passed"
 done
