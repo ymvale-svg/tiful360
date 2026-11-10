@@ -22,6 +22,7 @@ import { useProcessAccessGrants } from "@/hooks/useSystemAccess";
 import { isOpenGrant } from "@/domain/systemAccess/picks";
 import { GRANT_STATUS_LABEL, grantLabel } from "@/domain/systemAccess/types";
 import { Link } from "react-router-dom";
+import { VehicleItemAction } from "@/components/vehicles/VehicleItemAction";
 import {
   appendOnboardingAudit,
   useCompleteOnboardingProcess,
@@ -408,6 +409,13 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
                                     <StickyNote className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-600" />
                                     <span><span className="font-medium">הערה לתפעול: </span>{item.notes}</span>
                                   </p>
+                                )}
+                                {item.item_type === "vehicle" && item.status !== "done" && (
+                                  <VehicleItemAction
+                                    item={item}
+                                    process={process}
+                                    preferredModel={item.selected_model_id ? groupModels.find((m) => m.id === item.selected_model_id)?.name : null}
+                                  />
                                 )}
                                 {item.completion_note && (
                                   <p className="text-xs mt-1.5 text-muted-foreground">הערת ביצוע: {item.completion_note}</p>

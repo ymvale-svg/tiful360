@@ -61,6 +61,7 @@ export const HUB_TABS = {
     { key: "assets", label: "משאבים", roles: ASSET_STAFF },
     { key: "handover", label: "ממתינים לשיוך", roles: ASSET_STAFF },
     { key: "subscriptions", label: "רכב ומנויים", roles: ["admin", "super_admin", "operations", "finance", "payroll"] },
+    { key: "leasing", label: "ליסינג ורמות רכב", roles: ["admin", "super_admin", "operations", "finance"] },
     { key: "categories", label: "קטגוריות", roles: ["admin", "super_admin", "operations", "legal"] },
   ],
   settings: [
