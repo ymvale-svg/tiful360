@@ -8,7 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { FormField } from "@/components/feedback/FormField";
 import { StateView } from "@/components/feedback/StateView";
 import { useToast } from "@/hooks/use-toast";
-import { useAttendanceLocationReport, resolvePunchAddresses } from "@/hooks/useAttendanceLocationReport";
+import {
+  canAutoResolve,
+  resolvePunchAddresses,
+  useAddressResolving,
+  useAttendanceLocationReport,
+} from "@/hooks/useAttendanceLocationReport";
 import {
   EXPORT_HEADERS,
   buildShiftRows,
@@ -59,7 +64,7 @@ export function AttendanceLocationReport() {
   const [from, setFrom] = useState(() => monthStart(today));
   const [to, setTo] = useState(today);
   const [employeeId, setEmployeeId] = useState<string>(ALL);
-  const [resolving, setResolving] = useState(false);
+  const resolving = useAddressResolving();
   const qc = useQueryClient();
   const { toast } = useToast();
 
@@ -110,35 +115,33 @@ export function AttendanceLocationReport() {
 
   const resolveMissing = async (ids: string[]) => {
     if (ids.length === 0) return;
-    setResolving(true);
-    try {
-      const refresh = () => qc.invalidateQueries({ queryKey: ["attendance_location_report"] });
-      const res = await resolvePunchAddresses(ids, () => void refresh());
-      await refresh();
-      if (res.failed.length) {
-        toast({
-          title: "חלק מהכתובות לא הושלמו",
-          description: "במקומן מוצגות הקואורדינטות. אפשר לנסות שוב מאוחר יותר.",
-          variant: "destructive",
-        });
-      }
-    } finally {
-      setResolving(false);
+    const refresh = () => qc.invalidateQueries({ queryKey: ["attendance_location_report"] });
+    const res = await resolvePunchAddresses(ids, () => void refresh());
+    await refresh();
+    if (res.failed) {
+      toast({
+        title: "חלק מהכתובות לא הושלמו",
+        description: `${res.reason ?? ""} במקומן מוצגות הקואורדינטות, ואפשר לנסות שוב בכפתור "השלמת כתובות".`.trim(),
+        variant: "destructive",
+      });
     }
   };
 
-  // Resolve addresses once per loaded range, in the background.
+  // Resolve missing addresses once per loaded range, in the background. A run already in
+  // progress (also from an earlier visit to this screen) is never started twice, and after
+  // a failed run automatic retries pause for 30 minutes so a refresh doesn't rescan.
   const autoResolved = useRef<string>("");
   useEffect(() => {
     const key = `${from}|${to}`;
     if (isLoading || isFetching || resolving || autoResolved.current === key || missingIds.length === 0) return;
     autoResolved.current = key;
+    if (!canAutoResolve()) return;
     void resolveMissing(missingIds);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [from, to, isLoading, isFetching, missingIds]);
 
   const handleExport = async () => {
-    if (missingIds.length && !resolving) await resolveMissing(missingIds);
+    if (missingIds.length && !resolving && canAutoResolve()) await resolveMissing(missingIds);
     const fresh = (await refetch()).data ?? punches;
     const all = buildShiftRows(fresh, from, to);
     const out = employeeId === ALL ? all : all.filter((r) => r.employee_id === employeeId);
