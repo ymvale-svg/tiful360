@@ -61,14 +61,31 @@ export function isSystemOwner(grant: Pick<AccessGrant, "system_access_systems">,
   return actor.roles.includes(system.owner_role);
 }
 
+const WAITING = new Set(["requested", "revoke_requested"]);
+const SENT = new Set(["dispatched", "revoke_dispatched"]);
+
+/** A revocation in progress (as opposed to a grant being opened). */
+export const isRevoking = (g: Pick<AccessGrant, "status">) => g.status === "revoke_requested" || g.status === "revoke_dispatched";
+
 /** Mirrors resolve_system_access_grant: the manager acts on any open grant, the owner on grants sent to them. */
 export function canResolve(grant: Pick<AccessGrant, "status" | "system_access_systems">, actor: Actor): boolean {
-  if (grant.status !== "requested" && grant.status !== "dispatched") return false;
-  return actor.isManager || (grant.status === "dispatched" && isSystemOwner(grant, actor));
+  if (!WAITING.has(grant.status) && !SENT.has(grant.status)) return false;
+  return actor.isManager || (SENT.has(grant.status) && isSystemOwner(grant, actor));
 }
 
 export function canDispatch(grant: Pick<AccessGrant, "status">, actor: Actor): boolean {
-  return actor.isManager && grant.status === "requested";
+  return actor.isManager && WAITING.has(grant.status);
 }
 
+/** Revocations cannot be rejected: leaving access open is not an option. */
+export const canReject = (g: Pick<AccessGrant, "status">) => g.status === "requested" || g.status === "dispatched";
+
+/** The owner sends back what was sent to them. */
+export const canReturn = (g: Pick<AccessGrant, "status">) => SENT.has(g.status);
+
+/** Still being opened (onboarding waits for these). */
 export const isOpenGrant = (g: Pick<AccessGrant, "status">) => g.status === "requested" || g.status === "dispatched";
+
+/** Still waiting for something in its request's direction. */
+export const isOpenInRequest = (kind: "grant" | "revoke", g: Pick<AccessGrant, "status">) =>
+  kind === "revoke" ? isRevoking(g) : isOpenGrant(g);

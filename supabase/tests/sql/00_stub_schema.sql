@@ -39,3 +39,4 @@ CREATE TABLE public.onboarding_items (id uuid PRIMARY KEY DEFAULT gen_random_uui
 ALTER TABLE public.it_tickets ADD COLUMN checklist jsonb;
 ALTER TABLE public.employees ADD COLUMN employee_code text;
 CREATE FUNCTION public.my_access_blocked() RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT false $$;
+ALTER TABLE public.employees ADD COLUMN end_date date;

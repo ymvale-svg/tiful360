@@ -147,25 +147,36 @@ export async function importTree(db: Db, systemId: string, paths: string[]): Pro
 const GRANT_SELECT =
   "*, system_access_systems(name, owner_role, owner_user_id, provisioning), system_access_groups(name, external_name), system_access_resources(path)";
 
+// Grants point at requests twice (the request that opened them, the one that revokes them),
+// so each embed names its foreign key.
+const BY_REQUEST = "system_access_grants!system_access_grants_request_id_fkey";
+const BY_REVOKE = "system_access_grants!system_access_grants_revoke_request_id_fkey";
+
 export async function listRequests(db: Db, companyId: string, status: "open" | "done"): Promise<AccessRequest[]> {
   const { data, error } = await db
     .from("system_access_requests")
-    .select(`*, employees(full_name, employee_code, role, department, start_date, email), system_access_grants(${GRANT_SELECT})`)
+    .select(
+      `*, employees(full_name, employee_code, role, department, start_date, email), opened:${BY_REQUEST}(${GRANT_SELECT}), revoking:${BY_REVOKE}(${GRANT_SELECT})`,
+    )
     .eq("company_id", companyId)
     .eq("status", status)
     .order("requested_at", { ascending: false })
     .limit(status === "done" ? 50 : 500);
   fail(error);
-  return (data ?? []) as AccessRequest[];
+  type Row = Omit<AccessRequest, "system_access_grants"> & { opened?: AccessGrant[]; revoking?: AccessGrant[] };
+  return ((data ?? []) as Row[]).map(({ opened, revoking, ...r }) => ({
+    ...r,
+    system_access_grants: (r.kind === "revoke" ? revoking : opened) ?? [],
+  }));
 }
 
 export async function listProcessGrants(db: Db, onboardingProcessId: string): Promise<AccessGrant[]> {
   const { data, error } = await db
     .from("system_access_requests")
-    .select(`system_access_grants(${GRANT_SELECT})`)
+    .select(`grants:${BY_REQUEST}(${GRANT_SELECT})`)
     .eq("onboarding_process_id", onboardingProcessId);
   fail(error);
-  return ((data ?? []) as Array<{ system_access_grants: AccessGrant[] }>).flatMap((r) => r.system_access_grants);
+  return ((data ?? []) as Array<{ grants: AccessGrant[] }>).flatMap((r) => r.grants);
 }
 
 export interface RequestAccessResult {
@@ -267,4 +278,38 @@ export async function inviteToTiful360(
     throw new Error(result?.error || "פתיחת המשתמש נכשלה");
   }
   return email;
+}
+
+/** Revoke some (or, without ids, all) of an employee's access through the hub. */
+export async function requestRevocation(db: Db, employeeId: string, grantIds: string[] | null, note?: string | null) {
+  const { data, error } = await db.rpc("request_system_access_revocation", {
+    _employee_id: employeeId,
+    _grant_ids: grantIds && grantIds.length ? grantIds : null,
+    _note: note?.trim() || null,
+  });
+  fail(error);
+  return data as { requestId: string; ticketId: string; ticketCode: string; count: number };
+}
+
+/** Access the company's employees hold, including access waiting to be revoked. */
+export async function listHeldGrants(db: Db, companyId: string): Promise<Array<AccessGrant & { employees: { full_name: string; department: string | null; status: string } | null }>> {
+  const { data, error } = await db
+    .from("system_access_grants")
+    .select(`${GRANT_SELECT}, employees(full_name, department, status)`)
+    .eq("company_id", companyId)
+    .in("status", ["active", "revoke_requested", "revoke_dispatched"])
+    .order("effective_from");
+  fail(error);
+  return (data ?? []) as Array<AccessGrant & { employees: { full_name: string; department: string | null; status: string } | null }>;
+}
+
+/** Every grant of one employee, past and present, with the requests behind them (for the protocol). */
+export async function listEmployeeGrantHistory(db: Db, employeeId: string): Promise<AccessGrant[]> {
+  const { data, error } = await db
+    .from("system_access_grants")
+    .select(GRANT_SELECT)
+    .eq("employee_id", employeeId)
+    .order("effective_from");
+  fail(error);
+  return (data ?? []) as AccessGrant[];
 }

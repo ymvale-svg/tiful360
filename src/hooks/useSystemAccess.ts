@@ -18,6 +18,9 @@ import {
   requestAccess,
   resolveGrant,
   inviteToTiful360,
+  listEmployeeGrantHistory,
+  listHeldGrants,
+  requestRevocation,
   type GrantAction,
 } from "@/services/systemAccess";
 import type { AccessGroup, AccessPick, AccessResource, AccessSystem } from "@/domain/systemAccess/types";
@@ -200,6 +203,34 @@ export function useProvisionTiful360() {
       await resolveGrant(supabase, grantId, "done", { externalUsername: email, note: "משתמש נפתח והזמנה נשלחה" });
       return email;
     },
+    onSuccess: invalidate,
+  });
+}
+
+/** Who holds which access now, for the matrix. */
+export function useHeldGrants() {
+  const { activeCompanyId } = useCompany();
+  return useQuery({
+    queryKey: [...KEYS.requests, "held", activeCompanyId],
+    queryFn: () => listHeldGrants(supabase, activeCompanyId!),
+    enabled: !!activeCompanyId,
+  });
+}
+
+/** One employee's access, past and present, for the protocol. */
+export function useEmployeeGrantHistory(employeeId: string | null) {
+  return useQuery({
+    queryKey: [...KEYS.requests, "employee", employeeId],
+    queryFn: () => listEmployeeGrantHistory(supabase, employeeId!),
+    enabled: !!employeeId,
+  });
+}
+
+export function useRequestRevocation() {
+  const invalidate = useInvalidateRequests();
+  return useMutation({
+    mutationFn: ({ employeeId, grantIds, note }: { employeeId: string; grantIds?: string[] | null; note?: string | null }) =>
+      requestRevocation(supabase, employeeId, grantIds ?? null, note),
     onSuccess: invalidate,
   });
 }

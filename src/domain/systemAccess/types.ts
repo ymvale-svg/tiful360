@@ -53,15 +53,22 @@ export const SUGGESTED_SYSTEMS: Array<Pick<AccessSystem, "name" | "provisioning"
   { name: "כונן P", provisioning: "manual", owner_role: "it_manager", resource_label: "תיקייה" },
 ];
 
-export type GrantStatus = "requested" | "dispatched" | "active" | "rejected" | "revoked";
+export type GrantStatus =
+  | "requested" | "dispatched" | "active" | "rejected"
+  | "revoke_requested" | "revoke_dispatched" | "revoked";
 
 export const GRANT_STATUS_LABEL: Record<GrantStatus, string> = {
   requested: "ממתין",
   dispatched: "נשלח לאחראי",
   active: "נפתח",
   rejected: "נדחה",
+  revoke_requested: "ממתין לניתוק",
+  revoke_dispatched: "נשלח לאחראי לניתוק",
   revoked: "נותק",
 };
+
+/** Statuses in which the employee holds the access (a pending revocation still counts). */
+export const HELD_STATUSES: GrantStatus[] = ["active", "revoke_requested", "revoke_dispatched"];
 
 /** What a request asks for: a system, optionally one access group or one resource, and from when. */
 export interface AccessPick {
@@ -89,6 +96,12 @@ export interface AccessGrant {
   rejection_reason: string | null;
   note: string | null;
   created_at: string;
+  revoke_request_id?: string | null;
+  revoke_due_at?: string | null;
+  revoke_dispatch_ticket_id?: string | null;
+  revoked_at?: string | null;
+  revoked_by_name?: string | null;
+  revoke_note?: string | null;
   system_access_systems?: Pick<AccessSystem, "name" | "owner_role" | "owner_user_id" | "provisioning"> | null;
   system_access_groups?: Pick<AccessGroup, "name" | "external_name"> | null;
   system_access_resources?: Pick<AccessResource, "path"> | null;

@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   canDispatch,
+  canReject,
   canResolve,
+  canReturn,
+  isOpenInRequest,
+  isRevoking,
   defaultEffectiveLocal,
   isSystemOwner,
   itemsToPicks,
@@ -77,5 +81,28 @@ describe("who acts on a grant", () => {
     expect(grantLabel({ ...base, system_access_groups: { name: "הנדסה", external_name: "GRP_P_Engineering" } })).toBe("כונן P · הנדסה (GRP_P_Engineering)");
     expect(grantLabel({ ...base, system_access_resources: { path: "פרויקטים\\תכנון" } })).toBe("כונן P · פרויקטים\\תכנון");
     expect(grantLabel(base)).toBe("כונן P");
+  });
+});
+
+describe("revocation rules", () => {
+  const g = (status: AccessGrant["status"]) =>
+    ({ status, system_access_systems: { name: "כונן P", owner_role: "it_manager", owner_user_id: null, provisioning: "manual" } }) as AccessGrant;
+  const manager = { userId: "m", roles: ["admin"], isManager: true };
+  const it_ = { userId: "i", roles: ["it_manager"], isManager: false };
+
+  it("dispatches and resolves revocations like grants, but never rejects them", () => {
+    expect(canDispatch(g("revoke_requested"), manager)).toBe(true);
+    expect(canResolve(g("revoke_dispatched"), it_)).toBe(true);
+    expect(canResolve(g("revoke_requested"), it_)).toBe(false);
+    expect(canReject(g("revoke_requested"))).toBe(false);
+    expect(canReject(g("dispatched"))).toBe(true);
+    expect(canReturn(g("revoke_dispatched"))).toBe(true);
+  });
+
+  it("counts open grants per request direction", () => {
+    expect(isOpenInRequest("revoke", g("revoke_dispatched"))).toBe(true);
+    expect(isOpenInRequest("revoke", g("active"))).toBe(false);
+    expect(isOpenInRequest("grant", g("revoke_requested"))).toBe(false);
+    expect(isRevoking(g("revoke_requested"))).toBe(true);
   });
 });

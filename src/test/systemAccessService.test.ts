@@ -5,7 +5,9 @@ import {
   hasProcessRequest,
   importTree,
   inviteToTiful360,
+  listRequests,
   requestAccess,
+  requestRevocation,
   resolveGrant,
   saveGroup,
   saveSystem,
@@ -18,7 +20,7 @@ type Db = Parameters<typeof saveSystem>[0];
 function fakeDb(result: { data?: unknown; error?: unknown } = { data: { id: "new" }, error: null }) {
   const calls: Array<[string, unknown[]]> = [];
   const chain: Record<string, unknown> = {};
-  for (const m of ["insert", "update", "upsert", "delete", "select", "eq", "order", "single", "limit"]) {
+  for (const m of ["insert", "update", "upsert", "delete", "select", "eq", "order", "single", "limit", "in", "neq"]) {
     chain[m] = (...args: unknown[]) => {
       calls.push([m, args]);
       return chain;
@@ -142,5 +144,27 @@ describe("Tiful360 provisioning", () => {
     const { db: fake, invoke } = db({});
     await expect(inviteToTiful360(fake, "c1", { ...emp, email: null })).rejects.toThrow("אין כתובת מייל");
     expect(invoke).not.toHaveBeenCalled();
+  });
+});
+
+describe("requests by direction", () => {
+  it("names both foreign keys and keeps the grants of the request's own direction", async () => {
+    const rows = [
+      { id: "r1", kind: "grant", opened: [{ id: "a" }], revoking: [{ id: "x" }] },
+      { id: "r2", kind: "revoke", opened: [], revoking: [{ id: "b" }] },
+    ];
+    const { db, calls } = fakeDb({ data: rows, error: null });
+    const requests = await listRequests(db, "c1", "open");
+    expect(requests.map((r) => [r.id, r.system_access_grants.map((g) => g.id)])).toEqual([["r1", ["a"]], ["r2", ["b"]]]);
+    const select = String(called(calls, "select")[0][0]);
+    expect(select).toContain("opened:system_access_grants!system_access_grants_request_id_fkey(");
+    expect(select).toContain("revoking:system_access_grants!system_access_grants_revoke_request_id_fkey(");
+  });
+
+  it("revokes all of an employee's access when no grants are named", async () => {
+    const { db, rpc } = fakeDb();
+    rpc.mockResolvedValue({ data: { count: 2 }, error: null });
+    await requestRevocation(db, "emp", [], " מעבר מחלקה ");
+    expect(rpc).toHaveBeenCalledWith("request_system_access_revocation", { _employee_id: "emp", _grant_ids: null, _note: "מעבר מחלקה" });
   });
 });

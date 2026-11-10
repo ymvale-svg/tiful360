@@ -15,6 +15,7 @@ MIGRATIONS=(
   supabase/migrations/20261110100000_onboarding_fulfillment_tracks.sql
   supabase/migrations/20261110110000_system_access_catalog.sql
   supabase/migrations/20261110120000_system_access_requests.sql
+  supabase/migrations/20261110130000_system_access_revocation.sql
 )
 for test in supabase/tests/sql/*.sql; do
   [[ "$(basename "$test")" == 00_* ]] && continue

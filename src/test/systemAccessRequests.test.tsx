@@ -105,3 +105,24 @@ describe("automatic Tiful360 user", () => {
     );
   });
 });
+
+describe("revocation requests", () => {
+  it("shows a revoke request with its due time, no reject, and 'revoked' as the done action", async () => {
+    auth = { user: { id: "manager" }, roles: ["admin"] };
+    REQUEST.kind = "revoke";
+    REQUEST.system_access_grants = [
+      grant("g5", "פריוריטי", "admin", "revoke_requested", { revoke_due_at: "2026-11-30T15:00:00Z" }) as unknown as AccessRequest["system_access_grants"][number],
+    ];
+    render(<ConfirmProvider><RequestsTab /></ConfirmProvider>);
+    expect(screen.getByText("ניתוק")).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "לנתק עד" })).toBeTruthy();
+    const r = row("פריוריטי");
+    expect(within(r).queryByRole("button", { name: "דחה" })).toBeNull();
+    fireEvent.click(within(r).getByRole("button", { name: "נותק" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).queryByLabelText(/שם המשתמש/)).toBeNull();
+    fireEvent.click(within(dialog).getByRole("button", { name: "סימון כנותק" }));
+    await waitFor(() => expect(resolve).toHaveBeenCalledWith(expect.objectContaining({ grantId: "g5", action: "done" })));
+    expect(screen.getByRole("button", { name: /שלח לאחראי לניתוק/ })).toBeTruthy();
+  });
+});

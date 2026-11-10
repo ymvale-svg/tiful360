@@ -15,9 +15,12 @@ import { OWNER_ROLE_LABEL } from "@/lib/domainConfig";
 import { formatDateTimeDMY } from "@/lib/utils";
 import {
   canDispatch,
+  canReject,
   canResolve,
+  canReturn,
   defaultEffectiveLocal,
-  isOpenGrant,
+  isOpenInRequest,
+  isRevoking,
   isSystemOwner,
   picksToItems,
   toLocalInput,
@@ -35,6 +38,8 @@ const STATUS_STYLE: Record<GrantStatus, string> = {
   dispatched: "bg-info/10 text-info",
   active: "bg-success/10 text-success",
   rejected: "bg-destructive/10 text-destructive",
+  revoke_requested: "bg-warning/10 text-warning",
+  revoke_dispatched: "bg-info/10 text-info",
   revoked: "bg-muted text-muted-foreground",
 };
 
@@ -111,7 +116,8 @@ function RequestCard({ request, actor }: { request: AccessRequest; actor: Actor 
   const grants = [...request.system_access_grants].sort((a, b) => a.created_at.localeCompare(b.created_at));
   const emp = request.employees;
   const dispatchable = grants.filter((g) => canDispatch(g, actor));
-  const done = grants.filter((g) => !isOpenGrant(g)).length;
+  const revoke = request.kind === "revoke";
+  const done = grants.filter((g) => !isOpenInRequest(request.kind, g)).length;
 
   const toggle = (id: string) =>
     setSelected((prev) => {
@@ -155,7 +161,12 @@ function RequestCard({ request, actor }: { request: AccessRequest; actor: Actor 
     <article className="rounded-xl border border-border p-4 space-y-3" aria-labelledby={`req-${request.id}`}>
       <header className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h3 id={`req-${request.id}`} className="text-base font-semibold">{emp?.full_name ?? "עובד"}</h3>
+          <h3 id={`req-${request.id}`} className="text-base font-semibold flex items-center gap-2">
+            {emp?.full_name ?? "עובד"}
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${revoke ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"}`}>
+              {revoke ? "ניתוק" : "פתיחה"}
+            </span>
+          </h3>
           <p className="text-xs text-muted-foreground">
             {[emp?.role, emp?.department].filter(Boolean).join(" · ")}
             {emp?.start_date ? ` · תחילת עבודה ${new Date(emp.start_date).toLocaleDateString("en-GB")}` : ""}
@@ -175,7 +186,7 @@ function RequestCard({ request, actor }: { request: AccessRequest; actor: Actor 
             <tr className="text-xs text-muted-foreground border-b border-border">
               <th scope="col" className="w-8 py-2 px-1"><span className="sr-only">בחירה לשליחה</span></th>
               <th scope="col" className="text-start font-medium py-2 px-2">הרשאה</th>
-              <th scope="col" className="text-start font-medium py-2 px-2">בתוקף מ</th>
+              <th scope="col" className="text-start font-medium py-2 px-2">{revoke ? "לנתק עד" : "בתוקף מ"}</th>
               <th scope="col" className="text-start font-medium py-2 px-2">אחראי</th>
               <th scope="col" className="text-start font-medium py-2 px-2">סטטוס</th>
               <th scope="col" className="text-start font-medium py-2 px-2"><span className="sr-only">פעולות</span></th>
@@ -198,30 +209,44 @@ function RequestCard({ request, actor }: { request: AccessRequest; actor: Actor 
                     {g.note && <div className="text-xs font-normal text-muted-foreground">{g.note}</div>}
                     {g.rejection_reason && <div className="text-xs font-normal text-destructive">סיבת דחייה: {g.rejection_reason}</div>}
                   </th>
-                  <td className="py-2 px-2 tabular-nums whitespace-nowrap">{formatDateTimeDMY(g.effective_from)}</td>
+                  <td className="py-2 px-2 tabular-nums whitespace-nowrap">
+                    {revoke ? (g.revoke_due_at ? formatDateTimeDMY(g.revoke_due_at) : "—") : formatDateTimeDMY(g.effective_from)}
+                  </td>
                   <td className="py-2 px-2 whitespace-nowrap">{owner}</td>
                   <td className="py-2 px-2">
                     <span className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${STATUS_STYLE[g.status]}`}>{GRANT_STATUS_LABEL[g.status]}</span>
-                    {g.executed_at && (
-                      <div className="text-xs text-muted-foreground mt-1 whitespace-nowrap">
-                        {g.executed_by_name} · {formatDateTimeDMY(g.executed_at)}
-                      </div>
+                    {revoke && g.status === "active" && <div className="text-xs text-muted-foreground mt-1">הניתוק בוטל</div>}
+                    {revoke ? (
+                      g.revoked_at && (
+                        <div className="text-xs text-muted-foreground mt-1 whitespace-nowrap">
+                          {g.revoked_by_name} · {formatDateTimeDMY(g.revoked_at)}
+                        </div>
+                      )
+                    ) : (
+                      g.executed_at && (
+                        <div className="text-xs text-muted-foreground mt-1 whitespace-nowrap">
+                          {g.executed_by_name} · {formatDateTimeDMY(g.executed_at)}
+                        </div>
+                      )
                     )}
+                    {revoke && g.revoke_note && <div className="text-xs text-muted-foreground mt-1">{g.revoke_note}</div>}
                   </td>
                   <td className="py-2 px-2">
                     {canResolve(g, actor) && (
                       <div className="flex flex-wrap gap-1.5">
-                        {g.system_access_systems?.provisioning === "auto_tiful360" && actor.isManager ? (
+                        {g.system_access_systems?.provisioning === "auto_tiful360" && actor.isManager && !isRevoking(g) ? (
                           <Button size="sm" onClick={() => { void openTiful360User(g); }} loading={provisioningId === g.id} loadingText="פותח…">
                             פתח משתמש
                           </Button>
                         ) : (
-                          <Button size="sm" variant="outline" onClick={() => setAction({ grant: g, kind: "done" })}>בוצע</Button>
+                          <Button size="sm" variant="outline" onClick={() => setAction({ grant: g, kind: "done" })}>
+                            {isRevoking(g) ? "נותק" : "בוצע"}
+                          </Button>
                         )}
-                        {g.status === "dispatched" && isSystemOwner(g, actor) ? (
+                        {canReturn(g) && isSystemOwner(g, actor) ? (
                           <Button size="sm" variant="ghost" onClick={() => setAction({ grant: g, kind: "return" })}>החזר</Button>
                         ) : (
-                          <Button size="sm" variant="ghost" onClick={() => setAction({ grant: g, kind: "reject" })}>דחה</Button>
+                          canReject(g) && <Button size="sm" variant="ghost" onClick={() => setAction({ grant: g, kind: "reject" })}>דחה</Button>
                         )}
                       </div>
                     )}
@@ -239,7 +264,7 @@ function RequestCard({ request, actor }: { request: AccessRequest; actor: Actor 
             <input value={note} onChange={(e) => setNote(e.target.value)} className={inputClass} />
           </FormField>
           <Button onClick={() => { void send(); }} disabled={selected.size === 0} loading={dispatch.isPending} loadingText="שולח…">
-            <Send className="w-4 h-4" /> שלח לאחראי ({selected.size})
+            <Send className="w-4 h-4" /> {revoke ? "שלח לאחראי לניתוק" : "שלח לאחראי"} ({selected.size})
           </Button>
         </div>
       )}
@@ -259,6 +284,7 @@ function GrantActionDialog({ action, onClose }: { action: { grant: AccessGrant; 
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const kind = action?.kind;
+  const revoking = !!action && isRevoking(action.grant);
   const needsReason = kind === "reject" || kind === "return";
 
   const reset = () => { setExecutedAt(""); setUsername(""); setNote(""); setError(null); };
@@ -277,7 +303,7 @@ function GrantActionDialog({ action, onClose }: { action: { grant: AccessGrant; 
         externalUsername: username,
         note,
       });
-      toast({ title: kind === "done" ? "סומן כבוצע" : kind === "reject" ? "ההרשאה נדחתה" : "הוחזר למנהל ההרשאות" });
+      toast({ title: kind === "done" ? (revoking ? "סומן כנותק" : "סומן כבוצע") : kind === "reject" ? "ההרשאה נדחתה" : "הוחזר למנהל ההרשאות" });
       reset();
       onClose();
     } catch (e) {
@@ -289,18 +315,20 @@ function GrantActionDialog({ action, onClose }: { action: { grant: AccessGrant; 
     <Dialog open={!!action} onOpenChange={(o) => { if (!o && !resolve.isPending) { reset(); onClose(); } }}>
       <DialogContent dir="rtl" className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{kind ? ACTION_TITLE[kind] : ""}</DialogTitle>
+          <DialogTitle>{kind === "done" && revoking ? "סימון כנותק" : kind ? ACTION_TITLE[kind] : ""}</DialogTitle>
           <DialogDescription>{action ? grantLabel(action.grant) : ""}</DialogDescription>
         </DialogHeader>
         <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
           {kind === "done" && (
             <>
-              <FormField label="מתי נפתח בפועל" hint="ריק = עכשיו. לא ניתן לבחור זמן עתידי.">
+              <FormField label={revoking ? "מתי נותק בפועל" : "מתי נפתח בפועל"} hint="ריק = עכשיו. לא ניתן לבחור זמן עתידי.">
                 <input type="datetime-local" value={executedAt} max={toLocalInput(new Date().toISOString())} onChange={(e) => setExecutedAt(e.target.value)} className={inputClass} />
               </FormField>
-              <FormField label="שם המשתמש שנפתח במערכת" hint="לא חובה">
-                <input value={username} onChange={(e) => setUsername(e.target.value)} dir="ltr" className={inputClass} />
-              </FormField>
+              {!revoking && (
+                <FormField label="שם המשתמש שנפתח במערכת" hint="לא חובה">
+                  <input value={username} onChange={(e) => setUsername(e.target.value)} dir="ltr" className={inputClass} />
+                </FormField>
+              )}
             </>
           )}
           <FormField label={needsReason ? (kind === "reject" ? "סיבת הדחייה" : "למה מוחזר") : "הערה (לא חובה)"} required={needsReason} error={error}>
@@ -309,7 +337,7 @@ function GrantActionDialog({ action, onClose }: { action: { grant: AccessGrant; 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => { reset(); onClose(); }} disabled={resolve.isPending}>ביטול</Button>
             <Button type="submit" variant={kind === "reject" ? "destructive" : "default"} loading={resolve.isPending} loadingText="שומר…">
-              {kind ? ACTION_TITLE[kind] : ""}
+              {kind === "done" && revoking ? "סימון כנותק" : kind ? ACTION_TITLE[kind] : ""}
             </Button>
           </div>
         </form>
