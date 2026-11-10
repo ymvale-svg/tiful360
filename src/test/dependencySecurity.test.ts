@@ -41,3 +41,29 @@ describe("development transformer compatibility", () => {
     expect(result.code).not.toContain(": number");
   });
 });
+describe("dependency installation source", () => {
+  const fs = require("node:fs") as typeof import("node:fs");
+  const path = require("node:path") as typeof import("node:path");
+  const root = path.resolve(__dirname, "../..");
+  const lock = fs.readFileSync(path.join(root, "bun.lock"), "utf8");
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+
+  it("resolves packages from the public npm registry, not a hosting provider's private cache", () => {
+    expect(lock).not.toMatch(/npm\.pkg\.dev/);
+    expect(lock).not.toMatch(/lovable-core-prod/);
+  });
+
+  it("keeps Bun as the only lockfile", () => {
+    expect(fs.existsSync(path.join(root, "package-lock.json"))).toBe(false);
+    expect(fs.existsSync(path.join(root, "yarn.lock"))).toBe(false);
+    expect(fs.existsSync(path.join(root, "pnpm-lock.yaml"))).toBe(false);
+  });
+
+  it("has no Lovable editor-only dev tooling", () => {
+    const dev = Object.keys(pkg.devDependencies ?? {});
+    expect(dev).not.toContain("lovable-tagger");
+    expect(dev.filter((d) => d.startsWith("@lovable.dev/vite-plugin-"))).toEqual([]);
+    const vite = fs.readFileSync(path.join(root, "vite.config.ts"), "utf8");
+    expect(vite).not.toMatch(/lovable-tagger|__lovable_backend_proxy/);
+  });
+});

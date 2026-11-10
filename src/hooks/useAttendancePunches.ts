@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { resolvePunchAddressInBackground } from "@/hooks/useAttendanceLocationReport";
 import { useCompany } from "@/hooks/useCompany";
 
 export interface AttendancePunch {
@@ -271,7 +272,7 @@ export function useCreateRemotePunch() {
       note?: string;
       geo?: { lat: number; lng: number; accuracy?: number } | null;
     }) => {
-      const { error } = await supabase.rpc("add_own_remote_punch" as any, {
+      const { data, error } = await supabase.rpc("add_own_remote_punch" as any, {
         _direction: params.direction,
         _signature: params.signatureDataUrl ?? null,
         _note: params.note ?? null,
@@ -285,6 +286,8 @@ export function useCreateRemotePunch() {
         }
         throw new Error(msg || "שגיאה בשליחת ההחתמה");
       }
+      // Store the street address for the attendance location report, in the background.
+      if (params.geo) resolvePunchAddressInBackground((data as { id?: string } | null)?.id);
     },
 
     onSuccess: () => qc.invalidateQueries({ queryKey: ["attendance_punches"] }),

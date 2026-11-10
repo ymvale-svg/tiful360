@@ -1,14 +1,11 @@
-import { defineConfig, loadEnv } from "vite";
+import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
-import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/supabase/vite";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), "");
-
+export default defineConfig(() => {
   return {
     server: {
       host: "::",
@@ -16,21 +13,10 @@ export default defineConfig(({ mode }) => {
       hmr: {
         overlay: false,
       },
-      proxy: env.VITE_SUPABASE_URL
-        ? {
-            "/__lovable_backend_proxy": {
-              target: env.VITE_SUPABASE_URL,
-              changeOrigin: true,
-              secure: true,
-              rewrite: (requestPath) => requestPath.replace(/^\/__lovable_backend_proxy/, ""),
-            },
-          }
-        : undefined,
     },
     plugins: [
       mcpPlugin(),
       react(),
-      mode === "development" && componentTagger(),
       VitePWA({
         // The manifest is hand-maintained in public/manifest.webmanifest and
         // already linked from index.html — the plugin only adds the worker.

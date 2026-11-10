@@ -465,18 +465,18 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
   });
 
   /** Email the signed protocol to the receiving employee (recipient is resolved server-side). */
-  const sendProtocolEmail = async (pdfUrl: string | null) => {
+  const sendProtocolEmail = async (formId: string) => {
     if (!employeeId) return;
     try {
       const { data, error } = await supabase.functions.invoke("send-handover-protocol-email", {
 
         body: {
           employeeId,
+          formId,
           idempotencyKey: `handover-${asset!.id}-${employeeId}-${Date.now()}`,
 
           templateData: {
             employeeName: employee?.full_name ?? "",
-            companyName: activeCompany?.name ?? "",
             itemName: asset?.asset_name ?? "",
             itemCode: asset?.asset_code ?? "",
             direction,
@@ -488,8 +488,6 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
               ...(isVehicle && odometer ? [{ label: 'ק"מ במעמד המסירה', value: odometer }] : []),
             ].map((f: any) => ({ label: f.label, value: String(f.value ?? "") })),
             notes: freeText || null,
-            pdfUrl,
-            portalUrl: "https://tiful360.com/portal",
           },
         },
       });
@@ -589,7 +587,7 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
         pdfUrl = await uploadFile(blob, "protocol.pdf", "application/pdf");
       }
 
-      await insertForm({
+      const signedRow = await insertForm({
         status: "signed",
         form_snapshot: { ...snapshot(media), employee_signature: receiver, issuer_signature: issuer } as any,
         signature_data: receiver,
@@ -602,7 +600,7 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
       setBusyStage("שומר את הפרוטוקול…");
       await applyAssetUpdate();
       setBusyStage("שולח מייל לעובד…");
-      await sendProtocolEmail(pdfUrl);
+      await sendProtocolEmail(signedRow.id);
 
       toast({ title: "הפרוטוקול נחתם ונשמר", description: "המסמך נוסף לאזור האישי, לכרטיס הפריט ונשלח במייל לעובד" });
       qc.invalidateQueries({ queryKey: ["assets"] });
