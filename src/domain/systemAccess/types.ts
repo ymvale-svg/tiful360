@@ -6,7 +6,7 @@ export type Provisioning = "manual" | "auto_tiful360" | "auto_mesimon";
 export const PROVISIONING_LABEL: Record<Provisioning, string> = {
   manual: "ידני",
   auto_tiful360: "אוטומטי · תפעול 360",
-  auto_mesimon: "אוטומטי · מסימון",
+  auto_mesimon: "אוטומטי · משימון",
 };
 
 export interface AccessSystem {
@@ -46,7 +46,7 @@ export interface AccessGroup {
 /** Systems most companies start with; the user picks which to add. */
 export const SUGGESTED_SYSTEMS: Array<Pick<AccessSystem, "name" | "provisioning" | "owner_role" | "resource_label">> = [
   { name: "תפעול 360", provisioning: "auto_tiful360", owner_role: "admin", resource_label: "קבוצת הרשאה" },
-  { name: "מסימון", provisioning: "auto_mesimon", owner_role: "admin", resource_label: "מחלקה" },
+  { name: "משימון", provisioning: "auto_mesimon", owner_role: "admin", resource_label: "מחלקה" },
   { name: "פריוריטי", provisioning: "manual", owner_role: "admin", resource_label: "סביבה" },
   { name: "ויפלנס", provisioning: "manual", owner_role: "admin", resource_label: "פרויקט" },
   { name: "סמנטו", provisioning: "manual", owner_role: "admin", resource_label: "פרויקט" },
