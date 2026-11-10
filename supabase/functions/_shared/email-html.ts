@@ -15,7 +15,8 @@ function mergeStyle(element: any, styles: Record<string, string>) {
 export function formatEmailHtml(html: string, brand: EmailBrand = {}): string {
   if (html.includes('data-tiful-email="v1"')) return html
   const source = /<body[\s>]/i.test(html) ? html : `<html><head></head><body>${html}</body></html>`
-  const { document } = parseHTML(source)
+  // linkedom's types model a browser Window; its DOM nodes are used untyped here.
+  const { document } = parseHTML(source) as unknown as { document: any }
   const body = document.body
 
   // Legacy full-width layout tables have one cell per row. Flatten only those;
