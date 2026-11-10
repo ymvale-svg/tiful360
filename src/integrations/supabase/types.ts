@@ -5205,6 +5205,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      import_legacy_system_access: {
+        Args: { _apply?: boolean; _company_id: string }
+        Returns: Json
+      }
       import_system_access_tree: {
         Args: { _paths: string[]; _system_id: string }
         Returns: Json
