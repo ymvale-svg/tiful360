@@ -77,6 +77,8 @@
 5. לוודא שה-DNS של `tiful360.com` ושל `notify.tiful360.com` בשליטתכם ולא אצל Lovable.
 
 ### שלב 1 – מאגר חבילות וכלי פיתוח (יום 2–3) · ללא השפעה · פותר L1, L3
+> **בוצע (10/11/2026):** `bun.lock` מפנה ל-`registry.npmjs.org` עם אותן 1,025 חבילות ואותם hash. הוסרו 3 חבילות פיתוח של Lovable ו-proxy `/__lovable_backend_proxy`. נוסף `.github/workflows/ci.yml`. `xlsx` נשאר מ-`cdn.sheetjs.com` כמו קודם.
+
 - לייצר מחדש את `bun.lock` מול `registry.npmjs.org` (אותן גרסאות, ו-`patchedDependencies` נשמרים, לפי חוק Bun ב-`AGENTS.md`). להוסיף בדיקה ב-`dependencySecurity.test.ts` שאין ב-`bun.lock` כתובת `pkg.dev`.
 - להסיר מ-`package.json` את `lovable-tagger`, `@lovable.dev/vite-plugin-dev-server-bridge` ו-`@lovable.dev/vite-plugin-hmr-gate`. מ-`vite.config.ts` להסיר את `componentTagger` ואת ה-proxy `/__lovable_backend_proxy`.
 - להוסיף `.github/workflows/ci.yml`: התקנה, lint, בדיקות ו-build.
