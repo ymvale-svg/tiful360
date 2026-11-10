@@ -20,7 +20,7 @@ CREATE OR REPLACE FUNCTION public.onboarding_item_needs_asset(_item_type text)
 RETURNS boolean
 LANGUAGE sql
 IMMUTABLE
-AS $$ SELECT _item_type IN ('asset', 'license') $$;
+AS $$ SELECT _item_type IN ('asset', 'license', 'vehicle') $$;
 
 CREATE OR REPLACE FUNCTION public.complete_onboarding_item(_item_id uuid, _done boolean, _note text DEFAULT NULL)
 RETURNS public.onboarding_items

@@ -27,3 +27,13 @@ export async function listOnboardingAssetPicks(db: Db) {
   if (error) throw error;
   return (data ?? []) as Array<{ id: string; asset_id: string | null; status: string }>;
 }
+
+/** Set how a category is fulfilled in onboarding and whether HR sees it (RLS: catalog managers). */
+export async function updateCategoryOnboarding(
+  db: Db,
+  categoryId: string,
+  patch: { fulfillment_track?: string | null; show_in_onboarding?: boolean | null },
+) {
+  const { error } = await db.from("asset_categories").update(patch).eq("id", categoryId);
+  if (error) throw error;
+}

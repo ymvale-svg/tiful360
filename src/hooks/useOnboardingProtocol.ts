@@ -23,6 +23,7 @@ const ITEM_KIND_LABEL: Record<string, string> = {
   license: "רישיון / תוכנה",
   subscription: "מנוי",
   task: "משימה",
+  vehicle: "רכב",
 };
 
 export const ONBOARDING_DOCUMENT_TYPE = "onboarding_protocol";

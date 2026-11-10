@@ -23,7 +23,7 @@ export interface StockAsset {
 
 /** Item types whose completion hands over an asset (mirrors onboarding_item_needs_asset in the DB). */
 export function itemNeedsAsset(itemType: string): boolean {
-  return itemType === "asset" || itemType === "license";
+  return itemType === "asset" || itemType === "license" || itemType === "vehicle";
 }
 
 /** A done item records a hand-over: it is undone by unticking, never removed. */

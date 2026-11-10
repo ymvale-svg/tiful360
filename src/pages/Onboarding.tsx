@@ -4,11 +4,13 @@ import { ActiveFilters } from "@/components/ui/active-filters";
 import { EMPTY_ICONS } from "@/components/feedback/emptyIcons";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { UserPlus, Send, UserRound, AlertCircle, ListChecks } from "lucide-react";
+import { UserPlus, Send, UserRound, AlertCircle, ListChecks, Settings2 } from "lucide-react";
 import { EmptyState, ListSkeleton } from "@/components/feedback/StateView";
 import { NewOnboardingDialog } from "@/components/onboarding/NewOnboardingDialog";
 import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
 import { SendToOpsDialog } from "@/components/onboarding/SendToOpsDialog";
+import { OnboardingCatalogSettings } from "@/components/onboarding/OnboardingCatalogSettings";
+import { useAuth } from "@/hooks/useAuth";
 import { EmployeeLink } from "@/components/EmployeeLink";
 import {
   ONBOARDING_STATUS_LABEL,
@@ -35,6 +37,9 @@ export default function Onboarding() {
   const [sendTarget, setSendTarget] = useState<OnboardingProcess | null>(null);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<OnboardingStatus | "all">("all");
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  const { hasRole } = useAuth();
+  const canManageCatalog = hasRole("admin") || hasRole("operations");
 
   const filtered = useMemo(() => {
     return processes.filter((p) => {
@@ -58,10 +63,18 @@ export default function Onboarding() {
           <h1 className="page-title">קליטת עובדים</h1>
           <p className="page-subtitle">ניהול תהליכי הקליטה — מהזנת הצרכים ועד מסירת הציוד</p>
         </div>
-        <Button size="touch" className="gap-2 w-full sm:w-auto" onClick={() => setDialogOpen(true)}>
-          <UserPlus className="w-4 h-4" />
-          תהליך קליטה חדש
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          {canManageCatalog && (
+            <Button size="touch" variant="outline" className="gap-2 w-full sm:w-auto" onClick={() => setCatalogOpen(true)}>
+              <Settings2 className="w-4 h-4" />
+              קטלוג הקליטה
+            </Button>
+          )}
+          <Button size="touch" className="gap-2 w-full sm:w-auto" onClick={() => setDialogOpen(true)}>
+            <UserPlus className="w-4 h-4" />
+            תהליך קליטה חדש
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-2">
@@ -210,6 +223,7 @@ export default function Onboarding() {
         })}
       </div>
 
+      <OnboardingCatalogSettings open={catalogOpen} onOpenChange={setCatalogOpen} />
       <NewOnboardingDialog open={dialogOpen} onOpenChange={setDialogOpen} />
       <OnboardingChecklist process={openProcess} onOpenChange={(o) => !o && setSelected(null)} />
       <SendToOpsDialog
