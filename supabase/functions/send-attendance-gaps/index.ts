@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
 
   // Group by employee
   const byEmp = new Map<string, { full_name: string; email: string | null; rows: any[] }>()
-  for (const g of gaps ?? []) {
+  for (const g of (gaps ?? []) as any[]) {
     if (employee_ids?.length && !employee_ids.includes(g.employee_id)) continue
     const cur = byEmp.get(g.employee_id) ?? { full_name: g.full_name, email: g.email, rows: [] }
     cur.rows.push(g)

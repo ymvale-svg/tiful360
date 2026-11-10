@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
 
     if (lookupErr) return json({ error: "lookup_failed", details: lookupErr.message }, 500);
     if (!form) return json({ error: "invalid_token" }, 401);
-    if (form.status !== "pending") return json({ error: "form_already_processed" }, 409);
+    if ((form as unknown as { status: string }).status !== "pending") return json({ error: "form_already_processed" }, 409);
 
     // Build a constrained path the client cannot influence
     const f = form as unknown as { id: string; company_id: string; employee_id: string; asset_id?: string };
