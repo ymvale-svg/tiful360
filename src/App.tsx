@@ -33,6 +33,7 @@ const ITTickets = lazyWithReload(() => import("@/pages/ITTickets"));
 const Requests = lazyWithReload(() => import("@/pages/Requests"));
 const EmployeePortal = lazyWithReload(() => import("@/pages/EmployeePortal"));
 const Settings = lazyWithReload(() => import("@/pages/Settings"));
+const SystemAccess = lazyWithReload(() => import("@/pages/SystemAccess"));
 const SelectCompany = lazyWithReload(() => import("@/pages/SelectCompany"));
 const ResetPassword = lazyWithReload(() => import("@/pages/ResetPassword"));
 const Welcome = lazyWithReload(() => import("@/pages/Welcome"));
@@ -99,6 +100,7 @@ const App = () => (
                   <Route path="/assets/:domain/:itemId?" element={<ProtectedRoute requiredRoles={SCREEN_ROLES.assetDomain}><AssetsDomainPage /></ProtectedRoute>} />
                   <Route path="/it-tickets" element={<ProtectedRoute requiredRoles={SCREEN_ROLES.tickets}><ITTickets /></ProtectedRoute>} />
                   <Route path="/settings" element={<ProtectedRoute requiredRoles={SCREEN_ROLES.settings}><Settings /></ProtectedRoute>} />
+                  <Route path="/system-access" element={<ProtectedRoute requiredRoles={SCREEN_ROLES.systemAccess}><SystemAccess /></ProtectedRoute>} />
                   {LEGACY_REDIRECTS.map((r) => (
                     <Route key={r.from} path={r.from} element={<LegacyRedirectRoute redirect={r} />} />
                   ))}

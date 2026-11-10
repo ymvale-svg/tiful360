@@ -31,10 +31,12 @@ describe("OnboardingCatalogSettings", () => {
 
   it("shows each category's derived track and visibility", () => {
     renderDialog();
-    expect(screen.getByLabelText("מסלול ביצוע למחשב נייד")).toHaveValue("equipment");
-    expect(screen.getByLabelText("מסלול ביצוע לפוליסת ביטוח")).toHaveValue("none");
-    expect(screen.getByLabelText("מחשב נייד מופיע בקליטה")).toBeChecked();
-    expect(screen.getByLabelText("פוליסת ביטוח מופיע בקליטה")).not.toBeChecked();
+    const value = (label: string) => (screen.getByLabelText(label) as HTMLSelectElement).value;
+    const checked = (label: string) => screen.getByLabelText(label).getAttribute("aria-checked");
+    expect(value("מסלול ביצוע למחשב נייד")).toBe("equipment");
+    expect(value("מסלול ביצוע לפוליסת ביטוח")).toBe("none");
+    expect(checked("מחשב נייד מופיע בקליטה")).toBe("true");
+    expect(checked("פוליסת ביטוח מופיע בקליטה")).toBe("false");
   });
 
   it("saves a new track and a visibility change for that category only", async () => {
