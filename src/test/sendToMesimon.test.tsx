@@ -47,7 +47,7 @@ describe("SendToMesimonButton", () => {
 
     await screen.findByText("מיחשוב (פרויקט חדש)");
     screen.getByText("ישראל וייל · תפעול");
-    await waitFor(() => expect((screen.getByLabelText("תאריך יעד") as HTMLInputElement).value).toBe("2026-10-27"));
+    await waitFor(() => expect((screen.getByLabelText("תאריך יעד") as HTMLInputElement).value).toBe("27/10/2026"));
 
     fireEvent.click(screen.getByText("צור משימה"));
     await waitFor(() => expect(invoke).toHaveBeenCalledWith("create-mesimon-task", expect.anything()));
