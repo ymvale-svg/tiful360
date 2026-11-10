@@ -422,3 +422,9 @@
 - **`mesimonBoundary.test.ts`** צריך להיכתב מראש עם `_shared/mesimon.ts` (ה5). אחרת
   שלב 5 ייכשל על בדיקה שנכתבה לפניו.
 - **רשימת ה-allowlist** של `layering.test.ts` לא תכלול אף קובץ חדש מהשרשרת.
+- **מוסכם עם שיחת תוכנית הבדיקות** (commit `1a278219` בענף שלה):
+  `mesimonBoundary.test.ts` מאפשר את `MESIMON_URL` ו-`MESIMON_API_KEY` רק ב-
+  `_shared/mesimon.ts`. אם נכתוב אותו לפני WP-4, הוא ייצא שתי פונקציות שאפשר לבדוק
+  מ-Vitest בלי Deno:
+  - `isMesimonCompany(companyId, envValue)`: בדיקת החברה, פונקציה טהורה.
+  - `callMesimon(path, body, deps)`: הקריאה עצמה, עם `fetch` ו-env מוזרקים.
