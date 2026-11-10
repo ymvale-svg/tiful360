@@ -3922,6 +3922,35 @@ export type Database = {
           },
         ]
       }
+      system_access_scan_keys: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          system_id: string
+          token_hash: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          system_id: string
+          token_hash: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          system_id?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_access_scan_keys_system_id_fkey"
+            columns: ["system_id"]
+            isOneToOne: true
+            referencedRelation: "system_access_systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_access_systems: {
         Row: {
           company_id: string
@@ -3933,6 +3962,9 @@ export type Database = {
           owner_user_id: string | null
           provisioning: string
           resource_label: string
+          scan_agent: string | null
+          scan_last_at: string | null
+          scan_last_result: Json | null
           sort_order: number
           updated_at: string
         }
@@ -3946,6 +3978,9 @@ export type Database = {
           owner_user_id?: string | null
           provisioning?: string
           resource_label?: string
+          scan_agent?: string | null
+          scan_last_at?: string | null
+          scan_last_result?: Json | null
           sort_order?: number
           updated_at?: string
         }
@@ -3959,6 +3994,9 @@ export type Database = {
           owner_user_id?: string | null
           provisioning?: string
           resource_label?: string
+          scan_agent?: string | null
+          scan_last_at?: string | null
+          scan_last_result?: Json | null
           sort_order?: number
           updated_at?: string
         }
@@ -4802,6 +4840,10 @@ export type Database = {
         }
         Returns: Json
       }
+      create_system_access_scan_token: {
+        Args: { _system_id: string }
+        Returns: string
+      }
       delete_company_cascade: {
         Args: { _company_id: string }
         Returns: undefined
@@ -5167,6 +5209,24 @@ export type Database = {
         Args: { _paths: string[]; _system_id: string }
         Returns: Json
       }
+      import_system_access_tree_core: {
+        Args: {
+          _actor: string
+          _paths: string[]
+          _source: string
+          _system: Database["public"]["Tables"]["system_access_systems"]["Row"]
+        }
+        Returns: Json
+      }
+      ingest_system_access_tree: {
+        Args: {
+          _agent: string
+          _paths: string[]
+          _system_id: string
+          _token: string
+        }
+        Returns: Json
+      }
       is_company_admin: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
@@ -5247,6 +5307,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      revoke_system_access_scan_token: {
+        Args: { _system_id: string }
+        Returns: undefined
       }
       seed_default_permission_groups: {
         Args: { _company_id: string }
@@ -5498,6 +5562,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      system_access_scan_status: { Args: { _system_id: string }; Returns: Json }
       system_access_status_label: { Args: { _status: string }; Returns: string }
       update_my_birthday_preference: {
         Args: {
