@@ -88,6 +88,22 @@ export async function renameResource(db: Db, resource: Pick<AccessResource, "id"
   fail(error);
 }
 
+const IN_USE = "יש עובדים עם הרשאה כאן, ולכן אי אפשר למחוק. אפשר להשבית במקום זאת, וההרשאות הקיימות יישמרו.";
+
+/** Deletes a resource and its sub-resources; refused by the database while any grant points at them. */
+export async function deleteResource(db: Db, resourceId: string) {
+  const { error } = await db.from("system_access_resources").delete().eq("id", resourceId);
+  if (error?.code === "23503") throw new Error(IN_USE);
+  fail(error);
+}
+
+/** Deletes a system with its environments, groups and scan key; refused while any grant points at it. */
+export async function deleteSystem(db: Db, companyId: string, systemId: string) {
+  const { error } = await db.from("system_access_systems").delete().eq("id", systemId).eq("company_id", companyId);
+  if (error?.code === "23503") throw new Error(IN_USE);
+  fail(error);
+}
+
 export async function setResourceActive(db: Db, resourceId: string, isActive: boolean) {
   const { error } = await db.from("system_access_resources").update({ is_active: isActive }).eq("id", resourceId);
   fail(error);
