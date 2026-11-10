@@ -288,6 +288,13 @@
       "when": 1794325384204,
       "tag": "0040_system_access_revocation",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1794325436350,
+      "tag": "0041_vehicle_leasing",
+      "breakpoints": true
     }
   ]
 }

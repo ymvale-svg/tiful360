@@ -3478,6 +3478,53 @@ export type Database = {
           },
         ]
       }
+      suppliers: {
+        Row: {
+          company_id: string
+          contact_name: string | null
+          created_at: string
+          email: string | null
+          id: string
+          is_active: boolean
+          kind: string
+          name: string
+          notes: string | null
+          phone: string | null
+        }
+        Insert: {
+          company_id: string
+          contact_name?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+        }
+        Update: {
+          company_id?: string
+          contact_name?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppressed_emails: {
         Row: {
           created_at: string
@@ -4081,6 +4128,197 @@ export type Database = {
         }
         Relationships: []
       }
+      vehicle_quotes: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          delivery_date: string | null
+          extracted: Json | null
+          file_path: string | null
+          id: string
+          includes: string | null
+          km_per_year: number | null
+          model: string | null
+          monthly_price: number | null
+          notes: string | null
+          period_months: number | null
+          request_id: string
+          supplier_id: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          delivery_date?: string | null
+          extracted?: Json | null
+          file_path?: string | null
+          id?: string
+          includes?: string | null
+          km_per_year?: number | null
+          model?: string | null
+          monthly_price?: number | null
+          notes?: string | null
+          period_months?: number | null
+          request_id: string
+          supplier_id?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          delivery_date?: string | null
+          extracted?: Json | null
+          file_path?: string | null
+          id?: string
+          includes?: string | null
+          km_per_year?: number | null
+          model?: string | null
+          monthly_price?: number | null
+          notes?: string | null
+          period_months?: number | null
+          request_id?: string
+          supplier_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_quotes_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_quotes_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_requests: {
+        Row: {
+          asset_id: string | null
+          chosen_quote_id: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          delivered_at: string | null
+          desired_date: string | null
+          employee_id: string
+          id: string
+          onboarding_item_id: string | null
+          ordered_at: string | null
+          period_months: number
+          preferences: Json
+          quote_body: string | null
+          quote_subject: string | null
+          quotes_requested_at: string | null
+          requested_supplier_ids: string[]
+          status: string
+          tier_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          asset_id?: string | null
+          chosen_quote_id?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          delivered_at?: string | null
+          desired_date?: string | null
+          employee_id: string
+          id?: string
+          onboarding_item_id?: string | null
+          ordered_at?: string | null
+          period_months?: number
+          preferences?: Json
+          quote_body?: string | null
+          quote_subject?: string | null
+          quotes_requested_at?: string | null
+          requested_supplier_ids?: string[]
+          status?: string
+          tier_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          asset_id?: string | null
+          chosen_quote_id?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          delivered_at?: string | null
+          desired_date?: string | null
+          employee_id?: string
+          id?: string
+          onboarding_item_id?: string | null
+          ordered_at?: string | null
+          period_months?: number
+          preferences?: Json
+          quote_body?: string | null
+          quote_subject?: string | null
+          quotes_requested_at?: string | null
+          requested_supplier_ids?: string[]
+          status?: string
+          tier_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_requests_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_requests_chosen_quote_fkey"
+            columns: ["chosen_quote_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_requests_onboarding_item_id_fkey"
+            columns: ["onboarding_item_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_requests_tier_id_fkey"
+            columns: ["tier_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_tiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vehicle_subscriptions: {
         Row: {
           asset_id: string | null
@@ -4141,6 +4379,82 @@ export type Database = {
             columns: ["employee_vehicle_id"]
             isOneToOne: false
             referencedRelation: "employee_vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_tier_roles: {
+        Row: {
+          company_id: string
+          department: string | null
+          id: string
+          role_name: string
+          tier_id: string
+        }
+        Insert: {
+          company_id: string
+          department?: string | null
+          id?: string
+          role_name: string
+          tier_id: string
+        }
+        Update: {
+          company_id?: string
+          department?: string | null
+          id?: string
+          role_name?: string
+          tier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_tier_roles_tier_id_fkey"
+            columns: ["tier_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_tiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_tiers: {
+        Row: {
+          allowed_models: string | null
+          company_id: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          level: number
+          monthly_cap: number | null
+          name: string
+        }
+        Insert: {
+          allowed_models?: string | null
+          company_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          level?: number
+          monthly_cap?: number | null
+          name: string
+        }
+        Update: {
+          allowed_models?: string | null
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          level?: number
+          monthly_cap?: number | null
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_tiers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -4542,6 +4856,8 @@ export type Database = {
           role: string
         }[]
       }
+      fleet_can_manage: { Args: { _company_id: string }; Returns: boolean }
+      fleet_can_view: { Args: { _company_id: string }; Returns: boolean }
       gen_handover_short_code: { Args: never; Returns: string }
       get_attendance_agent_status: {
         Args: { _company_id: string }
