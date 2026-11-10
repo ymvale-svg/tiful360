@@ -66,14 +66,14 @@ Deno.serve(async (req) => {
   const byCompany = new Map<string, { company_name: string; rows: any[] }>()
   for (const r of rows ?? []) {
     if (requestedCompany && r.company_id !== requestedCompany) continue
-    const cur = byCompany.get(r.company_id) ?? { company_name: r.company_name, rows: [] }
+    const cur = byCompany.get(r.company_id) ?? { company_name: r.company_name, rows: [] as any[] }
     cur.rows.push(r)
     byCompany.set(r.company_id, cur)
   }
 
   if (requestedCompany && !byCompany.has(requestedCompany)) {
     const { data: c } = await admin.from('companies').select('name').eq('id', requestedCompany).single()
-    byCompany.set(requestedCompany, { company_name: c?.name ?? '', rows: [] })
+    byCompany.set(requestedCompany, { company_name: c?.name ?? '', rows: [] as any[] })
   }
 
   const reportDate = formatDateIL(target)
