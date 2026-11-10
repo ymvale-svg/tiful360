@@ -22,6 +22,7 @@ const MAX_IDS = 50;
 const MAX_LOOKUPS = 20;
 const PHOTON_URL = "https://photon.komoot.io/reverse";
 const USER_AGENT = "Tiful360-Attendance/1.0";
+const FETCH_TIMEOUT_MS = 8000;
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -57,9 +58,26 @@ function formatAddress(features: { properties?: PhotonProperties }[]): string {
 async function lookup(lat: number, lng: number): Promise<string> {
   // Photon answers 400 when any extra query parameter is sent, so the URL stays lat/lon only.
   const url = `${PHOTON_URL}?lat=${lat}&lon=${lng}`;
-  const res = await fetch(url, { headers: { "User-Agent": USER_AGENT, Accept: "application/json" } });
-  if (!res.ok) throw new Error(`photon_${res.status}`);
-  const body = await res.json();
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
+  } catch (e) {
+    throw new Error(`photon_network: ${String(e)}`);
+  }
+  if (!res.ok) {
+    await res.body?.cancel();
+    throw new Error(`photon_${res.status}`);
+  }
+  let body: { features?: unknown };
+  try {
+    body = await res.json();
+  } catch {
+    // Throttled/blocked responses are sometimes HTML with status 200.
+    throw new Error("photon_bad_body");
+  }
   const features = (Array.isArray(body?.features) ? body.features : []) as { properties?: PhotonProperties }[];
   return formatAddress(features);
 }
@@ -85,7 +103,10 @@ Deno.serve(async (req) => {
     const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const { data: pending, error: pendErr } = await userClient.rpc("get_punches_missing_address", { _punch_ids: ids });
-    if (pendErr) return json({ error: "lookup_failed" }, 403);
+    if (pendErr) {
+      console.error("get_punches_missing_address failed", pendErr.message);
+      return json({ error: "lookup_failed", reason: "permission" }, 403);
+    }
     const rows = (pending ?? []) as { punch_id: string; lat: number; lng: number }[];
     if (rows.length === 0) return json({ resolved: 0, remaining: 0 });
 
@@ -102,17 +123,20 @@ Deno.serve(async (req) => {
     const groups = [...byKey.values()];
 
     // Cached places.
-    const { data: cached } = await admin
+    const { data: cached, error: cacheErr } = await admin
       .from("geo_address_cache")
       .select("lat_key, lng_key, address")
       .in("lat_key", [...new Set(groups.map((g) => g.lat))])
       .in("lng_key", [...new Set(groups.map((g) => g.lng))]);
+    if (cacheErr) console.error("cache read failed", cacheErr.message);
     const cache = new Map<string, string>();
     for (const c of cached ?? []) cache.set(`${Number(c.lat_key)},${Number(c.lng_key)}`, c.address);
 
     let lookups = 0;
     let resolved = 0;
     let remaining = 0;
+    // Error codes returned to the screen, so it can say why addresses are missing.
+    const errors = new Set<string>();
     for (const g of groups) {
       const k = `${g.lat},${g.lng}`;
       let address = cache.get(k);
@@ -127,10 +151,13 @@ Deno.serve(async (req) => {
           address = await lookup(g.lat, g.lng);
         } catch (e) {
           console.error("geocode lookup failed", String(e));
+          errors.add(e instanceof Error ? e.message.split(":")[0] : "photon_error");
           remaining += g.punchIds.length;
           continue;
         }
-        await admin.from("geo_address_cache").upsert({ lat_key: g.lat, lng_key: g.lng, address });
+        const { error: upErr } = await admin.from("geo_address_cache").upsert({ lat_key: g.lat, lng_key: g.lng, address });
+        if (upErr) console.error("cache write failed", upErr.message);
+        cache.set(k, address);
       }
       const { error: updErr } = await admin
         .from("attendance_punches")
@@ -139,15 +166,16 @@ Deno.serve(async (req) => {
         .is("geo_address", null);
       if (updErr) {
         console.error("update failed", updErr.message);
+        errors.add("update_failed");
         remaining += g.punchIds.length;
       } else {
         resolved += g.punchIds.length;
       }
     }
 
-    return json({ resolved, remaining });
+    return json({ resolved, remaining, errors: [...errors].slice(0, 3) });
   } catch (e) {
     console.error("unhandled", e);
-    return json({ error: "internal_error" }, 500);
+    return json({ error: "internal_error", reason: String(e).slice(0, 200) }, 500);
   }
 });
