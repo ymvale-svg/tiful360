@@ -11,6 +11,9 @@ import {
   saveSystem,
   setGroupResource,
   setResourceActive,
+  renameResource,
+  deleteResource,
+  deleteSystem,
   dispatchAccess,
   listPickerCatalog,
   listProcessGrants,
@@ -82,6 +85,35 @@ export function useSetAccessResourceActive(systemId: string | null) {
     mutationFn: ({ resourceId, isActive }: { resourceId: string; isActive: boolean }) =>
       setResourceActive(supabase, resourceId, isActive),
     onSuccess: () => qc.invalidateQueries({ queryKey: KEYS.resources(systemId) }),
+  });
+}
+
+export function useRenameAccessResource(systemId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ resource, name }: { resource: Pick<AccessResource, "id" | "path" | "parent_id">; name: string }) =>
+      renameResource(supabase, resource, name),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["system-access"] }),
+  });
+}
+
+export function useDeleteAccessResource(systemId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (resourceId: string) => deleteResource(supabase, resourceId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["system-access"] }),
+  });
+}
+
+export function useDeleteAccessSystem() {
+  const qc = useQueryClient();
+  const { activeCompanyId } = useCompany();
+  return useMutation({
+    mutationFn: (systemId: string) => {
+      if (!activeCompanyId) throw new Error("לא נבחרה חברה");
+      return deleteSystem(supabase, activeCompanyId, systemId);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["system-access"] }),
   });
 }
 
