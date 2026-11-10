@@ -11,13 +11,13 @@ set -euo pipefail
 cd "$(dirname "$0")/../../.."
 PSQL=(psql -q -v ON_ERROR_STOP=1 -d "${PGDATABASE:-postgres}")
 MIGRATIONS=(
-  supabase/migrations/20261110090000_onboarding_checklist_integrity.sql
-  supabase/migrations/20261110100000_onboarding_fulfillment_tracks.sql
-  supabase/migrations/20261110110000_system_access_catalog.sql
-  supabase/migrations/20261110120000_system_access_requests.sql
-  supabase/migrations/20261110130000_system_access_revocation.sql
-  supabase/migrations/20261110140000_vehicle_leasing.sql
-  supabase/migrations/20261110150000_system_access_tree_scan.sql
+  supabase/migrations/20261110200000_onboarding_checklist_integrity.sql
+  supabase/migrations/20261110210000_onboarding_fulfillment_tracks.sql
+  supabase/migrations/20261110220000_system_access_catalog.sql
+  supabase/migrations/20261110230000_system_access_requests.sql
+  supabase/migrations/20261110240000_system_access_revocation.sql
+  supabase/migrations/20261110250000_vehicle_leasing.sql
+  supabase/migrations/20261110260000_system_access_tree_scan.sql
 )
 for test in supabase/tests/sql/*.sql; do
   [[ "$(basename "$test")" == 00_* ]] && continue

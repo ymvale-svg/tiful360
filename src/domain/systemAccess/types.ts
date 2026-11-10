@@ -1,4 +1,4 @@
-// Rows of the system access catalog (supabase/migrations/20261110110000_system_access_catalog.sql).
+// Rows of the system access catalog (supabase/migrations/20261110220000_system_access_catalog.sql).
 import type { AccessLevel } from "@/domain/systemAccess/protocol";
 
 export type Provisioning = "manual" | "auto_tiful360" | "auto_mesimon";

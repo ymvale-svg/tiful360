@@ -1,4 +1,4 @@
-// Rows of the vehicle and leasing tables (supabase/migrations/20261110140000_vehicle_leasing.sql).
+// Rows of the vehicle and leasing tables (supabase/migrations/20261110250000_vehicle_leasing.sql).
 
 export interface Supplier {
   id: string;

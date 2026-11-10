@@ -8,7 +8,7 @@
 -- Cancelling the offboarding (status back to 'active') cancels what was not revoked yet.
 --
 -- A grant moves active → revoke_requested → (revoke_dispatched) → revoked. The functions of
--- 20261110120000 are replaced here to handle both directions.
+-- 20261110230000 are replaced here to handle both directions.
 
 ALTER TABLE public.system_access_grants
   ADD COLUMN IF NOT EXISTS revoke_request_id uuid REFERENCES public.system_access_requests(id) ON DELETE SET NULL,
