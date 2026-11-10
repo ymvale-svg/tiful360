@@ -72,7 +72,7 @@ export function SystemsTab() {
   const askDelete = (system: AccessSystem) =>
     confirm({
       title: `למחוק את ${system.name}?`,
-      description: `יימחקו גם כל ה${system.resource_label} וקבוצות הגישה שלה. אם יש לעובדים הרשאה במערכת, המחיקה לא תתבצע ואפשר להשבית אותה במקום.`,
+      description: `יימחקו גם כל הפריטים שבה (${system.resource_label}) וקבוצות הגישה שלה. אם יש לעובדים הרשאה במערכת, המחיקה לא תתבצע ואפשר להשבית אותה במקום.`,
       confirmLabel: "מחק",
       destructive: true,
       onConfirm: async () => {
