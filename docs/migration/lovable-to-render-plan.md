@@ -86,6 +86,10 @@
 - **אימות:** `bun install --frozen-lockfile && bun run build && bun run test` עוברים במחשב נקי וב-CI.
 
 ### שלב 2 – אירוח ב-Render במקביל (יום 3–5) · ללא השפעה · L2
+> **הוכן (10/11/2026):** `render.yaml` בשורש הריפו, עם בדיקה (`src/test/hostingConfig.test.ts`) שמוודאת שכל כותרות האבטחה של `vercel.json` קיימות בו באותו ערך. נבדק שה-build מייצר את `sw.js`, `assets/` ו-`.well-known/assetlinks.json`.
+> **נותר לבצע בצד שלכם:** חיבור הריפו ב-Render (New → Blueprint), הזנת שלושת משתני `VITE_SUPABASE_*`, והוספת כתובת ה-onrender.com ל-Redirect URLs ב-Supabase Auth.
+> **לבירור:** לריפו מחובר גם Vercel (בדיקת "Vercel Preview Comments" ב-PR). צריך לבדוק אם `tiful360.com` מוגש היום מ-Vercel או מ-Lovable, כי זה משנה את שלב 8.
+
 - להוסיף `render.yaml`:
   ```yaml
   services:
