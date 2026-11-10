@@ -239,6 +239,13 @@
       "when": 1794314941006,
       "tag": "0033_attendance_location_report",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1794315279835,
+      "tag": "0034_location_report_remote_only",
+      "breakpoints": true
     }
   ]
 }

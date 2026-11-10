@@ -28,16 +28,17 @@ export function useAttendanceLocationReport(from: string, to: string, enabled = 
   });
 }
 
-const CHUNK = 50;
+const CHUNK = 20;
 const MAX_ROUNDS_PER_CHUNK = 15;
 
 /**
  * Asks the reverse-geocode edge function to store addresses for these punches, in chunks,
  * showing progress in the progress center. The function resolves a limited number of new
  * places per call (OpenStreetMap allows one lookup per second), so each chunk is retried
- * until nothing is left or a call makes no progress.
+ * until nothing is left or a call makes no progress. `onChunkDone` runs after every call that
+ * stored addresses, so the screen can show them as they arrive.
  */
-export async function resolvePunchAddresses(punchIds: readonly string[]) {
+export async function resolvePunchAddresses(punchIds: readonly string[], onChunkDone?: () => void) {
   const chunks: string[][] = [];
   for (let i = 0; i < punchIds.length; i += CHUNK) chunks.push(punchIds.slice(i, i + CHUNK));
   return runBatch(
@@ -47,6 +48,7 @@ export async function resolvePunchAddresses(punchIds: readonly string[]) {
         const { data, error } = await supabase.functions.invoke("reverse-geocode", { body: { punch_ids: ids } });
         if (error) throw new Error("שירות הכתובות לא זמין כרגע");
         const { resolved = 0, remaining = 0 } = (data ?? {}) as { resolved?: number; remaining?: number };
+        if (resolved > 0) onChunkDone?.();
         if (remaining === 0) return;
         if (resolved === 0) throw new Error("חלק מהכתובות לא נמצאו");
       }

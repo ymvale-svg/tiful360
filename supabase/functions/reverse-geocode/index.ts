@@ -6,8 +6,9 @@
 // reports). Only those rows are written, with the service role.
 //
 // Addresses come from OpenStreetMap Nominatim, whose usage policy allows at most one
-// request per second with an identifying User-Agent. Points are rounded to 4 decimals
-// (about 11 m) and cached in geo_address_cache, so each place is looked up once.
+// request per second with an identifying User-Agent. Points are snapped to a grid of
+// 0.0005° (about 55 m × 47 m in Israel) and cached in geo_address_cache, so GPS jitter
+// around the same site resolves to one lookup and each place is looked up once.
 // One call resolves at most MAX_LOOKUPS new places; the client calls again for the rest.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -30,7 +31,8 @@ function json(body: unknown, status = 200) {
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-const roundKey = (n: number) => Math.round(n * 10000) / 10000;
+// 0.0005° grid; the snapped value fits geo_address_cache's numeric(8,4) keys.
+const roundKey = (n: number) => Math.round(n * 2000) / 2000;
 
 interface NominatimAddress {
   road?: string;
