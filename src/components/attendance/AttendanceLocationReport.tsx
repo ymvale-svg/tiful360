@@ -53,7 +53,7 @@ function PlaceCell({ p }: { p: PunchPlace | null }) {
   );
 }
 
-/** Per employee and day: check-in time and place, check-out time and place. Excel export. */
+/** Remote-punching employees, per employee and day: check-in time and place, check-out time and place. Excel export. */
 export function AttendanceLocationReport() {
   const today = ilDate(new Date());
   const [from, setFrom] = useState(() => monthStart(today));
@@ -112,8 +112,9 @@ export function AttendanceLocationReport() {
     if (ids.length === 0) return;
     setResolving(true);
     try {
-      const res = await resolvePunchAddresses(ids);
-      await qc.invalidateQueries({ queryKey: ["attendance_location_report"] });
+      const refresh = () => qc.invalidateQueries({ queryKey: ["attendance_location_report"] });
+      const res = await resolvePunchAddresses(ids, () => void refresh());
+      await refresh();
       if (res.failed.length) {
         toast({
           title: "חלק מהכתובות לא הושלמו",
@@ -182,8 +183,8 @@ export function AttendanceLocationReport() {
         label="דוח המיקומים"
         isEmpty={!rangeError && rows.length === 0}
         empty={{
-          title: "אין החתמות בטווח שנבחר",
-          description: "בחרו טווח תאריכים אחר או עובד אחר.",
+          title: "אין החתמות מרחוק בטווח שנבחר",
+          description: "הדוח כולל רק עובדים שמחתימים מרחוק. בחרו טווח תאריכים אחר או עובד אחר.",
           icon: <Users className="h-6 w-6" />,
         }}
       >
@@ -203,13 +204,13 @@ export function AttendanceLocationReport() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead scope="col">תאריך</TableHead>
-                      <TableHead scope="col">כניסה</TableHead>
-                      <TableHead scope="col">מיקום כניסה</TableHead>
-                      <TableHead scope="col">יציאה</TableHead>
-                      <TableHead scope="col">מיקום יציאה</TableHead>
-                      <TableHead scope="col">משך</TableHead>
-                      <TableHead scope="col">הערה</TableHead>
+                      <TableHead scope="col" className="text-start">תאריך</TableHead>
+                      <TableHead scope="col" className="text-start">כניסה</TableHead>
+                      <TableHead scope="col" className="text-start">מיקום כניסה</TableHead>
+                      <TableHead scope="col" className="text-start">יציאה</TableHead>
+                      <TableHead scope="col" className="text-start">מיקום יציאה</TableHead>
+                      <TableHead scope="col" className="text-start">משך</TableHead>
+                      <TableHead scope="col" className="text-start">הערה</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -219,11 +220,11 @@ export function AttendanceLocationReport() {
                           {formatDay(r.day)}
                           <span className="block text-xs text-muted-foreground">{hebrewWeekday(r.day)}</span>
                         </TableCell>
-                        <TableCell className="tabular-nums">{r.in?.time ?? "—"}</TableCell>
+                        <TableCell className="text-start tabular-nums">{r.in?.time ?? "—"}</TableCell>
                         <TableCell className="min-w-48"><PlaceCell p={r.in} /></TableCell>
-                        <TableCell className="tabular-nums">{r.out?.time ?? "—"}</TableCell>
+                        <TableCell className="text-start tabular-nums">{r.out?.time ?? "—"}</TableCell>
                         <TableCell className="min-w-48"><PlaceCell p={r.out} /></TableCell>
-                        <TableCell className="tabular-nums">{formatMinutes(r.minutes) || "—"}</TableCell>
+                        <TableCell className="text-start tabular-nums">{formatMinutes(r.minutes) || "—"}</TableCell>
                         <TableCell className={cn(r.note && r.note !== "בעבודה" && "text-warning font-medium")}>
                           {r.note}
                         </TableCell>
