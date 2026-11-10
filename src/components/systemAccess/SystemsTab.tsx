@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Check, DatabaseZap, Pencil, Plus, Server, X } from "lucide-react";
+import { Check, DatabaseZap, Pencil, Plus, Server, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { FormField } from "@/components/feedback/FormField";
@@ -11,6 +11,8 @@ import {
   useAccessResources,
   useAccessSystems,
   useAddAccessResource,
+  useDeleteAccessResource,
+  useDeleteAccessSystem,
   useLegacyAccessImport,
   useRenameAccessResource,
   useSaveAccessSystem,
@@ -37,6 +39,8 @@ export function SystemsTab() {
   const { toast } = useToast();
   const { data: systems = [], isLoading, error, refetch } = useAccessSystems();
   const save = useSaveAccessSystem();
+  const remove = useDeleteAccessSystem();
+  const confirm = useConfirm();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState({ name: "", provisioning: "manual" as Provisioning, owner_role: "admin", resource_label: "סביבה" });
 
@@ -65,6 +69,19 @@ export function SystemsTab() {
     }
   };
 
+  const askDelete = (system: AccessSystem) =>
+    confirm({
+      title: `למחוק את ${system.name}?`,
+      description: `יימחקו גם כל הפריטים שבה (${system.resource_label}) וקבוצות הגישה שלה. אם יש לעובדים הרשאה במערכת, המחיקה לא תתבצע ואפשר להשבית אותה במקום.`,
+      confirmLabel: "מחק",
+      destructive: true,
+      onConfirm: async () => {
+        await remove.mutateAsync(system.id);
+        if (selectedId === system.id) setSelectedId(null);
+        toast({ title: "המערכת נמחקה" });
+      },
+    });
+
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <section aria-labelledby="systems-title" className="space-y-4">
@@ -85,6 +102,7 @@ export function SystemsTab() {
                   <th scope="col" className="text-start font-medium py-2 px-2">פתיחה</th>
                   <th scope="col" className="text-start font-medium py-2 px-2">אחראי</th>
                   <th scope="col" className="text-start font-medium py-2 px-2">פעילה</th>
+                  <th scope="col" className="py-2 px-2"><span className="sr-only">מחיקה</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -127,6 +145,11 @@ export function SystemsTab() {
                         onCheckedChange={(v) => { void update(s, { is_active: v }); }}
                         aria-label={`${s.name} פעילה`}
                       />
+                    </td>
+                    <td className="py-2 px-2">
+                      <IconButton label={`מחק את ${s.name}`} onClick={() => { void askDelete(s); }}>
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </IconButton>
                     </td>
                   </tr>
                 ))}
@@ -188,11 +211,27 @@ function EnvironmentsPanel({ system }: { system: AccessSystem }) {
   const add = useAddAccessResource(system.id);
   const setActive = useSetAccessResourceActive(system.id);
   const rename = useRenameAccessResource(system.id);
+  const removeResource = useDeleteAccessResource(system.id);
+  const confirm = useConfirm();
   const [name, setName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const topLevel = resources.filter((r) => !r.parent_id);
   const hasChildren = useMemo(() => new Set(resources.map((r) => r.parent_id).filter(Boolean)), [resources]);
+
+  const askDeleteResource = (r: AccessResource) =>
+    confirm({
+      title: `למחוק את ${r.name}?`,
+      description: hasChildren.has(r.id)
+        ? "יימחקו גם כל התיקיות שבתוכה. אם יש לעובדים הרשאה כאן, המחיקה לא תתבצע ואפשר להשבית במקום."
+        : "אם יש לעובדים הרשאה כאן, המחיקה לא תתבצע ואפשר להשבית במקום.",
+      confirmLabel: "מחק",
+      destructive: true,
+      onConfirm: async () => {
+        await removeResource.mutateAsync(r.id);
+        toast({ title: "נמחק" });
+      },
+    });
 
   const startEdit = (r: AccessResource) => { setEditingId(r.id); setEditName(r.name); };
   const cancelEdit = () => { setEditingId(null); setEditName(""); };
@@ -271,6 +310,9 @@ function EnvironmentsPanel({ system }: { system: AccessSystem }) {
                       <Pencil className="w-3.5 h-3.5" />
                     </IconButton>
                   )}
+                  <IconButton label={`מחק את ${r.name}`} onClick={() => { void askDeleteResource(r); }}>
+                    <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                  </IconButton>
                 </div>
               )}
               <Switch
