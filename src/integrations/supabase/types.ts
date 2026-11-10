@@ -2558,10 +2558,12 @@ export type Database = {
       onboarding_items: {
         Row: {
           asset_id: string | null
+          asset_prior_owner_id: string | null
           assigned_at: string | null
           catalog_ref_id: string | null
           completed_at: string | null
           completed_by: string | null
+          completion_note: string | null
           created_at: string
           fulfillment_type: string | null
           id: string
@@ -2576,10 +2578,12 @@ export type Database = {
         }
         Insert: {
           asset_id?: string | null
+          asset_prior_owner_id?: string | null
           assigned_at?: string | null
           catalog_ref_id?: string | null
           completed_at?: string | null
           completed_by?: string | null
+          completion_note?: string | null
           created_at?: string
           fulfillment_type?: string | null
           id?: string
@@ -2594,10 +2598,12 @@ export type Database = {
         }
         Update: {
           asset_id?: string | null
+          asset_prior_owner_id?: string | null
           assigned_at?: string | null
           catalog_ref_id?: string | null
           completed_at?: string | null
           completed_by?: string | null
+          completion_note?: string | null
           created_at?: string
           fulfillment_type?: string | null
           id?: string
@@ -2616,6 +2622,20 @@ export type Database = {
             columns: ["asset_id"]
             isOneToOne: false
             referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_items_asset_prior_owner_id_fkey"
+            columns: ["asset_prior_owner_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_items_asset_prior_owner_id_fkey"
+            columns: ["asset_prior_owner_id"]
+            isOneToOne: false
+            referencedRelation: "employees_public"
             referencedColumns: ["id"]
           },
           {
@@ -3970,6 +3990,35 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      complete_onboarding_item: {
+        Args: { _done: boolean; _item_id: string; _note?: string }
+        Returns: {
+          asset_id: string | null
+          asset_prior_owner_id: string | null
+          assigned_at: string | null
+          catalog_ref_id: string | null
+          completed_at: string | null
+          completed_by: string | null
+          completion_note: string | null
+          created_at: string
+          fulfillment_type: string | null
+          id: string
+          item_type: string
+          notes: string | null
+          owner_role: string
+          process_id: string
+          selected_group_id: string | null
+          selected_model_id: string | null
+          status: string
+          title: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "onboarding_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       confirm_my_attendance_month: {
         Args: { _month: string }
         Returns: {
@@ -4372,6 +4421,10 @@ export type Database = {
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       my_access_blocked: { Args: never; Returns: boolean }
       my_self_edit_count_this_month: { Args: never; Returns: number }
+      onboarding_item_needs_asset: {
+        Args: { _item_type: string }
+        Returns: boolean
+      }
       resolve_handover_short_code: { Args: { _code: string }; Returns: string }
       seed_default_permission_groups: {
         Args: { _company_id: string }

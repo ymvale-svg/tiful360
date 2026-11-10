@@ -253,6 +253,13 @@
       "when": 1794317613588,
       "tag": "0035_document_location_report_remote_only",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794325081719,
+      "tag": "0036_onboarding_checklist_integrity",
+      "breakpoints": true
     }
   ]
 }
