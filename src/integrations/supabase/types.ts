@@ -942,6 +942,7 @@ export type Database = {
           edited_by: string | null
           employee_code_raw: string
           employee_id: string | null
+          geo_address: string | null
           id: string
           processed_at: string | null
           processed_by: string | null
@@ -958,6 +959,7 @@ export type Database = {
           edited_by?: string | null
           employee_code_raw: string
           employee_id?: string | null
+          geo_address?: string | null
           id?: string
           processed_at?: string | null
           processed_by?: string | null
@@ -974,6 +976,7 @@ export type Database = {
           edited_by?: string | null
           employee_code_raw?: string
           employee_id?: string | null
+          geo_address?: string | null
           id?: string
           processed_at?: string | null
           processed_by?: string | null
@@ -4169,6 +4172,28 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_attendance_location_report: {
+        Args: {
+          _company_id: string
+          _employee_id?: string | null
+          _from: string
+          _to: string
+        }
+        Returns: {
+          accuracy: number | null
+          department: string | null
+          direction: string
+          employee_code: string | null
+          employee_id: string
+          full_name: string
+          geo_address: string | null
+          lat: number | null
+          lng: number | null
+          punch_at: string
+          punch_id: string
+          source: string
+        }[]
+      }
       get_live_employee_locations: {
         Args: { _company_id: string }
         Returns: {
@@ -4233,6 +4258,14 @@ export type Database = {
           full_name: string
           roles: string
           user_id: string
+        }[]
+      }
+      get_punches_missing_address: {
+        Args: { _punch_ids: string[] }
+        Returns: {
+          lat: number
+          lng: number
+          punch_id: string
         }[]
       }
       get_subordinate_employee_ids: {

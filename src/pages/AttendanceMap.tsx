@@ -6,10 +6,55 @@ import { Card } from "@/components/ui/card";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, RefreshCw, Users } from "lucide-react";
+import { FileText, MapPin, RefreshCw, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSearchParams } from "react-router-dom";
+import { AttendanceLocationReport } from "@/components/attendance/AttendanceLocationReport";
 
+type View = "map" | "report";
+
+/** Live attendance map, and a per-employee report of check-in/check-out times and places (?view=report). */
 export default function AttendanceMap() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const view: View = searchParams.get("view") === "report" ? "report" : "map";
+  const setView = (v: View) => {
+    const next = new URLSearchParams(searchParams);
+    if (v === "map") next.delete("view");
+    else next.set("view", v);
+    setSearchParams(next, { replace: true });
+  };
+
+  return (
+    <div dir="rtl" className="flex flex-col">
+      <div className="px-4 md:px-6 pt-4 md:pt-6 flex flex-wrap gap-2" role="group" aria-label="תצוגת מפת נוכחות">
+        <Button variant={view === "map" ? "default" : "outline"} size="sm" aria-pressed={view === "map"} onClick={() => setView("map")}>
+          <MapPin aria-hidden="true" /> מפה חיה
+        </Button>
+        <Button variant={view === "report" ? "default" : "outline"} size="sm" aria-pressed={view === "report"} onClick={() => setView("report")}>
+          <FileText aria-hidden="true" /> דוח החתמות ומיקומים
+        </Button>
+      </div>
+      {view === "map" ? (
+        <LiveMap />
+      ) : (
+        <div className="p-4 md:p-6 flex flex-col gap-4">
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <FileText className="w-6 h-6 text-primary" aria-hidden="true" />
+              דוח החתמות ומיקומים
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              לכל עובד ולכל יום: שעת כניסה ומיקומה, שעת יציאה ומיקומה. משמרת שעוברת חצות נרשמת ביום הכניסה.
+            </p>
+          </div>
+          <AttendanceLocationReport />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LiveMap() {
   const { data: locations = [], isLoading, refetch, isFetching } = useLiveEmployeeLocations();
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState<string | null>(null);
@@ -32,7 +77,7 @@ export default function AttendanceMap() {
   const outCount = filtered.filter((l) => l.direction === "out").length;
 
   return (
-    <div dir="rtl" className="p-4 md:p-6 flex flex-col gap-4 lg:h-[calc(100dvh-5.5rem)]">
+    <div className="p-4 md:p-6 flex flex-col gap-4 lg:h-[calc(100dvh-8.5rem)]">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
