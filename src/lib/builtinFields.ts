@@ -38,19 +38,6 @@ export const BUILTIN_FIELDS: Partial<Record<DomainKey, BuiltinField[]>> = {
     { key: "insurance_company", label: "חברת ביטוח", defaultVisible: true },
     ...COMMON_ASSIGN,
   ],
-  digital: [
-    { key: "account_username", label: "שם משתמש", defaultVisible: true },
-    { key: "account_url", label: "כתובת / URL", defaultVisible: true },
-    { key: "mfa_enabled", label: "אימות דו-שלבי (MFA)", defaultVisible: true },
-    { key: "password_expires_at", label: "תפוגת סיסמה", defaultVisible: true },
-    { key: "license_expires_at", label: "תפוגת רישיון", defaultVisible: true },
-    { key: "serial_number", label: "מס׳ סידורי", defaultVisible: false },
-    { key: "manufacturer_model", label: "יצרן ודגם", defaultVisible: false },
-    { key: "condition", label: "מצב הציוד", defaultVisible: false },
-    { key: "assigned_site_id", label: "שיוך לאתר", defaultVisible: false },
-    { key: "expiry_date", label: "תאריך תפוגה", defaultVisible: false },
-    ...COMMON_ASSIGN,
-  ],
   licenses: [
     { key: "vendor", label: "ספק", defaultVisible: true },
     { key: "plan", label: "תוכנית/Plan", defaultVisible: true },
@@ -157,8 +144,8 @@ export function showFieldRow(
 
 /**
  * Does a handover/return protocol make sense for this item?
- * Only items that physically pass hand-to-hand (equipment, vehicles, digital
- * access, trainings, cards handed to employees). Insurance, real estate and
+ * Only items that physically pass hand-to-hand (equipment, vehicles, trainings,
+ * cards handed to employees). Insurance, real estate and
  * plain software licenses never get protocols.
  */
 export function isHandoverRelevant(
@@ -169,7 +156,6 @@ export function isHandoverRelevant(
   if (category?.protocol_type === "vehicle") return true;
   switch (domain) {
     case "physical":
-    case "digital":
     case "training":
       return true;
     case "licenses": {

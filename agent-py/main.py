@@ -11,7 +11,6 @@ import config
 from config import CLOCK_IP, CLOCK_PORT, POLL_INTERVAL, LOG_DIR, AGENT_VERSION, MIN_PUNCH_DATE, STATE_PATH, CLOCK_TIMEZONE
 from uploader import punch_to_payload, send_in_batches
 from heartbeat import start_loop as start_heartbeat
-import access_tree
 import zk_client
 
 
@@ -135,10 +134,6 @@ def main():
 
     stop_event = threading.Event()
     start_heartbeat(stop_event)
-    # Optional: the folder tree of a drive for system access (ACCESS_TREE_* in .env).
-    if access_tree.enabled():
-        log.info(f"Folder tree scan of {access_tree.ROOT} every {access_tree.INTERVAL_HOURS}h")
-        access_tree.start_loop(stop_event)
 
     while not stop_event.is_set():
         try:

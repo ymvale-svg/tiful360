@@ -13,8 +13,6 @@ project_id = "rhzmhiknbcipucfvgkok"
     verify_jwt = false
   [functions.ingest-attendance-heartbeat]
     verify_jwt = false
-  [functions.ingest-access-tree]
-    verify_jwt = false
   [functions.sign-form-upload-url]
     verify_jwt = false
   [functions.notify-expiring-assets]

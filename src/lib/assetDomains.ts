@@ -1,19 +1,17 @@
 // Shared domain classification for the assets feature.
-// 6 fixed domains. Categories carry a hard `domain` column on the DB.
+// 5 fixed domains. System access (accounts, permissions) is managed in the system access screen, not here. Categories carry a hard `domain` column on the DB.
 // `classifyCategory` remains only as a fallback for legacy data.
 
 import {
   AppWindow,
   Building,
   GraduationCap,
-  KeySquare,
   Monitor,
   ShieldCheck,
 } from "lucide-react";
 
 export type DomainKey =
   | "physical"
-  | "digital"
   | "licenses"
   | "training"
   | "insurance"
@@ -21,7 +19,6 @@ export type DomainKey =
 
 export const DOMAIN_ORDER: DomainKey[] = [
   "physical",
-  "digital",
   "licenses",
   "training",
   "insurance",
@@ -45,13 +42,6 @@ export const DOMAIN_META: Record<DomainKey, DomainMeta> = {
     hint: "מחשבים, ציוד היקפי, רכב, ציוד עזר",
     icon: Monitor,
     color: { bg: "bg-sky-500/10", text: "text-sky-600 dark:text-sky-400", ring: "hover:ring-sky-500/30", soft: "bg-sky-500/5" },
-  },
-  digital: {
-    key: "digital",
-    title: "גישות דיגיטליות",
-    hint: "חשבונות, מערכות, הרשאות, סיסמאות",
-    icon: KeySquare,
-    color: { bg: "bg-purple-500/10", text: "text-purple-600 dark:text-purple-400", ring: "hover:ring-purple-500/30", soft: "bg-purple-500/5" },
   },
   licenses: {
     key: "licenses",
@@ -90,7 +80,6 @@ export const DOMAIN_DEFAULTS: Record<DomainKey, {
   suggested_prefix: string;
 }> = {
   physical:    { is_assignable: true,  protocol_type: "physical",    suggested_prefix: "GEN" },
-  digital:     { is_assignable: false, protocol_type: "digital",     suggested_prefix: "DACC" },
   licenses:    { is_assignable: false, protocol_type: "license",     suggested_prefix: "SFT" },
   training:    { is_assignable: true,  protocol_type: "training",    suggested_prefix: "TRN" },
   insurance:   { is_assignable: false, protocol_type: "insurance",   suggested_prefix: "INS" },
@@ -102,7 +91,6 @@ export const DOMAIN_DEFAULTS: Record<DomainKey, {
 
 const SLUG_TO_KEY: Record<string, DomainKey> = {
   physical: "physical",
-  digital: "digital",
   licenses: "licenses",
   training: "training",
   insurance: "insurance",
@@ -112,7 +100,6 @@ const SLUG_TO_KEY: Record<string, DomainKey> = {
 
 const KEY_TO_SLUG: Record<DomainKey, string> = {
   physical: "physical",
-  digital: "digital",
   licenses: "licenses",
   training: "training",
   insurance: "insurance",
@@ -132,7 +119,6 @@ export function isDomainKey(value: string | undefined): value is DomainKey {
 
 /** Legacy fallback — classifies a category by its prefix/protocol_type. */
 export function classifyCategory(c: { prefix?: string; protocol_type?: string }): DomainKey {
-  if (c.prefix === "VRT" || c.protocol_type === "digital" || c.prefix === "DACC") return "digital";
   if (c.prefix === "SFT" || c.prefix === "MAN") return "licenses";
   if (c.protocol_type === "real_estate" || c.prefix === "LEASE") return "real_estate";
   if (c.protocol_type === "insurance" || c.prefix === "CERT" || c.prefix === "CINS") return "insurance";
@@ -154,7 +140,6 @@ export function groupCategoriesByDomain<T extends { id: string; domain?: string 
 ): Record<DomainKey, T[]> {
   const out: Record<DomainKey, T[]> = {
     physical: [],
-    digital: [],
     licenses: [],
     training: [],
     insurance: [],
@@ -238,12 +223,6 @@ export function getPanelOwnedCustomFieldKeys(
         "monthly_rent", "lease_start", "lease_end", "externally_managed", "management_company",
         "סטטוס בעלות", "כתובת", 'שטח (מ"ר)', "קומה", "משכיר", "טלפון משכיר",
         "שכ״ד חודשי", "תחילת חוזה", "סיום חוזה", "ניהול חיצוני", "חברת ניהול",
-      );
-      break;
-    case "digital":
-      add(
-        "url", "username", "platform", "access_level",
-        "כתובת", "שם משתמש", "פלטפורמה", "רמת גישה",
       );
       break;
     default:

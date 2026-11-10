@@ -114,10 +114,6 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
     expiry_date: "",
     notes: "",
     notification_days_before: "" as string,
-    account_username: "",
-    account_url: "",
-    mfa_enabled: false,
-    password_expires_at: "",
   });
   const [customFields, setCustomFields] = useState<Record<string, string>>({});
   const AGENT_NAME_KEYS = ["שם סוכן ביטוח", "שם סוכן", "סוכן ביטוח", "סוכן"];
@@ -216,7 +212,6 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
   const { isAdmin, isOperations } = useAuth();
   const canManage = isAdmin || isOperations;
   const domain = getDomain(selectedCategory as any);
-  const isDigital = domain === "digital";
   const isLicense = domain === "licenses";
   const addOption = useAddCategoryFieldOption();
   // Hide custom fields that duplicate the system expiry_date field.
@@ -252,7 +247,6 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
         asset_code: "", asset_name: "", category_id: "", group_id: "", serial_number: "", manufacturer_model: "",
         current_owner_id: "", assigned_site_id: "", container_id: "", status: "in_stock", expiry_date: "", notes: "",
         notification_days_before: "",
-        account_username: "", account_url: "", mfa_enabled: false, password_expires_at: "",
       });
       setCustomFields({});
       setBulkMode(false);
@@ -487,14 +481,6 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
         expiry_date: form.expiry_date || undefined,
         notes: form.notes || undefined,
         notification_days_before: form.notification_days_before.trim() === "" ? null : Number(form.notification_days_before),
-        ...(isDigital
-          ? {
-              account_username: form.account_username || undefined,
-              account_url: form.account_url || undefined,
-              mfa_enabled: form.mfa_enabled,
-              password_expires_at: form.password_expires_at || undefined,
-            }
-          : {}),
       } as any);
       // Close dialog + show toast immediately for snappy UX
       const catName = selectedCategory?.category_name ?? "פריט";
@@ -661,7 +647,6 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
     (!!form.asset_name.trim() && form.asset_name !== (defaultAssetName ?? "") && !vehicleLinkedGroup) ||
     !!form.serial_number || !!form.manufacturer_model || !!form.notes || !!form.expiry_date ||
     !!form.current_owner_id || !!form.assigned_site_id || !!form.notification_days_before ||
-    !!form.account_username || !!form.account_url || !!form.password_expires_at ||
     Object.values(customFields).some((v) => !!v && String(v).trim() !== "") ||
     pendingDocs.length > 0 || selectedEmployeeIds.length > 0;
   const busy = mutation.isPending || submitting || policyReading;
@@ -700,10 +685,10 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="w-5 h-5 text-primary" />
-            {selectedCategory?.prefix === "CINS" ? "הוספת ביטוח" : isDigital ? "הוספת גישה דיגיטלית" : isLicense ? "הוספת רישיון" : "הוספת פריט ציוד"}
+            {selectedCategory?.prefix === "CINS" ? "הוספת ביטוח" : isLicense ? "הוספת רישיון" : "הוספת פריט ציוד"}
           </DialogTitle>
           <DialogDescription>
-            {selectedCategory?.prefix === "CINS" ? "הוסף פוליסת ביטוח חדשה" : isDigital ? "הוסף גישה / חשבון חדש" : isLicense ? "הוסף רישיון חדש" : "הוסף פריט חדש למלאי הציוד"}
+            {selectedCategory?.prefix === "CINS" ? "הוסף פוליסת ביטוח חדשה" : isLicense ? "הוסף רישיון חדש" : "הוסף פריט חדש למלאי הציוד"}
           </DialogDescription>
         </DialogHeader>
 
@@ -744,7 +729,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
           {!bulkMode && (
             <div>
               <label htmlFor="add-asset-code" className="text-sm font-medium mb-1 block">
-                {selectedCategory?.prefix === "CINS" ? "מזהה פוליסה" : isDigital ? "מזהה גישה" : "מזהה / מס׳ סידורי"}
+                {selectedCategory?.prefix === "CINS" ? "מזהה פוליסה" : "מזהה / מס׳ סידורי"}
                 <span className="text-destructive mr-1" aria-hidden="true">*</span>
               </label>
               <input
@@ -771,7 +756,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
           ) : (
           <div>
             <label htmlFor="add-asset-name" className="text-sm font-medium mb-1 block">
-              {selectedCategory?.prefix === "CINS" ? "שם הפוליסה" : isDigital ? "שם המערכת / השירות" : "שם פריט"}
+              {selectedCategory?.prefix === "CINS" ? "שם הפוליסה" : "שם פריט"}
               <span className="text-destructive mr-1" aria-hidden="true">*</span>
             </label>
             <input
@@ -781,7 +766,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
               aria-describedby={errors.asset_name ? "add-asset-name-error" : undefined}
               value={form.asset_name}
               onChange={(e) => set("asset_name", e.target.value)}
-              placeholder={selectedCategory?.prefix === "CINS" ? "למשל: ביטוח קבלני - חיפה" : isDigital ? "למשל: Microsoft 365 / פריוריטי" : "למשל: MacBook Pro 16"}
+              placeholder={selectedCategory?.prefix === "CINS" ? "למשל: ביטוח קבלני - חיפה" : "למשל: MacBook Pro 16"}
               className={`w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 ${errors.asset_name ? "ring-2 ring-destructive/50" : "focus:ring-primary/30"}`}
             />
             {errors.asset_name && <p id="add-asset-name-error" role="alert" className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" aria-hidden="true" />{errors.asset_name}</p>}
@@ -803,65 +788,6 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
           )}
 
 
-
-          {/* Digital access details */}
-          {isDigital && !bulkMode && (
-            <div className="border-t border-border/50 pt-3 mt-3 space-y-3">
-              <p className="text-xs font-medium text-muted-foreground">פרטי הגישה</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {showBuiltin("account_username") && (
-                <div>
-                  <label htmlFor="add-asset-username" className="text-sm font-medium mb-1 block">שם משתמש</label>
-                  <input
-                    id="add-asset-username"
-                    value={form.account_username}
-                    onChange={(e) => set("account_username", e.target.value)}
-                    placeholder="username@company.com"
-                    dir="ltr"
-                    className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
-                  />
-                </div>
-                )}
-                {showBuiltin("account_url") && (
-                <div>
-                  <label htmlFor="add-asset-url" className="text-sm font-medium mb-1 block">כתובת המערכת</label>
-                  <input
-                    id="add-asset-url"
-                    value={form.account_url}
-                    onChange={(e) => set("account_url", e.target.value)}
-                    placeholder="https://"
-                    dir="ltr"
-                    className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
-                  />
-                </div>
-                )}
-                {showBuiltin("password_expires_at") && (
-                <div>
-                  <label htmlFor="add-asset-pwd-expiry" className="text-sm font-medium mb-1 block">תוקף סיסמה</label>
-                  <DateInput 
-                    id="add-asset-pwd-expiry"
-                    type="date"
-                    value={form.password_expires_at}
-                    onChange={(e) => set("password_expires_at", e.target.value)}
-                    dir="ltr"
-                    className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
-                  />
-                </div>
-                )}
-                {showBuiltin("mfa_enabled") && (
-                <label className="flex items-center gap-2 text-sm mt-6">
-                  <input
-                    type="checkbox"
-                    checked={form.mfa_enabled}
-                    onChange={(e) => set("mfa_enabled", e.target.checked as any)}
-                    className="w-4 h-4 accent-primary"
-                  />
-                  אימות דו-שלבי (MFA) מופעל
-                </label>
-                )}
-              </div>
-            </div>
-          )}
 
           {!bulkMode && domain === "insurance" && isCarInsuranceGroup(selectedGroup as any) && (
             <div className="space-y-1">

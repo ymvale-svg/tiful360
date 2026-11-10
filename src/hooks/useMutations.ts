@@ -141,9 +141,8 @@ export function useUpdateEmployee() {
   });
 }
 
-// useUpsertDigitalAccess and useDeleteDigitalAccess removed -
-// digital access is now managed via the assets table (DACC category).
-// Use useUpsertAsset / useDeleteAsset (if available) or direct supabase calls.
+// System access (accounts, permissions) is managed only in the system access screen
+// (src/hooks/useSystemAccess.ts), not as assets.
 
 export function useUnassignAsset() {
   const queryClient = useQueryClient();

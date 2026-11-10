@@ -15,7 +15,6 @@ import { AssetDocumentsSection } from "@/components/AssetDocumentsSection";
 import { HandoverFormsList } from "@/components/handover/HandoverFormsList";
 import { useAssetHandoverForms } from "@/hooks/useHandoverForms";
 import { VehicleDetailsPanel } from "@/components/assets/VehicleDetailsPanel";
-import { DigitalAccessPanel } from "@/components/assets/DigitalAccessPanel";
 import { LicenseDetailsPanel } from "@/components/assets/LicenseDetailsPanel";
 import { TrainingDetailsPanel } from "@/components/assets/TrainingDetailsPanel";
 import { InsuranceDetailsPanel } from "@/components/assets/InsuranceDetailsPanel";
@@ -394,7 +393,6 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
           {(() => {
             const domain = category ? getDomain(category) : null;
             if (category?.protocol_type === "vehicle") return <VehicleDetailsPanel asset={asset} />;
-            if (domain === "digital") return <DigitalAccessPanel asset={asset} />;
             if (domain === "licenses") return <LicenseDetailsPanel asset={asset} />;
             if (domain === "training") return <TrainingDetailsPanel asset={asset} />;
             if (domain === "insurance") return <>

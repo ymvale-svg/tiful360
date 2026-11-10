@@ -1,4 +1,6 @@
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useEmployeeGrantHistory } from "@/hooks/useSystemAccess";
+import { HELD_STATUSES } from "@/domain/systemAccess/types";
 import { AttendanceHeatmap } from "@/components/attendance/AttendanceHeatmap";
 import {
   ArrowRight, Shield, Key, Clock, AlertTriangle, UserMinus,
@@ -124,12 +126,10 @@ export default function EmployeeDetail() {
 
 
 
-  // Split employee assets by protocol_type (digital domain = digital access entries)
   const employeeAssets = assets ?? [];
-  const isDigital = (a: any) =>
-    a.asset_categories?.protocol_type === "digital" || (a.asset_categories?.prefix ?? "") === "DACC";
-  const physicalAssets = employeeAssets.filter((a: any) => !isDigital(a));
-  const digitalAccessAssets = employeeAssets.filter(isDigital);
+  // System access is managed only in the system access screen.
+  const { data: grantHistory = [] } = useEmployeeGrantHistory(id ?? null);
+  const heldGrants = grantHistory.filter((g) => HELD_STATUSES.includes(g.status));
   // Vehicles live in the "רכב ומנויים" tab only; subscription services (Pango,
   // tolls, fuel cards) are listed here under "ציוד וגישות" — no duplication.
   const nonVehicleAssets = employeeAssets.filter((a: any) => !isVehicleAsset(a));
@@ -282,8 +282,8 @@ export default function EmployeeDetail() {
             <p className="text-xs text-muted-foreground mt-1">פריטי ציוד</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-info">{digitalAccessAssets.length}</p>
-            <p className="text-xs text-muted-foreground mt-1">הרשאות דיגיטליות</p>
+            <p className="text-2xl font-bold text-info">{heldGrants.length}</p>
+            <p className="text-xs text-muted-foreground mt-1">הרשאות מערכות</p>
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold text-foreground">{activityLog?.length ?? 0}</p>
@@ -639,7 +639,6 @@ export default function EmployeeDetail() {
         />
       )}
 
-      {/* Digital access tab removed - now part of Assets tab via DACC category */}
 
 
 
@@ -667,11 +666,11 @@ export default function EmployeeDetail() {
           serial_number: a.serial_number,
           asset_categories: (a as any).asset_categories,
         }))}
-        digitalAccess={digitalAccessAssets.map((a: any) => ({
-          id: a.id,
-          access_type: a.custom_fields?.["סוג גישה"] ?? a.asset_name,
-          resource_path: a.custom_fields?.["נתיב/משאב"] ?? a.serial_number ?? "",
-          permission_level: a.custom_fields?.["רמת הרשאה"] ?? "read",
+        systemAccess={heldGrants.map((g) => ({
+          id: g.id,
+          access_type: g.system_access_systems?.name ?? "מערכת",
+          resource_path: g.system_access_groups?.name ?? g.system_access_resources?.path ?? "כל המערכת",
+          permission_level: g.system_access_groups?.external_name ?? "—",
         }))}
       />
 
@@ -692,7 +691,6 @@ export default function EmployeeDetail() {
         employee={employee}
       />
 
-      {/* Digital access dialog removed - managed via Asset dialog (DACC category) */}
 
       {/* Pick available asset to assign */}
       <Dialog open={pickerOpen} onOpenChange={(o) => { setPickerOpen(o); if (!o) setPickAssetId(""); }}>

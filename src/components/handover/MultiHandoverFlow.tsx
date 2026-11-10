@@ -78,11 +78,6 @@ const PHYSICAL_QUICK_TEXTS = [
 ];
 
 const NON_PHYSICAL_QUICK_TEXTS: Partial<Record<DomainKey, string[]>> = {
-  digital: [
-    "הגישה נמסרה והמשתמש התבקש להחליף סיסמה בכניסה ראשונה",
-    "המשתמש מאשר שימוש בהתאם למדיניות אבטחת המידע של החברה",
-    "אין להעביר את פרטי הגישה לגורם אחר",
-  ],
   licenses: [
     "הרישיון הוקצה לשימוש אישי בלבד",
     "המשתמש מאשר שימוש בהתאם לתנאי הרישיון של הספק",
@@ -91,7 +86,6 @@ const NON_PHYSICAL_QUICK_TEXTS: Partial<Record<DomainKey, string[]>> = {
 
 /** Domain-specific wording for the dialog / protocol. */
 const DOMAIN_COPY: Partial<Record<DomainKey, { dialogTitle: string; pdfTitle: string; itemsLabel: string }>> = {
-  digital: { dialogTitle: "מסירת גישות דיגיטליות", pdfTitle: "פרוטוקול הענקת גישה", itemsLabel: "הגישות בפרוטוקול" },
   licenses: { dialogTitle: "מסירת רישיונות", pdfTitle: "פרוטוקול הקצאת רישיון", itemsLabel: "הרישיונות בפרוטוקול" },
   training: { dialogTitle: "רישום הדרכות", pdfTitle: "פרוטוקול הדרכה", itemsLabel: "ההדרכות בפרוטוקול" },
   insurance: { dialogTitle: "מסירת פוליסות", pdfTitle: "פרוטוקול מסירת פוליסה", itemsLabel: "הפוליסות בפרוטוקול" },
@@ -237,7 +231,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned, defa
       const prefix = assets.length > 1 ? `פריט ${i + 1} — ` : "";
       rows.push({
         key: `item_${i}_name`,
-        label: `${prefix}${isPhysical ? "שם פריט" : domain === "digital" ? "מערכת / שירות" : "שם"}`,
+        label: `${prefix}${isPhysical ? "שם פריט" : "שם"}`,
         value: a.asset_name ?? "",
       });
       if (a.asset_code) rows.push({ key: `item_${i}_code`, label: `${prefix}מזהה`, value: a.asset_code });
@@ -245,15 +239,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned, defa
         rows.push({ key: `item_${i}_serial`, label: `${prefix}מס׳ סידורי`, value: a.serial_number });
       if (a.asset_categories?.category_name)
         rows.push({ key: `item_${i}_cat`, label: `${prefix}קטגוריה`, value: a.asset_categories.category_name });
-      if (domain === "digital") {
-        if (a.account_username) rows.push({ key: `item_${i}_user`, label: `${prefix}שם משתמש`, value: a.account_username });
-        if (a.account_url) rows.push({ key: `item_${i}_url`, label: `${prefix}כתובת המערכת`, value: a.account_url });
-        const perm = (a.custom_fields as any)?.["רמת הרשאה"] ?? (a.custom_fields as any)?.permission_level;
-        if (perm) rows.push({ key: `item_${i}_perm`, label: `${prefix}רמת הרשאה`, value: String(perm) });
-        if (a.password_expires_at)
-          rows.push({ key: `item_${i}_pwd`, label: `${prefix}תוקף סיסמה`, value: a.password_expires_at });
-      }
-      if ((domain === "digital" || domain === "licenses") && a.license_expires_at)
+      if (domain === "licenses" && a.license_expires_at)
         rows.push({ key: `item_${i}_lic`, label: `${prefix}תוקף רישיון`, value: a.license_expires_at });
     });
     return rows.filter((f) => f.value.trim() !== "");
@@ -638,9 +624,6 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned, defa
                     <span className="text-muted-foreground font-mono text-xs">{a.asset_code}</span>
                     {isPhysical && a.serial_number && (
                       <span className="text-muted-foreground text-xs">סידורי: {a.serial_number}</span>
-                    )}
-                    {domain === "digital" && a.account_username && (
-                      <span className="text-muted-foreground text-xs" dir="ltr">{a.account_username}</span>
                     )}
                   </div>
                 ))}

@@ -16,6 +16,9 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   user_invited: "הזמנת משתמש",
   user_banned: "חסימת משתמש",
   user_unbanned: "ביטול חסימה",
+  system_access_legacy_import: "ייבוא הרשאות קיימות",
+  system_access_legacy_import_undone: "ביטול ייבוא ההרשאות הקיימות",
+  digital_access_domain_removed: "הסרת תחום גישות דיגיטליות",
 };
 
 export const auditActionLabel = (a: string) => AUDIT_ACTION_LABELS[a] ?? a;
