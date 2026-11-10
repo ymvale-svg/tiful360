@@ -95,7 +95,7 @@ DB:    RLS + טריגרים + פונקציות אטומיות. נבדק ב-pgTAP
 | `singleRoleSource.test.ts` | אין `type AppRole =` מחוץ ל-`screenAccess.ts`. כל route, sidebar, טאב ו-GlobalSearch קוראים ל-`SCREEN_ROLES`/`canAccess` | Screen and tab role lists |
 | `noNativeDialogs.test.ts` | אין `window.confirm/prompt/alert` ב-`src/` (המצב היום נקי, הבדיקה שומרת שיישאר כך) | shared feedback components |
 | `mcpReadOnly.test.ts` | ב-`src/lib/mcp/tools` אין כתיבה ואין טבלאות שכר | App MCP |
-| `mesimonBoundary.test.ts` | ה-URL של Mesimon מופיע רק ב-`create-mesimon-task`, וזו בודקת `MESIMON_COMPANY_IDS` | Mesimon |
+| `mesimonBoundary.test.ts` | כתובת Mesimon (`MESIMON_URL`) ו-`MESIMON_API_KEY` מופיעים רק במודול המשותף `supabase/functions/_shared/mesimon.ts`, שבודק `MESIMON_COMPANY_IDS` לפני כל קריאה. כל פונקציה שפונה ל-Mesimon (`create-mesimon-task`, ובהמשך `provision-mesimon-user` משרשרת הקליטה) עוברת דרכו. עד הפיצול ב-WP-4, `create-mesimon-task` נמצא ב-allowlist | Mesimon |
 | `emailLayout.test.ts` | כל תבנית עטופה ב-`EmailLayout`, כל שליחת HTML עוברת `formatEmailHtml`, ואין company ברירת מחדל גלובלית | email-theme |
 | `spreadsheetAdapter.test.ts` | אין `from "xlsx"` מחוץ ל-`src/lib/xlsx.ts` | spreadsheet adapter |
 | `userRolesWrites.test.ts` | כתיבות ל-`user_roles` רק עם `super_admin`/`employee` | permission groups |
@@ -181,7 +181,7 @@ export async function approveCorrection(db: Db, id: string, note?: string) { …
 |---|---|---|
 | P0 | `manage-users` | כל action × כל תפקיד (מטריצה); שורת `permission_audit_log` עם המבצע האמיתי; אין ניהול של חברה אחרת; `resolveAppOrigin` |
 | P0 | `split-payslips` | parse על דוגמאות טקסט (LTR/RTL, רעש, ת"ז עם אפסים); העלאה חלקית לא נוגעת בעובדים אחרים; לא משויך → מחליף רק אותה ת"ז+תקופה |
-| P0 | `create-mesimon-task`, `it-api` | חברה לא מורשית → 403 בלי קריאה החוצה; סגירה → מייל לפותח |
+| P0 | `create-mesimon-task`, `it-api` | הקריאה ל-Mesimon עוברת ל-`_shared/mesimon.ts` (ויוצאת מה-allowlist של `mesimonBoundary`); חברה לא מורשית → 403 בלי קריאה החוצה; סגירה → מייל לפותח |
 | P0 | `mcp`, `list-companies-for-agent` | client לפי caller; access-block; read-only |
 | P1 | `reply-it-ticket`, `notify-it-ticket` | `markTicketInProgress` מותנה ב-`open` |
 | P1 | `ingest-attendance-punch/heartbeat` | אימות מכשיר, כפילויות, אזור זמן ישראל |
@@ -251,6 +251,14 @@ export async function approveCorrection(db: Db, id: string, note?: string) { …
 | 6–8 | WP-5, WP-6 | אין קובץ UI מעל 600 שורות; smoke לכל מסך; `src/hooks` ≥ 70% |
 
 ה-thresholds עולים אחרי כל חבילה. PR שמוריד כיסוי, או מוסיף הפרה ל-allowlist, נחסם.
+
+## חלק ד'2 – תיאום עם תוכנית שרשרת הקליטה וההרשאות
+
+התוכנית `docs/specs/onboarding-chain-plan.md` (ענף `claude/org-permissions-screen-bkrq0o`) רצה במקביל. ההסכמות:
+- **Mesimon:** מודול משותף אחד, `_shared/mesimon.ts`, לכל הקריאות ל-Mesimon (ראו `mesimonBoundary.test.ts`). כשתיכנס `provision-mesimon-user`, יעודכן כלל ה-Mesimon ב-`AGENTS.md`.
+- **שמות:** `services/access.ts` שייך ל-WP-3a (תפקידי האפליקציה). הרשאות למערכות הארגון יהיו ב-`services/systemAccess.ts` ובטבלאות `system_access_*` של השרשרת.
+- **קבצים חדשים** מהשרשרת (`services/onboarding.ts`, `services/systemAccess.ts`) נכתבים לפי ארכיטקטורת היעד ולא נכנסים ל-allowlist של `layering.test.ts`.
+- **בלי חפיפה:** השרשרת לא נוגעת ב-`AddAssetDialog`, `HandoverFlow`, `ITTickets`, `manage-users` ו-`ai-assistant` עד שחבילות העבודה שמפרקות אותם (WP-3c/3d/3e, WP-4, WP-5) ימוזגו.
 
 ## חלק ה' – כללי עבודה
 
