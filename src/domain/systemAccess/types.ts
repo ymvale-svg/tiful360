@@ -52,3 +52,71 @@ export const SUGGESTED_SYSTEMS: Array<Pick<AccessSystem, "name" | "provisioning"
   { name: "סמנטו", provisioning: "manual", owner_role: "admin", resource_label: "פרויקט" },
   { name: "כונן P", provisioning: "manual", owner_role: "it_manager", resource_label: "תיקייה" },
 ];
+
+export type GrantStatus = "requested" | "dispatched" | "active" | "rejected" | "revoked";
+
+export const GRANT_STATUS_LABEL: Record<GrantStatus, string> = {
+  requested: "ממתין",
+  dispatched: "נשלח לאחראי",
+  active: "נפתח",
+  rejected: "נדחה",
+  revoked: "נותק",
+};
+
+/** What a request asks for: a system, optionally one access group or one resource, and from when. */
+export interface AccessPick {
+  system_id: string;
+  group_id?: string | null;
+  resource_id?: string | null;
+  /** ISO timestamp; omitted = the employee's first day at 08:00 (set by the DB). */
+  effective_from?: string | null;
+}
+
+export interface AccessGrant {
+  id: string;
+  company_id: string;
+  request_id: string;
+  employee_id: string;
+  system_id: string;
+  group_id: string | null;
+  resource_id: string | null;
+  status: GrantStatus;
+  effective_from: string;
+  executed_at: string | null;
+  executed_by_name: string | null;
+  external_username: string | null;
+  dispatch_ticket_id: string | null;
+  rejection_reason: string | null;
+  note: string | null;
+  created_at: string;
+  system_access_systems?: Pick<AccessSystem, "name" | "owner_role" | "owner_user_id" | "provisioning"> | null;
+  system_access_groups?: Pick<AccessGroup, "name" | "external_name"> | null;
+  system_access_resources?: Pick<AccessResource, "path"> | null;
+}
+
+export interface AccessRequest {
+  id: string;
+  company_id: string;
+  employee_id: string;
+  kind: "grant" | "revoke";
+  status: "open" | "done";
+  requested_by_name: string;
+  requested_at: string;
+  note: string | null;
+  onboarding_process_id: string | null;
+  hub_ticket_id: string | null;
+  completed_at: string | null;
+  employees?: { full_name: string; employee_code: string | null; role: string | null; department: string | null; start_date: string | null; email: string | null } | null;
+  system_access_grants: AccessGrant[];
+}
+
+/** "כונן P · הנדסה (GRP_P_Engineering)" */
+export function grantLabel(g: AccessGrant): string {
+  const system = g.system_access_systems?.name ?? "מערכת";
+  if (g.system_access_groups) {
+    const ext = g.system_access_groups.external_name ? ` (${g.system_access_groups.external_name})` : "";
+    return `${system} · ${g.system_access_groups.name}${ext}`;
+  }
+  if (g.system_access_resources) return `${system} · ${g.system_access_resources.path}`;
+  return system;
+}

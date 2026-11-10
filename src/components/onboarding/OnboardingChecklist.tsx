@@ -18,6 +18,10 @@ import {
   type OnboardingProcess,
 } from "@/hooks/useOnboarding";
 import { canRemoveItem, itemNeedsAsset, reservedAssetIds, stockOptionsFor } from "@/domain/onboarding/checklist";
+import { useProcessAccessGrants } from "@/hooks/useSystemAccess";
+import { isOpenGrant } from "@/domain/systemAccess/picks";
+import { GRANT_STATUS_LABEL, grantLabel } from "@/domain/systemAccess/types";
+import { Link } from "react-router-dom";
 import {
   appendOnboardingAudit,
   useCompleteOnboardingProcess,
@@ -46,6 +50,7 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
   const { data: groupModels = [] } = useAssetGroupModels();
   const { data: assetPicks = [] } = useOnboardingAssetPicks();
   const completeItemMutation = useCompleteOnboardingItem();
+  const { data: accessGrants = [] } = useProcessAccessGrants(process?.id ?? null);
   const { data: categories = [] } = useAssetCategories();
   const { data: groups = [] } = useAssetGroups();
   const upsertItem = useUpsertOnboardingItem();
@@ -95,6 +100,8 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
   const emp = process.employees;
   const dLeft = daysUntil(emp?.start_date);
   const doneCount = items.filter((i) => i.status === "done").length;
+  const openGrants = accessGrants.filter(isOpenGrant).length;
+  const canFinish = doneCount === items.length && openGrants === 0;
 
   const assetOptions = (item: (typeof items)[number]) => {
     const preferredModel = item.selected_model_id
@@ -299,10 +306,10 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
                 size="sm"
                 className="gap-1.5"
                 onClick={() => { void finish(); }}
-                disabled={doneCount < items.length}
+                disabled={!canFinish}
                 loading={finishing}
                 loadingText="מפיק פרוטוקול…"
-                aria-describedby={doneCount < items.length ? "onb-finish-hint" : undefined}
+                aria-describedby={!canFinish ? "onb-finish-hint" : undefined}
               >
                 <CheckCircle2 className="w-4 h-4" /> סיום תהליך
               </Button>
@@ -316,10 +323,38 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
           </div>
         </div>
 
-        {process.status !== "done" && doneCount < items.length && (
+        {process.status !== "done" && !canFinish && (
           <p id="onb-finish-hint" className="text-xs text-muted-foreground mb-3">
-            {items.length - doneCount === 1 ? "נותר פריט אחד לסימון" : `נותרו ${items.length - doneCount} פריטים לסימון`} לפני סיום התהליך.
+            {doneCount < items.length && (items.length - doneCount === 1 ? "נותר פריט אחד לסימון. " : `נותרו ${items.length - doneCount} פריטים לסימון. `)}
+            {openGrants > 0 && (openGrants === 1 ? "הרשאה אחת עוד לא נפתחה. " : `${openGrants} הרשאות עוד לא נפתחו. `)}
+            התהליך ייסגר כשהכול יטופל.
           </p>
+        )}
+
+        {(accessGrants.length > 0 || (process.access_picks?.length ?? 0) > 0) && (
+          <section aria-labelledby="onb-access-title" className="border border-border/60 rounded-xl p-4 mb-4">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <h3 id="onb-access-title" className="text-sm font-semibold">הרשאות למערכות</h3>
+              <Link to="/system-access" className="text-xs text-primary hover:underline">למסך הרשאות מערכות</Link>
+            </div>
+            {accessGrants.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                נבחרו {process.access_picks?.length} הרשאות. הן יישלחו למנהל ההרשאות עם שליחת הבקשה לתפעול.
+              </p>
+            ) : (
+              <ul className="divide-y divide-border/50">
+                {accessGrants.map((g) => (
+                  <li key={g.id} className="flex flex-wrap items-center justify-between gap-2 py-1.5 text-sm">
+                    <span>{grantLabel(g)}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {GRANT_STATUS_LABEL[g.status]}
+                      {g.executed_at ? ` · ${g.executed_by_name ?? ""} ${formatDateTimeDMY(g.executed_at)}` : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         )}
 
         <div className="space-y-4">

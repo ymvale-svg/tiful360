@@ -1,7 +1,14 @@
 // Data access for the system access catalog. Functions take the client as a parameter so they
 // can be tested with a fake. company_id of resources and groups is set by DB triggers.
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { AccessGroup, AccessResource, AccessSystem } from "@/domain/systemAccess/types";
+import type {
+  AccessGrant,
+  AccessGroup,
+  AccessPick,
+  AccessRequest,
+  AccessResource,
+  AccessSystem,
+} from "@/domain/systemAccess/types";
 import type { AccessLevel } from "@/domain/systemAccess/protocol";
 
 // The catalog tables are newer than the generated types, so they are queried untyped here and
@@ -132,4 +139,132 @@ export async function importTree(db: Db, systemId: string, paths: string[]): Pro
   const { data, error } = await db.rpc("import_system_access_tree", { _system_id: systemId, _paths: paths });
   fail(error);
   return data as TreeImportResult;
+}
+
+// ---------------------------------------------------------------------------------------
+// Requests and grants. Clients only read these tables; every change goes through a DB function.
+
+const GRANT_SELECT =
+  "*, system_access_systems(name, owner_role, owner_user_id, provisioning), system_access_groups(name, external_name), system_access_resources(path)";
+
+export async function listRequests(db: Db, companyId: string, status: "open" | "done"): Promise<AccessRequest[]> {
+  const { data, error } = await db
+    .from("system_access_requests")
+    .select(`*, employees(full_name, employee_code, role, department, start_date, email), system_access_grants(${GRANT_SELECT})`)
+    .eq("company_id", companyId)
+    .eq("status", status)
+    .order("requested_at", { ascending: false })
+    .limit(status === "done" ? 50 : 500);
+  fail(error);
+  return (data ?? []) as AccessRequest[];
+}
+
+export async function listProcessGrants(db: Db, onboardingProcessId: string): Promise<AccessGrant[]> {
+  const { data, error } = await db
+    .from("system_access_requests")
+    .select(`system_access_grants(${GRANT_SELECT})`)
+    .eq("onboarding_process_id", onboardingProcessId);
+  fail(error);
+  return ((data ?? []) as Array<{ system_access_grants: AccessGrant[] }>).flatMap((r) => r.system_access_grants);
+}
+
+export interface RequestAccessResult {
+  requestId: string;
+  ticketId: string;
+  ticketCode: string;
+  created: number;
+  skipped: number;
+}
+
+export async function requestAccess(
+  db: Db,
+  employeeId: string,
+  picks: AccessPick[],
+  options: { onboardingProcessId?: string | null; note?: string | null } = {},
+): Promise<RequestAccessResult> {
+  const { data, error } = await db.rpc("request_system_access", {
+    _employee_id: employeeId,
+    _items: picks,
+    _onboarding_process_id: options.onboardingProcessId ?? null,
+    _note: options.note?.trim() || null,
+  });
+  fail(error);
+  return data as RequestAccessResult;
+}
+
+export async function dispatchAccess(db: Db, grantIds: string[], note?: string | null) {
+  const { data, error } = await db.rpc("dispatch_system_access", { _grant_ids: grantIds, _note: note?.trim() || null });
+  fail(error);
+  return (data ?? []) as Array<{ ticketId: string; ticketCode: string; ownerRole: string; count: number }>;
+}
+
+export type GrantAction = "done" | "reject" | "return";
+
+export async function resolveGrant(
+  db: Db,
+  grantId: string,
+  action: GrantAction,
+  details: { executedAt?: string | null; externalUsername?: string | null; note?: string | null } = {},
+) {
+  const { error } = await db.rpc("resolve_system_access_grant", {
+    _grant_id: grantId,
+    _action: action,
+    _executed_at: details.executedAt ?? null,
+    _external_username: details.externalUsername?.trim() || null,
+    _note: details.note?.trim() || null,
+  });
+  fail(error);
+}
+
+export interface PickerCatalog {
+  groups: Array<Pick<AccessGroup, "id" | "system_id" | "name" | "external_name">>;
+  /** Top-level resources only (environments, projects, a drive's first level). */
+  resources: Array<Pick<AccessResource, "id" | "system_id" | "name" | "path">>;
+}
+
+/** What can be requested: active groups and active top-level resources of the company's systems. */
+export async function listPickerCatalog(db: Db, companyId: string): Promise<PickerCatalog> {
+  const [groups, resources] = await Promise.all([
+    db.from("system_access_groups").select("id, system_id, name, external_name").eq("company_id", companyId).eq("is_active", true).order("name"),
+    db.from("system_access_resources").select("id, system_id, name, path").eq("company_id", companyId).eq("is_active", true)
+      .is("parent_id", null).is("missing_since", null).order("name"),
+  ]);
+  fail(groups.error);
+  fail(resources.error);
+  return { groups: (groups.data ?? []) as PickerCatalog["groups"], resources: (resources.data ?? []) as PickerCatalog["resources"] };
+}
+
+/** Whether an onboarding process already produced an access request (so sending twice asks once). */
+export async function hasProcessRequest(db: Db, onboardingProcessId: string): Promise<boolean> {
+  const { data, error } = await db
+    .from("system_access_requests")
+    .select("id")
+    .eq("onboarding_process_id", onboardingProcessId)
+    .limit(1);
+  fail(error);
+  return (data ?? []).length > 0;
+}
+
+type FunctionsDb = Pick<SupabaseClient, "functions">;
+
+/**
+ * Open a Tiful360 user for the employee through manage-users (the same invite the employees
+ * screen sends). An existing account counts as opened. Returns the address the invite went to.
+ */
+export async function inviteToTiful360(
+  db: FunctionsDb,
+  companyId: string,
+  employee: { id: string; email: string | null; full_name: string },
+): Promise<string> {
+  const email = employee.email?.trim();
+  if (!email) throw new Error("לעובד אין כתובת מייל בכרטיס, ולכן אי אפשר לפתוח לו משתמש");
+  const { data, error } = await db.functions.invoke("manage-users?action=invite", {
+    body: { company_id: companyId, employees: [{ employee_id: employee.id, email, full_name: employee.full_name }] },
+  });
+  fail(error);
+  const result = (data as { results?: Array<{ status: string; error?: string }> } | null)?.results?.[0];
+  if (!result || (result.status !== "invited" && result.status !== "already_exists")) {
+    throw new Error(result?.error || "פתיחת המשתמש נכשלה");
+  }
+  return email;
 }

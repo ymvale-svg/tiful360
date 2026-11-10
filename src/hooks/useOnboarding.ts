@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
 import { completeOnboardingItem, listOnboardingAssetPicks } from "@/services/onboarding";
+import type { AccessPick } from "@/domain/systemAccess/types";
 
 export type OnboardingStatus = "draft" | "sent" | "in_progress" | "done";
 
@@ -39,6 +40,8 @@ export interface OnboardingProcess {
   protocol_version?: number | null;
   it_ticket_id?: string | null;
   audit_log?: unknown;
+  /** System access picked in the form, requested when the process is sent. */
+  access_picks?: AccessPick[] | null;
   employees?: {
     full_name: string;
     employee_code: string;
@@ -116,10 +119,12 @@ export function useCreateOnboardingProcess() {
       employee_id,
       items,
       status = "draft",
+      access_picks = null,
     }: {
       employee_id: string;
       items: NewOnboardingItem[];
       status?: OnboardingStatus;
+      access_picks?: AccessPick[] | null;
     }) => {
       const { data: employee, error: employeeError } = await supabase
         .from("employees")
@@ -136,6 +141,7 @@ export function useCreateOnboardingProcess() {
           employee_id,
           status,
           created_by: user?.id ?? null,
+          access_picks: access_picks?.length ? access_picks : null,
         } as any)
         .select()
         .single();

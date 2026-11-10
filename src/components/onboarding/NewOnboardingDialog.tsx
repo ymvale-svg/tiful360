@@ -19,11 +19,15 @@ import { appendOnboardingAudit } from "@/hooks/useOnboardingProtocol";
 import { useQueryClient } from "@tanstack/react-query";
 import { groupByTrack, itemTypeForCategory, showInOnboarding, TRACK_HINT, TRACK_LABEL } from "@/domain/onboarding/tracks";
 import { useAuth } from "@/hooks/useAuth";
+import { useAccessSystems } from "@/hooks/useSystemAccess";
+import { AccessPicker } from "@/components/systemAccess/AccessPicker";
+import { defaultEffectiveLocal, itemsToPicks, picksToItems, type PickState } from "@/domain/systemAccess/picks";
 import { resolveOwnerRole, OWNER_ROLE_OPTIONS, OWNER_ROLE_LABEL } from "@/lib/domainConfig";
 import { Send, Copy, UserPlus, CalendarDays, AlertCircle, X } from "lucide-react";
 import { EmployeeSetupWizard } from "@/components/EmployeeSetupWizard";
 import { SendToOpsDialog } from "@/components/onboarding/SendToOpsDialog";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 
 interface Props {
   open: boolean;
@@ -57,6 +61,11 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
   // only chooses what the employee needs.
   const canManageCatalog = hasRole("admin") || hasRole("operations") || hasRole("it_manager");
 
+  const { data: accessSystems = [] } = useAccessSystems();
+  // With systems defined in the access catalog, access is picked there instead of from asset categories.
+  const useAccessCatalog = accessSystems.some((s) => s.is_active);
+  const [accessPicks, setAccessPicks] = useState<PickState>({});
+
   const [employeeId, setEmployeeId] = useState("");
   const [selected, setSelected] = useState<Record<string, SelectedEntry>>({});
   const [copyFromId, setCopyFromId] = useState("");
@@ -73,6 +82,7 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
     if (!open) {
       setEmployeeId("");
       setSelected({});
+      setAccessPicks({});
       setCopyFromId("");
       setQuickAdd({});
       setQuickModel({});
@@ -95,6 +105,7 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
         next[i.catalog_ref_id] = entry;
       });
       setSelected(next);
+      setAccessPicks(itemsToPicks(editProcess.access_picks, defaultEffectiveLocal(editProcess.employees?.start_date)));
     }
   }, [open, editProcess]);
 
@@ -127,13 +138,19 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
   // Only categories meant for onboarding, grouped by how they are fulfilled.
   const blocks = useMemo(
     () =>
-      groupByTrack(categories as any[]).map(({ track, categories: cats }) => ({
-        title: TRACK_LABEL[track],
-        hint: TRACK_HINT[track],
-        cats,
-      })),
-    [categories]
+      groupByTrack(categories as any[])
+        .filter(({ track }) => !(useAccessCatalog && track === "access"))
+        .map(({ track, categories: cats }) => ({
+          title: TRACK_LABEL[track],
+          hint: TRACK_HINT[track],
+          cats,
+        })),
+    [categories, useAccessCatalog]
   );
+  const accessFrom = defaultEffectiveLocal((employee as { start_date?: string | null } | undefined)?.start_date);
+  const accessItems = picksToItems(accessPicks, accessFrom);
+  // Access already sent with the process is handled in the system access screen, not edited here.
+  const accessLocked = !!editProcess && editProcess.status !== "draft";
 
   const employeeOptions = useMemo(
     () =>
@@ -353,7 +370,17 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
         );
         if (error) throw error;
       }
+      const accessChanged =
+        !accessLocked && JSON.stringify(accessItems) !== JSON.stringify(editProcess.access_picks ?? []);
+      if (accessChanged) {
+        const { error } = await supabase
+          .from("onboarding_processes")
+          .update({ access_picks: accessItems.length ? (accessItems as unknown as Json) : null })
+          .eq("id", editProcess.id);
+        if (error) throw error;
+      }
       const changes: string[] = [];
+      if (accessChanged) changes.push("הרשאות למערכות עודכנו");
       if (toInsert.length) changes.push(`${toInsert.length} נוספו`);
       if (toUpdate.length) changes.push(`${toUpdate.length} עודכנו`);
       if (toDelete.length) changes.push(`${toDelete.length} הוסרו`);
@@ -378,16 +405,16 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
       return;
     }
     const items = buildItems();
-    if (!items.length) {
+    if (!items.length && !accessItems.length) {
       toast({ title: "בחר לפחות פריט אחד", variant: "destructive" });
       return;
     }
     try {
       // The process is always created as a draft; sending to operations happens
       // in the protocol dialog (signature → PDF → ticket → email).
-      const proc = await create.mutateAsync({ employee_id: employeeId, items, status: "draft" });
+      const proc = await create.mutateAsync({ employee_id: employeeId, items, status: "draft", access_picks: accessItems });
       if (status === "sent" && proc?.id) {
-        setPendingSend({ processId: proc.id, employeeId, count: items.length });
+        setPendingSend({ processId: proc.id, employeeId, count: items.length + accessItems.length });
         onOpenChange(false);
         return;
       }
@@ -481,6 +508,22 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
                 />
               </div>
             </div>
+
+            {useAccessCatalog && (
+              <div className="border border-border/60 rounded-xl p-4">
+                <div className="flex items-baseline justify-between gap-2 mb-3">
+                  <h3 className="text-sm font-semibold">הרשאות למערכות</h3>
+                  <span className="text-xs text-muted-foreground">נשלח למנהל ההרשאות עם הבקשה</span>
+                </div>
+                {accessLocked ? (
+                  <p className="text-sm text-muted-foreground">
+                    ההרשאות נשלחו עם הבקשה ומטופלות במסך הרשאות מערכות. שינוי או תוספת: בקשת הרשאות חדשה משם.
+                  </p>
+                ) : (
+                  <AccessPicker value={accessPicks} onChange={setAccessPicks} defaultFrom={accessFrom} />
+                )}
+              </div>
+            )}
 
             {blocks.map((block) => (
               <div key={block.title} className="border border-border/60 rounded-xl p-4">

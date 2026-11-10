@@ -180,11 +180,16 @@ BEGIN
     WHEN 'system_access_resources' THEN 'משאב: ' || COALESCE(_row->>'path', '')
     WHEN 'system_access_groups' THEN 'קבוצת גישה: ' || COALESCE(_row->>'name', '')
       || COALESCE(' (' || (_row->>'external_name') || ')', '')
+    WHEN 'system_access_grants' THEN 'הרשאה ל' || COALESCE(
+      (SELECT name FROM public.system_access_systems WHERE id = NULLIF(_row->>'system_id', '')::uuid), '')
+      -- system_access_status_label is defined with the requests (next migration); resolved at run time.
+      || ' · ' || COALESCE(public.system_access_status_label(_row->>'status'), '')
     ELSE 'שיוך משאב לקבוצה · ' || COALESCE(_row->>'level', '')
   END;
-  INSERT INTO public.permission_audit_log (actor_user_id, company_id, action, details, before_value, after_value)
+  INSERT INTO public.permission_audit_log (actor_user_id, target_employee_id, company_id, action, details, before_value, after_value)
   VALUES (
     _actor,
+    NULLIF(_row->>'employee_id', '')::uuid,
     NULLIF(_row->>'company_id', '')::uuid,
     TG_TABLE_NAME || '_' || lower(TG_OP),
     _details,

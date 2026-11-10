@@ -11,9 +11,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE TYPE public.app_role AS ENUM ('super_admin','admin','it_manager','operations','hr','payroll','finance','legal','employee','direct_manager','secretariat','ceo');
 CREATE TYPE public.asset_status AS ENUM ('in_use','in_stock','in_repair','lost','inactive');
 CREATE TYPE public.employee_status AS ENUM ('active','onboarding','leaving','inactive');
-CREATE TYPE public.ticket_type AS ENUM ('it','onboarding','offboarding');
+CREATE TYPE public.ticket_type AS ENUM ('offboarding','access','software','hardware','onboarding');
 CREATE TYPE public.ticket_status AS ENUM ('open','in_progress','done');
-CREATE TYPE public.ticket_priority AS ENUM ('low','medium','high','urgent');
+CREATE TYPE public.ticket_priority AS ENUM ('critical','high','medium','low');
 
 CREATE TABLE public.companies (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), name text);
 CREATE TABLE public.profiles (user_id uuid PRIMARY KEY, display_name text);
@@ -36,3 +36,6 @@ CREATE TABLE public.permission_audit_log (id uuid PRIMARY KEY DEFAULT gen_random
 
 CREATE TABLE public.onboarding_processes (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE, employee_id uuid NOT NULL REFERENCES public.employees(id) ON DELETE CASCADE, status text NOT NULL DEFAULT 'draft', created_by uuid, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), completed_at timestamptz, pdf_url text, it_ticket_id uuid);
 CREATE TABLE public.onboarding_items (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), process_id uuid NOT NULL REFERENCES public.onboarding_processes(id) ON DELETE CASCADE, item_type text NOT NULL DEFAULT 'asset', title text NOT NULL, owner_role text NOT NULL DEFAULT 'it_manager', catalog_ref_id uuid, selected_group_id uuid, fulfillment_type text, asset_id uuid REFERENCES public.assets(id) ON DELETE SET NULL, status text NOT NULL DEFAULT 'pending', notes text, completed_by uuid, completed_at timestamptz, assigned_at timestamptz, created_at timestamptz NOT NULL DEFAULT now());
+ALTER TABLE public.it_tickets ADD COLUMN checklist jsonb;
+ALTER TABLE public.employees ADD COLUMN employee_code text;
+CREATE FUNCTION public.my_access_blocked() RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT false $$;

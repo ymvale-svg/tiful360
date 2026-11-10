@@ -4,6 +4,9 @@ import { HubTabBar } from "@/components/hub/HubTabBar";
 import { ListSkeleton } from "@/components/feedback/StateView";
 import { useHubTab } from "@/hooks/useHubTab";
 
+const RequestsTab = lazyWithReload(() =>
+  import("@/components/systemAccess/RequestsTab").then((m) => ({ default: m.RequestsTab })),
+);
 const SystemsTab = lazyWithReload(() =>
   import("@/components/systemAccess/SystemsTab").then((m) => ({ default: m.SystemsTab })),
 );
@@ -12,11 +15,12 @@ const AccessTreeTab = lazyWithReload(() =>
 );
 
 const TAB_CONTENT: Record<string, React.ComponentType> = {
+  requests: RequestsTab,
   systems: SystemsTab,
   tree: AccessTreeTab,
 };
 
-/** Hub: the organisation's systems, their environments and folder trees, and access groups. */
+/** Hub: access requests and their handling, the organisation's systems, folder trees and access groups. */
 export default function SystemAccess() {
   const { tabs, active, setActive } = useHubTab("systemAccess");
   const Content = active ? TAB_CONTENT[active] : null;
@@ -25,7 +29,7 @@ export default function SystemAccess() {
     <div className="space-y-4">
       <div className="page-header">
         <h1 className="page-title">הרשאות מערכות</h1>
-        <p className="page-subtitle">המערכות של הארגון, הסביבות והתיקיות בהן, וקבוצות הגישה</p>
+        <p className="page-subtitle">בקשות הרשאה וטיפול בהן, המערכות של הארגון, התיקיות וקבוצות הגישה</p>
       </div>
       <HubTabBar tabs={tabs} active={active} onChange={setActive} label="הרשאות מערכות" />
       {Content && (

@@ -2651,6 +2651,7 @@ export type Database = {
           sent_at: string | null
           status: string
           updated_at: string
+          access_picks: Json | null
         }
         Insert: {
           audit_log?: Json
@@ -2666,6 +2667,7 @@ export type Database = {
           sent_at?: string | null
           status?: string
           updated_at?: string
+          access_picks?: Json | null
         }
         Update: {
           audit_log?: Json
@@ -2681,6 +2683,7 @@ export type Database = {
           sent_at?: string | null
           status?: string
           updated_at?: string
+          access_picks?: Json | null
         }
         Relationships: [
           {

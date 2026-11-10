@@ -11,14 +11,25 @@ import {
   saveSystem,
   setGroupResource,
   setResourceActive,
+  dispatchAccess,
+  listPickerCatalog,
+  listProcessGrants,
+  listRequests,
+  requestAccess,
+  resolveGrant,
+  inviteToTiful360,
+  type GrantAction,
 } from "@/services/systemAccess";
-import type { AccessGroup, AccessResource, AccessSystem } from "@/domain/systemAccess/types";
+import type { AccessGroup, AccessPick, AccessResource, AccessSystem } from "@/domain/systemAccess/types";
 import type { AccessLevel } from "@/domain/systemAccess/protocol";
 
 const KEYS = {
   systems: (companyId: string | null) => ["system-access", "systems", companyId] as const,
   resources: (systemId: string | null) => ["system-access", "resources", systemId] as const,
   groups: (systemId: string | null) => ["system-access", "groups", systemId] as const,
+  catalog: (companyId: string | null) => ["system-access", "picker-catalog", companyId] as const,
+  requests: ["system-access", "requests"] as const,
+  processGrants: (processId: string | null) => ["system-access", "requests", "process", processId] as const,
 };
 
 export function useAccessSystems() {
@@ -99,5 +110,96 @@ export function useSetGroupResource(systemId: string | null) {
     mutationFn: ({ groupId, resourceId, level }: { groupId: string; resourceId: string; level: AccessLevel | null }) =>
       setGroupResource(supabase, groupId, resourceId, level),
     onSuccess: () => qc.invalidateQueries({ queryKey: KEYS.groups(systemId) }),
+  });
+}
+
+/** Groups and top-level resources HR can pick, for every system of the company. */
+export function useAccessPickerCatalog() {
+  const { activeCompanyId } = useCompany();
+  return useQuery({
+    queryKey: KEYS.catalog(activeCompanyId),
+    queryFn: () => listPickerCatalog(supabase, activeCompanyId!),
+    enabled: !!activeCompanyId,
+  });
+}
+
+export function useAccessRequests(status: "open" | "done") {
+  const { activeCompanyId } = useCompany();
+  return useQuery({
+    queryKey: [...KEYS.requests, activeCompanyId, status],
+    queryFn: () => listRequests(supabase, activeCompanyId!, status),
+    enabled: !!activeCompanyId,
+  });
+}
+
+/** Grants requested from one onboarding process. */
+export function useProcessAccessGrants(processId: string | null) {
+  return useQuery({
+    queryKey: KEYS.processGrants(processId),
+    queryFn: () => listProcessGrants(supabase, processId!),
+    enabled: !!processId,
+  });
+}
+
+function useInvalidateRequests() {
+  const qc = useQueryClient();
+  return () => {
+    qc.invalidateQueries({ queryKey: KEYS.requests });
+    qc.invalidateQueries({ queryKey: ["it-tickets"] });
+  };
+}
+
+export function useRequestAccess() {
+  const invalidate = useInvalidateRequests();
+  return useMutation({
+    mutationFn: ({ employeeId, picks, onboardingProcessId, note }: {
+      employeeId: string; picks: AccessPick[]; onboardingProcessId?: string | null; note?: string | null;
+    }) => requestAccess(supabase, employeeId, picks, { onboardingProcessId, note }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDispatchAccess() {
+  const invalidate = useInvalidateRequests();
+  return useMutation({
+    mutationFn: async ({ grantIds, note }: { grantIds: string[]; note?: string | null }) => {
+      const tickets = await dispatchAccess(supabase, grantIds, note);
+      // The owner hears about the new ticket by the usual ticket email (IT's list for IT-owned
+      // systems, operations otherwise); a failed email does not undo the dispatch.
+      await Promise.all(
+        tickets.map((t) =>
+          supabase.functions
+            .invoke("notify-it-ticket", { body: { ticket_id: t.ticketId, ...(t.ownerRole === "it_manager" ? { target: "it" } : {}) } })
+            .catch((e) => console.warn("notify-it-ticket failed", e)),
+        ),
+      );
+      return tickets;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export function useResolveGrant() {
+  const invalidate = useInvalidateRequests();
+  return useMutation({
+    mutationFn: ({ grantId, action, executedAt, externalUsername, note }: {
+      grantId: string; action: GrantAction; executedAt?: string | null; externalUsername?: string | null; note?: string | null;
+    }) => resolveGrant(supabase, grantId, action, { executedAt, externalUsername, note }),
+    onSuccess: invalidate,
+  });
+}
+
+/** Tiful360 opens by itself: invite the employee, then mark the grant done with the address used. */
+export function useProvisionTiful360() {
+  const invalidate = useInvalidateRequests();
+  const { activeCompanyId } = useCompany();
+  return useMutation({
+    mutationFn: async ({ grantId, employee }: { grantId: string; employee: { id: string; email: string | null; full_name: string } }) => {
+      if (!activeCompanyId) throw new Error("לא נבחרה חברה");
+      const email = await inviteToTiful360(supabase, activeCompanyId, employee);
+      await resolveGrant(supabase, grantId, "done", { externalUsername: email, note: "משתמש נפתח והזמנה נשלחה" });
+      return email;
+    },
+    onSuccess: invalidate,
   });
 }
