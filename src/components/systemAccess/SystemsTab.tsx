@@ -1,21 +1,18 @@
 import { useMemo, useState } from "react";
-import { DatabaseZap, Plus, Server } from "lucide-react";
+import { Plus, Server } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { FormField } from "@/components/feedback/FormField";
 import { StateView } from "@/components/feedback/StateView";
-import { useConfirm } from "@/components/feedback/ConfirmDialog";
 import { useToast } from "@/hooks/use-toast";
 import {
   useAccessResources,
   useAccessSystems,
   useAddAccessResource,
-  useLegacyAccessImport,
   useSaveAccessSystem,
   useSetAccessResourceActive,
 } from "@/hooks/useSystemAccess";
 import { OWNER_ROLE_LABEL } from "@/lib/domainConfig";
-import type { LegacyImportResult } from "@/services/systemAccess";
 import {
   PROVISIONING_LABEL,
   SUGGESTED_SYSTEMS,
@@ -169,8 +166,6 @@ export function SystemsTab() {
             <Plus className="w-4 h-4" /> הוסף מערכת
           </Button>
         </form>
-
-        <LegacyImportCard />
       </section>
 
       {selected && <EnvironmentsPanel system={selected} />}
@@ -253,63 +248,3 @@ function EnvironmentsPanel({ system }: { system: AccessSystem }) {
   );
 }
 
-/** One-time import of access that employees already hold: digital-access assets and the old list.
- *  Shows what would be created first; running it again adds only what is new. */
-function LegacyImportCard() {
-  const { toast } = useToast();
-  const confirm = useConfirm();
-  const { preview, apply } = useLegacyAccessImport();
-
-  const start = async () => {
-    let result: LegacyImportResult;
-    try {
-      result = await preview.mutateAsync();
-    } catch (e) {
-      toast({ title: "לא ניתן לבדוק", description: message(e), variant: "destructive" });
-      return;
-    }
-    if (result.grants === 0) {
-      toast({ title: "אין מה לייבא", description: result.skipped ? `${result.skipped} הרשאות כבר קיימות במסך.` : "לא נמצאו גישות דיגיטליות משויכות לעובדים." });
-      return;
-    }
-    await confirm({
-      title: "ייבוא הרשאות קיימות",
-      description: (
-        <div className="space-y-2 text-sm">
-          <p>{result.grants} הרשאות פעילות ל-{result.employees} עובדים{result.skipped ? ` · ${result.skipped} כבר קיימות ולא ייובאו שוב` : ""}.</p>
-          {(result.systemsCreated > 0 || result.resourcesCreated > 0) && (
-            <p>יתווספו {result.systemsCreated} מערכות ו-{result.resourcesCreated} סביבות שעוד לא מוגדרות.</p>
-          )}
-          <table className="w-full text-xs" aria-label="הרשאות לייבוא לפי מערכת">
-            <thead>
-              <tr className="text-muted-foreground"><th scope="col" className="text-start font-medium">מערכת</th><th scope="col" className="text-start font-medium">הרשאות</th></tr>
-            </thead>
-            <tbody>
-              {Object.entries(result.bySystem).map(([name, v]) => (
-                <tr key={name}><th scope="row" className="text-start font-normal">{name}</th><td>{v.grants}</td></tr>
-              ))}
-            </tbody>
-          </table>
-          <p className="text-muted-foreground">תאריך התחילה הוא היום הראשון של העובד ב-08:00. מועד הפתיחה בפועל לא ידוע ויוצג בפרוטוקול כ"—". לא נפתחות קריאות.</p>
-        </div>
-      ),
-      confirmLabel: "ייבא",
-      onConfirm: async () => {
-        const done = await apply.mutateAsync();
-        toast({ title: "ההרשאות יובאו", description: `${done.grants} הרשאות ל-${done.employees} עובדים` });
-      },
-    });
-  };
-
-  return (
-    <div className="rounded-xl border border-border p-4 space-y-2">
-      <h3 className="text-sm font-semibold">הרשאות שכבר קיימות</h3>
-      <p className="text-xs text-muted-foreground">
-        גישות דיגיטליות שמשויכות לעובדים במשאבים יובאו כהרשאות פעילות, כדי שהמטריצה, ההצעות וההתראות יראו את התמונה המלאה. אפשר להריץ שוב: רק מה שחדש יתווסף.
-      </p>
-      <Button type="button" size="sm" variant="outline" onClick={() => { void start(); }} loading={preview.isPending} loadingText="בודק…">
-        <DatabaseZap className="w-4 h-4" /> בדוק מה ייובא
-      </Button>
-    </div>
-  );
-}

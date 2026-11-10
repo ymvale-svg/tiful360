@@ -6,7 +6,7 @@ const cat = (id: string, patch: Record<string, unknown> = {}) => ({ id, domain: 
 describe("fulfilment tracks", () => {
   it("derives the track from the domain when the category has none", () => {
     expect(resolveTrack(cat("laptop"))).toBe("equipment");
-    expect(resolveTrack(cat("priority", { domain: "digital" }))).toBe("access");
+    expect(resolveTrack(cat("priority", { fulfillment_track: "access" }))).toBe("access");
     expect(resolveTrack(cat("office", { domain: "licenses" }))).toBe("license");
     expect(resolveTrack(cat("safety", { domain: "training" }))).toBe("task");
     expect(resolveTrack(cat("policy", { domain: "insurance" }))).toBe("none");
@@ -25,7 +25,7 @@ describe("fulfilment tracks", () => {
 
   it("maps tracks to item types", () => {
     expect(itemTypeForCategory(cat("laptop"))).toBe("asset");
-    expect(itemTypeForCategory(cat("priority", { domain: "digital" }))).toBe("access");
+    expect(itemTypeForCategory(cat("priority", { fulfillment_track: "access" }))).toBe("access");
     expect(itemTypeForCategory(cat("safety", { domain: "training" }))).toBe("task");
   });
 
@@ -40,7 +40,7 @@ describe("fulfilment tracks", () => {
       cat("safety", { domain: "training" }),
       cat("laptop"),
       cat("policy", { domain: "insurance" }),
-      cat("priority", { domain: "digital" }),
+      cat("priority", { fulfillment_track: "access" }),
       cat("phone"),
       cat("forced", { domain: "real_estate", show_in_onboarding: true }),
     ]);

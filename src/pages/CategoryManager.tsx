@@ -118,7 +118,7 @@ export default function CategoryManager() {
   // Group categories by domain
   const byDomain = useMemo(() => {
     const out: Record<DomainKey, any[]> = {
-      physical: [], digital: [], licenses: [], training: [], insurance: [], real_estate: [],
+      physical: [], licenses: [], training: [], insurance: [], real_estate: [],
     };
     for (const c of categories ?? []) out[getDomain(c)].push(c);
     return out;

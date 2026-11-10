@@ -316,45 +316,17 @@ export async function listEmployeeGrantHistory(db: Db, employeeId: string): Prom
   return (data ?? []) as ProtocolGrant[];
 }
 
-export interface ScanStatus {
-  connected: boolean;
-  last_at: string | null;
-  last_result: { added: number; missing: number; returned: number; total: number } | null;
-  agent: string | null;
+export interface MyAccessRow {
+  id: string;
+  system_name: string;
+  target: string | null;
+  effective_from: string;
+  pending_revoke: boolean;
 }
 
-export async function getScanStatus(db: Db, systemId: string): Promise<ScanStatus | null> {
-  const { data, error } = await db.rpc("system_access_scan_status", { _system_id: systemId });
+/** The signed-in employee's own held access (employee portal). */
+export async function listMySystemAccess(db: Db, companyId: string): Promise<MyAccessRow[]> {
+  const { data, error } = await db.rpc("my_system_access", { _company_id: companyId });
   fail(error);
-  return (data ?? null) as ScanStatus | null;
-}
-
-/** A new scan key for the system (replaces any old one). The key is returned once and never stored. */
-export async function createScanKey(db: Db, systemId: string): Promise<string> {
-  const { data, error } = await db.rpc("create_system_access_scan_token", { _system_id: systemId });
-  fail(error);
-  return data as string;
-}
-
-export async function revokeScanKey(db: Db, systemId: string) {
-  const { error } = await db.rpc("revoke_system_access_scan_token", { _system_id: systemId });
-  fail(error);
-}
-
-export interface LegacyImportResult {
-  applied: boolean;
-  systemsCreated: number;
-  resourcesCreated: number;
-  grants: number;
-  employees: number;
-  skipped: number;
-  bySystem: Record<string, { grants: number }>;
-}
-
-/** Existing access (digital-access assets and the old digital_access list) as active grants.
- *  apply=false computes the same result and rolls it back, for a preview. */
-export async function importLegacyAccess(db: Db, companyId: string, apply: boolean): Promise<LegacyImportResult> {
-  const { data, error } = await db.rpc("import_legacy_system_access", { _company_id: companyId, _apply: apply });
-  fail(error);
-  return data as LegacyImportResult;
+  return (data ?? []) as MyAccessRow[];
 }

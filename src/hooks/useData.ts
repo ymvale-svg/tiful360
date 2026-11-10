@@ -47,8 +47,8 @@ export function useEmployeeAssets(employeeId: string) {
   });
 }
 
-// useEmployeeDigitalAccess removed - digital access is now stored as assets in DACC category
-// Use useEmployeeAssets and filter by asset_categories.prefix === 'DACC'
+// System access (accounts, permissions) is managed only in the system access screen
+// (src/hooks/useSystemAccess.ts), not as assets.
 
 export function useAssets() {
   const { activeCompanyId } = useCompany();

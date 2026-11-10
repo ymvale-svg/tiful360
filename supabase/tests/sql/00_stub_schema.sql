@@ -44,3 +44,4 @@ ALTER TABLE public.employees ADD COLUMN end_date date;
 ALTER TABLE public.asset_categories ADD COLUMN domain text NOT NULL DEFAULT 'physical';
 ALTER TABLE public.assets ADD COLUMN account_username text, ADD COLUMN created_at timestamptz DEFAULT now();
 CREATE TABLE public.digital_access (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), employee_id uuid NOT NULL REFERENCES public.employees(id), company_id uuid, access_type text NOT NULL, resource_path text NOT NULL, status text NOT NULL DEFAULT 'active', created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE public.alerts (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), title text, related_asset_id uuid REFERENCES public.assets(id));

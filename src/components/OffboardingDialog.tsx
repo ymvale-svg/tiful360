@@ -34,7 +34,7 @@ interface OffboardingDialogProps {
     manufacturer_model?: string | null;
     asset_categories?: { category_name: string } | null;
   }>;
-  digitalAccess: Array<{
+  systemAccess: Array<{
     id: string;
     access_type: string;
     resource_path: string;
@@ -47,7 +47,7 @@ export function OffboardingDialog({
   onOpenChange,
   employee,
   assets,
-  digitalAccess,
+  systemAccess,
 }: OffboardingDialogProps) {
   const [endDate, setEndDate] = useState(
     new Date(Date.now() + 14 * 86400000).toISOString().split("T")[0]
@@ -65,7 +65,7 @@ export function OffboardingDialog({
         employeeName: employee.full_name,
         employeeCode: employee.employee_code,
         endDate,
-        digitalAccess: digitalAccess.map((da) => ({
+        systemAccess: systemAccess.map((da) => ({
           access_type: da.access_type,
           resource_path: da.resource_path,
         })),
@@ -90,7 +90,7 @@ export function OffboardingDialog({
 
   const handleDownloadPdf = async () => {
     // PDF download via browser print dialog (html2pdf was removed for security)
-    const htmlContent = generateProtocolHtml(employee, assets, digitalAccess, endDate);
+    const htmlContent = generateProtocolHtml(employee, assets, systemAccess, endDate);
     const win = window.open("", "_blank");
     if (!win) {
       toast({ title: "שגיאה", description: "נא לאפשר חלונות קופצים", variant: "destructive" });
@@ -132,7 +132,7 @@ export function OffboardingDialog({
                   <p className="font-medium text-destructive">שים לב - הפעולות הבאות יבוצעו:</p>
                   <ul className="mt-2 space-y-1 text-muted-foreground">
                     <li>• שינוי סטטוס העובד ל"בתהליך עזיבה"</li>
-                    <li>• השהיית {digitalAccess.length} הרשאות דיגיטליות</li>
+                    <li>• בקשת ניתוק ל-{systemAccess.length} הרשאות מערכות, במסך הרשאות מערכות</li>
                     <li>• יצירת קריאת IT לפרוטוקול ניתוק (SLA 4 שעות)</li>
                     <li>• הפקת פרוטוקול משיכת ציוד ({assets.length} פריטים)</li>
                   </ul>
@@ -168,7 +168,7 @@ export function OffboardingDialog({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">הרשאות לביטול:</span>
-                  <span className="font-medium">{digitalAccess.length} הרשאות</span>
+                  <span className="font-medium">{systemAccess.length} הרשאות</span>
                 </div>
               </div>
 
@@ -193,7 +193,7 @@ export function OffboardingDialog({
           <div className="py-12 text-center" role="status" aria-live="polite">
             <div className="w-12 h-12 border-4 border-destructive border-t-transparent rounded-full animate-spin mx-auto mb-4" />
             <p className="font-medium">מפעיל פרוטוקול ניתוק...</p>
-            <p className="text-sm text-muted-foreground mt-1">משנה סטטוס, משהה הרשאות, יוצר קריאת IT. החלון ייסגר רק לאחר שהתהליך יסתיים.</p>
+            <p className="text-sm text-muted-foreground mt-1">משנה סטטוס, פותח בקשת ניתוק הרשאות, יוצר קריאת IT. החלון ייסגר רק לאחר שהתהליך יסתיים.</p>
           </div>
         )}
 
@@ -213,7 +213,7 @@ export function OffboardingDialog({
             <div className="space-y-4 mt-4">
               <div className="bg-success/10 border border-success/30 rounded-lg p-3 text-sm space-y-1">
                 <p className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-success shrink-0" aria-hidden="true" />סטטוס העובד שונה ל"בתהליך עזיבה"</p>
-                <p className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-success shrink-0" aria-hidden="true" />{digitalAccess.length} הרשאות דיגיטליות הושהו</p>
+                <p className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-success shrink-0" aria-hidden="true" />נפתחה בקשת ניתוק ל-{systemAccess.length} הרשאות מערכות</p>
                 <p className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-success shrink-0" aria-hidden="true" />נוצרה קריאת IT: <span className="font-mono font-bold">{ticketCode}</span></p>
               </div>
 
@@ -267,7 +267,7 @@ function esc(s: string | null | undefined): string {
 function generateProtocolHtml(
   employee: OffboardingDialogProps["employee"],
   assets: OffboardingDialogProps["assets"],
-  digitalAccess: OffboardingDialogProps["digitalAccess"],
+  systemAccess: OffboardingDialogProps["systemAccess"],
   endDate: string
 ) {
   const today = new Date().toLocaleDateString("en-GB");
@@ -328,13 +328,13 @@ function generateProtocolHtml(
   </tbody>
 </table>
 
-<h2>הרשאות דיגיטליות לניתוק (${digitalAccess.length})</h2>
+<h2>הרשאות מערכות לניתוק (${systemAccess.length})</h2>
 <table>
   <thead>
-    <tr><th>נותק</th><th>סוג</th><th>משאב</th><th>רמת הרשאה</th></tr>
+    <tr><th>נותק</th><th>מערכת</th><th>סביבה / קבוצה</th><th>קבוצת AD</th></tr>
   </thead>
   <tbody>
-    ${digitalAccess.map(da => `<tr>
+    ${systemAccess.map(da => `<tr>
       <td style="text-align:center;"><span class="checkbox"></span></td>
       <td>${esc(da.access_type)}</td>
       <td style="font-family:monospace;">${esc(da.resource_path)}</td>

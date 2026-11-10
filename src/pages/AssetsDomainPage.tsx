@@ -77,7 +77,6 @@ function insuranceStatus(a: any, domain: DomainKey): { label: string; cls: strin
 }
 
 function expiryOf(a: any, domain: DomainKey): string | null {
-  if (domain === "digital") return a.license_expires_at || a.password_expires_at || null;
   if (domain === "licenses") return a.license_expires_at || null;
   if (a.expiry_date) return a.expiry_date;
   // Fallback: a custom date field such as "תוקף חוזה" / "תפוגה" / "תאריך סיום".
@@ -1072,11 +1071,9 @@ function InstancesTable({
     return (k ? fmtCustom(cf[k]) : "") || a.sites?.name || "";
   };
   const secondValue = (a: any) =>
-    (domain === "digital"
-      ? a.account_username
-      : domain === "licenses"
-        ? (a.custom_fields?.["ספק"] ?? a.manufacturer_model)
-        : a.serial_number) ?? null;
+    (domain === "licenses"
+      ? (a.custom_fields?.["ספק"] ?? a.manufacturer_model)
+      : a.serial_number) ?? null;
 
   const expiryInfo = (a: any) => {
     const exp = expiryOf(a, domain);
@@ -1094,8 +1091,8 @@ function InstancesTable({
       { key: "name", label: "שם פריט", render: (a) => a.asset_name ?? "—", sortVal: (a) => a.asset_name ?? "" },
       {
         key: "second",
-        label: domain === "digital" ? "שם משתמש" : domain === "licenses" ? "ספק" : "מס׳ סידורי",
-        render: (a) => <span dir={domain === "digital" ? "ltr" : undefined}>{secondValue(a) ?? "—"}</span>,
+        label: domain === "licenses" ? "ספק" : "מס׳ סידורי",
+        render: (a) => secondValue(a) ?? "—",
         sortVal: (a) => secondValue(a) ?? "",
       },
       {

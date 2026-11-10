@@ -1,4 +1,5 @@
 \set ON_ERROR_STOP 1
+-- applies: 20261110310000_remove_digital_access_and_tree_scan.sql
 -- a1 admin of A · a3 HR of A · a2 admin of B
 INSERT INTO companies(id,name) VALUES ('00000000-0000-0000-0000-0000000000c1','A'),('00000000-0000-0000-0000-0000000000c2','B');
 INSERT INTO profiles VALUES ('00000000-0000-0000-0000-0000000000a1','מנהל ההרשאות'),('00000000-0000-0000-0000-0000000000a3','דנה');
@@ -72,4 +73,37 @@ SELECT pg_temp.check((SELECT count(*) FROM system_access_requests WHERE note = '
 SELECT pg_temp.check((import_legacy_system_access('00000000-0000-0000-0000-0000000000c1', true)->>'grants')::int = 0, 'idempotent');
 RESET ROLE;
 SELECT pg_temp.check((SELECT count(*) FROM permission_audit_log WHERE action = 'system_access_legacy_import') = 2, 'each import audited');
-SELECT 'link and import: all assertions passed' AS result;
+
+-- 3. Removal (20261110310000): the import is undone, the digital domain and the nightly scan go.
+-- Before it runs: a group set up by hand on the imported drive, and an alert on a digital asset.
+INSERT INTO system_access_groups(system_id, name) SELECT id, 'הנדסה' FROM system_access_systems WHERE name = 'כונן P';
+INSERT INTO alerts(title, related_asset_id) SELECT 'תפוגת סיסמה', id FROM assets WHERE account_username = 'VATIK';
+\i supabase/migrations/20261110310000_remove_digital_access_and_tree_scan.sql
+SELECT pg_temp.check((SELECT count(*) FROM system_access_grants WHERE note LIKE 'יובא%') = 0
+  AND NOT EXISTS (SELECT 1 FROM system_access_requests WHERE note = 'ייבוא הרשאות קיימות מהמשאבים'), 'imported grants and request removed');
+SELECT pg_temp.check((SELECT count(*) FROM system_access_grants) = 2, 'grants requested by hand stay');
+SELECT pg_temp.check((SELECT array_agg(name ORDER BY name) FROM system_access_systems) = ARRAY['כונן P', 'פריוריטי'],
+  'Priority (import only) removed; the drive keeps its group; the existing system stays');
+SELECT pg_temp.check(NOT EXISTS (SELECT 1 FROM system_access_resources), 'imported environments removed');
+SELECT pg_temp.check((SELECT array_agg(category_name) FROM asset_categories) = ARRAY['מחשב נייד']
+  AND (SELECT array_agg(asset_name) FROM assets) = ARRAY['Laptop'], 'digital categories and assets removed, equipment stays');
+SELECT pg_temp.check((SELECT related_asset_id FROM alerts) IS NULL, 'alert detached from the deleted asset');
+SELECT pg_temp.check(NOT EXISTS (SELECT 1 FROM digital_access), 'old list emptied');
+SELECT pg_temp.expect_error($$INSERT INTO asset_categories(company_id, category_name, domain) VALUES ('00000000-0000-0000-0000-0000000000c1', 'x', 'digital')$$, '%asset_categories_domain_check%');
+SELECT pg_temp.check(to_regclass('public.system_access_scan_keys') IS NULL
+  AND to_regprocedure('public.ingest_system_access_tree(uuid,text,text[],text)') IS NULL
+  AND to_regprocedure('public.import_legacy_system_access(uuid,boolean)') IS NULL
+  AND to_regprocedure('public.import_system_access_tree(uuid,text[])') IS NOT NULL, 'scan and import functions removed, manual tree import kept');
+SELECT pg_temp.check((SELECT count(*) FROM permission_audit_log WHERE action IN ('system_access_legacy_import_undone', 'digital_access_domain_removed')) = 2, 'removal audited');
+
+-- 4. The portal: an employee sees only their own held access
+UPDATE employees SET linked_user_id = '00000000-0000-0000-0000-0000000000a9' WHERE id = '00000000-0000-0000-0000-0000000000e1';
+UPDATE system_access_grants SET status = 'active' WHERE employee_id = '00000000-0000-0000-0000-0000000000e1';
+SET ROLE authenticated;
+SELECT set_config('test.uid','00000000-0000-0000-0000-0000000000a9',false);
+SELECT pg_temp.check((SELECT array_agg(system_name) FROM my_system_access('00000000-0000-0000-0000-0000000000c1')) = ARRAY['פריוריטי'], 'own access listed');
+SELECT pg_temp.check(NOT EXISTS (SELECT 1 FROM my_system_access('00000000-0000-0000-0000-0000000000c2')), 'nothing for another company');
+SELECT set_config('test.uid','00000000-0000-0000-0000-0000000000a1',false);
+SELECT pg_temp.check(NOT EXISTS (SELECT 1 FROM my_system_access('00000000-0000-0000-0000-0000000000c1')), 'an admin without an employee card sees nothing here');
+RESET ROLE;
+SELECT 'link, import and removal: all assertions passed' AS result;

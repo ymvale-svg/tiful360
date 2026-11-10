@@ -48,8 +48,6 @@ function domainSubtitle(key: DomainKey, cats: any[], assets: any[]): string {
       const sub = assets.filter((a) => cats.find((c) => c.id === a.category_id)?.prefix === "MAN").length;
       return `${assets.length} פריטים · ${sw} תוכנות · ${sub} מנויים`;
     }
-    case "digital":
-      return `${assets.length} גישות פעילות`;
     case "physical": {
       const inUse = assets.filter((a) => a.status === "in_use").length;
       const inStock = assets.filter((a) => a.status === "in_stock").length;

@@ -26,7 +26,6 @@ export const TRACK_HINT: Record<FulfillmentTrack, string> = {
 
 const DOMAIN_DEFAULT_TRACK: Record<DomainKey, FulfillmentTrack> = {
   physical: "equipment",
-  digital: "access",
   licenses: "license",
   training: "task",
   insurance: "none",
