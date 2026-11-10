@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
-import { DatabaseZap, Plus, Server } from "lucide-react";
+import { Check, DatabaseZap, Pencil, Plus, Server, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { FormField } from "@/components/feedback/FormField";
 import { StateView } from "@/components/feedback/StateView";
+import { IconButton } from "@/components/feedback/IconButton";
 import { useConfirm } from "@/components/feedback/ConfirmDialog";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -11,6 +12,7 @@ import {
   useAccessSystems,
   useAddAccessResource,
   useLegacyAccessImport,
+  useRenameAccessResource,
   useSaveAccessSystem,
   useSetAccessResourceActive,
 } from "@/hooks/useSystemAccess";
@@ -19,6 +21,7 @@ import type { LegacyImportResult } from "@/services/systemAccess";
 import {
   PROVISIONING_LABEL,
   SUGGESTED_SYSTEMS,
+  type AccessResource,
   type AccessSystem,
   type Provisioning,
 } from "@/domain/systemAccess/types";
@@ -184,8 +187,26 @@ function EnvironmentsPanel({ system }: { system: AccessSystem }) {
   const { data: resources = [], isLoading, error, refetch } = useAccessResources(system.id);
   const add = useAddAccessResource(system.id);
   const setActive = useSetAccessResourceActive(system.id);
+  const rename = useRenameAccessResource(system.id);
   const [name, setName] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
   const topLevel = resources.filter((r) => !r.parent_id);
+  const hasChildren = useMemo(() => new Set(resources.map((r) => r.parent_id).filter(Boolean)), [resources]);
+
+  const startEdit = (r: AccessResource) => { setEditingId(r.id); setEditName(r.name); };
+  const cancelEdit = () => { setEditingId(null); setEditName(""); };
+  const saveEdit = async (r: AccessResource) => {
+    const clean = editName.trim();
+    if (!clean || clean === r.name) { cancelEdit(); return; }
+    try {
+      await rename.mutateAsync({ resource: r, name: clean });
+      cancelEdit();
+      toast({ title: "השם עודכן" });
+    } catch (e) {
+      toast({ title: "השם לא נשמר", description: message(e), variant: "destructive" });
+    }
+  };
 
   const submit = async () => {
     const clean = name.trim();
@@ -219,10 +240,39 @@ function EnvironmentsPanel({ system }: { system: AccessSystem }) {
         <ul className="divide-y divide-border/60">
           {topLevel.map((r) => (
             <li key={r.id} className="flex items-center justify-between gap-2 py-2 text-sm">
-              <span className={r.is_active ? "" : "text-muted-foreground line-through"}>
-                {r.name}
-                {r.missing_since && <span className="ms-2 text-xs text-warning">לא נמצא בייבוא האחרון</span>}
-              </span>
+              {editingId === r.id ? (
+                <form
+                  className="flex flex-1 items-center gap-1"
+                  onSubmit={(e) => { e.preventDefault(); void saveEdit(r); }}
+                >
+                  <input
+                    autoFocus
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Escape") cancelEdit(); }}
+                    aria-label={`שם חדש ל${r.name}`}
+                    className={inputClass}
+                  />
+                  <IconButton type="submit" label="שמור שם" disabled={!editName.trim()} loading={rename.isPending}>
+                    <Check className="w-4 h-4" />
+                  </IconButton>
+                  <IconButton type="button" label="ביטול עריכה" onClick={cancelEdit}>
+                    <X className="w-4 h-4" />
+                  </IconButton>
+                </form>
+              ) : (
+                <div className="flex flex-1 items-center gap-1 min-w-0">
+                  <span className={r.is_active ? "" : "text-muted-foreground line-through"}>
+                    {r.name}
+                    {r.missing_since && <span className="ms-2 text-xs text-warning">לא נמצא בייבוא האחרון</span>}
+                  </span>
+                  {!hasChildren.has(r.id) && (
+                    <IconButton label={`ערוך את ${r.name}`} onClick={() => startEdit(r)}>
+                      <Pencil className="w-3.5 h-3.5" />
+                    </IconButton>
+                  )}
+                </div>
+              )}
               <Switch
                 checked={r.is_active}
                 onCheckedChange={(v) =>
