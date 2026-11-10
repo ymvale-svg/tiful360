@@ -942,6 +942,7 @@ export type Database = {
           edited_by: string | null
           employee_code_raw: string
           employee_id: string | null
+          geo_address: string | null
           id: string
           processed_at: string | null
           processed_by: string | null
@@ -958,6 +959,7 @@ export type Database = {
           edited_by?: string | null
           employee_code_raw: string
           employee_id?: string | null
+          geo_address?: string | null
           id?: string
           processed_at?: string | null
           processed_by?: string | null
@@ -974,6 +976,7 @@ export type Database = {
           edited_by?: string | null
           employee_code_raw?: string
           employee_id?: string | null
+          geo_address?: string | null
           id?: string
           processed_at?: string | null
           processed_by?: string | null
@@ -1837,6 +1840,27 @@ export type Database = {
           field_key?: string
           id?: string
           sent_at?: string
+        }
+        Relationships: []
+      }
+      geo_address_cache: {
+        Row: {
+          address: string
+          created_at: string
+          lat_key: number
+          lng_key: number
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          lat_key: number
+          lng_key: number
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          lat_key?: number
+          lng_key?: number
         }
         Relationships: []
       }
@@ -3753,6 +3777,7 @@ export type Database = {
           edited_by: string | null
           employee_code_raw: string
           employee_id: string | null
+          geo_address: string | null
           id: string
           processed_at: string | null
           processed_by: string | null
@@ -3784,6 +3809,7 @@ export type Database = {
           edited_by: string | null
           employee_code_raw: string
           employee_id: string | null
+          geo_address: string | null
           id: string
           processed_at: string | null
           processed_by: string | null
@@ -3813,6 +3839,7 @@ export type Database = {
           edited_by: string | null
           employee_code_raw: string
           employee_id: string | null
+          geo_address: string | null
           id: string
           processed_at: string | null
           processed_by: string | null
@@ -3831,6 +3858,12 @@ export type Database = {
       apply_attendance_correction: {
         Args: { _correction_id: string }
         Returns: undefined
+      }
+      attendance_report_visible_employee_ids: {
+        Args: { _company_id: string }
+        Returns: {
+          employee_id: string
+        }[]
       }
       can_manage_announcements: {
         Args: { _company_id: string; _user_id: string }
@@ -3978,6 +4011,7 @@ export type Database = {
           edited_by: string | null
           employee_code_raw: string
           employee_id: string | null
+          geo_address: string | null
           id: string
           processed_at: string | null
           processed_by: string | null
@@ -4045,6 +4079,28 @@ export type Database = {
           gap_type: string
           punch_count: number
           punch_times: string
+        }[]
+      }
+      get_attendance_location_report: {
+        Args: {
+          _company_id: string
+          _employee_id?: string
+          _from: string
+          _to: string
+        }
+        Returns: {
+          accuracy: number
+          department: string
+          direction: string
+          employee_code: string
+          employee_id: string
+          full_name: string
+          geo_address: string
+          lat: number
+          lng: number
+          punch_at: string
+          punch_id: string
+          source: string
         }[]
       }
       get_company_birthdays: {
@@ -4233,6 +4289,14 @@ export type Database = {
           full_name: string
           roles: string
           user_id: string
+        }[]
+      }
+      get_punches_missing_address: {
+        Args: { _punch_ids: string[] }
+        Returns: {
+          lat: number
+          lng: number
+          punch_id: string
         }[]
       }
       get_subordinate_employee_ids: {

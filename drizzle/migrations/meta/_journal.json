@@ -232,6 +232,13 @@
       "when": 1793873522578,
       "tag": "0032_asset_groups_allow_hr",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1794314941006,
+      "tag": "0033_attendance_location_report",
+      "breakpoints": true
     }
   ]
 }
