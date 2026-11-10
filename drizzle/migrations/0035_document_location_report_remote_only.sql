@@ -1,0 +1,1 @@
+COMMENT ON FUNCTION public.get_attendance_location_report(uuid, date, date, uuid) IS 'Location report: only employees who punch remotely (can_remote_punch or a portal_remote punch in range).';
