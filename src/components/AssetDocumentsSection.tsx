@@ -26,7 +26,7 @@ interface Props {
 }
 
 export function AssetDocumentsSection({ assetId }: Props) {
-  const { data: documents, isLoading } = useAssetDocuments(assetId);
+  const { data: documents, isLoading, error: documentsError } = useAssetDocuments(assetId);
   const upload = useUploadAssetDocument();
   const del = useDeleteAssetDocument();
   const archive = useArchiveAssetDocument();
@@ -169,12 +169,12 @@ export function AssetDocumentsSection({ assetId }: Props) {
               {typeLabel(doc.document_type)}
             </span>
             {isExpired && (
-              <span className="px-1.5 py-0.5 rounded bg-destructive/10 text-destructive text-xs flex items-center gap-1">
+              <span className="px-1.5 py-0.5 rounded bg-destructive/10 text-destructive-text text-xs flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" aria-hidden="true" /> פג תוקף
               </span>
             )}
             {isWarning && (
-              <span className="px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 text-xs flex items-center gap-1">
+              <span className="px-1.5 py-0.5 rounded bg-warning/10 text-warning-text text-xs flex items-center gap-1">
                 <Calendar className="w-3 h-3" aria-hidden="true" /> פג בעוד {expiringSoon} ימים
               </span>
             )}
@@ -201,7 +201,7 @@ export function AssetDocumentsSection({ assetId }: Props) {
               <Archive aria-hidden="true" />
             </IconButton>
           )}
-          <IconButton label={`מחק את ${name}`} onClick={() => { void handleDelete(doc); }} className="text-muted-foreground hover:text-destructive">
+          <IconButton label={`מחק את ${name}`} onClick={() => { void handleDelete(doc); }} className="text-muted-foreground hover:text-destructive-text">
             <Trash2 aria-hidden="true" />
           </IconButton>
         </div>
@@ -210,7 +210,11 @@ export function AssetDocumentsSection({ assetId }: Props) {
   };
 
   return (
+    // Dropping files is a pointer shortcut; the "העלה מסמך" button and the FileDrop input are the keyboard path.
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- drag-and-drop only, keyboard path above
     <div
+      role="region"
+      aria-label="מסמכים מצורפים"
       className={cn(
         "rounded-lg border bg-card p-3 space-y-3 transition-colors",
         isDragging && "border-primary border-2 bg-primary/5"
@@ -221,10 +225,10 @@ export function AssetDocumentsSection({ assetId }: Props) {
     >
       <div className="flex items-center justify-between">
         <div className="text-sm font-medium flex items-center gap-2">
-          <FileText className="w-4 h-4 text-primary" />
+          <FileText className="w-4 h-4 text-primary" aria-hidden="true" />
           מסמכים מצורפים
           {documents && documents.length > 0 && (
-            <span className="text-xs text-muted-foreground font-normal">({documents.length})</span>
+            <span className="text-xs text-muted-foreground font-normal tabular-nums">({documents.length})</span>
           )}
           {isDragging && <span className="text-xs text-primary">שחרר כאן להעלאה</span>}
         </div>
@@ -286,6 +290,8 @@ export function AssetDocumentsSection({ assetId }: Props) {
 
       {isLoading ? (
         <p role="status" className="text-xs text-muted-foreground text-center py-2">טוען מסמכים…</p>
+      ) : documentsError ? (
+        <p role="alert" className="text-xs text-destructive-text text-center py-2">לא הצלחנו לטעון את המסמכים. בדקו את החיבור לאינטרנט ונסו שוב.</p>
       ) : !documents || documents.length === 0 ? (
         <p className="text-xs text-muted-foreground text-center py-2">אין מסמכים מצורפים</p>
       ) : (
@@ -307,7 +313,7 @@ export function AssetDocumentsSection({ assetId }: Props) {
                 className="flex min-h-9 items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
               >
                 <Archive className="w-3.5 h-3.5" />
-                ארכיון ({archivedDocs.length})
+                ארכיון (<span className="tabular-nums">{archivedDocs.length}</span>)
                 {showArchive ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
               </button>
               {showArchive && (

@@ -37,6 +37,10 @@ means something; numbers are the loudest thing on a work screen.
 | Quiet surface | `--muted` / `--muted-foreground` |
 | Sidebar | `--sidebar-*` (dark in both themes) |
 
+Coloured words use the text-strength tokens `--success-text`, `--warning-text`, `--info-text`,
+`--destructive-text` (`text-success-text` …), which keep 4.5:1 in both themes; the base status tokens
+are for icons, bars and tints only. Raw Tailwind palette colours (`red-500`, `emerald-600` …) are not used.
+
 Status colour is never the only signal: always pair it with text or an icon. Light and dark themes
 both keep 4.5:1 text contrast.
 
@@ -76,6 +80,7 @@ indicator. Everything respects `prefers-reduced-motion`. No scroll-reveal choreo
 | Uploads | `uploadFile()` (progress donut) |
 | Saves | `Button` busy state + global `SaveProgressBar` (automatic) |
 | KPI with link to its list | `KpiTile` |
+| Status indicator (icon + word + soft tint), row severity bar | `StatusChip`, `SEVERITY_BAR` — `components/feedback/StatusChip` |
 
 ## App shell pattern
 

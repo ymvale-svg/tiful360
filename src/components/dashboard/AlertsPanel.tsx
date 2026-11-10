@@ -1,6 +1,7 @@
 import { Clock, AlertTriangle, OctagonAlert, Info, Package, User, Bell } from "lucide-react";
 import { EMPTY_ICONS } from "@/components/feedback/emptyIcons";
 import { StateView } from "@/components/feedback/StateView";
+import { StatusChip, type StatusTone } from "@/components/feedback/StatusChip";
 import { daysUntil, relativeDay } from "@/lib/alertGroups";
 import { useAlerts } from "@/hooks/useData";
 import { ExportExcelButton } from "@/components/ExcelActionButtons";
@@ -11,10 +12,10 @@ const severityStyle: Record<string, string> = {
   warning: "border-warning/30 bg-warning/5",
   info: "border-info/30 bg-info/5",
 };
-const severityBadge: Record<string, string> = {
-  critical: "bg-destructive/10 text-destructive",
-  warning: "bg-warning/15 text-warning",
-  info: "bg-info/10 text-info",
+const severityTone: Record<string, StatusTone> = {
+  critical: "critical",
+  warning: "warning",
+  info: "info",
 };
 const severityIcon = { critical: OctagonAlert, warning: AlertTriangle, info: Info } as const;
 const severityLabel: Record<string, string> = {
@@ -33,7 +34,7 @@ export function AlertsPanel() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 id="alerts-panel-title" className="text-lg font-semibold">כל ההתראות</h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground tabular-nums">
             {alerts?.length ?? 0} התראות פעילות • {alerts?.filter(a => a.severity === "critical").length ?? 0} קריטיות
           </p>
         </div>
@@ -82,11 +83,10 @@ export function AlertsPanel() {
                   <p className="text-xs text-muted-foreground mt-0.5">{alert.category}</p>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
-                  <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md font-semibold ${severityBadge[alert.severity] ?? ""}`}>
-                    <SevIcon className="w-3 h-3" aria-hidden="true" />
+                  <StatusChip tone={severityTone[alert.severity] ?? "neutral"} icon={SevIcon}>
                     {severityLabel[alert.severity] ?? alert.severity}
-                  </span>
-                  <span className={`text-xs flex items-center gap-1 tabular-nums ${days !== null && days < 0 ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                  </StatusChip>
+                  <span className={`text-xs flex items-center gap-1 tabular-nums ${days !== null && days < 0 ? "text-destructive-text font-medium" : "text-muted-foreground"}`}>
                     <Clock className="w-3 h-3" aria-hidden="true" />
                     {alert.target_date ? `${new Date(alert.target_date).toLocaleDateString("he-IL")} · ${relativeDay(days!)}` : "ללא תאריך יעד"}
                   </span>

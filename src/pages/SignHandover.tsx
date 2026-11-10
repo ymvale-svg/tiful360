@@ -194,7 +194,7 @@ export default function SignHandover() {
   if (gate === "forbidden") {
     return (
       <main className="min-h-screen flex flex-col items-center justify-center gap-3 p-6 text-center" dir="rtl">
-        <h1 className="text-xl font-bold text-destructive">הטופס אינו שייך לחשבון זה</h1>
+        <h1 className="text-xl font-bold text-destructive-text">הטופס אינו שייך לחשבון זה</h1>
         <p className="text-sm text-muted-foreground max-w-sm">
           התחברתם עם חשבון אחר. יש להתנתק ולהתחבר עם החשבון של העובד שעבורו נשלח הטופס.
         </p>
@@ -220,7 +220,7 @@ export default function SignHandover() {
   if (done || record.status === "signed") {
     return (
       <main className="min-h-screen flex flex-col items-center justify-center p-6 text-center" dir="rtl">
-        <CheckCircle2 className="w-16 h-16 text-green-500 mb-4" aria-hidden="true" />
+        <CheckCircle2 className="w-16 h-16 text-success mb-4" aria-hidden="true" />
         <h1 className="text-2xl font-bold mb-2">הטופס נחתם בהצלחה</h1>
         <p className="text-muted-foreground">תודה. עותק נשמר בתיק שלך.</p>
         <Button className="mt-4" variant="outline" onClick={() => navigate("/portal")}>לאזור האישי</Button>

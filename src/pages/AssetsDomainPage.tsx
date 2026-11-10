@@ -4,7 +4,7 @@ import { BulkActionBar } from "@/components/ui/bulk-action-bar";
 import { EMPTY_ICONS } from "@/components/feedback/emptyIcons";
 import { useNextInsurancePayments } from "@/hooks/useInsurancePayments";
 import { RowContextMenu, copyAction, openInNewTab, type ContextAction } from "@/components/context/RowContextMenu";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { usePersistentFilter } from "@/hooks/usePersistentFilter";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { useConfirm } from "@/components/feedback/ConfirmDialog";
 import { IconButton } from "@/components/feedback/IconButton";
-import { EmptyState, ListSkeleton } from "@/components/feedback/StateView";
+import { EmptyState, ListSkeleton, StateView } from "@/components/feedback/StateView";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAssets, useAssetCategories } from "@/hooks/useData";
 import { useAssetGroups, useCreateAssetGroup, useAssignAssetsToGroup, useDeleteAssetGroup, useUpdateAssetGroup } from "@/hooks/useAssetGroups";
@@ -100,9 +100,17 @@ export default function AssetsDomainPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const { data: assets, isLoading } = useAssets();
-  const { data: categories } = useAssetCategories();
-  const { data: groups } = useAssetGroups();
+  const { data: assets, isLoading: assetsLoading, error: assetsError, refetch: refetchAssets } = useAssets();
+  const { data: categories, isLoading: categoriesLoading, error: categoriesError, refetch: refetchCategories } = useAssetCategories();
+  const { data: groups, isLoading: groupsLoading, error: groupsError, refetch: refetchGroups } = useAssetGroups();
+  // Empty / "not found" states are shown only after items, categories and sub-categories all loaded.
+  const isLoading = assetsLoading || categoriesLoading || groupsLoading;
+  const loadError = assetsError || categoriesError || groupsError;
+  const retryLoad = () => {
+    if (assetsError) void refetchAssets();
+    if (categoriesError) void refetchCategories();
+    if (groupsError) void refetchGroups();
+  };
   const { data: expiring } = useExpiringAssets(30);
   const createGroup = useCreateAssetGroup();
   const assignToGroup = useAssignAssetsToGroup();
@@ -183,6 +191,9 @@ export default function AssetsDomainPage() {
   const [addCategoryId, setAddCategoryId] = useState<string | undefined>(undefined);
   const [addGroupId, setAddGroupId] = useState<string | undefined>(undefined);
   const [newSubFor, setNewSubFor] = useState<string | null>(null);
+  // "תת-קטגוריה חדשה" swaps its button for the name input, so focus follows it there.
+  const newSubInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (newSubFor) newSubInputRef.current?.focus(); }, [newSubFor]);
   const [fieldsTargetId, setFieldsTargetId] = useState<string | null>(null);
   const { data: allGroupsForFields } = useAssetGroups();
   const fieldsGroup = (allGroupsForFields ?? []).find((g: any) => g.id === fieldsTargetId) ?? null;
@@ -409,6 +420,18 @@ export default function AssetsDomainPage() {
         </div>
       );
     }
+    if (!asset && assetsError) {
+      return (
+        <div className="space-y-4" dir="rtl">
+          <StateView error={assetsError} onRetry={() => { void refetchAssets(); }} label="את פרטי הפריט">
+            {null}
+          </StateView>
+          <div className="text-center">
+            <Button variant="outline" onClick={() => navigate(`/assets/${params.domain}`)}>חזרה לרשימה</Button>
+          </div>
+        </div>
+      );
+    }
     if (!asset) {
       return (
         <div className="p-8 text-center" dir="rtl">
@@ -483,7 +506,7 @@ export default function AssetsDomainPage() {
                 {drilledCategory?.category_name} · תת-קטגוריה
               </p>
             ) : expiringCount > 0 ? (
-              <p className="text-sm text-warning">{expiringCount} פגי תוקף בקרוב</p>
+              <p className="text-sm text-warning-text">{expiringCount} פגי תוקף בקרוב</p>
             ) : null}
           </div>
         </div>
@@ -504,7 +527,7 @@ export default function AssetsDomainPage() {
 
       {expiredOnly && (
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/10 text-destructive border border-destructive/20 text-xs font-medium">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/10 text-destructive-text border border-destructive/20 text-xs font-medium">
             <AlertTriangle className="w-3.5 h-3.5" />
             מציג רק פריטים שפג תוקפם ({visibleAssets.length})
             <button
@@ -616,6 +639,12 @@ export default function AssetsDomainPage() {
           <span className="sr-only">טוען פריטים…</span>
           <ListSkeleton rows={5} />
         </div>
+      ) : loadError ? (
+        <div className="bg-card border border-border rounded-2xl">
+          <StateView error={loadError} onRetry={retryLoad} label="את הפריטים">
+            {null}
+          </StateView>
+        </div>
       ) : domainCats.length === 0 ? (
         <div className="bg-card border border-dashed border-border rounded-2xl p-8 text-center">
           <p className="text-muted-foreground mb-3">אין עדיין קטגוריות בדומיין זה</p>
@@ -628,7 +657,7 @@ export default function AssetsDomainPage() {
           {subParam === NO_SUBCATEGORY_KEY && drilledItems.length > 0 && (
             <div className="bg-warning/5 border border-warning/30 rounded-xl p-3 flex flex-wrap items-center gap-2">
               <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                <AlertTriangle className="w-3.5 h-3.5 text-warning" />
+                <AlertTriangle className="w-3.5 h-3.5 text-warning-text" />
                 {selectedIds.size > 0 ? `${selectedIds.size} נבחרו` : "בחר פריטים כדי לשייך אותם לתת-קטגוריה"}
               </span>
               <div className="w-64">
@@ -738,7 +767,7 @@ export default function AssetsDomainPage() {
                     <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-1.5 group-hover:text-foreground transition-colors">
                       <ChevronDown aria-hidden="true" className={cn("w-4 h-4 transition-transform", collapsed && "-rotate-90")} />
                       {category.category_name}
-                      <span className="font-normal">
+                      <span className="font-normal tabular-nums">
                         ({cards.filter((c) => c.id !== NO_SUBCATEGORY_KEY).length} תת-קטגוריות · {total} פריטים)
                       </span>
                     </h3>
@@ -748,7 +777,7 @@ export default function AssetsDomainPage() {
                   {newSubFor === category.id ? (
                     <div className="flex items-center gap-1.5">
                       <Input
-                        autoFocus
+                        ref={newSubInputRef}
                         value={newSubName}
                         onChange={(e) => setNewSubName(e.target.value)}
                         onKeyDown={(e) => {
@@ -818,38 +847,39 @@ export default function AssetsDomainPage() {
                       });
                       return (
                         <RowContextMenu key={c.id} actions={subMenuActions(category, c)}>
+                        // The name button stretches over the row (after:inset-0); delete sits above it (z-10).
                         <div
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => { setSelectedIds(new Set()); updateParams({ cat: category.id, sub: c.id }); }}
-                          aria-label={`פתח תת-קטגוריה ${c.name}`}
-                          onKeyDown={(e) => {
-                            if (e.target !== e.currentTarget) return;
-                            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedIds(new Set()); updateParams({ cat: category.id, sub: c.id }); }
-                          }}
-                          className="w-full min-w-[34rem] grid grid-cols-[1fr_7rem_5rem_6rem_2.5rem_2rem] gap-2 px-4 py-3 text-base border-t border-border hover:bg-muted/40 text-right items-center transition-colors cursor-pointer"
+                          className="relative w-full min-w-[34rem] focus-within:bg-muted/40 grid grid-cols-[1fr_7rem_5rem_6rem_2.5rem_2rem] gap-2 px-4 py-3 text-base border-t border-border hover:bg-muted/40 text-right items-center transition-colors cursor-pointer"
                         >
                           <div className="flex items-center gap-2 truncate">
                             {hasExpired && (
-                              <span className="inline-flex shrink-0 text-destructive" title="יש פריטים פגי תוקף">
+                              <span className="inline-flex shrink-0 text-destructive-text" title="יש פריטים פגי תוקף">
                                 <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
                                 <span className="sr-only">יש פריטים פגי תוקף</span>
                               </span>
                             )}
-                            <span className={cn("truncate font-medium", c.id === NO_SUBCATEGORY_KEY && "text-muted-foreground")}>
+                            <button
+                              type="button"
+                              onClick={() => { setSelectedIds(new Set()); updateParams({ cat: category.id, sub: c.id }); }}
+                              aria-label={`פתח תת-קטגוריה ${c.name}`}
+                              className={cn(
+                                "truncate font-medium text-right after:absolute after:inset-0 after:content-[''] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-ring",
+                                c.id === NO_SUBCATEGORY_KEY && "text-muted-foreground",
+                              )}
+                            >
                               {c.name}
-                            </span>
+                            </button>
                           </div>
                           <div className="text-xs text-muted-foreground truncate">
                             {c.ownerRole ? OWNER_ROLE_LABEL[c.ownerRole] ?? c.ownerRole : "—"}
                           </div>
-                          <div className="text-xs text-muted-foreground">{c.items.length}</div>
-                          <div className="text-xs">{active} / {c.items.length}</div>
+                          <div className="text-xs text-muted-foreground tabular-nums">{c.items.length}</div>
+                          <div className="text-xs tabular-nums">{active} / {c.items.length}</div>
                           {c.id === NO_SUBCATEGORY_KEY ? <div /> : (
                             <IconButton
                               label={`מחק תת-קטגוריה ${c.name}`}
                               onClick={(e) => { e.stopPropagation(); handleDeleteGroup(c.id, c.name, c.items.length); }}
-                              className="text-muted-foreground hover:text-destructive"
+                              className="relative z-10 text-muted-foreground hover:text-destructive-text"
                             >
                               <Trash2 aria-hidden="true" />
                             </IconButton>
@@ -947,31 +977,24 @@ const SubCategoryCard = React.forwardRef<HTMLDivElement, {
   const isUnassigned = card.id === NO_SUBCATEGORY_KEY;
 
   return (
+    // The name button stretches over the whole card (after:inset-0); edit/delete sit above it (z-10),
+    // so the card opens from anywhere without nesting buttons inside an interactive element.
     <div
       ref={ref}
       {...rest}
-      role="button"
-      tabIndex={0}
-      onClick={onClick}
-      aria-label={`פתח תת-קטגוריה ${card.name}`}
-      onKeyDown={(e) => {
-        // Only the card itself: Enter on the edit/delete buttons must not also open the card.
-        if (e.target !== e.currentTarget) return;
-        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); }
-      }}
       className={cn(
         "group relative bg-card border rounded-2xl p-4 text-center cursor-pointer",
-        "hover:shadow-xl hover:-translate-y-1 hover:ring-2 active:scale-[0.98] transition-all duration-200",
+        "hover:shadow-xl hover:-translate-y-1 hover:ring-2 focus-within:ring-2 active:scale-[0.98] transition-all duration-200",
         isUnassigned ? "border-dashed border-warning/50 hover:ring-warning/30" : cn("border-border", color.ring),
         "flex flex-col items-center gap-3 aspect-square justify-center",
         extraClass,
       )}
     >
-      <span className="absolute top-2 right-2 text-[0.8125rem] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+      <span className="absolute top-2 right-2 text-[0.8125rem] font-bold tabular-nums px-2 py-0.5 rounded-full bg-primary/10 text-primary">
         {total}
       </span>
       {hasExpired && (
-        <span className="absolute top-2 left-2 inline-flex items-center justify-center w-5 h-5 rounded-full bg-destructive/15 text-destructive" title="יש פריטים פגי תוקף">
+        <span className="absolute top-2 left-2 inline-flex items-center justify-center w-5 h-5 rounded-full bg-destructive/15 text-destructive-text" title="יש פריטים פגי תוקף">
           <AlertTriangle className="w-3 h-3" aria-hidden="true" />
           <span className="sr-only">יש פריטים פגי תוקף</span>
         </span>
@@ -983,9 +1006,10 @@ const SubCategoryCard = React.forwardRef<HTMLDivElement, {
           aria-label={`ערוך תת-קטגוריה ${card.name}`}
           onClick={(e) => { e.stopPropagation(); onEdit(); }}
           className={cn(
-            "absolute bottom-1 left-11 inline-flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground",
+            "absolute z-10 bottom-1 left-11 inline-flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground",
             "hover:bg-muted hover:text-foreground transition-colors",
-            "[@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100",
+            // Always visible; on desktop at reduced emphasis until hover or keyboard focus.
+            "[@media(hover:hover)]:opacity-70 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100",
           )}
         >
           <Pencil className="w-4 h-4" aria-hidden="true" />
@@ -998,9 +1022,9 @@ const SubCategoryCard = React.forwardRef<HTMLDivElement, {
           aria-label={`מחק תת-קטגוריה ${card.name}`}
           onClick={(e) => { e.stopPropagation(); onDelete(); }}
           className={cn(
-            "absolute bottom-1 left-1 inline-flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground",
-            "hover:bg-destructive/10 hover:text-destructive transition-colors",
-            "[@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100",
+            "absolute z-10 bottom-1 left-1 inline-flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground",
+            "hover:bg-destructive/10 hover:text-destructive-text transition-colors",
+            "[@media(hover:hover)]:opacity-70 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100",
           )}
         >
           <Trash2 className="w-4 h-4" aria-hidden="true" />
@@ -1009,17 +1033,24 @@ const SubCategoryCard = React.forwardRef<HTMLDivElement, {
 
       <div className={cn(
         "w-20 h-20 rounded-2xl flex items-center justify-center shadow-md ring-1 ring-border/40",
-        "transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:ring-2",
-        isUnassigned ? "bg-warning/10 text-warning" : cn(color.bg, color.text, color.ring),
+        "transition-all duration-200 group-hover:scale-110 group-hover:shadow-lg group-hover:ring-2",
+        isUnassigned ? "bg-warning/10 text-warning-text" : cn(color.bg, color.text, color.ring),
       )}>
-        {isUnassigned ? <AlertTriangle className="w-10 h-10" strokeWidth={1.75} /> : <Icon className="w-10 h-10" strokeWidth={1.75} />}
+        {isUnassigned ? <AlertTriangle className="w-10 h-10" strokeWidth={1.75} aria-hidden="true" /> : <Icon className="w-10 h-10" strokeWidth={1.75} aria-hidden="true" />}
       </div>
       <div className="w-full">
-        <div className="text-sm font-semibold line-clamp-2 leading-tight">{card.name}</div>
+        <button
+          type="button"
+          onClick={onClick}
+          aria-label={`פתח תת-קטגוריה ${card.name}`}
+          className="text-sm font-semibold line-clamp-2 leading-tight after:absolute after:inset-0 after:rounded-2xl after:content-[''] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring"
+        >
+          {card.name}
+        </button>
         {isAssignable && total > 0 && !isUnassigned && (
           <div className="text-xs text-muted-foreground mt-1 flex items-center justify-center gap-1">
-            <Users className="w-3 h-3" />
-            {activeCount} פעילים / {total}
+            <Users className="w-3 h-3" aria-hidden="true" />
+            <span className="tabular-nums">{activeCount} פעילים / {total}</span>
           </div>
         )}
         {!isUnassigned && card.ownerRole && (
@@ -1081,7 +1112,7 @@ function InstancesTable({
   const expiryInfo = (a: any) => {
     const exp = expiryOf(a, domain);
     const days = exp ? Math.ceil((new Date(exp).getTime() - Date.now()) / 86400000) : null;
-    const cls = days !== null && days < 0 ? "text-destructive" : "text-foreground";
+    const cls = days !== null && days < 0 ? "text-destructive-text" : "text-foreground";
     const txt = days === null || days > 30 ? null : days < 0 ? `פג לפני ${Math.abs(days)} ימים` : days === 0 ? "פג היום" : `בעוד ${days} ימים`;
     return { exp, cls, txt };
   };
@@ -1117,7 +1148,7 @@ function InstancesTable({
           const e = expiryInfo(a);
           return e.exp ? <span className={cn("inline-flex flex-col gap-1 tabular-nums", e.cls)}>
             <span dir="ltr">{formatDateDMY(e.exp)}</span>
-            {e.txt && <span className={cn("inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium", e.cls === "text-destructive" ? "border-destructive/30 bg-destructive/10" : "border-warning/40 bg-warning/10")}>
+            {e.txt && <span className={cn("inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium", e.cls === "text-destructive-text" ? "border-destructive/30 bg-destructive/10" : "border-warning/40 bg-warning/10")}>
               <AlertTriangle aria-hidden="true" className="h-3.5 w-3.5" />{e.txt}
             </span>}
           </span> : dash;
@@ -1128,7 +1159,7 @@ function InstancesTable({
     if (isInsurance) {
       cols.push({
         key: "next_payment", label: "תשלום הבא",
-        render: (a) => { const n = nextPayments?.get(a.id); return n ? <span className={cn(n.due_date < new Date().toISOString().slice(0, 10) && "text-destructive")}>{formatDateDMY(n.due_date)}{n.amount != null ? ` · ₪${Number(n.amount).toLocaleString()}` : ""}</span> : dash; },
+        render: (a) => { const n = nextPayments?.get(a.id); const overdue = !!n && n.due_date < new Date().toISOString().slice(0, 10); return n ? <span className={cn("inline-flex items-center gap-1 tabular-nums", overdue && "text-destructive-text")}>{overdue && <><AlertTriangle aria-hidden="true" className="h-3.5 w-3.5 shrink-0" /><span className="sr-only">באיחור: </span></>}{formatDateDMY(n.due_date)}{n.amount != null ? ` · ₪${Number(n.amount).toLocaleString()}` : ""}</span> : dash; },
         sortVal: (a) => { const n = nextPayments?.get(a.id); return n ? new Date(n.due_date).getTime() : Number.MAX_SAFE_INTEGER; },
       });
     }
@@ -1296,18 +1327,20 @@ function InstancesTable({
                 copyAction("העתק מס' רישוי", a.license_plate),
                 copyAction("העתק שם", a.asset_name),
               ]}>
-                <tr onClick={() => onSelect(a.id)} className={cn("group cursor-pointer transition-colors hover:bg-accent/60 focus-within:bg-accent/60", selected ? "bg-primary/10" : index % 2 ? "bg-muted/30" : "bg-card")}>
-                  {selectable && <td className="border-b border-border px-4 py-4" onClick={(e) => e.stopPropagation()}>
+                {/* Row click is a mouse shortcut; the last cell's button is the keyboard / screen-reader path.
+                    Clicks on links, buttons and the selection cell keep their own action. */}
+                <tr onClick={(e) => { if ((e.target as HTMLElement).closest("a, button, input, [data-row-click-ignore]")) return; onSelect(a.id); }} className={cn("group cursor-pointer transition-colors hover:bg-accent/60 focus-within:bg-accent/60", selected ? "bg-primary/10" : index % 2 ? "bg-muted/30" : "bg-card")}>
+                  {selectable && <td className="border-b border-border px-4 py-4" data-row-click-ignore>
                     <Checkbox className="h-6 w-6" aria-label={`בחר ${label}`} checked={selected} onCheckedChange={() => onToggleSelect?.(a.id)} />
                   </td>}
                   {visibleCols.map((c, i) => (
                     <td key={c.key} className={cn("min-w-40 max-w-96 border-b border-border px-6 py-4 align-middle leading-7", i === 0 && "font-medium", c.key === "code" && "tabular-nums")}>
-                      <div className="whitespace-normal break-words" onClick={(e) => { if ((e.target as HTMLElement).closest("a, button")) e.stopPropagation(); }}>
+                      <div className="whitespace-normal break-words">
                         {c.render(a)}
                       </div>
                     </td>
                   ))}
-                  <td className="border-b border-border px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                  <td className="border-b border-border px-3 py-3" data-row-click-ignore>
                     <Button variant="ghost" size="icon" className="h-11 w-11 text-primary" aria-label={`פתח כרטיס ${label}`} title={`פתח כרטיס ${label}`} onClick={() => onSelect(a.id)}>
                       <ArrowRight aria-hidden="true" className="rtl:rotate-180" />
                     </Button>

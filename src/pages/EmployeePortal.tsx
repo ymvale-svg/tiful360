@@ -578,18 +578,18 @@ export default function EmployeePortal() {
             </section>
 
             {processedBirthdays.length > 0 && (
-              <section aria-labelledby="portal-bdays-title" className="bg-gradient-to-l from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-xl border border-amber-200/50 dark:border-amber-800/50 p-4">
+              <section aria-labelledby="portal-bdays-title" className="bg-warning/10 rounded-xl border border-warning/30 p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <Cake className="w-4 h-4 text-amber-600" aria-hidden="true" />
-                  <h2 id="portal-bdays-title" className="font-semibold text-sm text-amber-800 dark:text-amber-300">ימי הולדת החודש</h2>
+                  <Cake className="w-4 h-4 text-warning" aria-hidden="true" />
+                  <h2 id="portal-bdays-title" className="font-semibold text-sm text-foreground">ימי הולדת החודש</h2>
                 </div>
                 <ul className="flex flex-wrap gap-2">
                   {processedBirthdays.map((emp) => {
                     const prefix = emp.isToday ? "היום!" : emp.isTomorrow ? "מחר" : null;
                     const dateText = prefix ? `${prefix} · ${emp.label}` : emp.label;
                     return (
-                      <li key={emp.id} className="flex items-center gap-2 bg-white/60 dark:bg-white/10 rounded-lg px-3 py-1.5">
-                        <PartyPopper className="w-3.5 h-3.5 text-amber-600 shrink-0" aria-hidden="true" />
+                      <li key={emp.id} className="flex items-center gap-2 bg-background/60 rounded-lg px-3 py-1.5">
+                        <PartyPopper className="w-3.5 h-3.5 text-warning shrink-0" aria-hidden="true" />
                         <span className="text-xs font-medium">{emp.full_name}</span>
                         <span className="text-xs text-muted-foreground">— {dateText}</span>
                       </li>
@@ -680,13 +680,13 @@ export default function EmployeePortal() {
                   </h2>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col items-center p-3 bg-muted/50 rounded-lg">
-                      <span className="text-2xl font-bold text-primary">
+                      <span className="text-2xl font-bold text-primary tabular-nums">
                         {emp.vacation_balance != null ? Number(emp.vacation_balance).toFixed(2) : "—"}
                       </span>
                       <span className="text-xs text-muted-foreground">ימי חופשה</span>
                     </div>
                     <div className="flex flex-col items-center p-3 bg-muted/50 rounded-lg">
-                      <span className="text-2xl font-bold text-info">
+                      <span className="text-2xl font-bold text-info-text tabular-nums">
                         {emp.sick_balance != null ? Number(emp.sick_balance).toFixed(2) : "—"}
                       </span>
                       <span className="text-xs text-muted-foreground">ימי מחלה</span>

@@ -4,8 +4,9 @@ import { ActiveFilters } from "@/components/ui/active-filters";
 import { EMPTY_ICONS } from "@/components/feedback/emptyIcons";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { UserPlus, Send, UserRound, AlertCircle, ListChecks, Settings2 } from "lucide-react";
+import { UserPlus, Send, UserRound, AlertCircle, ListChecks, Settings2, Clock } from "lucide-react";
 import { EmptyState, ListSkeleton } from "@/components/feedback/StateView";
+import { StatusChip, type StatusTone } from "@/components/feedback/StatusChip";
 import { NewOnboardingDialog } from "@/components/onboarding/NewOnboardingDialog";
 import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
 import { SendToOpsDialog } from "@/components/onboarding/SendToOpsDialog";
@@ -21,11 +22,11 @@ import {
   type OnboardingStatus,
 } from "@/hooks/useOnboarding";
 
-const STATUS_STYLE: Record<OnboardingStatus, string> = {
-  draft: "bg-muted text-muted-foreground",
-  sent: "bg-info/10 text-info",
-  in_progress: "bg-warning/10 text-warning",
-  done: "bg-success/10 text-success",
+const STATUS_TONE: Record<OnboardingStatus, StatusTone> = {
+  draft: "neutral",
+  sent: "info",
+  in_progress: "warning",
+  done: "success",
 };
 
 export default function Onboarding() {
@@ -111,7 +112,7 @@ export default function Onboarding() {
         )}
         {!isLoading && isError && (
           <div className="p-8 text-center space-y-3">
-            <AlertCircle className="w-6 h-6 text-destructive mx-auto" />
+            <AlertCircle className="w-6 h-6 text-destructive mx-auto" aria-hidden="true" />
             <div>
               <p className="text-sm font-medium">לא ניתן לטעון את תהליכי הקליטה</p>
               <p className="text-xs text-muted-foreground mt-1">{error instanceof Error ? error.message : "אירעה שגיאה בטעינה"}</p>
@@ -153,21 +154,18 @@ export default function Onboarding() {
           return (
             <div
               key={p.id}
-              className="p-4 flex flex-col sm:flex-row sm:items-center gap-3 hover:bg-muted/30 transition-colors cursor-pointer"
-              onClick={() => setSelected(p)}
+              className="p-4 flex flex-col sm:flex-row sm:items-center gap-3 hover:bg-muted/30 transition-colors"
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-medium">
                     <EmployeeLink employeeId={p.employee_id} name={p.employees?.full_name} />
                   </span>
-                  <span className={`text-[0.8125rem] px-2 py-0.5 rounded-full ${STATUS_STYLE[p.status]}`}>
-                    {ONBOARDING_STATUS_LABEL[p.status]}
-                  </span>
+                  <StatusChip tone={STATUS_TONE[p.status]}>{ONBOARDING_STATUS_LABEL[p.status]}</StatusChip>
                   {p.status !== "done" && d !== null && d <= 2 && (
-                    <span className="text-[0.8125rem] px-2 py-0.5 rounded-full bg-destructive/10 text-destructive">
+                    <StatusChip tone="critical" icon={Clock}>
                       {d >= 0 ? `מתחיל בעוד ${d} ימים` : "כבר התחיל"}
-                    </span>
+                    </StatusChip>
                   )}
                 </div>
                 <p className="text-sm text-muted-foreground mt-0.5">
@@ -176,7 +174,7 @@ export default function Onboarding() {
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm text-muted-foreground whitespace-nowrap">
+                <span className="text-sm text-muted-foreground whitespace-nowrap tabular-nums">
                   {done}/{items.length} פריטים
                 </span>
                 <Button

@@ -154,9 +154,9 @@ export function HandoverFormsList({ forms, context, emptyText = "אין עדיי
                 {code ? <span className="text-muted-foreground"> ({code})</span> : null}
               </p>
               <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <Clock className="w-3 h-3" />
+                <Clock className="w-3 h-3" aria-hidden="true" />
                 {fmt(f.signed_at ?? f.created_at)}
-                {pending && <span className="text-warning">· ממתין לחתימה</span>}
+                {pending && <span className="text-warning-text">· ממתין לחתימה</span>}
               </p>
             </div>
             <div className="flex items-center gap-1 shrink-0">

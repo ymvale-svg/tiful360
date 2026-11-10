@@ -278,7 +278,7 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
             {emp?.role} · {emp?.department} · תחילת עבודה{" "}
             {emp?.start_date ? new Date(emp.start_date).toLocaleDateString("en-GB") : "—"}
             {dLeft !== null && (
-              <span className={dLeft <= 2 ? " text-destructive font-medium" : ""}>
+              <span className={dLeft <= 2 ? " text-destructive-text font-medium" : ""}>
                 {" "}({dLeft >= 0 ? `בעוד ${dLeft} ימים` : `החל לפני ${Math.abs(dLeft)} ימים`})
               </span>
             )}
@@ -389,7 +389,7 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
                                     {OWNER_ROLE_LABEL[item.owner_role] ?? item.owner_role}
                                   </span>
                                   {item.assigned_at && (
-                                    <span className="text-[0.8125rem] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600">
+                                    <span className="text-[0.8125rem] px-1.5 py-0.5 rounded bg-success/10 text-success-text">
                                       הוצמד ב-{formatDateTimeDMY(item.assigned_at)}
                                     </span>
                                   )}
@@ -405,8 +405,8 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
                                   )}
                                 </div>
                                 {item.notes && (
-                                  <p className="text-xs mt-1.5 px-2.5 py-1.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-foreground flex items-start gap-1.5">
-                                    <StickyNote className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-600" />
+                                  <p className="text-xs mt-1.5 px-2.5 py-1.5 rounded-md bg-warning/10 border border-warning/40 text-foreground flex items-start gap-1.5">
+                                    <StickyNote className="w-3.5 h-3.5 mt-0.5 shrink-0 text-warning" />
                                     <span><span className="font-medium">הערה לתפעול: </span>{item.notes}</span>
                                   </p>
                                 )}

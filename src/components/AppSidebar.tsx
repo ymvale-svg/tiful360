@@ -56,6 +56,7 @@ interface NavGroup {
  */
 export const navGroups: NavGroup[] = [
   {
+    title: "ראשי",
     items: [
       { label: "לוח בקרה", icon: LayoutDashboard, path: "/", roles: SCREEN_ROLES.dashboard, count: "alerts" },
     ],
@@ -69,17 +70,27 @@ export const navGroups: NavGroup[] = [
     ],
   },
   {
-    title: "משאבים ושירות",
+    title: "משאבים",
     items: [
       { label: "ציוד ומשאבים", icon: Package, path: "/assets", roles: SCREEN_ROLES.assets, preload: preload.assets },
-      { label: "קריאות שירות", icon: Shield, path: "/it-tickets", roles: SCREEN_ROLES.tickets, preload: preload.itTickets, count: "tickets" },
       { label: "הרשאות מערכות", icon: KeyRound, path: "/system-access", roles: SCREEN_ROLES.systemAccess, preload: preload.systemAccess },
     ],
   },
   {
-    title: "מערכת",
+    title: "שירות ותקשורת",
+    items: [
+      { label: "קריאות שירות", icon: Shield, path: "/it-tickets", roles: SCREEN_ROLES.tickets, preload: preload.itTickets, count: "tickets" },
+    ],
+  },
+  {
+    title: "ניהול",
     items: [
       { label: "ניהול", icon: Settings, path: "/settings", roles: SCREEN_ROLES.settings, preload: preload.settings },
+    ],
+  },
+  {
+    title: "פורטל",
+    items: [
       { label: "פורטל עובדים", icon: UserCircle, path: "/portal", preload: preload.portal },
     ],
   },
@@ -196,7 +207,7 @@ export function AppSidebar({ mobileOpen = false, onMobileOpenChange }: AppSideba
           <span
             aria-hidden="true"
             className={cn(
-              "min-w-5 rounded-full px-1.5 text-center text-[11px] font-semibold leading-5 tabular-nums",
+              "min-w-5 rounded-full px-1.5 text-center text-xs font-semibold leading-5 tabular-nums",
               item.count === "alerts" ? "bg-destructive text-destructive-foreground" : "bg-sidebar-foreground/15 text-sidebar-foreground",
               !expanded && "absolute -top-1 -left-1",
             )}
@@ -215,7 +226,7 @@ export function AppSidebar({ mobileOpen = false, onMobileOpenChange }: AppSideba
   const sidebar = (
     <aside
       className={cn(
-        "fixed top-0 right-0 h-[100dvh] bg-sidebar flex flex-col z-50 transition-all duration-300 border-l border-sidebar-border",
+        "fixed top-0 right-0 h-[100dvh] bg-sidebar flex flex-col z-50 transition-all duration-200 border-l border-sidebar-border",
         mobileOpen ? "w-[280px] translate-x-0" : "w-[280px] translate-x-full lg:translate-x-0",
         collapsed ? "lg:w-[68px]" : "lg:w-[240px]"
       )}
@@ -227,7 +238,7 @@ export function AppSidebar({ mobileOpen = false, onMobileOpenChange }: AppSideba
         {(!collapsed || mobileOpen) && (
           <div className="overflow-hidden">
             <h1 className="text-sm font-bold text-sidebar-foreground whitespace-nowrap">תפעול 360</h1>
-            <p className="text-[11px] text-sidebar-muted whitespace-nowrap">ניהול משאבים מרכזי</p>
+            <p className="text-xs text-sidebar-muted whitespace-nowrap">ניהול משאבים מרכזי</p>
           </div>
         )}
       </div>
@@ -237,7 +248,7 @@ export function AppSidebar({ mobileOpen = false, onMobileOpenChange }: AppSideba
         {visibleGroups.map((g, i) => (
           <div key={g.title ?? i} className={cn("space-y-1", i > 0 && "mt-4")} role="group" aria-label={g.title}>
             {g.title && (!collapsed || mobileOpen) && (
-              <p className="px-3 pb-1 text-[11px] font-semibold tracking-wide text-sidebar-muted">{g.title}</p>
+              <p className="px-3 pb-1 text-xs font-semibold tracking-wide text-sidebar-muted">{g.title}</p>
             )}
             {g.title && collapsed && !mobileOpen && <div className="mx-3 mb-2 border-t border-sidebar-border" aria-hidden="true" />}
             {g.items.map((item) => (

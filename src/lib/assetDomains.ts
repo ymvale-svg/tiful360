@@ -38,6 +38,8 @@ export interface DomainMeta {
   color: { bg: string; text: string; ring: string; soft: string };
 }
 
+// `color` is a decorative categorical tint for the domain's icon tile (MASTER.md exception: six domains
+// need distinct hues and no semantic token fits). `color.text` colours the ICON only — never words or status.
 export const DOMAIN_META: Record<DomainKey, DomainMeta> = {
   physical: {
     key: "physical",

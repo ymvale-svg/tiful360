@@ -134,7 +134,7 @@ export default function SignOffboarding() {
     );
   if (!record)
     return (
-      <div className="min-h-screen flex items-center justify-center text-destructive" role="alert">
+      <div className="min-h-screen flex items-center justify-center text-destructive-text" role="alert">
         קישור לא תקף
       </div>
     );
@@ -145,7 +145,7 @@ export default function SignOffboarding() {
         className="min-h-screen flex flex-col items-center justify-center p-6 text-center"
         dir="rtl"
       >
-        <CheckCircle2 className="w-16 h-16 text-green-500 mb-4" aria-hidden="true" />
+        <CheckCircle2 className="w-16 h-16 text-success mb-4" aria-hidden="true" />
         <h1 className="text-2xl font-bold mb-2">הטופס נחתם בהצלחה</h1>
         <p className="text-muted-foreground">תודה. הטופס החתום נשלח לחברה.</p>
         {signedCopyUrl && (

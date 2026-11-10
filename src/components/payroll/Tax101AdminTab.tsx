@@ -6,17 +6,18 @@ import { CreateTax101BatchDialog } from "./CreateTax101BatchDialog";
 import { useCompanyTax101Forms, useSendTax101Invite, useDeleteTax101 } from "@/hooks/useTax101";
 import { useCompany } from "@/hooks/useCompany";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Plus, Mail, Download, Trash2, Loader2, Filter } from "lucide-react";
+import { FileText, Plus, Mail, Download, Trash2, Loader2, Filter, Clock, CheckCircle2, Send, type LucideIcon } from "lucide-react";
+import { StatusChip, type StatusTone } from "@/components/feedback/StatusChip";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { openTax101Pdf } from "@/lib/tax101Url";
 
-const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
-  pending: { label: "ממתין לחתימה", cls: "bg-muted text-muted-foreground" },
-  signed: { label: "נחתם", cls: "bg-success/15 text-success" },
-  sent: { label: "נשלח לשכר", cls: "bg-info/15 text-info" },
+const STATUS_LABEL: Record<string, { label: string; tone: StatusTone; icon: LucideIcon }> = {
+  pending: { label: "ממתין לחתימה", tone: "warning", icon: Clock },
+  signed: { label: "נחתם", tone: "success", icon: CheckCircle2 },
+  sent: { label: "נשלח לשכר", tone: "info", icon: Send },
 };
 
 export function Tax101AdminTab() {
@@ -144,9 +145,9 @@ export function Tax101AdminTab() {
                       <p className="font-medium">{f.employee?.full_name ?? "—"}</p>
                       <p className="text-[0.8125rem] text-muted-foreground">{f.employee?.employee_code}</p>
                     </td>
-                    <td className="font-mono">{f.tax_year}</td>
+                    <td className="font-mono tabular-nums">{f.tax_year}</td>
                     <td>
-                      <span className={`text-[0.8125rem] px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
+                      <StatusChip tone={st.tone} icon={st.icon}>{st.label}</StatusChip>
                     </td>
                     <td className="text-xs text-muted-foreground">{new Date(f.created_at).toLocaleDateString("en-GB")}</td>
                     <td className="text-xs text-muted-foreground">

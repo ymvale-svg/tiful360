@@ -130,7 +130,7 @@ export function NewPortalTicketDialog({ open, onOpenChange, employeeId, employee
               aria-invalid={titleError ? true : undefined}
               aria-describedby={titleError ? "pt-title-error" : undefined}
             />
-            {titleError && <p id="pt-title-error" role="alert" className="text-xs font-medium text-destructive">{titleError}</p>}
+            {titleError && <p id="pt-title-error" role="alert" className="text-xs font-medium text-destructive-text">{titleError}</p>}
           </div>
 
           <div className="space-y-1.5">
@@ -191,7 +191,7 @@ export function NewPortalTicketDialog({ open, onOpenChange, employeeId, employee
                 {files.map((f, i) => (
                   <li key={i} className="flex items-center justify-between gap-2 text-sm bg-muted/50 rounded ps-2">
                     <span className="truncate">{f.name}</span>
-                    <button type="button" className="min-h-11 px-3 text-sm text-destructive hover:underline shrink-0" aria-label={`הסר את ${f.name}`} disabled={submitting} onClick={() => setFiles((p) => p.filter((_, x) => x !== i))}>הסר</button>
+                    <button type="button" className="min-h-11 px-3 text-sm text-destructive-text hover:underline shrink-0" aria-label={`הסר את ${f.name}`} disabled={submitting} onClick={() => setFiles((p) => p.filter((_, x) => x !== i))}>הסר</button>
                   </li>
                 ))}
               </ul>

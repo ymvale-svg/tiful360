@@ -26,7 +26,7 @@ import {
 } from "@/hooks/useVehicleSubscriptions";
 
 const statusClass: Record<string, string> = {
-  active: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
+  active: "bg-success/10 text-success-text border-success/30",
   inactive: "bg-muted text-muted-foreground border-border",
 };
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { Car } from "lucide-react";
 import { useAssets, useEmployees } from "@/hooks/useData";
 import { useEmployeeVehicles } from "@/hooks/useVehicleSubscriptions";
@@ -30,12 +30,16 @@ export function InsuranceVehiclePicker({ employeeId, plate, onChange }: PickerPr
     [assets, personal, employeeId],
   );
   const active = (employees ?? []).filter((e: any) => e.status !== "terminated");
+  const uid = useId();
+  const employeeFieldId = `${uid}-employee`;
+  const plateFieldId = `${uid}-plate`;
 
   return (
     <div className="grid grid-cols-2 gap-3" dir="rtl">
       <div>
-        <label className="text-sm font-medium mb-1 block">עובד</label>
+        <label htmlFor={employeeFieldId} className="text-sm font-medium mb-1 block">עובד</label>
         <SearchableSelect
+          id={employeeFieldId}
           value={employeeId}
           onChange={(v) => onChange(v, "")}
           options={[
@@ -46,8 +50,9 @@ export function InsuranceVehiclePicker({ employeeId, plate, onChange }: PickerPr
         />
       </div>
       <div>
-        <label className="text-sm font-medium mb-1 block">רכב מבוטח</label>
+        <label htmlFor={plateFieldId} className="text-sm font-medium mb-1 block">רכב מבוטח</label>
         <SearchableSelect
+          id={plateFieldId}
           value={plate}
           onChange={(v) => onChange(employeeId, v)}
           options={[

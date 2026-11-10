@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Check, X, Clock4, AlertTriangle, UserPlus2, ArrowRight, ArrowLeft, Pencil, HelpCircle } from "lucide-react";
+import { StatusChip } from "@/components/feedback/StatusChip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useConfirm } from "@/components/feedback/ConfirmDialog";
 import { undoToast } from "@/components/feedback/undoToast";
@@ -106,8 +107,9 @@ export function AttendanceClockTab() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
-              <label className="text-xs text-muted-foreground">עובד</label>
+              <label htmlFor="clock-employee" className="text-xs text-muted-foreground">עובד</label>
               <SearchableSelect
+                id="clock-employee"
                 options={employeeOptions}
                 value={employeeId ?? ""}
                 onChange={(v) => setEmployeeId(v || null)}
@@ -166,7 +168,7 @@ function StatCard({ icon, label, value, warn }: { icon: React.ReactNode; label: 
     <Card>
       <CardContent className="py-4">
         <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">{icon}{label}</div>
-        <div className={`text-xl font-semibold ${warn ? "text-destructive" : ""}`}>{value}</div>
+        <div className={`text-xl font-semibold tabular-nums ${warn ? "text-destructive-text" : ""}`}>{value}</div>
       </CardContent>
     </Card>
   );
@@ -183,10 +185,10 @@ function OrphansPanel({ punches, employees }: { punches: AttendancePunch[]; empl
   );
 
   return (
-    <Card className="border-yellow-500/40">
+    <Card className="border-warning/40">
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-yellow-600" />
+          <AlertTriangle className="w-4 h-4 text-warning" aria-hidden="true" />
           פעימות לא משויכות ({punches.length})
         </CardTitle>
       </CardHeader>
@@ -261,7 +263,7 @@ function OrphansPanel({ punches, employees }: { punches: AttendancePunch[]; empl
                           <Button
                             size="sm"
                             variant="outline"
-                            className="text-destructive border-destructive/40 hover:bg-destructive hover:text-destructive-foreground"
+                            className="text-destructive-text border-destructive/40 hover:bg-destructive hover:text-destructive-foreground"
                             onClick={() => handleReject(p)}
                             aria-label={`דחה פעימה מ-${formatDate(p.punch_at)} ${formatTime(p.punch_at)}`}
                           >
@@ -294,7 +296,7 @@ function OrphansPanel({ punches, employees }: { punches: AttendancePunch[]; empl
                     <Button
                       size="sm"
                       variant="outline"
-                      className="w-full text-destructive border-destructive/40 hover:bg-destructive hover:text-destructive-foreground"
+                      className="w-full text-destructive-text border-destructive/40 hover:bg-destructive hover:text-destructive-foreground"
                       onClick={() => handleReject(p)}
                     >
                       <X className="w-4 h-4 ml-1" /> דחה פעימה
@@ -318,14 +320,12 @@ function DayStatusBadge({ items, leave }: { items: AttendancePunch[]; leave: str
     return leave ? (
       <Badge variant="outline" className="border-primary/40 text-primary bg-primary/10 whitespace-nowrap">{leave}</Badge>
     ) : (
-      <Badge variant="outline" className="border-destructive/40 text-destructive bg-destructive/10 whitespace-nowrap">לא החתים</Badge>
+      <StatusChip tone="critical">לא החתים</StatusChip>
     );
   }
   if (!firstIn || !lastOut) {
     return (
-      <Badge variant="outline" className="border-amber-500/50 text-amber-700 dark:text-amber-300 bg-amber-500/10 whitespace-nowrap">
-        חסרה החתמה
-      </Badge>
+      <StatusChip tone="warning">חסרה החתמה</StatusChip>
     );
   }
   return <span className="text-xs text-muted-foreground">—</span>;
@@ -536,9 +536,9 @@ function PunchChip({ punch }: { punch: AttendancePunch }) {
   };
 
   const color = punch.direction === "in"
-    ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/25"
+    ? "bg-success/15 text-success-text hover:bg-success/25"
     : punch.direction === "out"
-    ? "bg-rose-500/15 text-rose-700 dark:text-rose-300 hover:bg-rose-500/25"
+    ? "bg-info/15 text-info-text hover:bg-info/25"
     : "bg-muted text-muted-foreground hover:bg-muted/80";
   const DirIcon = punch.direction === "in" ? ArrowRight : punch.direction === "out" ? ArrowLeft : HelpCircle;
   const wasEdited = !!(punch as any).edited_at;
@@ -575,8 +575,8 @@ function PunchChip({ punch }: { punch: AttendancePunch }) {
             <p id={`punch-dir-${punch.id}`} className="text-sm text-muted-foreground mb-1.5">כיוון</p>
             <div className="grid grid-cols-3 gap-1" role="group" aria-labelledby={`punch-dir-${punch.id}`}>
               {([
-                { v: "in" as const, label: "כניסה", Icon: ArrowRight, active: "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40" },
-                { v: "out" as const, label: "יציאה", Icon: ArrowLeft, active: "bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/40" },
+                { v: "in" as const, label: "כניסה", Icon: ArrowRight, active: "bg-success/20 text-success-text border-success/40" },
+                { v: "out" as const, label: "יציאה", Icon: ArrowLeft, active: "bg-info/20 text-info-text border-info/40" },
                 { v: "unknown" as const, label: "לא ידוע", Icon: HelpCircle, active: "bg-muted-foreground/20 text-foreground border-muted-foreground/40" },
               ] as const).map(({ v, label, Icon, active }) => (
                 <button
@@ -588,7 +588,7 @@ function PunchChip({ punch }: { punch: AttendancePunch }) {
                     dirVal === v ? active : "border-border text-muted-foreground hover:bg-accent"
                   }`}
                 >
-                  <Icon className="w-3 h-3" />
+                  <Icon className="w-3 h-3" aria-hidden="true" />
                   {label}
                 </button>
               ))}

@@ -3,6 +3,7 @@ import { SearchInput } from "@/components/ui/search-input";
 import { ArrowRight, BookOpen, Building2, Car, Download, ExternalLink, FileText, Laptop, Loader2, PlayCircle, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/feedback/StateView";
 import { DocumentPreviewDialog } from "@/components/DocumentPreviewDialog";
 import { GuideItem, GuideTopic, ProcedureDepartment, ProcedureItem, getLearningSignedUrl } from "@/hooks/usePortalLearning";
 
@@ -77,7 +78,9 @@ export function PortalLearningLibrary(props: Props) {
             {busy ? <Loader2 className="w-4 h-4 animate-spin text-primary" aria-label="פותח…" /> : props.mode === "guides" && guide.content_type === "pdf" ? <Download className="w-4 h-4 text-muted-foreground" aria-hidden="true" /> : <ExternalLink className="w-4 h-4 text-muted-foreground" aria-hidden="true" />}
           </button>;
         })}
-        {!currentItems.length && <Empty label="לא נמצאו פריטים בנושא זה" />}
+        {!currentItems.length && (normalized
+          ? <Empty label="לא נמצאו פריטים בנושא זה" onClear={() => setSearch("")} />
+          : <Empty label="עדיין לא נוספו פריטים בנושא זה" />)}
         <DocumentPreviewDialog open={!!preview} onOpenChange={(open) => !open && setPreview(null)} url={preview?.url ?? null} fileName={preview?.name ?? ""} title={preview?.title} />
       </div>
     );
@@ -101,7 +104,7 @@ export function PortalLearningLibrary(props: Props) {
           </button>;
         })}
       </div>
-      {!shownGroups.length && <Empty label={normalized ? "לא נמצאו תוצאות" : "עדיין לא נוסף תוכן"} />}
+      {!shownGroups.length && <Empty label={normalized ? "לא נמצאו תוצאות" : "עדיין לא נוסף תוכן"} onClear={normalized ? () => setSearch("") : undefined} />}
     </div>
   );
 }
@@ -116,4 +119,13 @@ function SearchBox({ value, onChange }: { value: string; onChange: (value: strin
   return <SearchInput label="חיפוש בספרייה" placeholder="חיפוש..." value={value} onValueChange={onChange} />;
 }
 
-function Empty({ label }: { label: string }) { return <p className="text-center text-sm text-muted-foreground py-8">{label}</p>; }
+/** Shown only for loaded data (the portal wraps the library in StateView); a search miss offers to clear it. */
+function Empty({ label, onClear }: { label: string; onClear?: () => void }) {
+  return (
+    <EmptyState
+      title={label}
+      icon={<BookOpen className="h-6 w-6" />}
+      action={onClear ? <Button variant="outline" onClick={onClear}>נקה חיפוש</Button> : undefined}
+    />
+  );
+}

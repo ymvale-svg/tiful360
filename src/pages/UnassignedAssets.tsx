@@ -19,7 +19,7 @@ import { DOMAIN_META, DOMAIN_ORDER, getDomain, domainKeyToSlug, type DomainKey }
 import { cn } from "@/lib/utils";
 import { usePersistentFilter } from "@/hooks/usePersistentFilter";
 import { useToast } from "@/hooks/use-toast";
-import { EmptyState, ListSkeleton } from "@/components/feedback/StateView";
+import { EmptyState, ListSkeleton, StateView } from "@/components/feedback/StateView";
 
 const statusLabels: Record<string, string> = {
   in_use: "בשימוש", in_stock: "במלאי", in_repair: "בתיקון", lost: "אבד",
@@ -30,7 +30,7 @@ type SortKey = "name" | "code" | "category" | "created_desc" | "created_asc";
 export default function UnassignedAssets() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { data: assets, isLoading } = useAssets();
+  const { data: assets, isLoading, error, refetch } = useAssets();
   const { data: categories } = useAssetCategories();
   const { data: groups } = useAssetGroups();
 
@@ -244,6 +244,12 @@ export default function UnassignedAssets() {
           <span className="sr-only">טוען פריטים…</span>
           <ListSkeleton rows={5} />
         </div>
+      ) : error ? (
+        <div className="bg-card border border-border rounded-2xl">
+          <StateView error={error} onRetry={() => refetch()} label="את הפריטים">
+            {null}
+          </StateView>
+        </div>
       ) : rows.length === 0 ? (
         <div className="bg-card border border-border rounded-2xl">
           {filtersActive ? (
@@ -281,7 +287,7 @@ export default function UnassignedAssets() {
                   />
                   <span className="text-xs text-muted-foreground">בחר למסירה מרובה</span>
                 </div>
-                <button className="w-full text-right" onClick={() => openAsset(a)}>
+                <button type="button" className="w-full text-right" onClick={() => openAsset(a)}>
                   <div className="font-semibold">{a.asset_name}</div>
                   <div className="text-xs text-muted-foreground font-mono">{a.asset_code}</div>
                   <div className="text-xs text-muted-foreground">
@@ -289,7 +295,7 @@ export default function UnassignedAssets() {
                   </div>
                 </button>
                 <Button size="touch" variant="outline" className="w-full gap-1.5" onClick={() => setHandoverAsset(a)}>
-                  <FileSignature className="w-4 h-4" /> בצע מסירה
+                  <FileSignature className="w-4 h-4" aria-hidden="true" /> בצע מסירה
                 </Button>
               </div>
             ))}
@@ -327,7 +333,7 @@ export default function UnassignedAssets() {
                     </td>
                     <td className="px-4 py-2 font-mono text-xs text-muted-foreground">{a.asset_code}</td>
                     <td className="px-4 py-2">
-                      <button className="font-medium hover:underline" onClick={() => openAsset(a)}>
+                      <button type="button" className="font-medium hover:underline" onClick={() => openAsset(a)}>
                         {a.asset_name}
                       </button>
                     </td>
@@ -345,7 +351,7 @@ export default function UnassignedAssets() {
                     </td>
                     <td className="px-4 py-2 text-left">
                       <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setHandoverAsset(a)}>
-                        <FileSignature className="w-4 h-4" /> בצע מסירה
+                        <FileSignature className="w-4 h-4" aria-hidden="true" /> בצע מסירה
                       </Button>
                     </td>
                   </tr>

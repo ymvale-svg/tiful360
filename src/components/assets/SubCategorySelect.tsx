@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Check, X } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,10 @@ interface Props {
   onChange: (groupId: string) => void;
   error?: boolean;
   disabled?: boolean;
+  /** id of the picker button, for `<label htmlFor>`. */
+  id?: string;
+  "aria-required"?: boolean;
+  "aria-describedby"?: string;
 }
 
 /**
@@ -30,12 +34,18 @@ export function SubCategorySelect({
   onChange,
   error,
   disabled,
+  id,
+  "aria-required": ariaRequired,
+  "aria-describedby": ariaDescribedBy,
 }: Props) {
   const { data: assetGroups } = useAssetGroups();
   const createGroup = useCreateAssetGroup();
   const { toast } = useToast();
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
+  // "תת-קטגוריה חדשה" swaps the picker for the name input, so focus follows it there.
+  const newNameRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (adding) newNameRef.current?.focus(); }, [adding]);
 
   const groups = useMemo(
     () => (assetGroups ?? []).filter((g) => g.category_id === categoryId),
@@ -65,7 +75,7 @@ export function SubCategorySelect({
     return (
       <div className="flex items-center gap-2">
         <Input
-          autoFocus
+          ref={newNameRef}
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => {
@@ -90,11 +100,15 @@ export function SubCategorySelect({
   return (
     <div className="space-y-1">
       <SearchableSelect
+        id={id}
         value={value}
         onChange={onChange}
         options={groups.map((g) => ({ value: g.id, label: g.name }))}
         placeholder={groups.length ? "בחר תת-קטגוריה..." : "אין עדיין תתי-קטגוריות"}
         error={error}
+        aria-required={ariaRequired}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={ariaDescribedBy}
       />
       {!disabled && (
         <button

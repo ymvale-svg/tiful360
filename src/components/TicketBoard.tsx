@@ -63,6 +63,7 @@ export function TicketBoard<T extends BoardTicket>({ tickets, onOpen, onMove, re
         const items = byStatus(col.status);
         const Icon = col.icon;
         return (
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- drop target only; every move is also in the card menu
           <section
             key={col.status}
             aria-labelledby={`board-${col.status}`}
@@ -78,7 +79,7 @@ export function TicketBoard<T extends BoardTicket>({ tickets, onOpen, onMove, re
               <Icon className={cn("h-4 w-4", col.tint)} aria-hidden="true" />
               {col.label}
               <span className="rounded-full bg-background px-2 text-xs tabular-nums text-muted-foreground">{items.length}</span>
-              {col.status === "done" && <span className="ms-auto text-[11px] font-normal text-muted-foreground">{DONE_DAYS} ימים אחרונים</span>}
+              {col.status === "done" && <span className="ms-auto text-xs font-normal text-muted-foreground">{DONE_DAYS} ימים אחרונים</span>}
             </h2>
             <ul className="flex flex-1 flex-col gap-2">
               <AnimatePresence initial={false}>
@@ -91,6 +92,7 @@ export function TicketBoard<T extends BoardTicket>({ tickets, onOpen, onMove, re
                     exit={{ opacity: 0, transition: { duration: 0.12 } }}
                     transition={{ type: "spring", stiffness: 500, damping: 38 }}
                   >
+                    {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- drag source only; the card's button opens it and its menu moves it */}
                     <div
                       draggable
                       onDragStart={(e) => { e.dataTransfer.setData("text/plain", t.id); e.dataTransfer.effectAllowed = "move"; setDragId(t.id); }}
@@ -105,9 +107,9 @@ export function TicketBoard<T extends BoardTicket>({ tickets, onOpen, onMove, re
                       <div className="flex items-start gap-2">
                         <div className="min-w-0 flex-1">
                           <div className="mb-1 flex flex-wrap items-center gap-1.5">
-                            {t.ticket_code && <span className="font-mono text-[11px] text-muted-foreground">{t.ticket_code}</span>}
+                            {t.ticket_code && <span className="font-mono text-xs text-muted-foreground">{t.ticket_code}</span>}
                             {t.priority && priorityLabel && (
-                              <span className={cn("rounded-full px-1.5 py-px text-[11px] font-medium", priorityClass?.(t.priority))}>{priorityLabel(t.priority)}</span>
+                              <span className={cn("rounded-full px-1.5 py-px text-xs font-medium", priorityClass?.(t.priority))}>{priorityLabel(t.priority)}</span>
                             )}
                           </div>
                           <button

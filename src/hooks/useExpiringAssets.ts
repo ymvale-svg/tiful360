@@ -21,14 +21,15 @@ export const DOMAIN_LABELS: Record<ProtocolDomain, string> = {
   real_estate: "נדל\"ן",
 };
 
+/** Domain tag next to an expiring item. The word carries the meaning, so the tag stays neutral. */
 export const DOMAIN_STYLES: Record<ProtocolDomain, string> = {
   physical: "bg-muted text-foreground",
-  vehicle: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-  digital: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
-  license: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  insurance: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  training: "bg-pink-500/10 text-pink-700 dark:text-pink-400",
-  real_estate: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400",
+  vehicle: "bg-muted text-foreground",
+  digital: "bg-muted text-foreground",
+  license: "bg-muted text-foreground",
+  insurance: "bg-muted text-foreground",
+  training: "bg-muted text-foreground",
+  real_estate: "bg-muted text-foreground",
 };
 
 export interface ExpiringAsset {
@@ -96,8 +97,8 @@ export function expiryUrgency(daysLeft: number): {
       : months === 1 ? "פג לפני חודש"
       : months === 2 ? "פג לפני חודשיים"
       : `פג לפני ${months} חודשים`;
-    return { color: "text-destructive", bg: "bg-destructive/10", border: "border-destructive/30", label };
+    return { color: "text-destructive-text", bg: "bg-destructive/10", border: "border-destructive/30", label };
   }
-  if (daysLeft <= 3) return { color: "text-orange-600 dark:text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/30", label: `${daysLeft} ימים` };
-  return { color: "text-yellow-700 dark:text-yellow-400", bg: "bg-yellow-500/10", border: "border-yellow-500/30", label: `${daysLeft} ימים` };
+  if (daysLeft <= 3) return { color: "text-warning-text font-semibold", bg: "bg-warning/10", border: "border-warning/60", label: `${daysLeft} ימים` };
+  return { color: "text-warning-text", bg: "bg-warning/10", border: "border-warning/30", label: `${daysLeft} ימים` };
 }

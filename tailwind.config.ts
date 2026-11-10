@@ -33,18 +33,22 @@ export default {
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
+          text: "hsl(var(--destructive-text))",
         },
         success: {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
+          text: "hsl(var(--success-text))",
         },
         warning: {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
+          text: "hsl(var(--warning-text))",
         },
         info: {
           DEFAULT: "hsl(var(--info))",
           foreground: "hsl(var(--info-foreground))",
+          text: "hsl(var(--info-text))",
         },
         "link-back": {
           DEFAULT: "hsl(var(--link-back))",

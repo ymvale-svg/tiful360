@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { CalendarDays, CalendarPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { StatusChip, type StatusTone } from "@/components/feedback/StatusChip";
 import { useTeamLeaveRequests } from "@/hooks/useLeaveRequests";
 import { buildGoogleCalendarUrl } from "@/lib/googleCalendar";
 
@@ -10,14 +11,14 @@ const TYPE_LABELS: Record<string, string> = {
 const STATUS_LABELS: Record<string, string> = {
   approved: "מאושר",
 };
-const STATUS_CLASS: Record<string, string> = {
-  approved: "bg-success/15 text-success",
+const STATUS_TONE: Record<string, StatusTone> = {
+  approved: "success",
 };
 
 const fmt = (d: string) => new Date(d).toLocaleDateString("en-GB");
 
 export function LeaveStatusCard() {
-  const { data: requests = [], isLoading } = useTeamLeaveRequests();
+  const { data: requests = [], isLoading, error, refetch } = useTeamLeaveRequests();
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -42,14 +43,20 @@ export function LeaveStatusCard() {
     <div className="bg-card rounded-xl border border-border/50 shadow-card">
       <div className="p-5 border-b border-border/50 flex items-center justify-between">
         <h2 className="font-semibold flex items-center gap-2">
-          <CalendarDays className="w-4 h-4 text-primary" />
+          <CalendarDays className="w-4 h-4 text-primary" aria-hidden="true" />
           בקשות חופשה ומחלה
         </h2>
         <Link to="/requests" className="text-xs text-primary hover:underline">הצג הכל</Link>
       </div>
       <div className="divide-y divide-border/50">
-        {isLoading && <div className="p-6 text-center text-sm text-muted-foreground">טוען...</div>}
-        {!isLoading && recent.length === 0 && (
+        {isLoading && <div className="p-6 text-center text-sm text-muted-foreground" role="status">טוען...</div>}
+        {!isLoading && error && (
+          <div className="p-6 text-center text-sm" role="alert">
+            <p className="font-medium">לא הצלחנו לטעון את הבקשות</p>
+            <Button variant="outline" size="sm" className="mt-2" onClick={() => { void refetch(); }}>נסו שוב</Button>
+          </div>
+        )}
+        {!isLoading && !error && recent.length === 0 && (
           <div className="p-6 text-center text-sm text-muted-foreground">אין בקשות</div>
         )}
         {recent.map((r: any) => (
@@ -68,25 +75,26 @@ export function LeaveStatusCard() {
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {r.end_date && (
-                <a
-                  href={buildGoogleCalendarUrl({
-                    title: `${r.employee?.full_name ?? "עובד"} ${r.request_type === "sick" ? "במחלה" : "בחופש"}`,
-                    startDate: r.start_date,
-                    endDate: r.end_date,
-                    details: `${TYPE_LABELS[r.request_type] ?? r.request_type}${r.reason ? ` — ${r.reason}` : ""}`,
-                  })}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
-                    <CalendarPlus className="w-3 h-3" />
+                <Button asChild variant="outline" size="sm" className="h-7 text-xs gap-1">
+                  <a
+                    href={buildGoogleCalendarUrl({
+                      title: `${r.employee?.full_name ?? "עובד"} ${r.request_type === "sick" ? "במחלה" : "בחופש"}`,
+                      startDate: r.start_date,
+                      endDate: r.end_date,
+                      details: `${TYPE_LABELS[r.request_type] ?? r.request_type}${r.reason ? ` — ${r.reason}` : ""}`,
+                    })}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`הוספת ההיעדרות של ${r.employee?.full_name ?? "העובד"} ליומן (נפתח בחלון חדש)`}
+                  >
+                    <CalendarPlus className="w-3 h-3" aria-hidden="true" />
                     ליומן
-                  </Button>
-                </a>
+                  </a>
+                </Button>
               )}
-              <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${STATUS_CLASS[r.status]}`}>
+              <StatusChip tone={STATUS_TONE[r.status] ?? "neutral"}>
                 {STATUS_LABELS[r.status] ?? r.status}
-              </span>
+              </StatusChip>
             </div>
           </div>
         ))}

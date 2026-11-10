@@ -118,7 +118,7 @@ export function BirthdayPreferenceCard({ employee }: Props) {
                 className="text-right"
               />
               {dayInvalid && (
-                <p id="bday-heb-day-error" role="alert" className="text-xs text-destructive mt-1 text-right">יום לא תקין</p>
+                <p id="bday-heb-day-error" role="alert" className="text-xs text-destructive-text mt-1 text-right">יום לא תקין</p>
               )}
             </div>
             <div>
@@ -146,7 +146,7 @@ export function BirthdayPreferenceCard({ employee }: Props) {
                 className="text-right"
               />
               {yearInvalid && (
-                <p id="bday-heb-year-error" role="alert" className="text-xs text-destructive mt-1 text-right">שנה לא תקינה</p>
+                <p id="bday-heb-year-error" role="alert" className="text-xs text-destructive-text mt-1 text-right">שנה לא תקינה</p>
               )}
             </div>
           </div>

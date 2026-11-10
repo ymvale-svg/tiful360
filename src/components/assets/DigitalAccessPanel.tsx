@@ -46,8 +46,8 @@ export function DigitalAccessPanel({ asset }: Props) {
   const expiryClass = (d?: string | null) => {
     const days = daysTo(d);
     if (days === null) return "text-muted-foreground";
-    if (days < 0) return "text-destructive font-semibold";
-    if (days <= 30) return "text-amber-600 dark:text-amber-400 font-semibold";
+    if (days < 0) return "text-destructive-text font-semibold";
+    if (days <= 30) return "text-warning-text font-semibold";
     return "text-foreground";
   };
   const expiryLabel = (d?: string | null) => {
@@ -147,14 +147,14 @@ export function DigitalAccessPanel({ asset }: Props) {
         )}
         {show("mfa_enabled", asset.mfa_enabled) && (
         <div className="col-span-2 flex items-center justify-between py-2 border-t border-border">
-          <Label className="text-sm flex items-center gap-2">
-            {form.mfa_enabled ? <Shield className="w-4 h-4 text-emerald-600" /> : <ShieldOff className="w-4 h-4 text-muted-foreground" />}
+          <Label htmlFor={editing ? "digital-access-mfa" : undefined} className="text-sm flex items-center gap-2">
+            {form.mfa_enabled ? <Shield className="w-4 h-4 text-success-text" aria-hidden="true" /> : <ShieldOff className="w-4 h-4 text-muted-foreground" aria-hidden="true" />}
             אימות דו-שלבי (MFA)
           </Label>
           {editing ? (
-            <Switch checked={form.mfa_enabled} onCheckedChange={(c) => setForm({ ...form, mfa_enabled: c })} />
+            <Switch id="digital-access-mfa" checked={form.mfa_enabled} onCheckedChange={(c) => setForm({ ...form, mfa_enabled: c })} />
           ) : (
-            <span className={cn("text-sm font-medium", asset.mfa_enabled ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")}>
+            <span className={cn("text-sm font-medium", asset.mfa_enabled ? "text-success-text" : "text-muted-foreground")}>
               {asset.mfa_enabled === true ? "מופעל" : asset.mfa_enabled === false ? "לא מופעל" : "לא הוגדר"}
             </span>
           )}

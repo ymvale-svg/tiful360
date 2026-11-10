@@ -182,7 +182,7 @@ export function DomainsGrid({ onQuickAssign }: Props) {
       {/* Status chips */}
       <div className="flex flex-wrap items-center gap-2">
         {openOffboardings > 0 && (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-info/10 text-info border border-info/20 text-xs font-medium">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-info/10 text-info-text border border-info/20 text-xs font-medium">
             <Users className="w-3.5 h-3.5" />
             {openOffboardings} תהליכי offboarding פתוחים
           </span>
@@ -190,7 +190,7 @@ export function DomainsGrid({ onQuickAssign }: Props) {
         {totalSoon30 > 0 && (
           <Button variant="outline" size="sm" onClick={openSoonResources}
             title="פתח את המשאבים שתוקפם פג תוך 30 יום"
-            className="h-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-warning/10 text-warning border border-warning/20 text-xs font-medium hover:bg-warning/20 hover:text-warning">
+            className="h-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-warning/10 text-warning-text border border-warning/20 text-xs font-medium hover:bg-warning/20 hover:text-warning-text">
             <Clock className="w-3.5 h-3.5" />
             {totalSoon30} פגים תוך 30 יום
           </Button>
@@ -202,7 +202,7 @@ export function DomainsGrid({ onQuickAssign }: Props) {
               type="button"
               title="הצג את הפריטים שפג תוקפם"
               onClick={() => first && navigate(`/assets/${domainKeyToSlug(first.meta.key)}?expired=1`)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/10 text-destructive border border-destructive/20 text-xs font-medium cursor-pointer hover:bg-destructive/20 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/10 text-destructive-text border border-destructive/20 text-xs font-medium cursor-pointer hover:bg-destructive/20 transition-colors"
             >
               <AlertTriangle className="w-3.5 h-3.5" />
               {totalExpired} פריטים פגי תוקף
@@ -226,9 +226,9 @@ export function DomainsGrid({ onQuickAssign }: Props) {
           {grouped.map(({ meta, cats, assets, expired, soon, soonItems, subCount }) => {
             const Icon = meta.icon;
             const badge = expired > 0
-              ? { text: `${expired} פגי תוקף`, cls: "bg-destructive/10 text-destructive" }
+              ? { text: `${expired} פגי תוקף`, cls: "bg-destructive/10 text-destructive-text" }
               : soon > 0
-              ? { text: `חידוש תוך 14 יום`, cls: "bg-warning/10 text-warning" }
+              ? { text: `חידוש תוך 14 יום`, cls: "bg-warning/10 text-warning-text" }
               : null;
 
             const slug = domainKeyToSlug(meta.key);
@@ -245,7 +245,6 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                     "relative bg-card border border-primary/40 rounded-2xl p-5 text-right",
                     meta.color.ring
                   )}
-                  onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className={cn(
@@ -313,19 +312,10 @@ export function DomainsGrid({ onQuickAssign }: Props) {
             return (
               <RowContextMenu key={meta.key} actions={domainMenuActions}>
               <div
-                role="button"
-                tabIndex={0}
-                onClick={openDomain}
-                onKeyDown={(e) => {
-                  // Only the card itself: Enter on a nested button must activate that button.
-                  if (e.target !== e.currentTarget) return;
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    openDomain();
-                  }
-                }}
                 className={cn(
-                  "group relative bg-card border border-border rounded-2xl p-5 transition-all text-right cursor-pointer hover:shadow-lg hover:-translate-y-0.5 hover:ring-2 focus:outline-none focus:ring-2",
+                  // The title button stretches over the whole card (after:inset-0), so the card opens
+                  // the domain without nesting the other buttons inside an interactive element.
+                  "group relative bg-card border border-border rounded-2xl p-5 transition-all text-right cursor-pointer hover:shadow-lg hover:-translate-y-0.5 hover:ring-2 focus-within:ring-2",
                   isEmpty && "opacity-70",
                   meta.color.ring
                 )}
@@ -346,7 +336,7 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                     }}
                     title={expired > 0 ? "הצג את הפריטים שפג תוקפם" : "הצג את הפריטים שתוקפם פג תוך 14 יום"}
                     className={cn(
-                      "absolute top-3 left-3 inline-flex items-center gap-1 min-h-8 text-xs font-medium px-2.5 py-1 rounded-full transition-shadow hover:ring-2 hover:ring-current/30 cursor-pointer",
+                      "absolute z-10 top-3 left-3 inline-flex items-center gap-1 min-h-8 text-xs font-medium px-2.5 py-1 rounded-full transition-shadow hover:ring-2 hover:ring-current/30 cursor-pointer",
                       badge.cls
                     )}
                   >
@@ -358,8 +348,8 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                 {canManage && (
                   <div
                     className={cn(
-                      // Always visible on touch screens; on desktop they appear on hover or keyboard focus.
-                      "absolute left-3 flex items-center gap-1 transition-opacity [@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
+                      // Always visible; on desktop at reduced emphasis until hover or keyboard focus.
+                      "absolute z-10 left-3 flex items-center gap-1 transition-opacity [@media(hover:hover)]:opacity-70 group-hover:opacity-100 group-focus-within:opacity-100",
                       badge ? "bottom-3" : "top-3"
                     )}
                   >
@@ -392,7 +382,15 @@ export function DomainsGrid({ onQuickAssign }: Props) {
 
                 <div className={cn("flex items-start justify-between mb-3", badge && "ml-20")}>
                   <div className="flex-1 text-right pr-2">
-                    <h3 className="text-base font-semibold leading-tight">{label.title}</h3>
+                    <h3 className="text-base font-semibold leading-tight">
+                      <button
+                        type="button"
+                        onClick={openDomain}
+                        className="text-right after:absolute after:inset-0 after:rounded-2xl after:content-[''] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring"
+                      >
+                        {label.title}
+                      </button>
+                    </h3>
                     <p className="text-xs text-muted-foreground mt-1">
                       {isEmpty ? "אין פריטים בדומיין זה" : domainSubtitle(meta.key, cats, assets)}
                     </p>
@@ -417,7 +415,7 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); navigate("/assets?tab=categories"); }}
-                      className="text-xs min-h-8 px-2.5 py-1 rounded-md border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                      className="relative z-10 text-xs min-h-8 px-2.5 py-1 rounded-md border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
                     >
                       + הוסף קטגוריה ראשונה
                     </button>
@@ -451,12 +449,11 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                             navigate(`/assets/${slug}?cat=${c.id}`);
                           }}
                           className={cn(
-                            "inline-flex items-center gap-1 text-xs min-h-8 px-2.5 py-1 rounded-md border border-border bg-background hover:bg-muted transition-colors",
-                            meta.color.text
+                            "relative z-10 inline-flex items-center gap-1 text-xs min-h-8 px-2.5 py-1 rounded-md border border-border bg-background text-foreground hover:bg-muted transition-colors"
                           )}
                         >
                           <span>{c.category_name}</span>
-                          <span className="text-muted-foreground">{c._count ?? 0}</span>
+                          <span className="text-muted-foreground tabular-nums">{c._count ?? 0}</span>
                         </button>
                         </RowContextMenu>
                       ))}
@@ -473,7 +470,7 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                               return next;
                             });
                           }}
-                          className="inline-flex items-center text-xs min-h-8 px-2.5 py-1 rounded-md border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                          className="relative z-10 inline-flex items-center text-xs min-h-8 px-2.5 py-1 rounded-md border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
                         >
                           {expandedDomains.has(meta.key) ? "פחות" : `+${cats.length - 6}`}
                         </button>
@@ -492,6 +489,7 @@ export function DomainsGrid({ onQuickAssign }: Props) {
       {onQuickAssign && (
         <div className="bg-gradient-to-l from-primary/5 to-transparent border border-primary/20 rounded-2xl p-4 flex items-center justify-between gap-4">
           <button
+            type="button"
             onClick={onQuickAssign}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium shrink-0"
           >

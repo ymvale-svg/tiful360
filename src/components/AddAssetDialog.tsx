@@ -83,7 +83,7 @@ const PER_EMP_EXPIRY_PREFIXES = ["VHC", "EQP"];
 export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultGroupId, defaultAssetName }: Props) {
   const { activeCompanyId } = useCompany();
   const { data: categories } = useAssetCategories();
-  const { data: employees } = useEmployees();
+  const { data: employees, isLoading: employeesLoading, error: employeesError } = useEmployees();
   const { data: existingAssets } = useAssets();
   const mutation = useCreateAsset();
   const uploadDoc = useUploadAssetDocument();
@@ -709,26 +709,33 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
 
         <div className="space-y-3 mt-4" ref={formRef}>
           {/* Category */}
-          <div role="group" aria-labelledby="add-asset-category-label" data-invalid={errors.category_id ? "true" : undefined}>
-            <label id="add-asset-category-label" className="text-sm font-medium mb-1 block">קטגוריה<span className="text-destructive mr-1" aria-hidden="true">*</span></label>
+          <div data-invalid={errors.category_id ? "true" : undefined}>
+            <label id="add-asset-category-label" htmlFor="add-asset-category" className="text-sm font-medium mb-1 block">קטגוריה<span className="text-destructive-text mr-1" aria-hidden="true">*</span></label>
             <SearchableSelect
+              id="add-asset-category"
+              aria-required
+              aria-invalid={errors.category_id ? true : undefined}
+              aria-describedby={errors.category_id ? "add-asset-category-error" : undefined}
               value={form.category_id}
               onChange={(v) => { set("category_id", v); set("group_id", ""); setCustomFields({}); }}
               options={(categories ?? []).map(c => ({ value: c.id, label: c.category_name }))}
               placeholder="בחר קטגוריה..."
               error={!!errors.category_id}
             />
-            {errors.category_id && <p role="alert" className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" aria-hidden="true" />{errors.category_id}</p>}
+            {errors.category_id && <p id="add-asset-category-error" role="alert" className="text-xs text-destructive-text mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" aria-hidden="true" />{errors.category_id}</p>}
           </div>
 
           {/* Sub-category (group) — shown once a category is selected; new values can be added inline */}
           {form.category_id && (
-            <div role="group" aria-labelledby="add-asset-group-label" data-invalid={errors.group_id ? "true" : undefined}>
-              <label id="add-asset-group-label" className="text-sm font-medium mb-1 block">
+            <div data-invalid={errors.group_id ? "true" : undefined}>
+              <label id="add-asset-group-label" htmlFor="add-asset-group" className="text-sm font-medium mb-1 block">
                 תת-קטגוריה
-                {categoryGroups.length > 0 && <span className="text-destructive mr-1" aria-hidden="true">*</span>}
+                {categoryGroups.length > 0 && <span className="text-destructive-text mr-1" aria-hidden="true">*</span>}
               </label>
               <SubCategorySelect
+                id="add-asset-group"
+                aria-required={categoryGroups.length > 0}
+                aria-describedby={errors.group_id ? "add-asset-group-error" : undefined}
                 categoryId={form.category_id}
                 companyId={(selectedCategory as any)?.company_id ?? activeCompanyId}
                 defaultOwnerRole={(selectedCategory as any)?.default_owner_role ?? null}
@@ -736,7 +743,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                 onChange={(v) => set("group_id", v)}
                 error={!!errors.group_id}
               />
-              {errors.group_id && <p role="alert" className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" aria-hidden="true" />{errors.group_id}</p>}
+              {errors.group_id && <p id="add-asset-group-error" role="alert" className="text-xs text-destructive-text mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" aria-hidden="true" />{errors.group_id}</p>}
             </div>
           )}
 
@@ -745,7 +752,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
             <div>
               <label htmlFor="add-asset-code" className="text-sm font-medium mb-1 block">
                 {selectedCategory?.prefix === "CINS" ? "מזהה פוליסה" : isDigital ? "מזהה גישה" : "מזהה / מס׳ סידורי"}
-                <span className="text-destructive mr-1" aria-hidden="true">*</span>
+                <span className="text-destructive-text mr-1" aria-hidden="true">*</span>
               </label>
               <input
                 id="add-asset-code"
@@ -760,7 +767,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
               <p id="add-asset-code-hint" className="text-xs text-muted-foreground mt-1">
                 נוצר אוטומטית בפורמט <span className="font-mono">PREFIX-MMYY-NNN</span> — המונה ממשיך לרוץ, החודש מתעדכן אוטומטית
               </p>
-              {errors.asset_code && <p role="alert" className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" aria-hidden="true" />{errors.asset_code}</p>}
+              {errors.asset_code && <p role="alert" className="text-xs text-destructive-text mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" aria-hidden="true" />{errors.asset_code}</p>}
             </div>
           )}
 
@@ -772,7 +779,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
           <div>
             <label htmlFor="add-asset-name" className="text-sm font-medium mb-1 block">
               {selectedCategory?.prefix === "CINS" ? "שם הפוליסה" : isDigital ? "שם המערכת / השירות" : "שם פריט"}
-              <span className="text-destructive mr-1" aria-hidden="true">*</span>
+              <span className="text-destructive-text mr-1" aria-hidden="true">*</span>
             </label>
             <input
               id="add-asset-name"
@@ -784,14 +791,15 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
               placeholder={selectedCategory?.prefix === "CINS" ? "למשל: ביטוח קבלני - חיפה" : isDigital ? "למשל: Microsoft 365 / פריוריטי" : "למשל: MacBook Pro 16"}
               className={`w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 ${errors.asset_name ? "ring-2 ring-destructive/50" : "focus:ring-primary/30"}`}
             />
-            {errors.asset_name && <p id="add-asset-name-error" role="alert" className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" aria-hidden="true" />{errors.asset_name}</p>}
+            {errors.asset_name && <p id="add-asset-name-error" role="alert" className="text-xs text-destructive-text mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" aria-hidden="true" />{errors.asset_name}</p>}
           </div>
           )}
 
           {selectedCategory?.prefix !== "CINS" && selectedCategory?.prefix !== "CAR" && domain === "physical" && showBuiltin("manufacturer_model") && (
-            <div role="group" aria-labelledby="add-asset-model-label">
-              <label id="add-asset-model-label" className="text-sm font-medium mb-1 block">יצרן ומודל</label>
+            <div>
+              <label id="add-asset-model-label" htmlFor="add-asset-model" className="text-sm font-medium mb-1 block">יצרן ומודל</label>
               <ManufacturerModelInput
+                id="add-asset-model"
                 value={form.manufacturer_model}
                 onChange={(v) => set("manufacturer_model", v)}
                 groupId={form.group_id || null}
@@ -883,9 +891,10 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
           {!bulkMode && (
             <div className={cn("grid gap-3", selectedCategory?.prefix === "CINS" ? "grid-cols-1" : "grid-cols-2")}>
               {selectedCategory?.prefix === "CINS" ? null : (selectedCategory as any)?.is_assignable !== false ? (
-                <div role="group" aria-labelledby="add-asset-owner-label">
-                  <label id="add-asset-owner-label" className="text-sm font-medium mb-1 block">שיוך לעובד</label>
+                <div>
+                  <label id="add-asset-owner-label" htmlFor="add-asset-owner" className="text-sm font-medium mb-1 block">שיוך לעובד</label>
                   <SearchableSelect
+                    id="add-asset-owner"
                     value={form.current_owner_id}
                     onChange={(v) => setForm(prev => ({ ...prev, current_owner_id: v }))}
                     options={[
@@ -897,7 +906,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                 </div>
               ) : (
                 <div>
-                  <label className="text-sm font-medium mb-1 block">סוג נכס</label>
+                  <span className="text-sm font-medium mb-1 block">סוג נכס</span>
                   <div className="px-3 py-2 bg-primary/5 border border-primary/20 rounded-lg text-sm text-primary">
                     נכס מוסדי (לא משוייך לעובד)
                   </div>
@@ -937,7 +946,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                   />
                   <button
                     type="button"
-                    className="min-h-9 text-xs text-muted-foreground hover:text-destructive"
+                    className="min-h-9 text-xs text-muted-foreground hover:text-destructive-text"
                     onClick={() => setForm(prev => ({ ...prev, assigned_site_id: "", container_id: "" }))}
                   >
                     הסר שיוך לאתר
@@ -1026,7 +1035,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                       <div className="flex items-center justify-between mb-1 gap-2">
                         <label id={`${fieldId}-label`} htmlFor={fieldId} className="text-sm font-medium">
                           {cf.field_name}
-                          {cf.is_required && <span className="text-destructive mr-1" aria-hidden="true">*</span>}
+                          {cf.is_required && <span className="text-destructive-text mr-1" aria-hidden="true">*</span>}
                         </label>
                         <div className="flex items-center gap-2">
                           {canManage && (cf.field_type === "list" || cf.field_type === "list_multi") && (
@@ -1088,7 +1097,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                                     ) : selected.map(s => (
                                       <span key={s} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-primary/10 text-primary text-xs">
                                         {s}
-                                        <X className="w-3 h-3 cursor-pointer hover:text-destructive" aria-hidden="true" onClick={(e) => { e.stopPropagation(); toggle(s); }} />
+                                        <X className="w-3 h-3 cursor-pointer hover:text-destructive-text" aria-hidden="true" onClick={(e) => { e.stopPropagation(); toggle(s); }} />
                                       </span>
                                     ))}
                                   </span>
@@ -1125,7 +1134,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                           dir={cf.field_type === "date" || cf.field_type === "number" ? "ltr" : "rtl"}
                         />
                       )}
-                      {errors[errKey] && <p id={`${fieldId}-error`} role="alert" className="text-xs text-destructive mt-1">{errors[errKey]}</p>}
+                      {errors[errKey] && <p id={`${fieldId}-error`} role="alert" className="text-xs text-destructive-text mt-1">{errors[errKey]}</p>}
                     </div>
                   );
                 })}
@@ -1171,7 +1180,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                         type="button"
                         label={`הסר את ${f.name}`}
                         onClick={() => setPendingDocs(prev => prev.filter((_, i) => i !== idx))}
-                        className="shrink-0 text-muted-foreground hover:text-destructive"
+                        className="shrink-0 text-muted-foreground hover:text-destructive-text"
                       >
                         <Trash2 aria-hidden="true" />
                       </IconButton>
@@ -1262,7 +1271,11 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                 </div>
 
                 <div className="border border-border rounded-lg max-h-48 overflow-y-auto" role="group" aria-labelledby="add-asset-employees-label" data-invalid={errors.employees ? "true" : undefined}>
-                  {filteredEmployees.length === 0 ? (
+                  {employeesLoading ? (
+                    <div role="status" aria-busy="true" className="p-4 text-center text-sm text-muted-foreground">טוען עובדים…</div>
+                  ) : employeesError ? (
+                    <div role="alert" className="p-4 text-center text-sm text-destructive-text">לא הצלחנו לטעון את רשימת העובדים. סגרו ופתחו שוב את החלון.</div>
+                  ) : filteredEmployees.length === 0 ? (
                     <div className="p-4 text-center text-sm text-muted-foreground">לא נמצאו עובדים</div>
                   ) : (
                     filteredEmployees.map(e => {
@@ -1282,7 +1295,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                     })
                   )}
                 </div>
-                {errors.employees && <p role="alert" className="text-xs text-destructive mt-1">{errors.employees}</p>}
+                {errors.employees && <p role="alert" className="text-xs text-destructive-text mt-1">{errors.employees}</p>}
               </div>
 
               {/* Per-employee fields table */}
@@ -1334,7 +1347,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                               <div className="flex items-center justify-between gap-1">
                                 <span>
                                   {cf.field_name}
-                                  {cf.is_required && <span className="text-destructive mr-1">*</span>}
+                                  {cf.is_required && <span className="text-destructive-text mr-1">*</span>}
                                 </span>
                                 <div className="flex items-center gap-1">
                                   <button type="button" onClick={() => copyToAll(`cf:${cf.field_name}`)}
@@ -1363,7 +1376,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                                 <div className="font-medium truncate">{emp.full_name}</div>
                                 <div className="text-xs text-muted-foreground truncate">{emp.employee_code}</div>
                                 {rowError && (
-                                  <div className="text-xs text-destructive flex items-center gap-1 mt-1">
+                                  <div className="text-xs text-destructive-text flex items-center gap-1 mt-1">
                                     <AlertCircle className="w-3 h-3" /> {rowError}
                                   </div>
                                 )}
@@ -1474,7 +1487,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
           )}
 
           {errorCount > 0 && (
-            <p role="alert" className="flex items-center gap-1.5 text-sm text-destructive">
+            <p role="alert" className="flex items-center gap-1.5 text-sm text-destructive-text">
               <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
               {errorCount === 1 ? "יש שדה אחד לתיקון — הוא מסומן למעלה." : `יש ${errorCount} שדות לתיקון — הם מסומנים למעלה.`}
             </p>

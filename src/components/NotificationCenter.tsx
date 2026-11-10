@@ -31,9 +31,9 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 const SEVERITY = {
-  critical: { label: "קריטי", icon: OctagonAlert, chip: "bg-destructive/10 text-destructive", bar: "bg-destructive" },
-  warning: { label: "אזהרה", icon: AlertTriangle, chip: "bg-warning/15 text-warning", bar: "bg-warning" },
-  info: { label: "מידע", icon: Info, chip: "bg-info/10 text-info", bar: "bg-info" },
+  critical: { label: "קריטי", icon: OctagonAlert, chip: "bg-destructive/10 text-destructive-text", bar: "bg-destructive" },
+  warning: { label: "אזהרה", icon: AlertTriangle, chip: "bg-warning/15 text-warning-text", bar: "bg-warning" },
+  info: { label: "מידע", icon: Info, chip: "bg-info/10 text-info-text", bar: "bg-info" },
 } as const;
 
 const SPRING = { type: "spring", stiffness: 420, damping: 34, mass: 0.8 } as const;
@@ -53,7 +53,7 @@ export function NotificationBell() {
       >
         <Bell className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
         {count > 0 && (
-          <span aria-hidden="true" className="absolute -top-0.5 -left-0.5 min-w-5 h-5 px-1 rounded-full bg-destructive text-destructive-foreground text-[11px] font-bold leading-5 text-center tabular-nums">
+          <span aria-hidden="true" className="absolute -top-0.5 -left-0.5 min-w-5 h-5 px-1 rounded-full bg-destructive text-destructive-foreground text-xs font-bold leading-5 text-center tabular-nums">
             {count > 99 ? "99+" : count}
           </span>
         )}
@@ -160,7 +160,7 @@ function NotificationCenter() {
               >
                 {t.label}
                 {counts[t.id] > 0 && (
-                  <span className="rounded-full bg-muted px-1.5 text-[11px] font-semibold tabular-nums text-muted-foreground">{counts[t.id]}</span>
+                  <span className="rounded-full bg-muted px-1.5 text-xs font-semibold tabular-nums text-muted-foreground">{counts[t.id]}</span>
                 )}
                 {active && (
                   <motion.span
@@ -226,7 +226,7 @@ function NotificationCenter() {
                               {days !== null && (
                                 <>
                                   <span aria-hidden="true">·</span>
-                                  <span className={cn(days < 0 && !isHandled && "font-medium text-destructive")}>{relativeDay(days)}</span>
+                                  <span className={cn(days < 0 && !isHandled && "font-medium text-destructive-text")}>{relativeDay(days)}</span>
                                 </>
                               )}
                             </p>

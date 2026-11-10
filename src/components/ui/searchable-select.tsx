@@ -21,6 +21,8 @@ interface Props {
   allowCreate?: boolean;
   createLabel?: (q: string) => string;
   disabled?: boolean;
+  /** Options are still loading: show that instead of the "no results" text. */
+  loading?: boolean;
   /** Forwarded to the trigger so a Label/FormField can name and describe it. */
   id?: string;
   "aria-label"?: string;
@@ -43,6 +45,7 @@ export function SearchableSelect({
   allowCreate = false,
   createLabel = (q) => `הוסף "${q}"`,
   disabled,
+  loading = false,
   id,
   ...aria
 }: Props) {
@@ -88,9 +91,11 @@ export function SearchableSelect({
         dir={dir}
       >
         <div className="flex items-center border-b px-3" dir={dir}>
-          <Search className="w-4 h-4 opacity-50 shrink-0" />
+          <Search className="w-4 h-4 opacity-50 shrink-0" aria-hidden="true" />
           <input
+            // eslint-disable-next-line jsx-a11y/no-autofocus -- dialog primary field: the search box of the list that just opened
             autoFocus
+            aria-label={searchPlaceholder}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={searchPlaceholder}
@@ -103,7 +108,9 @@ export function SearchableSelect({
           onWheel={(e) => e.stopPropagation()}
           onTouchMove={(e) => e.stopPropagation()}
         >
-          {filtered.length === 0 && !(allowCreate && query.trim()) ? (
+          {loading && options.length === 0 ? (
+            <div className="py-6 text-center text-sm text-muted-foreground" role="status" aria-busy="true">טוען…</div>
+          ) : filtered.length === 0 && !(allowCreate && query.trim()) ? (
             <div className="py-6 text-center text-sm text-muted-foreground">{emptyText}</div>
           ) : (
             <>

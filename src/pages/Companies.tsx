@@ -30,7 +30,7 @@ export default function Companies() {
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const [deleteConfirmName, setDeleteConfirmName] = useState("");
 
-  const { data: companies = [], isLoading } = useQuery({
+  const { data: companies = [], isLoading, error: companiesError, refetch: refetchCompanies } = useQuery({
     queryKey: ["companies"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -291,6 +291,16 @@ export default function Companies() {
                     טוען חברות...
                   </TableCell>
                 </TableRow>
+              ) : companiesError ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-8" role="alert">
+                    <p className="text-sm font-semibold">לא הצלחנו לטעון את החברות</p>
+                    <p className="text-sm text-muted-foreground">בדקו את החיבור לאינטרנט ונסו שוב.</p>
+                    <Button variant="outline" size="sm" className="mt-2" onClick={() => void refetchCompanies()}>
+                      נסה שוב
+                    </Button>
+                  </TableCell>
+                </TableRow>
               ) : companies.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
@@ -323,7 +333,7 @@ export default function Companies() {
                         <Pencil className="w-3 h-3" aria-hidden="true" />
                         ערוך
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => { setDeleteConfirmName(""); setDeleteTarget(c); }} className="gap-1 text-destructive hover:text-destructive" aria-label={`מחק את ${c.name}`}>
+                      <Button variant="ghost" size="sm" onClick={() => { setDeleteConfirmName(""); setDeleteTarget(c); }} className="gap-1 text-destructive-text hover:text-destructive-text" aria-label={`מחק את ${c.name}`}>
                         <Trash2 className="w-3 h-3" aria-hidden="true" />
                         מחק
                       </Button>

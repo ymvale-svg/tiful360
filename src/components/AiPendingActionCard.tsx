@@ -137,10 +137,10 @@ export function AiPendingActionCard({ action, loading, onApprove, onReject }: Pr
     <div
       role="region"
       aria-label="אישור פעולה"
-      className="border border-amber-300 dark:border-amber-700 bg-gradient-to-b from-amber-50 to-background dark:from-amber-950/40 dark:to-background rounded-xl shadow-sm overflow-hidden"
+      className="border border-warning/40 bg-card rounded-xl shadow-sm overflow-hidden"
     >
-      <div className="flex items-center gap-2 px-3 py-2 bg-amber-100/60 dark:bg-amber-900/30 border-b border-amber-200/60 dark:border-amber-800/60">
-        <AlertCircle className="w-4 h-4 text-amber-700 dark:text-amber-300" aria-hidden />
+      <div className="flex items-center gap-2 px-3 py-2 bg-warning/10 border-b border-warning/30">
+        <AlertCircle className="w-4 h-4 text-warning" aria-hidden />
         <p ref={headingRef} tabIndex={-1} className="text-sm font-semibold text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded">נדרש אישור</p>
         <span className="text-xs text-muted-foreground mr-auto">{title}</span>
       </div>

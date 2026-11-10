@@ -465,6 +465,7 @@ export default function Employees() {
                           copyAction("העתק מס' עובד", emp.employee_code),
                           copyAction("העתק מייל", full?.email),
                         ]}>
+                        {/* Row click is a mouse shortcut; the name link is the keyboard/AT open control. */}
                         <tr
                           onClick={() => navigate(`/employees/${emp.id}`)}
                           className="cursor-pointer hover:bg-muted/50"
@@ -479,7 +480,7 @@ export default function Employees() {
                               />
                             </td>
                           )}
-                          <td className="font-mono text-xs text-muted-foreground">{emp.employee_code}</td>
+                          <td className="font-mono text-xs text-muted-foreground tabular-nums">{emp.employee_code}</td>
                           <td className="font-medium">
                             <Link
                               to={`/employees/${emp.id}`}
@@ -505,7 +506,7 @@ export default function Employees() {
                           {canManageUsers && (
                             <td onClick={(e) => e.stopPropagation()}>
                               {hasAccount ? (
-                                <Badge variant="outline" className="gap-1 text-[0.8125rem] bg-success/10 text-success border-success/20">
+                                <Badge variant="outline" className="gap-1 text-[0.8125rem] bg-success/10 text-success-text border-success/20">
                                   <ShieldCheck className="w-3 h-3" aria-hidden="true" />
                                   פעיל
                                 </Badge>
@@ -535,7 +536,7 @@ export default function Employees() {
                           )}
                           <td>
                             {inContacts ? (
-                              <span className="inline-flex items-center gap-1 text-[0.8125rem] text-success">
+                              <span className="inline-flex items-center gap-1 text-[0.8125rem] text-success-text">
                                 <UserCheck className="w-4 h-4" aria-hidden="true" />
                                 מוצג
                               </span>

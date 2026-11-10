@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Activity, AlertTriangle, CheckCircle2, RefreshCw, Wifi, WifiOff } from "lucide-react";
+import { StatusChip, TONE_SURFACE, TONE_TEXT, type StatusTone } from "@/components/feedback/StatusChip";
+import { Activity, AlertTriangle, CheckCircle2, RefreshCw, Wifi, WifiOff, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface FlowState {
@@ -119,14 +119,14 @@ export function AttendanceFlowIndicator() {
   // 4. agent חי + שעון נגיש → תקין (גם אם אין החתמות)
   let status: "live" | "ok" | "no_clock" | "no_agent" | "never" = "never";
   let statusLabel = "agent לא הותקן";
-  let statusColor = "bg-muted text-muted-foreground";
-  let Icon: any = AlertTriangle;
+  let tone: StatusTone = "neutral";
+  let Icon: LucideIcon = AlertTriangle;
   let alertMsg: { title: string; body: string } | null = null;
 
   if (agent.lastSeenAt == null) {
     status = "never";
     statusLabel = "agent לא הותקן";
-    statusColor = "bg-muted text-muted-foreground";
+    tone = "neutral";
     Icon = WifiOff;
     alertMsg = {
       title: "ה-agent עדיין לא דיווח חיבור.",
@@ -136,7 +136,7 @@ export function AttendanceFlowIndicator() {
     status = "no_agent";
     const min = Math.floor((hbAgeSec ?? 0) / 60);
     statusLabel = `agent מנותק ${min >= 60 ? `${Math.floor(min / 60)}ש' ` : ""}${min % 60} דק'`;
-    statusColor = "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/40";
+    tone = "critical";
     Icon = WifiOff;
     alertMsg = {
       title: "אין heartbeat מה-agent.",
@@ -145,7 +145,7 @@ export function AttendanceFlowIndicator() {
   } else if (agent.clockReachable === false) {
     status = "no_clock";
     statusLabel = "השעון לא נגיש";
-    statusColor = "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/40";
+    tone = "warning";
     Icon = AlertTriangle;
     alertMsg = {
       title: `ה-agent חי אך לא מצליח להתחבר לשעון${agent.clockIp ? ` ${agent.clockIp}` : ""}.`,
@@ -154,21 +154,21 @@ export function AttendanceFlowIndicator() {
   } else if (state.countLast5Min > 0) {
     status = "live";
     statusLabel = "זרימה פעילה";
-    statusColor = "bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30";
+    tone = "success";
     Icon = Activity;
   } else {
     status = "ok";
     statusLabel = "מחובר וממתין";
-    statusColor = "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30";
+    tone = "info";
     Icon = CheckCircle2;
   }
 
   return (
-    <Card className={`border ${status === "live" ? "border-green-500/40" : status === "no_agent" ? "border-red-500/40" : status === "no_clock" ? "border-amber-500/40" : ""}`} dir="rtl">
+    <Card className={`border ${status === "live" ? "border-success/40" : status === "no_agent" ? "border-destructive/40" : status === "no_clock" ? "border-warning/40" : ""}`} dir="rtl">
       <CardContent className="p-4">
         {alertMsg && (
-          <div className={`mb-3 flex items-start gap-2 rounded-md border p-2.5 ${status === "no_clock" ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400" : "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-400"}`}>
-            <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+          <div className={`mb-3 flex items-start gap-2 rounded-md border p-2.5 ${status === "no_clock" ? `${TONE_SURFACE.warning} ${TONE_TEXT.warning}` : `${TONE_SURFACE.critical} ${TONE_TEXT.critical}`}`}>
+            <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" aria-hidden="true" />
             <div className="text-xs leading-relaxed">
               <div className="font-semibold">{alertMsg.title}</div>
               <div className="opacity-80">{alertMsg.body}</div>
@@ -178,25 +178,23 @@ export function AttendanceFlowIndicator() {
         <div className="flex flex-wrap items-center gap-3 justify-between">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <Icon className={`w-5 h-5 ${status === "live" ? "text-green-600 dark:text-green-400" : status === "no_agent" ? "text-red-600 dark:text-red-400" : status === "no_clock" ? "text-amber-600 dark:text-amber-400" : "text-blue-600 dark:text-blue-400"}`} />
+              <Icon className={`w-5 h-5 ${status === "live" ? "text-success" : status === "no_agent" ? "text-destructive" : status === "no_clock" ? "text-warning" : "text-info"}`} aria-hidden="true" />
               {status === "live" && (
-                <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5" aria-hidden="true">
+                  <span className="animate-ping motion-reduce:animate-none absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-success"></span>
                 </span>
               )}
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-semibold text-sm">סטטוס שעון נוכחות</span>
-                <Badge variant="outline" className={statusColor}>{statusLabel}</Badge>
+                <StatusChip tone={tone} icon={Icon}>{statusLabel}</StatusChip>
                 {agentAlive && agent.clockReachable === true && (
-                  <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/30 gap-1">
-                    <Wifi className="w-3 h-3" /> שעון מחובר
-                  </Badge>
+                  <StatusChip tone="success" icon={Wifi}>שעון מחובר</StatusChip>
                 )}
               </div>
-              <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-x-3">
+              <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-x-3 tabular-nums">
                 <span>פעימה אחרונה: {formatAgo(state.lastPunchAt)}</span>
                 <span>heartbeat: {formatAgo(agent.lastSeenAt)}</span>
                 {agent.agentVersion && <span>ver {agent.agentVersion}</span>}
@@ -215,8 +213,9 @@ export function AttendanceFlowIndicator() {
               disabled={isRefreshing || !activeCompanyId}
               className="h-8 px-2"
               title={`עודכן: ${new Date(lastRefreshAt).toLocaleTimeString("he-IL")}`}
+              aria-label="רענן סטטוס שעון נוכחות"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} aria-hidden="true" />
             </Button>
           </div>
         </div>
@@ -228,7 +227,7 @@ export function AttendanceFlowIndicator() {
 function Stat({ label, value, highlight }: { label: string; value: number; highlight?: boolean }) {
   return (
     <div className="text-center">
-      <div className={`font-bold text-base ${highlight ? "text-green-600 dark:text-green-400" : ""}`}>{value}</div>
+      <div className={`font-bold text-base tabular-nums ${highlight ? "text-success-text" : ""}`}>{value}</div>
       <div className="text-muted-foreground">{label}</div>
     </div>
   );

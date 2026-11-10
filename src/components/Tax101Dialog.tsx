@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, forwardRef } from "react";
+import { useEffect, useId, useMemo, useRef, useState, forwardRef } from "react";
 import { Stepper } from "@/components/ui/stepper";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { useSubmitTax101 } from "@/hooks/useTax101";
 import { supabase } from "@/integrations/supabase/client";
 import { validateTax101 } from "@/lib/validateTax101";
 import { Tax101ValidationPanel } from "@/components/Tax101ValidationPanel";
+import { focusFirstInvalid } from "@/components/feedback/FormField";
 
 interface Dependent {
   full_name: string;
@@ -212,6 +213,9 @@ const emptyForm = (employee?: any): Tax101FormData => {
   };
 };
 
+/** Visual required marker; the control itself carries aria-required. */
+const Req = () => <span className="text-destructive ms-0.5" aria-hidden="true">*</span>;
+
 const PrefilledBadge = () => (
   <Badge variant="secondary" className="text-xs h-5 px-1.5 font-normal opacity-70">
     מולא מהפרופיל
@@ -230,6 +234,8 @@ interface Props {
   /** Employer details supplied by the caller (token flow — anon cannot read tables). */
   employerOverride?: { name: string; tax_id: string; address?: string; phone?: string } | null;
 }
+
+const MISSING_ID_MSG = "יש להזין תעודת זהות או מספר דרכון";
 
 const STEPS = [
   "פרטים אישיים",
@@ -250,6 +256,36 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
   const [employerInfo, setEmployerInfo] = useState<{ name: string; tax_id: string; address?: string; phone?: string } | null>(null);
   const sigRef = useRef<SignaturePadHandle>(null);
   const previewRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  // Stable, per-instance ids so labels/errors never clash if the dialog renders twice.
+  const uid = useId();
+  const fid = (name: string) => `t101${uid}-${name}`;
+  // Inline errors of the current step, keyed by field name.
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof Tax101FormData, string>>>({});
+  const [focusRequest, setFocusRequest] = useState(0);
+
+  useEffect(() => {
+    if (focusRequest > 0) focusFirstInvalid(bodyRef.current);
+  }, [focusRequest]);
+
+  /** id + required/invalid/describedby wiring for a validated control. */
+  const fieldA11y = (name: keyof Tax101FormData, required = false) => {
+    const err = fieldErrors[name];
+    return {
+      id: fid(name),
+      "aria-required": required || undefined,
+      "aria-invalid": err ? true : undefined,
+      "aria-describedby": err ? `${fid(name)}-error` : undefined,
+    } as const;
+  };
+  const fieldError = (name: keyof Tax101FormData) =>
+    fieldErrors[name] ? (
+      <p id={`${fid(name)}-error`} className="text-xs font-medium text-destructive-text">{fieldErrors[name]}</p>
+    ) : null;
+  const goToStep = (s: number) => {
+    setFieldErrors({});
+    setStep(s);
+  };
 
   // Live validation against the official 0101/130 requirements.
   // Recomputed on every change so step 5 always shows the current state.
@@ -299,6 +335,7 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
   useEffect(() => {
     if (!open) return;
     setStep(0);
+    setFieldErrors({});
     const saved = localStorage.getItem(draftKey);
     if (saved) {
       try {
@@ -318,8 +355,22 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
     return () => clearInterval(t);
   }, [open, data, draftKey]);
 
-  const update = <K extends keyof Tax101FormData>(k: K, v: Tax101FormData[K]) =>
+  const update = <K extends keyof Tax101FormData>(k: K, v: Tax101FormData[K]) => {
     setData((d) => ({ ...d, [k]: v }));
+    setFieldErrors((e) => {
+      // ID and passport are one "either" requirement: filling one clears the shared "missing" error.
+      const keys: Array<keyof Tax101FormData> = k === "id_number" || k === "passport_number" ? ["id_number", "passport_number"] : [k];
+      const nextErrors = { ...e };
+      let changed = false;
+      for (const key of keys) {
+        if (key in nextErrors && (key === k || nextErrors[key] === MISSING_ID_MSG)) {
+          delete nextErrors[key];
+          changed = true;
+        }
+      }
+      return changed ? nextErrors : e;
+    });
+  };
 
   const addDependent = () =>
     setData((d) => ({
@@ -361,33 +412,47 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
       },
     }));
 
-  const validateStep = (): string | null => {
+  /** Same rules and messages as before, but every failing field of the step is reported (in the old order). */
+  const validateStep = (): Array<[keyof Tax101FormData, string]> => {
+    const errs: Array<[keyof Tax101FormData, string]> = [];
     if (step === 0) {
-      if (!data.first_name || !data.last_name) return "יש להזין שם פרטי ושם משפחה";
-      if (!data.id_number && !data.passport_number) return "יש להזין תעודת זהות או מספר דרכון";
-      if (data.id_number && !/^\d{9}$/.test(data.id_number)) return "תעודת זהות לא תקינה (9 ספרות)";
-      if (!data.gender) return "יש לבחור מין";
-      if (!data.birth_date) return "יש להזין תאריך לידה";
+      const nameMsg = "יש להזין שם פרטי ושם משפחה";
+      if (!data.first_name) errs.push(["first_name", nameMsg]);
+      if (!data.last_name) errs.push(["last_name", nameMsg]);
+      if (!data.id_number && !data.passport_number) {
+        errs.push(["id_number", MISSING_ID_MSG], ["passport_number", MISSING_ID_MSG]);
+      }
+      if (data.id_number && !/^\d{9}$/.test(data.id_number)) errs.push(["id_number", "תעודת זהות לא תקינה (9 ספרות)"]);
+      if (!data.gender) errs.push(["gender", "יש לבחור מין"]);
+      if (!data.birth_date) errs.push(["birth_date", "יש להזין תאריך לידה"]);
     }
     if (step === 1) {
-      if (!data.city || !data.street) return "יש למלא כתובת מלאה";
-      if (!data.marital_status) return "יש לבחור מצב משפחתי";
-      if (data.health_fund_member && !data.health_fund_name) return "יש לבחור שם קופת חולים";
-      if (!data.kibbutz_member) return "יש לבחור סטטוס חבר קיבוץ/מושב שיתופי";
+      const addrMsg = "יש למלא כתובת מלאה";
+      if (!data.street) errs.push(["street", addrMsg]);
+      if (!data.city) errs.push(["city", addrMsg]);
+      if (!data.marital_status) errs.push(["marital_status", "יש לבחור מצב משפחתי"]);
+      if (data.health_fund_member && !data.health_fund_name) errs.push(["health_fund_name", "יש לבחור שם קופת חולים"]);
+      if (!data.kibbutz_member) errs.push(["kibbutz_member", "יש לבחור סטטוס חבר קיבוץ/מושב שיתופי"]);
     }
-    return null;
+    return errs;
   };
 
   const next = () => {
-    const err = validateStep();
-    if (err) {
-      toast({ title: "חסרים שדות", description: err, variant: "destructive" });
+    const errs = validateStep();
+    if (errs.length > 0) {
+      setFieldErrors(Object.fromEntries(errs) as Partial<Record<keyof Tax101FormData, string>>);
+      setFocusRequest((n) => n + 1);
+      toast({ title: "חסרים שדות", description: errs[0][1], variant: "destructive" });
       return;
     }
+    setFieldErrors({});
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
   };
 
-  const prev = () => setStep((s) => Math.max(s - 1, 0));
+  const prev = () => {
+    setFieldErrors({});
+    setStep((s) => Math.max(s - 1, 0));
+  };
 
   const handleSubmit = async () => {
     // Block on official-form validation errors before producing the PDF.
@@ -423,7 +488,7 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
           _pdf_url: pdfUrl,
         });
         if (error) throw error;
-        try { await supabase.functions.invoke("send-tax101-email", { body: { form_id: formId, access_token: tokenFromUrl, log_activity: true } }); } catch {}
+        try { await supabase.functions.invoke("send-tax101-email", { body: { form_id: formId, access_token: tokenFromUrl, log_activity: true } }); } catch { /* email is best-effort; the form is already submitted */ }
       } else {
         await submit.mutateAsync({ formId, formData: data, signatureData: sig, pdfUrl });
       }
@@ -447,7 +512,7 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" dir="rtl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-primary" />
+            <FileText className="w-5 h-5 text-primary" aria-hidden="true" />
             טופס 101 לשנת {taxYear}
           </DialogTitle>
           <DialogDescription>
@@ -455,59 +520,65 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
           </DialogDescription>
         </DialogHeader>
 
-        <Stepper steps={STEPS.map((label) => ({ label }))} current={step} onStepClick={setStep} label="שלבי הטופס" className="mb-2" />
+        <Stepper steps={STEPS.map((label) => ({ label }))} current={step} onStepClick={goToStep} label="שלבי הטופס" className="mb-2" />
 
-        <div className="space-y-4 py-2">
+        <div ref={bodyRef} className="space-y-4 py-2">
           {/* Step 0: Personal */}
           {step === 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="flex items-center gap-2">שם פרטי {employee?.full_name && <PrefilledBadge />}</Label>
-                <Input value={data.first_name} onChange={(e) => update("first_name", e.target.value)} />
+                <Label htmlFor={fid("first_name")} className="flex items-center gap-2"><span>שם פרטי<Req /></span> {employee?.full_name && <PrefilledBadge />}</Label>
+                <Input {...fieldA11y("first_name", true)} value={data.first_name} onChange={(e) => update("first_name", e.target.value)} />
+                {fieldError("first_name")}
               </div>
               <div className="space-y-1.5">
-                <Label className="flex items-center gap-2">שם משפחה {employee?.full_name && <PrefilledBadge />}</Label>
-                <Input value={data.last_name} onChange={(e) => update("last_name", e.target.value)} />
+                <Label htmlFor={fid("last_name")} className="flex items-center gap-2"><span>שם משפחה<Req /></span> {employee?.full_name && <PrefilledBadge />}</Label>
+                <Input {...fieldA11y("last_name", true)} value={data.last_name} onChange={(e) => update("last_name", e.target.value)} />
+                {fieldError("last_name")}
               </div>
               <div className="space-y-1.5">
-                <Label className="flex items-center gap-2">תעודת זהות (9 ספרות) {employee?.id_number && <PrefilledBadge />}</Label>
-                <Input value={data.id_number} onChange={(e) => update("id_number", e.target.value)} maxLength={9} dir="ltr" />
+                <Label htmlFor={fid("id_number")} className="flex items-center gap-2">תעודת זהות (9 ספרות) {employee?.id_number && <PrefilledBadge />}</Label>
+                <Input {...fieldA11y("id_number", !data.passport_number)} value={data.id_number} onChange={(e) => update("id_number", e.target.value)} maxLength={9} dir="ltr" />
+                {fieldError("id_number")}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="t101-passport_number">מספר דרכון <span className="text-muted-foreground text-xs">(למי שאין מס' זהות)</span></Label>
-                <Input id="t101-passport_number" value={data.passport_number} onChange={(e) => update("passport_number", e.target.value)} dir="ltr" />
+                <Label htmlFor={fid("passport_number")}>מספר דרכון <span className="text-muted-foreground text-xs">(למי שאין מס' זהות)</span></Label>
+                <Input {...fieldA11y("passport_number", !data.id_number)} value={data.passport_number} onChange={(e) => update("passport_number", e.target.value)} dir="ltr" />
+                {fieldError("passport_number")}
               </div>
               <div className="space-y-1.5">
-                <Label className="flex items-center gap-2">מין {employee?.gender && <PrefilledBadge />}</Label>
-                <select className="w-full h-10 px-3 rounded-md bg-background border border-input" value={data.gender} onChange={(e) => update("gender", e.target.value as any)}>
+                <Label htmlFor={fid("gender")} className="flex items-center gap-2"><span>מין<Req /></span> {employee?.gender && <PrefilledBadge />}</Label>
+                <select {...fieldA11y("gender", true)} className="w-full h-10 px-3 rounded-md bg-background border border-input aria-[invalid=true]:border-destructive" value={data.gender} onChange={(e) => update("gender", e.target.value as Tax101FormData["gender"])}>
                   <option value="">בחר...</option>
                   <option value="male">זכר</option>
                   <option value="female">נקבה</option>
                 </select>
+                {fieldError("gender")}
               </div>
               <div className="space-y-1.5">
-                <Label className="flex items-center gap-2">תאריך לידה {employee?.birth_date && <PrefilledBadge />}</Label>
-                <Input type="date" value={data.birth_date} onChange={(e) => update("birth_date", e.target.value)} />
+                <Label htmlFor={fid("birth_date")} className="flex items-center gap-2"><span>תאריך לידה<Req /></span> {employee?.birth_date && <PrefilledBadge />}</Label>
+                <Input {...fieldA11y("birth_date", true)} type="date" value={data.birth_date} onChange={(e) => update("birth_date", e.target.value)} />
+                {fieldError("birth_date")}
               </div>
               <div className="space-y-1.5">
-                <Label className="flex items-center gap-2">ארץ לידה {employee?.country_of_birth && <PrefilledBadge />}</Label>
-                <Input value={data.country_of_birth} onChange={(e) => update("country_of_birth", e.target.value)} />
+                <Label htmlFor={fid("country_of_birth")} className="flex items-center gap-2">ארץ לידה {employee?.country_of_birth && <PrefilledBadge />}</Label>
+                <Input id={fid("country_of_birth")} value={data.country_of_birth} onChange={(e) => update("country_of_birth", e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label className="flex items-center gap-2">תאריך עלייה {employee?.aliyah_date && <PrefilledBadge />}</Label>
-                <Input type="date" value={data.aliyah_date} onChange={(e) => update("aliyah_date", e.target.value)} />
+                <Label htmlFor={fid("aliyah_date")} className="flex items-center gap-2">תאריך עלייה {employee?.aliyah_date && <PrefilledBadge />}</Label>
+                <Input id={fid("aliyah_date")} type="date" value={data.aliyah_date} onChange={(e) => update("aliyah_date", e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label className="flex items-center gap-2">טלפון {employee?.phone && <PrefilledBadge />}</Label>
-                <Input value={data.phone} onChange={(e) => update("phone", e.target.value)} />
+                <Label htmlFor={fid("phone")} className="flex items-center gap-2">טלפון {employee?.phone && <PrefilledBadge />}</Label>
+                <Input id={fid("phone")} value={data.phone} onChange={(e) => update("phone", e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="t101-mobile_phone">טלפון נייד</Label>
-                <Input id="t101-mobile_phone" value={data.mobile_phone} onChange={(e) => update("mobile_phone", e.target.value)} />
+                <Label htmlFor={fid("mobile_phone")}>טלפון נייד</Label>
+                <Input id={fid("mobile_phone")} value={data.mobile_phone} onChange={(e) => update("mobile_phone", e.target.value)} />
               </div>
               <div className="md:col-span-2 space-y-1.5">
-                <Label className="flex items-center gap-2">אימייל {employee?.email && <PrefilledBadge />}</Label>
-                <Input type="email" value={data.email} onChange={(e) => update("email", e.target.value)} />
+                <Label htmlFor={fid("email")} className="flex items-center gap-2">אימייל {employee?.email && <PrefilledBadge />}</Label>
+                <Input id={fid("email")} type="email" value={data.email} onChange={(e) => update("email", e.target.value)} />
               </div>
             </div>
           )}
@@ -518,32 +589,34 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
               <h3 className="text-sm font-semibold text-muted-foreground">כתובת מגורים</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="md:col-span-2 space-y-1.5">
-                  <Label htmlFor="t101-street">רחוב</Label>
-                  <Input id="t101-street" value={data.street} onChange={(e) => update("street", e.target.value)} />
+                  <Label htmlFor={fid("street")}>רחוב<Req /></Label>
+                  <Input {...fieldA11y("street", true)} value={data.street} onChange={(e) => update("street", e.target.value)} />
+                  {fieldError("street")}
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="t101-house_number">מספר בית</Label>
-                  <Input id="t101-house_number" value={data.house_number} onChange={(e) => update("house_number", e.target.value)} />
+                  <Label htmlFor={fid("house_number")}>מספר בית</Label>
+                  <Input id={fid("house_number")} value={data.house_number} onChange={(e) => update("house_number", e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="t101-city">עיר</Label>
-                  <Input id="t101-city" value={data.city} onChange={(e) => update("city", e.target.value)} />
+                  <Label htmlFor={fid("city")}>עיר<Req /></Label>
+                  <Input {...fieldA11y("city", true)} value={data.city} onChange={(e) => update("city", e.target.value)} />
+                  {fieldError("city")}
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="t101-postal_code">מיקוד</Label>
-                  <Input id="t101-postal_code" value={data.postal_code} onChange={(e) => update("postal_code", e.target.value)} />
+                  <Label htmlFor={fid("postal_code")}>מיקוד</Label>
+                  <Input id={fid("postal_code")} value={data.postal_code} onChange={(e) => update("postal_code", e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="t101-po_box">ת.ד.</Label>
-                  <Input id="t101-po_box" value={data.po_box} onChange={(e) => update("po_box", e.target.value)} />
+                  <Label htmlFor={fid("po_box")}>ת.ד.</Label>
+                  <Input id={fid("po_box")} value={data.po_box} onChange={(e) => update("po_box", e.target.value)} />
                 </div>
               </div>
 
               <h3 className="text-sm font-semibold text-muted-foreground pt-2">מצב משפחתי</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="t101-marital_status">מצב משפחתי</Label>
-                  <select id="t101-marital_status" className="w-full h-10 px-3 rounded-md bg-background border border-input" value={data.marital_status} onChange={(e) => update("marital_status", e.target.value as any)}>
+                  <Label htmlFor={fid("marital_status")}>מצב משפחתי<Req /></Label>
+                  <select {...fieldA11y("marital_status", true)} className="w-full h-10 px-3 rounded-md bg-background border border-input aria-[invalid=true]:border-destructive" value={data.marital_status} onChange={(e) => update("marital_status", e.target.value as Tax101FormData["marital_status"])}>
                     <option value="">בחר...</option>
                     <option value="single">רווק/ה</option>
                     <option value="married">נשוי/אה</option>
@@ -551,22 +624,23 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                     <option value="widowed">אלמן/ה</option>
                     <option value="separated">פרוד/ה</option>
                   </select>
+                  {fieldError("marital_status")}
                 </div>
                 <div className="space-y-1.5 flex items-end gap-4">
-                  <label className="flex items-center gap-2 text-sm">
-                    <Checkbox checked={data.is_israeli_resident} onCheckedChange={(v) => update("is_israeli_resident", !!v)} />
+                  <label htmlFor={fid("is_israeli_resident")} className="flex items-center gap-2 text-sm">
+                    <Checkbox id={fid("is_israeli_resident")} checked={data.is_israeli_resident} onCheckedChange={(v) => update("is_israeli_resident", !!v)} />
                     תושב/ת ישראל
                   </label>
                 </div>
               </div>
 
               <div className="space-y-2 p-3 bg-muted/30 rounded-lg">
-                <p className="text-sm font-medium leading-none">חבר/ה בקופת חולים</p>
-                <div className="flex items-center gap-6">
+                <p id={fid("health_fund_member-label")} className="text-sm font-medium leading-none">חבר/ה בקופת חולים</p>
+                <div role="group" aria-labelledby={fid("health_fund_member-label")} className="flex flex-wrap items-center gap-6">
                   <label className="flex items-center gap-2 text-sm cursor-pointer">
                     <input
                       type="radio"
-                      name="health_fund_member"
+                      name={fid("health_fund_member")}
                       checked={!data.health_fund_member}
                       onChange={() => {
                         update("health_fund_member", false);
@@ -578,7 +652,7 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                   <label className="flex items-center gap-2 text-sm cursor-pointer">
                     <input
                       type="radio"
-                      name="health_fund_member"
+                      name={fid("health_fund_member")}
                       checked={data.health_fund_member}
                       onChange={() => update("health_fund_member", true)}
                     />
@@ -586,7 +660,9 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                   </label>
                   {data.health_fund_member && (
                     <select
-                      className="h-10 px-3 rounded-md bg-background border border-input text-sm"
+                      {...fieldA11y("health_fund_name", true)}
+                      aria-label="שם קופת החולים"
+                      className="h-10 px-3 rounded-md bg-background border border-input text-sm aria-[invalid=true]:border-destructive"
                       value={data.health_fund_name}
                       onChange={(e) => update("health_fund_name", e.target.value)}
                     >
@@ -598,16 +674,24 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                     </select>
                   )}
                 </div>
+                {fieldError("health_fund_name")}
               </div>
 
               <div className="space-y-2 p-3 bg-muted/30 rounded-lg">
-                <p className="text-sm font-medium leading-none">חבר קיבוץ / מושב שיתופי</p>
-                <div className="flex flex-col gap-2">
+                <p id={fid("kibbutz_member-label")} className="text-sm font-medium leading-none">חבר קיבוץ / מושב שיתופי<Req /></p>
+                <div
+                  role="radiogroup"
+                  aria-labelledby={fid("kibbutz_member-label")}
+                  aria-required
+                  aria-describedby={fieldErrors.kibbutz_member ? `${fid("kibbutz_member")}-error` : undefined}
+                  className="flex flex-col gap-2"
+                >
                   <label className="flex items-center gap-2 text-sm cursor-pointer">
                     <input
                       type="radio"
-                      name="kibbutz_member"
+                      name={fid("kibbutz_member")}
                       checked={data.kibbutz_member === "no"}
+                      aria-invalid={fieldErrors.kibbutz_member ? true : undefined}
                       onChange={() => update("kibbutz_member", "no")}
                     />
                     לא
@@ -615,7 +699,7 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                   <label className="flex items-center gap-2 text-sm cursor-pointer">
                     <input
                       type="radio"
-                      name="kibbutz_member"
+                      name={fid("kibbutz_member")}
                       checked={data.kibbutz_member === "yes_transferred"}
                       onChange={() => update("kibbutz_member", "yes_transferred")}
                     />
@@ -624,13 +708,14 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                   <label className="flex items-center gap-2 text-sm cursor-pointer">
                     <input
                       type="radio"
-                      name="kibbutz_member"
+                      name={fid("kibbutz_member")}
                       checked={data.kibbutz_member === "yes_not_transferred"}
                       onChange={() => update("kibbutz_member", "yes_not_transferred")}
                     />
                     כן — ההכנסות ממעסיק זה אינן מועברות לקיבוץ
                   </label>
                 </div>
+                {fieldError("kibbutz_member")}
               </div>
 
               {data.marital_status === "married" && (
@@ -638,38 +723,38 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                   <h4 className="text-sm font-semibold">פרטים על בן/בת הזוג</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <Label htmlFor="t101-spouse_last_name">שם משפחה</Label>
-                      <Input id="t101-spouse_last_name" value={data.spouse_last_name} onChange={(e) => update("spouse_last_name", e.target.value)} />
+                      <Label htmlFor={fid("spouse_last_name")}>שם משפחה</Label>
+                      <Input id={fid("spouse_last_name")} value={data.spouse_last_name} onChange={(e) => update("spouse_last_name", e.target.value)} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="t101-spouse_first_name">שם פרטי</Label>
-                      <Input id="t101-spouse_first_name" value={data.spouse_first_name} onChange={(e) => update("spouse_first_name", e.target.value)} />
+                      <Label htmlFor={fid("spouse_first_name")}>שם פרטי</Label>
+                      <Input id={fid("spouse_first_name")} value={data.spouse_first_name} onChange={(e) => update("spouse_first_name", e.target.value)} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="t101-spouse_id">מספר זהות (9 ספרות)</Label>
-                      <Input id="t101-spouse_id" value={data.spouse_id} onChange={(e) => update("spouse_id", e.target.value)} dir="ltr" />
+                      <Label htmlFor={fid("spouse_id")}>מספר זהות (9 ספרות)</Label>
+                      <Input id={fid("spouse_id")} value={data.spouse_id} onChange={(e) => update("spouse_id", e.target.value)} dir="ltr" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="t101-spouse_passport">מספר דרכון <span className="text-muted-foreground text-xs">(למי שאין מס' זהות)</span></Label>
-                      <Input id="t101-spouse_passport" value={data.spouse_passport} onChange={(e) => update("spouse_passport", e.target.value)} dir="ltr" />
+                      <Label htmlFor={fid("spouse_passport")}>מספר דרכון <span className="text-muted-foreground text-xs">(למי שאין מס' זהות)</span></Label>
+                      <Input id={fid("spouse_passport")} value={data.spouse_passport} onChange={(e) => update("spouse_passport", e.target.value)} dir="ltr" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="t101-spouse_birth_date">תאריך לידה</Label>
-                      <Input id="t101-spouse_birth_date" type="date" value={data.spouse_birth_date} onChange={(e) => update("spouse_birth_date", e.target.value)} />
+                      <Label htmlFor={fid("spouse_birth_date")}>תאריך לידה</Label>
+                      <Input id={fid("spouse_birth_date")} type="date" value={data.spouse_birth_date} onChange={(e) => update("spouse_birth_date", e.target.value)} />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="t101-spouse_aliyah_date">תאריך עליה</Label>
-                      <Input id="t101-spouse_aliyah_date" type="date" value={data.spouse_aliyah_date} onChange={(e) => update("spouse_aliyah_date", e.target.value)} />
+                      <Label htmlFor={fid("spouse_aliyah_date")}>תאריך עליה</Label>
+                      <Input id={fid("spouse_aliyah_date")} type="date" value={data.spouse_aliyah_date} onChange={(e) => update("spouse_aliyah_date", e.target.value)} />
                     </div>
                   </div>
 
                   <div className="space-y-2 pt-2 border-t border-border/40">
-                    <Label className="text-sm font-semibold">הכנסות בן/בת הזוג</Label>
-                    <div className="space-y-2">
+                    <p id={fid("spouse_income_status-label")} className="text-sm font-semibold leading-none">הכנסות בן/בת הזוג</p>
+                    <div role="group" aria-labelledby={fid("spouse_income_status-label")} className="space-y-2">
                       <label className="flex items-center gap-2 text-sm">
                         <input
                           type="radio"
-                          name="spouse_income_status"
+                          name={fid("spouse_income_status")}
                           checked={data.spouse_income_status === "no_income"}
                           onChange={() => {
                             update("spouse_income_status", "no_income");
@@ -682,7 +767,7 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                       <label className="flex items-center gap-2 text-sm">
                         <input
                           type="radio"
-                          name="spouse_income_status"
+                          name={fid("spouse_income_status")}
                           checked={data.spouse_income_status === "has_income"}
                           onChange={() => {
                             update("spouse_income_status", "has_income");
@@ -693,22 +778,22 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                       </label>
                       {data.spouse_income_status === "has_income" && (
                         <div className="flex flex-wrap gap-4 pr-6">
-                          <label className="flex items-center gap-2 text-sm">
-                            <Checkbox
+                          <label htmlFor={fid("spouse_income_sources-work")} className="flex items-center gap-2 text-sm">
+                            <Checkbox id={fid("spouse_income_sources-work")}
                               checked={data.spouse_income_sources.work}
                               onCheckedChange={(v) => update("spouse_income_sources", { ...data.spouse_income_sources, work: !!v })}
                             />
                             עבודה
                           </label>
-                          <label className="flex items-center gap-2 text-sm">
-                            <Checkbox
+                          <label htmlFor={fid("spouse_income_sources-pension")} className="flex items-center gap-2 text-sm">
+                            <Checkbox id={fid("spouse_income_sources-pension")}
                               checked={data.spouse_income_sources.pension}
                               onCheckedChange={(v) => update("spouse_income_sources", { ...data.spouse_income_sources, pension: !!v })}
                             />
                             קצבה
                           </label>
-                          <label className="flex items-center gap-2 text-sm">
-                            <Checkbox
+                          <label htmlFor={fid("spouse_income_sources-business")} className="flex items-center gap-2 text-sm">
+                            <Checkbox id={fid("spouse_income_sources-business")}
                               checked={data.spouse_income_sources.business}
                               onCheckedChange={(v) => update("spouse_income_sources", { ...data.spouse_income_sources, business: !!v })}
                             />
@@ -719,7 +804,7 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                       <label className="flex items-center gap-2 text-sm">
                         <input
                           type="radio"
-                          name="spouse_income_status"
+                          name={fid("spouse_income_status")}
                           checked={data.spouse_income_status === "other_income"}
                           onChange={() => update("spouse_income_status", "other_income")}
                         />
@@ -738,7 +823,7 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold">ילדים מתחת לגיל 19</h3>
                 <Button size="sm" variant="outline" onClick={addDependent} className="gap-1">
-                  <Plus className="w-3 h-3" /> הוסף ילד/ה
+                  <Plus className="w-3 h-3" aria-hidden="true" /> הוסף ילד/ה
                 </Button>
               </div>
               {data.dependents.length === 0 ? (
@@ -748,30 +833,30 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                   {data.dependents.map((dep, i) => (
                     <div key={i} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end p-3 bg-muted/30 rounded-lg">
                       <div className="md:col-span-4 space-y-1">
-                        <Label className="text-xs">שם מלא</Label>
-                        <Input value={dep.full_name} onChange={(e) => updateDependent(i, "full_name", e.target.value)} />
+                        <Label htmlFor={fid(`dep-${i}-full_name`)} className="text-xs">שם מלא</Label>
+                        <Input id={fid(`dep-${i}-full_name`)} value={dep.full_name} onChange={(e) => updateDependent(i, "full_name", e.target.value)} />
                       </div>
                       <div className="md:col-span-3 space-y-1">
-                        <Label className="text-xs">ת"ז</Label>
-                        <Input value={dep.id_number} onChange={(e) => updateDependent(i, "id_number", e.target.value)} maxLength={9} />
+                        <Label htmlFor={fid(`dep-${i}-id_number`)} className="text-xs">ת"ז</Label>
+                        <Input id={fid(`dep-${i}-id_number`)} value={dep.id_number} onChange={(e) => updateDependent(i, "id_number", e.target.value)} maxLength={9} />
                       </div>
                       <div className="md:col-span-2 space-y-1">
-                        <Label className="text-xs">תאריך לידה</Label>
-                        <Input type="date" value={dep.birth_date} onChange={(e) => updateDependent(i, "birth_date", e.target.value)} />
+                        <Label htmlFor={fid(`dep-${i}-birth_date`)} className="text-xs">תאריך לידה</Label>
+                        <Input id={fid(`dep-${i}-birth_date`)} type="date" value={dep.birth_date} onChange={(e) => updateDependent(i, "birth_date", e.target.value)} />
                       </div>
                       <div className="md:col-span-2 flex flex-col gap-1 text-xs">
-                        <label className="flex items-center gap-1">
-                          <Checkbox checked={dep.is_in_custody} onCheckedChange={(v) => updateDependent(i, "is_in_custody", !!v)} />
+                        <label htmlFor={fid(`dep-${i}-is_in_custody`)} className="flex items-center gap-1">
+                          <Checkbox id={fid(`dep-${i}-is_in_custody`)} checked={dep.is_in_custody} onCheckedChange={(v) => updateDependent(i, "is_in_custody", !!v)} />
                           בחזקתי
                         </label>
-                        <label className="flex items-center gap-1">
-                          <Checkbox checked={dep.receives_allowance} onCheckedChange={(v) => updateDependent(i, "receives_allowance", !!v)} />
+                        <label htmlFor={fid(`dep-${i}-receives_allowance`)} className="flex items-center gap-1">
+                          <Checkbox id={fid(`dep-${i}-receives_allowance`)} checked={dep.receives_allowance} onCheckedChange={(v) => updateDependent(i, "receives_allowance", !!v)} />
                           קצבת ילדים
                         </label>
                       </div>
                       <div className="md:col-span-1">
                         <Button size="icon" variant="ghost" aria-label={`הסר ילד ${i + 1}`} onClick={() => removeDependent(i)}>
-                          <Trash2 className="w-4 h-4 text-destructive" />
+                          <Trash2 className="w-4 h-4 text-destructive" aria-hidden="true" />
                         </Button>
                       </div>
                     </div>
@@ -786,8 +871,8 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="t101-income_type">ד. סוג ההכנסה ממעסיק זה</Label>
-                  <select id="t101-income_type" className="w-full h-10 px-3 rounded-md bg-background border border-input" value={data.income_type} onChange={(e) => update("income_type", e.target.value as any)}>
+                  <Label htmlFor={fid("income_type")}>ד. סוג ההכנסה ממעסיק זה</Label>
+                  <select id={fid("income_type")} className="w-full h-10 px-3 rounded-md bg-background border border-input" value={data.income_type} onChange={(e) => update("income_type", e.target.value as any)}>
                     <option value="">בחר…</option>
                     <option value="monthly">(2) משכורת חודש</option>
                     <option value="monthly_additional">(3) משכורת בעד משרה נוספת</option>
@@ -799,8 +884,8 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="flex items-center gap-2">תאריך תחילת עבודה בשנת המס {employee?.start_date && <PrefilledBadge />}</Label>
-                  <Input type="date" value={data.job_start_date} onChange={(e) => update("job_start_date", e.target.value)} />
+                  <Label htmlFor={fid("job_start_date")} className="flex items-center gap-2">תאריך תחילת עבודה בשנת המס {employee?.start_date && <PrefilledBadge />}</Label>
+                  <Input id={fid("job_start_date")} type="date" value={data.job_start_date} onChange={(e) => update("job_start_date", e.target.value)} />
                 </div>
               </div>
 
@@ -813,8 +898,9 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                   const tc = data.tax_credits;
                   const setTc = (patch: Partial<typeof tc>) =>
                     update("tax_credits", { ...tc, ...patch });
-                  const numInput = (val: number | "", onChange: (v: number | "") => void) => (
+                  const numInput = (id: string, val: number | "", onChange: (v: number | "") => void) => (
                     <Input
+                      id={id}
                       type="number"
                       min={0}
                       className="h-11 w-20 text-base"
@@ -827,29 +913,29 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                     const k = (suf: string) => `children_${prefix}_${suf}` as keyof typeof tc;
                     return (
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mr-6 mt-2 text-xs">
-                        <label className="flex items-center gap-2">
+                        <label htmlFor={fid(k("born_this_year"))} className="flex items-center gap-2">
                           נולדו בשנת המס:
-                          {numInput(tc[k("born_this_year")] as any, (v) => setTc({ [k("born_this_year")]: v } as any))}
+                          {numInput(fid(k("born_this_year")), tc[k("born_this_year")] as number | "", (v) => setTc({ [k("born_this_year")]: v } as Partial<typeof tc>))}
                         </label>
-                        <label className="flex items-center gap-2">
+                        <label htmlFor={fid(k("age_1"))} className="flex items-center gap-2">
                           בני 1:
-                          {numInput(tc[k("age_1")] as any, (v) => setTc({ [k("age_1")]: v } as any))}
+                          {numInput(fid(k("age_1")), tc[k("age_1")] as number | "", (v) => setTc({ [k("age_1")]: v } as Partial<typeof tc>))}
                         </label>
-                        <label className="flex items-center gap-2">
+                        <label htmlFor={fid(k("age_2_to_3"))} className="flex items-center gap-2">
                           בני 2–3:
-                          {numInput(tc[k("age_2_to_3")] as any, (v) => setTc({ [k("age_2_to_3")]: v } as any))}
+                          {numInput(fid(k("age_2_to_3")), tc[k("age_2_to_3")] as number | "", (v) => setTc({ [k("age_2_to_3")]: v } as Partial<typeof tc>))}
                         </label>
-                        <label className="flex items-center gap-2">
+                        <label htmlFor={fid(k("age_4_to_5"))} className="flex items-center gap-2">
                           בני 4–5:
-                          {numInput(tc[k("age_4_to_5")] as any, (v) => setTc({ [k("age_4_to_5")]: v } as any))}
+                          {numInput(fid(k("age_4_to_5")), tc[k("age_4_to_5")] as number | "", (v) => setTc({ [k("age_4_to_5")]: v } as Partial<typeof tc>))}
                         </label>
-                        <label className="flex items-center gap-2">
+                        <label htmlFor={fid(k("age_6_to_17"))} className="flex items-center gap-2">
                           בני 6–17:
-                          {numInput(tc[k("age_6_to_17")] as any, (v) => setTc({ [k("age_6_to_17")]: v } as any))}
+                          {numInput(fid(k("age_6_to_17")), tc[k("age_6_to_17")] as number | "", (v) => setTc({ [k("age_6_to_17")]: v } as Partial<typeof tc>))}
                         </label>
-                        <label className="flex items-center gap-2">
+                        <label htmlFor={fid(k("age_18"))} className="flex items-center gap-2">
                           בני 18:
-                          {numInput(tc[k("age_18")] as any, (v) => setTc({ [k("age_18")]: v } as any))}
+                          {numInput(fid(k("age_18")), tc[k("age_18")] as number | "", (v) => setTc({ [k("age_18")]: v } as Partial<typeof tc>))}
                         </label>
                       </div>
                     );
@@ -857,19 +943,19 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
 
                   return (
                     <div className="space-y-2 text-sm">
-                      <label className="flex items-center gap-2">
-                        <Checkbox checked={tc.israeli_resident} onCheckedChange={(v) => setTc({ israeli_resident: !!v })} />
+                      <label htmlFor={fid("israeli_resident")} className="flex items-center gap-2">
+                        <Checkbox id={fid("israeli_resident")} checked={tc.israeli_resident} onCheckedChange={(v) => setTc({ israeli_resident: !!v })} />
                         1. אני תושב/ת ישראל
                       </label>
 
                       <div>
-                        <label className="flex items-center gap-2">
-                          <Checkbox checked={tc.blind_or_disabled} onCheckedChange={(v) => setTc({ blind_or_disabled: !!v })} />
+                        <label htmlFor={fid("blind_or_disabled")} className="flex items-center gap-2">
+                          <Checkbox id={fid("blind_or_disabled")} checked={tc.blind_or_disabled} onCheckedChange={(v) => setTc({ blind_or_disabled: !!v })} />
                           2א. אני עיוור/ת או נכה 100% לצמיתות
                         </label>
                         {tc.blind_or_disabled && (
-                          <label className="flex items-center gap-2 mr-6 mt-1 text-xs">
-                            <Checkbox
+                          <label htmlFor={fid("blind_or_disabled_period_at_least_year")} className="flex items-center gap-2 mr-6 mt-1 text-xs">
+                            <Checkbox id={fid("blind_or_disabled_period_at_least_year")}
                               checked={tc.blind_or_disabled_period_at_least_year}
                               onCheckedChange={(v) => setTc({ blind_or_disabled_period_at_least_year: !!v })}
                             />
@@ -878,20 +964,21 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                         )}
                       </div>
 
-                      <label className="flex items-center gap-2">
-                        <Checkbox checked={tc.disability_compensation_recipient} onCheckedChange={(v) => setTc({ disability_compensation_recipient: !!v })} />
+                      <label htmlFor={fid("disability_compensation_recipient")} className="flex items-center gap-2">
+                        <Checkbox id={fid("disability_compensation_recipient")} checked={tc.disability_compensation_recipient} onCheckedChange={(v) => setTc({ disability_compensation_recipient: !!v })} />
                         2ב. אני מקבל/ת תגמול חודשי לפי חוק הנכים
                       </label>
 
                       <div>
-                        <label className="flex items-center gap-2">
-                          <Checkbox checked={tc.settlement_eligible} onCheckedChange={(v) => setTc({ settlement_eligible: !!v })} />
+                        <label htmlFor={fid("settlement_eligible")} className="flex items-center gap-2">
+                          <Checkbox id={fid("settlement_eligible")} checked={tc.settlement_eligible} onCheckedChange={(v) => setTc({ settlement_eligible: !!v })} />
                           3. אני תושב/ת קבע ביישוב מזכה
                         </label>
                         {tc.settlement_eligible && (
-                          <label className="flex flex-wrap items-center gap-2 mr-6 mt-1 text-xs">
+                          <label htmlFor={fid("settlement_start_date")} className="flex flex-wrap items-center gap-2 mr-6 mt-1 text-xs">
                             מתאריך:
                             <Input
+                              id={fid("settlement_start_date")}
                               type="date"
                               className="h-11 text-base w-44"
                               value={tc.settlement_start_date}
@@ -902,13 +989,13 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                       </div>
 
                       <div>
-                        <label className="flex items-center gap-2">
-                          <Checkbox checked={tc.new_immigrant} onCheckedChange={(v) => setTc({ new_immigrant: !!v })} />
+                        <label htmlFor={fid("new_immigrant")} className="flex items-center gap-2">
+                          <Checkbox id={fid("new_immigrant")} checked={tc.new_immigrant} onCheckedChange={(v) => setTc({ new_immigrant: !!v })} />
                           4. אני עולה חדש/ה (זכאי/ת לזיכוי לתקופה של עד 3.5 שנים מיום העלייה)
                         </label>
                         {tc.new_immigrant && (
-                          <label className="flex items-center gap-2 mr-6 mt-1 text-xs">
-                            <Checkbox
+                          <label htmlFor={fid("new_immigrant_started_after_aliyah")} className="flex items-center gap-2 mr-6 mt-1 text-xs">
+                            <Checkbox id={fid("new_immigrant_started_after_aliyah")}
                               checked={tc.new_immigrant_started_after_aliyah}
                               onCheckedChange={(v) => setTc({ new_immigrant_started_after_aliyah: !!v })}
                             />
@@ -917,84 +1004,86 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                         )}
                       </div>
 
-                      <label className="flex items-center gap-2">
-                        <Checkbox checked={tc.single_parent_no_spouse_income} onCheckedChange={(v) => setTc({ single_parent_no_spouse_income: !!v })} />
+                      <label htmlFor={fid("single_parent_no_spouse_income")} className="flex items-center gap-2">
+                        <Checkbox id={fid("single_parent_no_spouse_income")} checked={tc.single_parent_no_spouse_income} onCheckedChange={(v) => setTc({ single_parent_no_spouse_income: !!v })} />
                         5. בגין בן/בת זוגי שאין לו/לה הכנסות בשנת המס
                       </label>
 
-                      <label className="flex items-center gap-2">
-                        <Checkbox checked={tc.single_parent_with_spouse_income} onCheckedChange={(v) => setTc({ single_parent_with_spouse_income: !!v })} />
+                      <label htmlFor={fid("single_parent_with_spouse_income")} className="flex items-center gap-2">
+                        <Checkbox id={fid("single_parent_with_spouse_income")} checked={tc.single_parent_with_spouse_income} onCheckedChange={(v) => setTc({ single_parent_with_spouse_income: !!v })} />
                         6. אני הורה במשפחה חד-הורית
                       </label>
 
                       <div>
-                        <label className="flex items-center gap-2">
-                          <Checkbox checked={tc.children_in_custody} onCheckedChange={(v) => setTc({ children_in_custody: !!v })} />
+                        <label htmlFor={fid("children_in_custody")} className="flex items-center gap-2">
+                          <Checkbox id={fid("children_in_custody")} checked={tc.children_in_custody} onCheckedChange={(v) => setTc({ children_in_custody: !!v })} />
                           7. בגין ילדיי שבחזקתי המפורטים בחלק ג'
                         </label>
                         {tc.children_in_custody && ageGrid("in_custody")}
                       </div>
 
                       <div>
-                        <label className="flex items-center gap-2">
-                          <Checkbox checked={tc.children_not_in_custody} onCheckedChange={(v) => setTc({ children_not_in_custody: !!v })} />
+                        <label htmlFor={fid("children_not_in_custody")} className="flex items-center gap-2">
+                          <Checkbox id={fid("children_not_in_custody")} checked={tc.children_not_in_custody} onCheckedChange={(v) => setTc({ children_not_in_custody: !!v })} />
                           8. בגין ילדיי שאינם בחזקתי
                         </label>
                         {tc.children_not_in_custody && ageGrid("not_in_custody")}
                       </div>
 
-                      <label className="flex items-center gap-2">
-                        <Checkbox checked={tc.single_parent} onCheckedChange={(v) => setTc({ single_parent: !!v })} />
+                      <label htmlFor={fid("single_parent")} className="flex items-center gap-2">
+                        <Checkbox id={fid("single_parent")} checked={tc.single_parent} onCheckedChange={(v) => setTc({ single_parent: !!v })} />
                         9. אני הורה יחיד
                       </label>
 
-                      <label className="flex items-center gap-2">
-                        <Checkbox checked={tc.children_with_alimony} onCheckedChange={(v) => setTc({ children_with_alimony: !!v })} />
+                      <label htmlFor={fid("children_with_alimony")} className="flex items-center gap-2">
+                        <Checkbox id={fid("children_with_alimony")} checked={tc.children_with_alimony} onCheckedChange={(v) => setTc({ children_with_alimony: !!v })} />
                         10. בגין ילדיי שאינם בחזקתי, אך אני משתתף/ת בכלכלתם
                       </label>
 
-                      <label className="flex items-center gap-2">
-                        <Checkbox checked={tc.parent_to_disabled_child} onCheckedChange={(v) => setTc({ parent_to_disabled_child: !!v })} />
+                      <label htmlFor={fid("parent_to_disabled_child")} className="flex items-center gap-2">
+                        <Checkbox id={fid("parent_to_disabled_child")} checked={tc.parent_to_disabled_child} onCheckedChange={(v) => setTc({ parent_to_disabled_child: !!v })} />
                         11. אני הורה לילד עם מוגבלות (זכאי/ת לגמלת ילד נכה)
                       </label>
 
-                      <label className="flex items-center gap-2">
-                        <Checkbox checked={tc.alimony_to_ex_spouse} onCheckedChange={(v) => setTc({ alimony_to_ex_spouse: !!v })} />
+                      <label htmlFor={fid("alimony_to_ex_spouse")} className="flex items-center gap-2">
+                        <Checkbox id={fid("alimony_to_ex_spouse")} checked={tc.alimony_to_ex_spouse} onCheckedChange={(v) => setTc({ alimony_to_ex_spouse: !!v })} />
                         12. בגין מזונות שאני משלם/ת לבן/בת זוג לשעבר
                       </label>
 
                       <div>
-                        <label className="flex items-center gap-2">
-                          <Checkbox checked={tc.child_aged_16_to_18} onCheckedChange={(v) => setTc({ child_aged_16_to_18: !!v })} />
+                        <label htmlFor={fid("child_aged_16_to_18")} className="flex items-center gap-2">
+                          <Checkbox id={fid("child_aged_16_to_18")} checked={tc.child_aged_16_to_18} onCheckedChange={(v) => setTc({ child_aged_16_to_18: !!v })} />
                           13. יש לי ילדים בני 16–18 בשנת המס
                         </label>
                         {tc.child_aged_16_to_18 && (
-                          <label className="flex items-center gap-2 mr-6 mt-1 text-xs">
+                          <label htmlFor={fid("child_aged_16_to_18_count")} className="flex items-center gap-2 mr-6 mt-1 text-xs">
                             מספר ילדים:
-                            {numInput(tc.child_aged_16_to_18_count, (v) => setTc({ child_aged_16_to_18_count: v }))}
+                            {numInput(fid("child_aged_16_to_18_count"), tc.child_aged_16_to_18_count, (v) => setTc({ child_aged_16_to_18_count: v }))}
                           </label>
                         )}
                       </div>
 
                       <div>
-                        <label className="flex items-center gap-2">
-                          <Checkbox checked={tc.discharged_soldier} onCheckedChange={(v) => setTc({ discharged_soldier: !!v })} />
+                        <label htmlFor={fid("discharged_soldier")} className="flex items-center gap-2">
+                          <Checkbox id={fid("discharged_soldier")} checked={tc.discharged_soldier} onCheckedChange={(v) => setTc({ discharged_soldier: !!v })} />
                           14. אני חייל/ת משוחרר/ת
                         </label>
                         {tc.discharged_soldier && (
                           <div className="flex flex-wrap gap-3 mr-6 mt-1 text-xs items-center">
-                            <label className="flex flex-wrap items-center gap-2">
+                            <label htmlFor={fid("discharged_soldier_service_start_date")} className="flex flex-wrap items-center gap-2">
                               תאריכי שירות מ:
                               <Input
+                                id={fid("discharged_soldier_service_start_date")}
                                 type="date"
                                 className="h-11 text-base w-40"
                                 value={tc.discharged_soldier_service_start_date}
                                 onChange={(e) => setTc({ discharged_soldier_service_start_date: e.target.value })}
                               />
                             </label>
-                            <label className="flex flex-wrap items-center gap-2">
+                            <label htmlFor={fid("discharged_soldier_service_end_date")} className="flex flex-wrap items-center gap-2">
                               עד:
                               <Input
+                                id={fid("discharged_soldier_service_end_date")}
                                 type="date"
                                 className="h-11 text-base w-40"
                                 value={tc.discharged_soldier_service_end_date}
@@ -1006,14 +1095,15 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                       </div>
 
                       <div>
-                        <label className="flex items-center gap-2">
-                          <Checkbox checked={tc.academic_degree_completed} onCheckedChange={(v) => setTc({ academic_degree_completed: !!v })} />
+                        <label htmlFor={fid("academic_degree_completed")} className="flex items-center gap-2">
+                          <Checkbox id={fid("academic_degree_completed")} checked={tc.academic_degree_completed} onCheckedChange={(v) => setTc({ academic_degree_completed: !!v })} />
                           15. סיימתי לימודים אקדמיים (מצורף טופס 119)
                         </label>
                         {tc.academic_degree_completed && (
-                          <label className="flex flex-wrap items-center gap-2 mr-6 mt-1 text-xs">
+                          <label htmlFor={fid("academic_degree_end_date")} className="flex flex-wrap items-center gap-2 mr-6 mt-1 text-xs">
                             תאריך סיום:
                             <Input
+                              id={fid("academic_degree_end_date")}
                               type="date"
                               className="h-11 text-base w-44"
                               value={tc.academic_degree_end_date}
@@ -1024,14 +1114,14 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                       </div>
 
                       <div>
-                        <label className="flex items-center gap-2">
-                          <Checkbox checked={tc.reservist_combat} onCheckedChange={(v) => setTc({ reservist_combat: !!v })} />
+                        <label htmlFor={fid("reservist_combat")} className="flex items-center gap-2">
+                          <Checkbox id={fid("reservist_combat")} checked={tc.reservist_combat} onCheckedChange={(v) => setTc({ reservist_combat: !!v })} />
                           16. שירתתי כלוחם/ת מילואים
                         </label>
                         {tc.reservist_combat && (
-                          <label className="flex items-center gap-2 mr-6 mt-1 text-xs">
+                          <label htmlFor={fid("reservist_combat_days")} className="flex items-center gap-2 mr-6 mt-1 text-xs">
                             מספר ימי שירות:
-                            {numInput(tc.reservist_combat_days, (v) => setTc({ reservist_combat_days: v }))}
+                            {numInput(fid("reservist_combat_days"), tc.reservist_combat_days, (v) => setTc({ reservist_combat_days: v }))}
                           </label>
                         )}
                       </div>
@@ -1041,8 +1131,8 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="t101-notes">הערות נוספות</Label>
-                <Textarea id="t101-notes" value={data.notes} onChange={(e) => update("notes", e.target.value)} rows={2} />
+                <Label htmlFor={fid("notes")}>הערות נוספות</Label>
+                <Textarea id={fid("notes")} value={data.notes} onChange={(e) => update("notes", e.target.value)} rows={2} />
               </div>
             </div>
           )}
@@ -1052,8 +1142,8 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
             <div className="space-y-3 p-3 bg-muted/30 rounded-lg">
               <h4 className="text-sm font-semibold">ט. אני מבקש/ת תיאום מס מהסיבות הבאות</h4>
 
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
+              <label htmlFor={fid("tax_coordination-no_income_until_start")} className="flex items-center gap-2 text-sm">
+                <Checkbox id={fid("tax_coordination-no_income_until_start")}
                   checked={data.tax_coordination.no_income_until_start}
                   onCheckedChange={(v) =>
                     update("tax_coordination", { ...data.tax_coordination, no_income_until_start: !!v })
@@ -1063,8 +1153,8 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
               </label>
 
               <div>
-                <label className="flex items-center gap-2 text-sm">
-                  <Checkbox
+                <label htmlFor={fid("tax_coordination-has_additional_employers")} className="flex items-center gap-2 text-sm">
+                  <Checkbox id={fid("tax_coordination-has_additional_employers")}
                     checked={data.tax_coordination.has_additional_employers}
                     onCheckedChange={(v) =>
                       update("tax_coordination", { ...data.tax_coordination, has_additional_employers: !!v })
@@ -1080,20 +1170,21 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                     {data.tax_coordination.additional_employers.map((emp, i) => (
                       <div key={i} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end p-2 bg-background rounded">
                         <div className="md:col-span-3 space-y-1">
-                          <Label className="text-xs">שם המעסיק</Label>
-                          <Input className="h-11 text-base" value={emp.employer_name} onChange={(e) => updateEmployer(i, "employer_name", e.target.value)} />
+                          <Label htmlFor={fid(`emp-${i}-employer_name`)} className="text-xs">שם המעסיק</Label>
+                          <Input id={fid(`emp-${i}-employer_name`)} className="h-11 text-base" value={emp.employer_name} onChange={(e) => updateEmployer(i, "employer_name", e.target.value)} />
                         </div>
                         <div className="md:col-span-3 space-y-1">
-                          <Label className="text-xs">כתובת</Label>
-                          <Input className="h-11 text-base" value={emp.employer_address} onChange={(e) => updateEmployer(i, "employer_address", e.target.value)} />
+                          <Label htmlFor={fid(`emp-${i}-employer_address`)} className="text-xs">כתובת</Label>
+                          <Input id={fid(`emp-${i}-employer_address`)} className="h-11 text-base" value={emp.employer_address} onChange={(e) => updateEmployer(i, "employer_address", e.target.value)} />
                         </div>
                         <div className="md:col-span-2 space-y-1">
-                          <Label className="text-xs">סוג ההכנסה</Label>
-                          <Input className="h-11 text-base" value={emp.income_type} onChange={(e) => updateEmployer(i, "income_type", e.target.value)} />
+                          <Label htmlFor={fid(`emp-${i}-income_type`)} className="text-xs">סוג ההכנסה</Label>
+                          <Input id={fid(`emp-${i}-income_type`)} className="h-11 text-base" value={emp.income_type} onChange={(e) => updateEmployer(i, "income_type", e.target.value)} />
                         </div>
                         <div className="md:col-span-2 space-y-1">
-                          <Label className="text-xs">הכנסה חודשית</Label>
+                          <Label htmlFor={fid(`emp-${i}-monthly_gross`)} className="text-xs">הכנסה חודשית</Label>
                           <Input
+                            id={fid(`emp-${i}-monthly_gross`)}
                             type="number"
                             className="h-11 text-base"
                             value={emp.monthly_gross}
@@ -1101,8 +1192,9 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                           />
                         </div>
                         <div className="md:col-span-1 space-y-1">
-                          <Label className="text-xs">מס %</Label>
+                          <Label htmlFor={fid(`emp-${i}-tax_withheld_percent`)} className="text-xs">מס %</Label>
                           <Input
+                            id={fid(`emp-${i}-tax_withheld_percent`)}
                             type="number"
                             className="h-11 text-base"
                             value={emp.tax_withheld_percent}
@@ -1111,20 +1203,20 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
                         </div>
                         <div className="md:col-span-1">
                           <Button size="icon" variant="ghost" aria-label={`הסר מעסיק ${i + 1}`} onClick={() => removeEmployer(i)}>
-                            <Trash2 className="w-4 h-4 text-destructive" />
+                            <Trash2 className="w-4 h-4 text-destructive" aria-hidden="true" />
                           </Button>
                         </div>
                       </div>
                     ))}
                     <Button size="sm" variant="outline" onClick={addEmployer} className="gap-1">
-                      <Plus className="w-3 h-3" /> הוסף מעסיק
+                      <Plus className="w-3 h-3" aria-hidden="true" /> הוסף מעסיק
                     </Button>
                   </div>
                 )}
               </div>
 
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
+              <label htmlFor={fid("tax_coordination-assessor_approval")} className="flex items-center gap-2 text-sm">
+                <Checkbox id={fid("tax_coordination-assessor_approval")}
                   checked={data.tax_coordination.assessor_approval}
                   onCheckedChange={(v) =>
                     update("tax_coordination", { ...data.tax_coordination, assessor_approval: !!v })
@@ -1139,7 +1231,7 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
           {step === 5 && (
             <div className="space-y-4">
               {/* Pre-export validation against the official 0101/130 layout */}
-              <Tax101ValidationPanel result={validation} onJumpToStep={(s) => setStep(s)} />
+              <Tax101ValidationPanel result={validation} onJumpToStep={goToStep} />
 
               <div className="p-3 bg-muted/30 rounded-lg text-xs space-y-1">
                 <p className="font-semibold">י. הצהרה:</p>
@@ -1159,12 +1251,12 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
         {/* Navigation */}
         <div className="flex items-center justify-between pt-4 border-t border-border/50">
           <Button variant="outline" onClick={prev} disabled={step === 0 || submitting} className="gap-1">
-            <ChevronRight className="w-4 h-4" /> הקודם
+            <ChevronRight className="w-4 h-4" aria-hidden="true" /> הקודם
           </Button>
 
           {step < STEPS.length - 1 ? (
             <Button onClick={next} className="gap-1">
-              הבא <ChevronLeft className="w-4 h-4" />
+              הבא <ChevronLeft className="w-4 h-4" aria-hidden="true" />
             </Button>
           ) : (
             <Button
@@ -1173,7 +1265,7 @@ export function Tax101Dialog({ open, onOpenChange, formId, taxYear, employee, on
               title={!validation.ok ? "יש לתקן את שגיאות הבדיקה לפני יצוא PDF" : undefined}
               className="gap-1.5"
             >
-              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+              {submitting ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <CheckCircle2 className="w-4 h-4" aria-hidden="true" />}
               {submitting ? "שולח..." : "אשר ושלח"}
             </Button>
           )}

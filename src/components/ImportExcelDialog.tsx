@@ -128,7 +128,9 @@ export function ImportExcelDialog({ open, onOpenChange, mode }: Props) {
   const { toast } = useToast();
   const { activeCompanyId } = useCompany();
   const { isOperations, isAdmin, isSuperAdmin } = useAuth();
-  const { data: existingEmployees = [] } = useEmployees();
+  // Manager lookup runs against this list, so a file is only parsed once it has loaded —
+  // otherwise every manager would be reported "לא נמצא".
+  const { data: existingEmployees = [], isLoading: employeesLoading, error: employeesError } = useEmployees();
   const queryClient = useQueryClient();
 
   const reset = () => {
@@ -369,7 +371,7 @@ export function ImportExcelDialog({ open, onOpenChange, mode }: Props) {
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <FileSpreadsheet className="w-5 h-5 text-primary" />
+            <FileSpreadsheet className="w-5 h-5 text-primary" aria-hidden="true" />
             יבוא {mode === "employees" ? "עובדים" : "משתמשים"} מאקסל
           </DialogTitle>
           <DialogDescription>
@@ -381,26 +383,32 @@ export function ImportExcelDialog({ open, onOpenChange, mode }: Props) {
           <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
             <span className="text-sm text-muted-foreground">הורד תבנית לדוגמה</span>
             <Button variant="outline" size="sm" className="gap-2" onClick={downloadTemplate}>
-              <Download className="w-4 h-4" />
+              <Download className="w-4 h-4" aria-hidden="true" />
               הורד תבנית
             </Button>
           </div>
 
           <FileDrop
             accept=".xlsx,.xls,.csv"
-            disabled={importing}
+            disabled={importing || employeesLoading || !!employeesError}
             onFiles={(files) => handleFile(files[0])}
             title={fileName || "גררו קובץ אקסל לכאן או לחצו לבחירה"}
-            hint={fileName ? "לחצו או גררו קובץ אחר כדי להחליף" : "xlsx, xls, csv"}
+            hint={employeesLoading ? "טוען את רשימת העובדים הקיימים…" : fileName ? "לחצו או גררו קובץ אחר כדי להחליף" : "xlsx, xls, csv"}
           />
+          {employeesError && (
+            <p role="alert" className="text-sm text-destructive-text flex items-center gap-1.5">
+              <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden="true" />
+              לא הצלחנו לטעון את רשימת העובדים הקיימים, ולכן אי אפשר לשייך מנהלים. סגרו ופתחו שוב את החלון.
+            </p>
+          )}
 
           {rows.length > 0 && !result && (
             <div className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-sm font-medium" role="status">
-                  <span className="text-success font-bold">{validRows.length} תקינים</span>
+                  <span className="text-success-text font-bold">{validRows.length} תקינים</span>
                   {" / "}
-                  <span className={errorRows ? "text-destructive font-bold" : "text-muted-foreground"}>{errorRows} עם שגיאות</span>
+                  <span className={errorRows ? "text-destructive-text font-bold" : "text-muted-foreground"}>{errorRows} עם שגיאות</span>
                 </p>
                 {errorRows > 0 && (
                   <Button
@@ -447,12 +455,12 @@ export function ImportExcelDialog({ open, onOpenChange, mode }: Props) {
                           <td className="p-2">
                             {r.direct_manager ? (
                               r._resolved_manager_id ? (
-                                <span className="inline-flex items-center gap-1 text-success">
+                                <span className="inline-flex items-center gap-1 text-success-text">
                                   <CheckCircle className="w-3.5 h-3.5 shrink-0" aria-label="נמצא" />
                                   {r.direct_manager}
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center gap-1 text-warning text-xs" title={r._manager_warning}>
+                                <span className="inline-flex items-center gap-1 text-warning-text text-xs" title={r._manager_warning}>
                                   <AlertTriangle className="w-3.5 h-3.5 shrink-0" aria-label="לא נמצא" />
                                   {r.direct_manager}
                                 </span>
@@ -462,12 +470,12 @@ export function ImportExcelDialog({ open, onOpenChange, mode }: Props) {
                           <td className="p-2">{r.system_role}</td>
                           <td className="p-2">
                             {hasErr ? (
-                              <span className="inline-flex items-start gap-1 text-destructive text-xs">
+                              <span className="inline-flex items-start gap-1 text-destructive-text text-xs">
                                 <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" aria-hidden="true" />
                                 {r._row_errors!.join(", ")}
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 text-success text-xs">
+                              <span className="inline-flex items-center gap-1 text-success-text text-xs">
                                 <CheckCircle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                                 תקין
                               </span>
@@ -498,19 +506,19 @@ export function ImportExcelDialog({ open, onOpenChange, mode }: Props) {
                     <p className="text-xs text-muted-foreground">{result.invited} הזמנות נשלחו / קושרו למשתמש קיים</p>
                   )}
                   {result.failed > 0 && (
-                    <p className="text-sm text-destructive">{result.failed} שגיאות</p>
+                    <p className="text-sm text-destructive-text">{result.failed} שגיאות</p>
                   )}
                   {result.inviteFailed > 0 && (
-                    <p className="text-sm text-destructive">{result.inviteFailed} הזמנות נכשלו</p>
+                    <p className="text-sm text-destructive-text">{result.inviteFailed} הזמנות נכשלו</p>
                   )}
                 </div>
               </div>
 
               {result.errors.length > 0 && (
                 <div className="max-h-56 overflow-auto border border-destructive/20 rounded-lg p-3 space-y-1">
-                  <p className="text-sm font-medium text-destructive mb-1">שורות שלא יובאו ושגיאות ({result.errors.length})</p>
+                  <p className="text-sm font-medium text-destructive-text mb-1">שורות שלא יובאו ושגיאות ({result.errors.length})</p>
                   {result.errors.map((err, i) => (
-                    <p key={i} className="text-xs text-destructive flex items-start gap-1">
+                    <p key={i} className="text-xs text-destructive-text flex items-start gap-1">
                       <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
                       {err}
                     </p>

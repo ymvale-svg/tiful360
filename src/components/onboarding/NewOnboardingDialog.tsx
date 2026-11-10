@@ -50,7 +50,7 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
   const { data: employees = [] } = useEmployees();
   const { data: categories = [] } = useAssetCategories();
   const { data: groups = [] } = useAssetGroups();
-  const { data: assets = [] } = useAssets();
+  const { data: assets = [], isLoading: assetsLoading } = useAssets();
   const { data: templates = [] } = useRoleTemplates();
   const { data: groupModels = [] } = useAssetGroupModels();
   const createGroup = useCreateAssetGroup();
@@ -66,7 +66,7 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
   // With systems defined in the access catalog, access is picked there instead of from asset categories.
   const useAccessCatalog = accessSystems.some((s) => s.is_active);
   const [accessPicks, setAccessPicks] = useState<PickState>({});
-  const { data: heldGrants = [] } = useHeldGrants();
+  const { data: heldGrants = [], isLoading: heldGrantsLoading } = useHeldGrants();
 
   const [employeeId, setEmployeeId] = useState("");
   const [selected, setSelected] = useState<Record<string, SelectedEntry>>({});
@@ -499,10 +499,10 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
           <div className="space-y-5 mt-2">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
               <div>
-                <label className="text-sm font-medium mb-1.5 block">עובד נקלט</label>
+                <label htmlFor="onboarding-employee" className="text-sm font-medium mb-1.5 block">עובד נקלט</label>
                 <div className="flex gap-2">
                   <div className={`flex-1 ${editProcess ? "pointer-events-none opacity-60" : ""}`}>
-                    <SearchableSelect value={employeeId} onChange={setEmployeeId} options={employeeOptions} />
+                    <SearchableSelect id="onboarding-employee" value={employeeId} onChange={setEmployeeId} options={employeeOptions} disabled={!!editProcess} />
                   </div>
                   {!editProcess && (
                     <Button
@@ -513,13 +513,13 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
                       aria-label="הקמת עובד חדש"
                       onClick={() => setNewEmployeeOpen(true)}
                     >
-                      <UserPlus className="w-4 h-4" />
+                      <UserPlus className="w-4 h-4" aria-hidden="true" />
                     </Button>
                   )}
                 </div>
                 {employee && (
                   <div className="flex items-center gap-2 mt-1.5">
-                    <CalendarDays className="w-3.5 h-3.5 text-muted-foreground" />
+                    <CalendarDays className="w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
                     <p className="text-xs text-muted-foreground">
                       תחילת עבודה: {(employee as any).start_date
                         ? new Date((employee as any).start_date).toLocaleDateString("en-GB")
@@ -530,26 +530,27 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
                         {(() => {
                           const d = daysUntilStart((employee as any).start_date);
                           if (d === null) return null;
-                          if (d < 0) return <span className="text-destructive">החל לפני {Math.abs(d)} ימים</span>;
-                          if (d === 0) return <span className="text-amber-600">היום</span>;
-                          return <span className="text-emerald-600">בעוד {d} ימים</span>;
+                          if (d < 0) return <span className="text-destructive-text">החל לפני {Math.abs(d)} ימים</span>;
+                          if (d === 0) return <span className="text-warning-text">היום</span>;
+                          return <span className="text-success-text">בעוד {d} ימים</span>;
                         })()}
                       </span>
                     )}
                   </div>
                 )}
                 {employee && !(employee as any).start_date && (
-                  <div className="flex items-center gap-1.5 mt-1.5 text-xs text-destructive">
-                    <AlertCircle className="w-3.5 h-3.5" />
+                  <div className="flex items-center gap-1.5 mt-1.5 text-xs text-destructive-text">
+                    <AlertCircle className="w-3.5 h-3.5" aria-hidden="true" />
                     חסר תאריך תחילת עבודה בכרטיס העובד — יש לעדכן את הכרטיס לפני השליחה לתפעול.
                   </div>
                 )}
               </div>
               <div>
-                <label className="text-sm font-medium mb-1.5 block flex items-center gap-1.5">
-                  <Copy className="w-3.5 h-3.5" /> העתק צרכים מעובד קיים
+                <label htmlFor="onboarding-copy-from" className="text-sm font-medium mb-1.5 flex items-center gap-1.5">
+                  <Copy className="w-3.5 h-3.5" aria-hidden="true" /> העתק צרכים מעובד קיים
                 </label>
                 <SearchableSelect
+                  id="onboarding-copy-from"
                   value={copyFromId}
                   onChange={copyFromEmployee}
                   options={(employees as any[]).map((e) => ({ value: e.id, label: e.full_name }))}
@@ -561,10 +562,11 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
                   variant="outline"
                   className="mt-2 gap-1.5"
                   onClick={suggestFromPeers}
-                  disabled={!employee}
+                  // The suggestion reads current holdings; until they load it would report "לא נמצא מה להוסיף".
+                  disabled={!employee || assetsLoading || (useAccessCatalog && heldGrantsLoading)}
                   title="מוסיף ציוד והרשאות שמחזיקים רוב העובדים באותו תפקיד ומחלקה"
                 >
-                  <Sparkles className="w-4 h-4" /> הצע לי סט לפי עובדים דומים
+                  <Sparkles className="w-4 h-4" aria-hidden="true" /> הצע לי סט לפי עובדים דומים
                 </Button>
               </div>
             </div>
