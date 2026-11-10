@@ -9,7 +9,7 @@ import type {
   AccessResource,
   AccessSystem,
 } from "@/domain/systemAccess/types";
-import type { AccessLevel } from "@/domain/systemAccess/protocol";
+import type { AccessLevel, ProtocolGrant } from "@/domain/systemAccess/protocol";
 
 // The catalog tables are newer than the generated types, so they are queried untyped here and
 // typed by the row interfaces in src/domain/systemAccess/types.ts.
@@ -304,12 +304,12 @@ export async function listHeldGrants(db: Db, companyId: string): Promise<Array<A
 }
 
 /** Every grant of one employee, past and present, with the requests behind them (for the protocol). */
-export async function listEmployeeGrantHistory(db: Db, employeeId: string): Promise<AccessGrant[]> {
+export async function listEmployeeGrantHistory(db: Db, employeeId: string): Promise<ProtocolGrant[]> {
   const { data, error } = await db
     .from("system_access_grants")
-    .select(GRANT_SELECT)
+    .select(`${GRANT_SELECT}, request:system_access_requests!system_access_grants_request_id_fkey(requested_by_name, requested_at)`)
     .eq("employee_id", employeeId)
     .order("effective_from");
   fail(error);
-  return (data ?? []) as AccessGrant[];
+  return (data ?? []) as ProtocolGrant[];
 }

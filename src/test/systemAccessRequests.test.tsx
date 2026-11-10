@@ -37,6 +37,7 @@ vi.mock("@/hooks/useSystemAccess", () => ({
   useDispatchAccess: () => mutation(dispatch),
   useResolveGrant: () => mutation(resolve),
   useProvisionTiful360: () => mutation(provision),
+  useGenerateAccessProtocol: () => mutation(vi.fn()),
   useRequestAccess: () => mutation(vi.fn()),
   useAccessSystems: () => ({ data: [] }),
   useAccessPickerCatalog: () => ({ data: { groups: [], resources: [] } }),

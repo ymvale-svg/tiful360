@@ -7,6 +7,9 @@ import { useHubTab } from "@/hooks/useHubTab";
 const RequestsTab = lazyWithReload(() =>
   import("@/components/systemAccess/RequestsTab").then((m) => ({ default: m.RequestsTab })),
 );
+const MatrixTab = lazyWithReload(() =>
+  import("@/components/systemAccess/MatrixTab").then((m) => ({ default: m.MatrixTab })),
+);
 const SystemsTab = lazyWithReload(() =>
   import("@/components/systemAccess/SystemsTab").then((m) => ({ default: m.SystemsTab })),
 );
@@ -16,6 +19,7 @@ const AccessTreeTab = lazyWithReload(() =>
 
 const TAB_CONTENT: Record<string, React.ComponentType> = {
   requests: RequestsTab,
+  matrix: MatrixTab,
   systems: SystemsTab,
   tree: AccessTreeTab,
 };

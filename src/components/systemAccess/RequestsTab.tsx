@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Inbox, Plus, Send } from "lucide-react";
+import { FileText, Inbox, Plus, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -9,7 +9,14 @@ import { StateView } from "@/components/feedback/StateView";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useEmployees } from "@/hooks/useData";
-import { useAccessRequests, useDispatchAccess, useProvisionTiful360, useRequestAccess, useResolveGrant } from "@/hooks/useSystemAccess";
+import {
+  useAccessRequests,
+  useDispatchAccess,
+  useGenerateAccessProtocol,
+  useProvisionTiful360,
+  useRequestAccess,
+  useResolveGrant,
+} from "@/hooks/useSystemAccess";
 import { AccessPicker } from "@/components/systemAccess/AccessPicker";
 import { OWNER_ROLE_LABEL } from "@/lib/domainConfig";
 import { formatDateTimeDMY } from "@/lib/utils";
@@ -109,6 +116,22 @@ function RequestCard({ request, actor }: { request: AccessRequest; actor: Actor 
   const { toast } = useToast();
   const dispatch = useDispatchAccess();
   const provision = useProvisionTiful360();
+  const protocol = useGenerateAccessProtocol();
+
+  const makeProtocol = async () => {
+    try {
+      const { blob, fileName } = await protocol.mutateAsync({ employeeId: request.employee_id });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      toast({ title: "הפרוטוקול הופק ונשמר בתיק העובד" });
+    } catch (e) {
+      toast({ title: "הפרוטוקול לא הופק", description: message(e), variant: "destructive" });
+    }
+  };
   const [provisioningId, setProvisioningId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [note, setNote] = useState("");
@@ -177,7 +200,12 @@ function RequestCard({ request, actor }: { request: AccessRequest; actor: Actor 
           </p>
           {request.note && <p className="text-sm mt-1">{request.note}</p>}
         </div>
-        <span className="text-sm tabular-nums text-muted-foreground">{done}/{grants.length} טופלו</span>
+        <div className="flex items-center gap-2">
+          <span className="text-sm tabular-nums text-muted-foreground">{done}/{grants.length} טופלו</span>
+          <Button size="sm" variant="outline" onClick={() => { void makeProtocol(); }} loading={protocol.isPending} loadingText="מפיק…">
+            <FileText className="w-4 h-4" /> פרוטוקול
+          </Button>
+        </div>
       </header>
 
       <div className="overflow-x-auto">

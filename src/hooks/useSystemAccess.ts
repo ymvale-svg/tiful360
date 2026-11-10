@@ -24,7 +24,9 @@ import {
   type GrantAction,
 } from "@/services/systemAccess";
 import type { AccessGroup, AccessPick, AccessResource, AccessSystem } from "@/domain/systemAccess/types";
-import type { AccessLevel } from "@/domain/systemAccess/protocol";
+import { accessProtocolId, employeeProtocolRows, type AccessLevel } from "@/domain/systemAccess/protocol";
+import { buildAccessProtocolPdf } from "@/lib/pdf/lazy";
+import { uploadFile } from "@/lib/uploadWithProgress";
 
 const KEYS = {
   systems: (companyId: string | null) => ["system-access", "systems", companyId] as const,
@@ -232,5 +234,63 @@ export function useRequestRevocation() {
     mutationFn: ({ employeeId, grantIds, note }: { employeeId: string; grantIds?: string[] | null; note?: string | null }) =>
       requestRevocation(supabase, employeeId, grantIds ?? null, note),
     onSuccess: invalidate,
+  });
+}
+
+export const ACCESS_PROTOCOL_DOCUMENT_TYPE = "access_protocol";
+
+/**
+ * Build the employee's access protocol (every access, by system, with its history), store it in
+ * the employee file, and return the PDF so the caller can open or download it.
+ */
+export function useGenerateAccessProtocol() {
+  const qc = useQueryClient();
+  const { activeCompanyId, activeCompany } = useCompany();
+  return useMutation({
+    mutationFn: async ({ employeeId }: { employeeId: string }) => {
+      if (!activeCompanyId) throw new Error("לא נבחרה חברה");
+      const [{ data: emp, error: empErr }, history, { data: auth }] = await Promise.all([
+        supabase.from("employees").select("full_name, employee_code, role, department, start_date, end_date").eq("id", employeeId).single(),
+        listEmployeeGrantHistory(supabase, employeeId),
+        supabase.auth.getUser(),
+      ]);
+      if (empErr) throw empErr;
+      const { data: profile } = auth?.user
+        ? await supabase.from("profiles").select("display_name").eq("user_id", auth.user.id).maybeSingle()
+        : { data: null };
+
+      const documentId = accessProtocolId(employeeId);
+      const blob = await buildAccessProtocolPdf({
+        documentId,
+        companyName: activeCompany?.name ?? "",
+        companyLogoUrl: activeCompany?.logo_url ?? null,
+        generatedBy: profile?.display_name || auth?.user?.email || "—",
+        employeeName: emp.full_name,
+        employeeCode: emp.employee_code ?? null,
+        role: emp.role ?? null,
+        department: emp.department ?? null,
+        startDate: emp.start_date ?? null,
+        endDate: (emp as { end_date?: string | null }).end_date ?? null,
+        rows: employeeProtocolRows(history),
+      });
+
+      const fileName = `${documentId}.pdf`;
+      const path = `${activeCompanyId}/${employeeId}/${Date.now()}-${fileName}`;
+      const up = await uploadFile("employee-documents", path, blob, { cacheControl: "3600", upsert: false, contentType: "application/pdf" });
+      if (up.error) throw up.error;
+      const { error: docErr } = await supabase.from("employee_documents").insert({
+        employee_id: employeeId,
+        company_id: activeCompanyId,
+        document_type: ACCESS_PROTOCOL_DOCUMENT_TYPE,
+        document_label: "פרוטוקול הרשאות למערכות",
+        file_url: path,
+        file_name: fileName,
+        file_size_bytes: blob.size,
+        uploaded_by: auth?.user?.id ?? null,
+      });
+      if (docErr) throw docErr;
+      return { blob, fileName, path };
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["employee-documents"] }),
   });
 }

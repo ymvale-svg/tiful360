@@ -77,6 +77,7 @@ export const HUB_TABS = {
   ],
   systemAccess: [
     { key: "requests", label: "בקשות לטיפול", roles: ACCESS_REQUEST_ROLES },
+    { key: "matrix", label: "מטריצת הרשאות", roles: ACCESS_REQUEST_ROLES },
     { key: "systems", label: "מערכות וסביבות", roles: ACCESS_CATALOG_MANAGERS },
     { key: "tree", label: "עץ וקבוצות גישה", roles: ACCESS_CATALOG_MANAGERS },
   ],
