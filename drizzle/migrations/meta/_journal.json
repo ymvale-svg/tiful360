@@ -281,6 +281,13 @@
       "when": 1794325276203,
       "tag": "0039_system_access_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1794325384204,
+      "tag": "0040_system_access_revocation",
+      "breakpoints": true
     }
   ]
 }

@@ -3520,7 +3520,14 @@ export type Database = {
           rejection_reason: string | null
           request_id: string
           resource_id: string | null
+          revoke_dispatch_ticket_id: string | null
+          revoke_dispatched_at: string | null
+          revoke_due_at: string | null
+          revoke_note: string | null
+          revoke_request_id: string | null
           revoked_at: string | null
+          revoked_by: string | null
+          revoked_by_name: string | null
           status: string
           system_id: string
         }
@@ -3541,7 +3548,14 @@ export type Database = {
           rejection_reason?: string | null
           request_id: string
           resource_id?: string | null
+          revoke_dispatch_ticket_id?: string | null
+          revoke_dispatched_at?: string | null
+          revoke_due_at?: string | null
+          revoke_note?: string | null
+          revoke_request_id?: string | null
           revoked_at?: string | null
+          revoked_by?: string | null
+          revoked_by_name?: string | null
           status?: string
           system_id: string
         }
@@ -3562,7 +3576,14 @@ export type Database = {
           rejection_reason?: string | null
           request_id?: string
           resource_id?: string | null
+          revoke_dispatch_ticket_id?: string | null
+          revoke_dispatched_at?: string | null
+          revoke_due_at?: string | null
+          revoke_note?: string | null
+          revoke_request_id?: string | null
           revoked_at?: string | null
+          revoked_by?: string | null
+          revoked_by_name?: string | null
           status?: string
           system_id?: string
         }
@@ -3614,6 +3635,20 @@ export type Database = {
             columns: ["resource_id"]
             isOneToOne: false
             referencedRelation: "system_access_resources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_grants_revoke_dispatch_ticket_id_fkey"
+            columns: ["revoke_dispatch_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "it_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_grants_revoke_request_id_fkey"
+            columns: ["revoke_request_id"]
+            isOneToOne: false
+            referencedRelation: "system_access_requests"
             referencedColumns: ["id"]
           },
           {
@@ -4443,6 +4478,16 @@ export type Database = {
         Args: { _process_id: string }
         Returns: number
       }
+      create_system_access_revocation: {
+        Args: {
+          _actor: string
+          _due_at: string
+          _emp: Database["public"]["Tables"]["employees"]["Row"]
+          _grant_ids: string[]
+          _note: string
+        }
+        Returns: Json
+      }
       delete_company_cascade: {
         Args: { _company_id: string }
         Returns: undefined
@@ -4839,6 +4884,10 @@ export type Database = {
         }
         Returns: Json
       }
+      request_system_access_revocation: {
+        Args: { _employee_id: string; _grant_ids?: string[]; _note?: string }
+        Returns: Json
+      }
       resolve_handover_short_code: { Args: { _code: string }; Returns: string }
       resolve_system_access_grant: {
         Args: {
@@ -4865,7 +4914,14 @@ export type Database = {
           rejection_reason: string | null
           request_id: string
           resource_id: string | null
+          revoke_dispatch_ticket_id: string | null
+          revoke_dispatched_at: string | null
+          revoke_due_at: string | null
+          revoke_note: string | null
+          revoke_request_id: string | null
           revoked_at: string | null
+          revoked_by: string | null
+          revoked_by_name: string | null
           status: string
           system_id: string
         }
@@ -5078,11 +5134,54 @@ export type Database = {
         }
         Returns: string
       }
+      system_access_grant_open: {
+        Args: { _kind: string; _status: string }
+        Returns: boolean
+      }
       system_access_is_manager: {
         Args: { _company_id: string }
         Returns: boolean
       }
       system_access_is_owner: { Args: { _system_id: string }; Returns: boolean }
+      system_access_request_grants: {
+        Args: {
+          _request: Database["public"]["Tables"]["system_access_requests"]["Row"]
+        }
+        Returns: {
+          company_id: string
+          created_at: string
+          dispatch_ticket_id: string | null
+          dispatched_at: string | null
+          effective_from: string
+          employee_id: string
+          executed_at: string | null
+          executed_by: string | null
+          executed_by_name: string | null
+          external_username: string | null
+          group_id: string | null
+          id: string
+          note: string | null
+          rejection_reason: string | null
+          request_id: string
+          resource_id: string | null
+          revoke_dispatch_ticket_id: string | null
+          revoke_dispatched_at: string | null
+          revoke_due_at: string | null
+          revoke_note: string | null
+          revoke_request_id: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          revoked_by_name: string | null
+          status: string
+          system_id: string
+        }[]
+        SetofOptions: {
+          from: "system_access_requests"
+          to: "system_access_grants"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       system_access_status_label: { Args: { _status: string }; Returns: string }
       update_my_birthday_preference: {
         Args: {
