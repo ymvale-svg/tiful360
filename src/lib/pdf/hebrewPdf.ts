@@ -33,7 +33,7 @@ export interface HebrewDoc {
   bold: PDFFont;
 }
 
-async function embedHebrewFonts(pdf: PDFDocument) {
+export async function embedHebrewFonts(pdf: PDFDocument) {
   pdf.registerFontkit(fontkit);
   if (!cachedRegular) cachedRegular = await loadFontBytes(notoSansHebrewRegularUrl);
   if (!cachedBold) cachedBold = await loadFontBytes(notoSansHebrewBoldUrl);

@@ -1671,6 +1671,7 @@ export type Database = {
           full_name: string
           gender: string | null
           health_fund_member: boolean | null
+          health_fund_name: string | null
           hebrew_birth_day: number | null
           hebrew_birth_month: number | null
           hebrew_birth_year: number | null
@@ -1678,9 +1679,11 @@ export type Database = {
           id: string
           id_number: string
           is_israeli_resident: boolean | null
+          kibbutz_member: string | null
           linked_user_id: string | null
           marital_status: string | null
           offboarding_snapshot: Json | null
+          passport_number: string | null
           phone: string | null
           po_box: string | null
           postal_code: string | null
@@ -1719,6 +1722,7 @@ export type Database = {
           full_name: string
           gender?: string | null
           health_fund_member?: boolean | null
+          health_fund_name?: string | null
           hebrew_birth_day?: number | null
           hebrew_birth_month?: number | null
           hebrew_birth_year?: number | null
@@ -1726,9 +1730,11 @@ export type Database = {
           id?: string
           id_number: string
           is_israeli_resident?: boolean | null
+          kibbutz_member?: string | null
           linked_user_id?: string | null
           marital_status?: string | null
           offboarding_snapshot?: Json | null
+          passport_number?: string | null
           phone?: string | null
           po_box?: string | null
           postal_code?: string | null
@@ -1767,6 +1773,7 @@ export type Database = {
           full_name?: string
           gender?: string | null
           health_fund_member?: boolean | null
+          health_fund_name?: string | null
           hebrew_birth_day?: number | null
           hebrew_birth_month?: number | null
           hebrew_birth_year?: number | null
@@ -1774,9 +1781,11 @@ export type Database = {
           id?: string
           id_number?: string
           is_israeli_resident?: boolean | null
+          kibbutz_member?: string | null
           linked_user_id?: string | null
           marital_status?: string | null
           offboarding_snapshot?: Json | null
+          passport_number?: string | null
           phone?: string | null
           po_box?: string | null
           postal_code?: string | null
@@ -4010,6 +4019,56 @@ export type Database = {
           },
         ]
       }
+      tax101_settings: {
+        Row: {
+          company_id: string
+          employer_name: string
+          employer_address: string
+          employer_phone: string
+          employer_tax_file_number: string
+          default_income_type: string
+          allow_edit_prefilled: boolean
+          write_back_to_employee: boolean
+          updated_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          employer_name?: string
+          employer_address?: string
+          employer_phone?: string
+          employer_tax_file_number?: string
+          default_income_type?: string
+          allow_edit_prefilled?: boolean
+          write_back_to_employee?: boolean
+          updated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          employer_name?: string
+          employer_address?: string
+          employer_phone?: string
+          employer_tax_file_number?: string
+          default_income_type?: string
+          allow_edit_prefilled?: boolean
+          write_back_to_employee?: boolean
+          updated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax101_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tax_form_101: {
         Row: {
           access_token: string | null
@@ -4027,6 +4086,7 @@ export type Database = {
           status: string
           sub_employer_id: string | null
           tax_year: number
+          template_version: string | null
           token_expires_at: string | null
           updated_at: string
         }
@@ -4046,6 +4106,7 @@ export type Database = {
           status?: string
           sub_employer_id?: string | null
           tax_year: number
+          template_version?: string | null
           token_expires_at?: string | null
           updated_at?: string
         }
@@ -4065,6 +4126,7 @@ export type Database = {
           status?: string
           sub_employer_id?: string | null
           tax_year?: number
+          template_version?: string | null
           token_expires_at?: string | null
           updated_at?: string
         }
@@ -5186,6 +5248,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_tax_form_101_context: {
+        Args: { _form_id?: string | null; _token?: string | null }
+        Returns: Json
+      }
       get_tax_form_101_context_by_token: {
         Args: { _token: string }
         Returns: Json
@@ -5460,6 +5526,17 @@ export type Database = {
       }
       start_employee_offboarding: {
         Args: { _employee_id: string; _end_date: string }
+        Returns: Json
+      }
+      submit_tax_form_101: {
+        Args: {
+          _form_data: Json
+          _form_id: string
+          _pdf_url: string
+          _signature: string
+          _template_version: string
+          _token: string | null
+        }
         Returns: Json
       }
       submit_tax_form_101_by_token: {

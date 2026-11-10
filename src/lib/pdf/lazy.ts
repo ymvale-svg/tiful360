@@ -47,3 +47,9 @@ type BuildAccessProtocolPdf = typeof import("./buildAccessProtocolPdf")["buildAc
 export async function buildAccessProtocolPdf(...args: Args<BuildAccessProtocolPdf>) {
   return (await import("./buildAccessProtocolPdf")).buildAccessProtocolPdf(...args);
 }
+
+type BuildTax101Pdf = typeof import("./buildTax101Pdf")["buildTax101Pdf"];
+
+export async function buildTax101Pdf(...args: Args<BuildTax101Pdf>) {
+  return (await import("./buildTax101Pdf")).buildTax101Pdf(...args);
+}

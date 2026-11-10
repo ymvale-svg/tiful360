@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Tax101Dialog } from "@/components/Tax101Dialog";
+import { Tax101OfficialForm } from "@/components/tax101/Tax101OfficialForm";
 import { FileText, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -11,7 +11,6 @@ export default function Tax101TokenPage() {
   const [form, setForm] = useState<any>(null);
   const [employee, setEmployee] = useState<any>(null);
   const [company, setCompany] = useState<any>(null);
-  const [employer, setEmployer] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [open, setOpen] = useState(false);
@@ -37,7 +36,6 @@ export default function Tax101TokenPage() {
         const f = (ctx as any).form;
         setEmployee((ctx as any).employee ?? null);
         setCompany((ctx as any).company ?? null);
-        setEmployer((ctx as any).employer ?? null);
         if (f?.status !== "pending") {
           setError("הטופס כבר נחתם");
           setForm(f);
@@ -117,18 +115,8 @@ export default function Tax101TokenPage() {
         )}
       </div>
 
-      {form && employee && (
-        <Tax101Dialog
-          open={open}
-          onOpenChange={setOpen}
-          formId={form.id}
-          taxYear={form.tax_year}
-          employee={employee}
-          isTokenFlow
-          employerOverride={employer}
-
-          onSuccess={() => setDone(true)}
-        />
+      {form && token && open && (
+        <Tax101OfficialForm open={open} onOpenChange={setOpen} token={token} onSigned={() => setDone(true)} />
       )}
     </main>
   );

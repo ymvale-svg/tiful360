@@ -1,7 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/hooks/useCompany";
+import {
+  DEFAULT_TAX101_SETTINGS,
+  type Tax101DependentSource,
+  type Tax101EmployeeSource,
+  type Tax101Settings,
+} from "@/lib/tax101/prefill";
+import { TAX101_TEMPLATE_VERSION, type Tax101FormData } from "@/lib/tax101/types";
 
 export type Tax101Status = "pending" | "signed" | "sent";
 
@@ -97,24 +105,6 @@ export function useMyPendingTax101(employeeId: string | undefined | null, year: 
   });
 }
 
-// Lookup form by access token (public flow)
-export function useTax101ByToken(token: string | undefined) {
-  return useQuery({
-    queryKey: ["tax101", "token", token],
-    queryFn: async () => {
-      if (!token) return null;
-      const { data, error } = await supabase
-        .from("tax_form_101" as any)
-        .select("*")
-        .eq("access_token", token)
-        .maybeSingle();
-      if (error) throw error;
-      return data as any;
-    },
-    enabled: !!token,
-  });
-}
-
 // Create a batch of forms for selected employees
 export function useCreateTax101Batch() {
   const qc = useQueryClient();
@@ -171,59 +161,114 @@ export function useCreateTax101Batch() {
   });
 }
 
-// Save signed form (employee or token flow)
+export interface Tax101ContextResult {
+  form: {
+    id: string;
+    tax_year: number;
+    status: Tax101Status;
+    form_data: unknown;
+    pdf_url: string | null;
+    signed_at: string | null;
+    company_id: string;
+    template_version: string | null;
+  };
+  company: { name: string | null; logo_url: string | null };
+  employer: { name: string; address: string; phone: string; tax_file_number: string };
+  settings: Pick<Tax101Settings, "default_income_type" | "allow_edit_prefilled" | "write_back_to_employee">;
+  employee: Tax101EmployeeSource & { id: string; company_id: string | null; employee_code?: string | null };
+  dependents: Tax101DependentSource[];
+}
+
+/** Everything the official-form auto-fill needs, for the signed-in employee or a token link. */
+export function useTax101Context(target: { formId?: string | null; token?: string | null }) {
+  const { formId, token } = target;
+  return useQuery({
+    queryKey: ["tax101", "context", formId ?? null, token ?? null],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_tax_form_101_context", {
+        _form_id: formId ?? null,
+        _token: token ?? null,
+      });
+      if (error) throw error;
+      return (data ?? null) as unknown as Tax101ContextResult | null;
+    },
+    enabled: !!(formId || token),
+    staleTime: 0,
+  });
+}
+
+// Sign the form: one atomic DB call (status, PDF, write-back to the employee card, activity log)
 export function useSubmitTax101() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({
       formId,
+      token,
       formData,
       signatureData,
-      pdfUrl,
+      pdfPath,
     }: {
       formId: string;
-      formData: any;
+      token?: string | null;
+      formData: Tax101FormData;
       signatureData: string;
-      pdfUrl: string;
+      pdfPath: string;
     }) => {
-      const { data, error } = await supabase
-        .from("tax_form_101" as any)
-        .update({
-          form_data: formData,
-          signature_data: signatureData,
-          pdf_url: pdfUrl,
-          status: "signed",
-          signed_at: new Date().toISOString(),
-        })
-        .eq("id", formId)
-        .select("*")
-        .single();
+      const { data, error } = await supabase.rpc("submit_tax_form_101", {
+        _form_id: formId,
+        _token: token ?? null,
+        _form_data: formData as unknown as Json,
+        _signature: signatureData,
+        _pdf_url: pdfPath,
+        _template_version: TAX101_TEMPLATE_VERSION,
+      });
       if (error) throw error;
 
-      // Activity log entry (best-effort — won't block on RLS)
+      // E-mail the signed PDF to payroll. The form is already signed, so a mail
+      // failure must not be reported as a failed signature.
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        await supabase.from("activity_log").insert({
-          company_id: (data as any).company_id,
-          employee_id: (data as any).employee_id,
-          entity_id: (data as any).id,
-          entity_type: "tax_form_101",
-          action: `מילוי וחתימה על טופס 101 לשנת ${(data as any).tax_year}`,
-          details: `הטופס נחתם דיגיטלית ונשלח למחלקת השכר`,
-          performed_by: user?.id ?? null,
+        await supabase.functions.invoke("send-tax101-email", {
+          body: token ? { form_id: formId, access_token: token } : { form_id: formId },
         });
       } catch (e) {
-        console.warn("activity_log insert (tax101) failed:", e);
+        console.warn("send-tax101-email failed:", e);
       }
-
-      // Trigger email send (with attachment via Resend)
-      await supabase.functions.invoke("send-tax101-email", { body: { form_id: formId } });
       return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tax101"] });
       qc.invalidateQueries({ queryKey: ["activity-log"] });
     },
+  });
+}
+
+export function useTax101Settings(companyId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["tax101", "settings", companyId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tax101_settings")
+        .select("*")
+        .eq("company_id", companyId!)
+        .maybeSingle();
+      if (error) throw error;
+      return { ...DEFAULT_TAX101_SETTINGS, ...(data ?? {}) } as Tax101Settings;
+    },
+    enabled: !!companyId,
+  });
+}
+
+export function useSaveTax101Settings() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async ({ companyId, settings }: { companyId: string; settings: Tax101Settings }) => {
+      const { error } = await supabase
+        .from("tax101_settings")
+        .upsert({ company_id: companyId, ...settings, updated_by: user?.id ?? null }, { onConflict: "company_id" });
+      if (error) throw error;
+    },
+    onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: ["tax101", "settings", v.companyId] }),
   });
 }
 

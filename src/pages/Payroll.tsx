@@ -16,6 +16,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Tax101AdminTab } from "@/components/payroll/Tax101AdminTab";
+import { Tax101SettingsCard } from "@/components/payroll/Tax101SettingsCard";
 import { AttendanceClockTab } from "@/components/payroll/AttendanceClockTab";
 import { MonthlyAttendanceReview } from "@/components/payroll/MonthlyAttendanceReview";
 import { MichpalExportCard } from "@/components/payroll/MichpalExportCard";
@@ -316,6 +317,8 @@ function PayrollSettingsTab() {
           שמור שינויים
         </Button>
       </div>
+
+      <Tax101SettingsCard />
 
       <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 space-y-3">
         <div className="flex items-center gap-3">

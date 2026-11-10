@@ -2,7 +2,7 @@ import { useState } from "react";
 import { FileText, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMyPendingTax101 } from "@/hooks/useTax101";
-import { Tax101Dialog } from "@/components/Tax101Dialog";
+import { Tax101OfficialForm } from "@/components/tax101/Tax101OfficialForm";
 
 interface Props {
   employee: any;
@@ -33,13 +33,7 @@ export function Tax101Banner({ employee, taxYear }: Props) {
       </div>
 
       {open && (
-        <Tax101Dialog
-          open={open}
-          onOpenChange={setOpen}
-          formId={pending.id}
-          taxYear={pending.tax_year}
-          employee={employee}
-        />
+        <Tax101OfficialForm open={open} onOpenChange={setOpen} formId={pending.id} />
       )}
     </>
   );
