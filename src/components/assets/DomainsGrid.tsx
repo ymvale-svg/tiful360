@@ -31,8 +31,9 @@ import { Input } from "@/components/ui/input";
 import { RowContextMenu, copyAction, openInNewTab, type ContextAction } from "@/components/context/RowContextMenu";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ExpiringResourcesDialog } from "@/components/assets/ExpiringResourcesDialog";
-import { expiryClickAction, getExpiringResourceTargets } from "@/lib/expiringResourceTargets";
+import { expiryClickAction, getExpiringResourceTargets, type ExpiringResourceTarget } from "@/lib/expiringResourceTargets";
 
 interface Props {
   /** Deprecated — domain cards now navigate via /assets/:domain. Kept optional for back-compat. */
@@ -89,6 +90,9 @@ export function DomainsGrid({ onQuickAssign }: Props) {
   const [editHint, setEditHint] = useState("");
   const [saving, setSaving] = useState(false);
   const [expiryListOpen, setExpiryListOpen] = useState(false);
+  // A domain's "renew within 14 days" badge opens its own list, not the 30-day one.
+  const [domainSoon, setDomainSoon] = useState<{ title: string; targets: ExpiringResourceTarget[] } | null>(null);
+  const [expandedDomains, setExpandedDomains] = useState<Set<DomainKey>>(new Set());
 
   const domainLabels = (activeCompany?.domain_labels ?? null) as DomainLabels | null;
   const labels = useMemo(() => getAllDomainLabels(domainLabels), [domainLabels]);
@@ -110,9 +114,10 @@ export function DomainsGrid({ onQuickAssign }: Props) {
         .sort((a, b) => b._count - a._count);
       const domainExpiring = (expiring ?? []).filter((e) => catIds.has(e.category_id));
       const expired = domainExpiring.filter((e) => e.days_left <= 0).length;
-      const soon = domainExpiring.filter((e) => e.days_left > 0 && e.days_left <= 14).length;
+      const soonItems = domainExpiring.filter((e) => e.days_left > 0 && e.days_left <= 14);
+      const soon = soonItems.length;
       const subCount = (assetGroups ?? []).filter((g: any) => catIds.has(g.category_id)).length;
-      return { meta, cats: sortedCats, assets: domainAssets, expired, soon, subCount };
+      return { meta, cats: sortedCats, assets: domainAssets, expired, soon, soonItems, subCount };
     });
   }, [categories, assets, expiring, assetGroups]);
 
@@ -164,7 +169,12 @@ export function DomainsGrid({ onQuickAssign }: Props) {
   };
 
   if (isLoading) {
-    return <div className="p-8 text-center text-muted-foreground">טוען...</div>;
+    return (
+      <div role="status" aria-busy="true" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <span className="sr-only">טוען דומיינים…</span>
+        {Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-40 rounded-2xl" />)}
+      </div>
+    );
   }
 
   return (
@@ -202,12 +212,18 @@ export function DomainsGrid({ onQuickAssign }: Props) {
       </div>
 
       <ExpiringResourcesDialog open={expiryListOpen} onOpenChange={setExpiryListOpen} targets={soonTargets} />
+      <ExpiringResourcesDialog
+        open={!!domainSoon}
+        onOpenChange={(o) => { if (!o) setDomainSoon(null); }}
+        targets={domainSoon?.targets ?? []}
+        title={domainSoon?.title}
+      />
 
       {/* Domain cards */}
       <div>
         <h2 className="text-xs font-semibold text-muted-foreground mb-3 text-right">6 דומיינים</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {grouped.map(({ meta, cats, assets, expired, soon, subCount }) => {
+          {grouped.map(({ meta, cats, assets, expired, soon, soonItems, subCount }) => {
             const Icon = meta.icon;
             const badge = expired > 0
               ? { text: `${expired} פגי תוקף`, cls: "bg-destructive/10 text-destructive" }
@@ -241,6 +257,7 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                   </div>
                   <div className="space-y-2">
                     <Input
+                      aria-label="כותרת הדומיין"
                       value={editTitle}
                       onChange={(e) => setEditTitle(e.target.value)}
                       placeholder="כותרת הדומיין"
@@ -248,6 +265,7 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                       className="text-right"
                     />
                     <Textarea
+                      aria-label="תיאור קצר של הדומיין"
                       value={editHint}
                       onChange={(e) => setEditHint(e.target.value)}
                       placeholder="תיאור קצר"
@@ -299,6 +317,8 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                 tabIndex={0}
                 onClick={openDomain}
                 onKeyDown={(e) => {
+                  // Only the card itself: Enter on a nested button must activate that button.
+                  if (e.target !== e.currentTarget) return;
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
                     openDomain();
@@ -312,13 +332,21 @@ export function DomainsGrid({ onQuickAssign }: Props) {
               >
                 {badge && (
                   <button
+                    type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigate(`/assets/${slug}?expired=1`);
+                      if (expired > 0) {
+                        navigate(`/assets/${slug}?expired=1`);
+                        return;
+                      }
+                      const targets = getExpiringResourceTargets(soonItems, categories ?? []);
+                      const action = expiryClickAction(targets);
+                      if (action.type === "navigate") navigate(action.href);
+                      else setDomainSoon({ title: `${label.title}: חידוש תוך 14 יום`, targets });
                     }}
-                    title="הצג את הפריטים שפג תוקפם"
+                    title={expired > 0 ? "הצג את הפריטים שפג תוקפם" : "הצג את הפריטים שתוקפם פג תוך 14 יום"}
                     className={cn(
-                      "absolute top-3 left-3 inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full transition-shadow hover:ring-2 hover:ring-current/30 cursor-pointer",
+                      "absolute top-3 left-3 inline-flex items-center gap-1 min-h-8 text-xs font-medium px-2.5 py-1 rounded-full transition-shadow hover:ring-2 hover:ring-current/30 cursor-pointer",
                       badge.cls
                     )}
                   >
@@ -330,7 +358,8 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                 {canManage && (
                   <div
                     className={cn(
-                      "absolute left-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity",
+                      // Always visible on touch screens; on desktop they appear on hover or keyboard focus.
+                      "absolute left-3 flex items-center gap-1 transition-opacity [@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
                       badge ? "bottom-3" : "top-3"
                     )}
                   >
@@ -339,7 +368,8 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                         e.stopPropagation();
                         startEdit(meta.key);
                       }}
-                      className="w-7 h-7 rounded-full flex items-center justify-center border border-border bg-background/80 text-muted-foreground hover:text-foreground"
+                      type="button"
+                      className="w-10 h-10 [@media(pointer:coarse)]:w-11 [@media(pointer:coarse)]:h-11 rounded-full flex items-center justify-center border border-border bg-background/80 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       aria-label="ערוך תווית דומיין"
                       title="ערוך תווית דומיין"
                     >
@@ -350,7 +380,8 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                         e.stopPropagation();
                         navigate(`/assets?tab=categories&domain=${meta.key}`);
                       }}
-                      className="w-7 h-7 rounded-full flex items-center justify-center border border-border bg-background/80 text-muted-foreground hover:text-foreground"
+                      type="button"
+                      className="w-10 h-10 [@media(pointer:coarse)]:w-11 [@media(pointer:coarse)]:h-11 rounded-full flex items-center justify-center border border-border bg-background/80 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       aria-label="עריכה מהירה של קטגוריות ותתי-קטגוריות"
                       title="עריכה מהירה — קטגוריות ותתי-קטגוריות"
                     >
@@ -366,7 +397,7 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                       {isEmpty ? "אין פריטים בדומיין זה" : domainSubtitle(meta.key, cats, assets)}
                     </p>
                     {!isEmpty && (
-                      <p className="text-[11px] text-muted-foreground/80 mt-0.5">
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         {cats.length} קטגוריות · {subCount} תת-קטגוריות
                       </p>
                     )}
@@ -383,16 +414,16 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                 {/* Category chips */}
                 <div className="flex flex-wrap gap-1.5 justify-end">
                   {isEmpty ? (
-                    <a
-                      href="/assets?tab=categories"
-                      onClick={(e) => e.stopPropagation()}
-                      className="text-[11px] px-2 py-1 rounded-md border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); navigate("/assets?tab=categories"); }}
+                      className="text-xs min-h-8 px-2.5 py-1 rounded-md border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
                     >
                       + הוסף קטגוריה ראשונה
-                    </a>
+                    </button>
                   ) : (
                     <>
-                      {cats.slice(0, 6).map((c) => (
+                      {(expandedDomains.has(meta.key) ? cats : cats.slice(0, 6)).map((c) => (
                         <RowContextMenu
                           key={c.id}
                           actions={[
@@ -414,13 +445,13 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                           ]}
                         >
                         <button
+                          type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             navigate(`/assets/${slug}?cat=${c.id}`);
                           }}
-
                           className={cn(
-                            "inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border border-border bg-background hover:bg-muted transition-colors",
+                            "inline-flex items-center gap-1 text-xs min-h-8 px-2.5 py-1 rounded-md border border-border bg-background hover:bg-muted transition-colors",
                             meta.color.text
                           )}
                         >
@@ -430,9 +461,22 @@ export function DomainsGrid({ onQuickAssign }: Props) {
                         </RowContextMenu>
                       ))}
                       {cats.length > 6 && (
-                        <span className="inline-flex items-center text-[11px] px-2 py-1 rounded-md border border-border text-muted-foreground">
-                          +{cats.length - 6}
-                        </span>
+                        <button
+                          type="button"
+                          aria-expanded={expandedDomains.has(meta.key)}
+                          aria-label={expandedDomains.has(meta.key) ? "הצג פחות קטגוריות" : `הצג עוד ${cats.length - 6} קטגוריות`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedDomains((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(meta.key)) next.delete(meta.key); else next.add(meta.key);
+                              return next;
+                            });
+                          }}
+                          className="inline-flex items-center text-xs min-h-8 px-2.5 py-1 rounded-md border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                        >
+                          {expandedDomains.has(meta.key) ? "פחות" : `+${cats.length - 6}`}
+                        </button>
                       )}
                     </>
                   )}

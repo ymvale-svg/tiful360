@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { SignaturePad, SignaturePadHandle } from "@/components/SignaturePad";
 import {
-  FileSignature, Camera, Video, Send, PenTool, Upload, X,
+  FileSignature, Camera, Video, Send, PenTool, Upload,
   ChevronLeft, ChevronRight, Loader2, FileDown, Package, Save, RotateCcw, Trash2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,6 +31,7 @@ import type { ProtocolMedia } from "@/lib/pdf/types";
 import { uploadProtocolFile, compressImage, describeUploadError } from "@/lib/protocolUpload";
 import { getDomain, type DomainKey } from "@/lib/assetDomains";
 import { SignLinkDialog } from "@/components/handover/SignLinkDialog";
+import { StepBar, ModeButton, FilePickerButton, CaptureOrPick, PhotoThumbs } from "@/components/handover/handoverControls";
 import { signLinkFor, sendSignLink, describeSignEmailReason } from "@/lib/signLink";
 import { compressVideo, VIDEO_TARGET_BYTES } from "@/lib/videoCompress";
 import {
@@ -64,6 +65,8 @@ interface Props {
   /** All selected items — must share one domain (enforced by caller). */
   assets: MultiAssetLike[];
   onAssigned?: () => void;
+  /** Pre-selects the receiving employee (e.g. from quick assign). */
+  defaultEmployeeId?: string;
 }
 
 type Step = "details" | "media" | "sign";
@@ -95,7 +98,7 @@ const DOMAIN_COPY: Partial<Record<DomainKey, { dialogTitle: string; pdfTitle: st
   real_estate: { dialogTitle: "מסירת נכסים", pdfTitle: "פרוטוקול מסירת נכס", itemsLabel: "הנכסים בפרוטוקול" },
 };
 
-export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Props) {
+export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned, defaultEmployeeId }: Props) {
   const { data: employees } = useEmployees();
   const { activeCompany, activeCompanyId } = useCompany();
   const { user } = useAuth();
@@ -110,6 +113,8 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [attachment, setAttachment] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+  /** What the final save is doing right now, shown on the button and announced. */
+  const [busyStage, setBusyStage] = useState<string | null>(null);
   const [videoProgress, setVideoProgress] = useState<number | null>(null);
   const [foundDraft, setFoundDraft] = useState<HandoverDraft | null>(null);
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
@@ -155,11 +160,11 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
     if (!open) return;
     setStep("details");
     setMode("on_site");
-    setEmployeeId("");
+    setEmployeeId(defaultEmployeeId ?? "");
     setFreeText("");
     setPhotos([]); setVideoFile(null); setAttachment(null);
     setVideoProgress(null); setDraftSavedAt(null);
-  }, [open]);
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps -- reset only when the dialog opens
 
   // ---- Draft (save mid-process / resume) ----
   const draftKey = assets.length ? draftKeyForAssets(assets.map((a) => a.id)) : null;
@@ -174,8 +179,13 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
     return () => { cancelled = true; };
   }, [open, draftKey]);
 
-  const handleSaveDraft = async () => {
-    if (!draftKey) return;
+  const savingDraftRef = useRef(false);
+  const [savingDraft, setSavingDraft] = useState(false);
+  /** Returns whether the draft was saved; repeated clicks while saving are ignored. */
+  const handleSaveDraft = async (): Promise<boolean> => {
+    if (!draftKey || savingDraftRef.current) return false;
+    savingDraftRef.current = true;
+    setSavingDraft(true);
     const savedAt = new Date().toISOString();
     try {
       await saveHandoverDraft({
@@ -191,8 +201,13 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
       setDraftSavedAt(savedAt);
       setFoundDraft(null);
       toast({ title: "הטיוטה נשמרה", description: "אפשר להמשיך את המסירה מאוחר יותר" });
+      return true;
     } catch (error: any) {
       toast({ title: "הטיוטה לא נשמרה במערכת", description: error?.message ?? "יש לנסות שוב", variant: "destructive" });
+      return false;
+    } finally {
+      savingDraftRef.current = false;
+      setSavingDraft(false);
     }
   };
 
@@ -264,7 +279,8 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
 
   /** Never close on an accidental tap outside — always ask first. */
   const requestClose = () => setConfirmExit(true);
-  const exitWithDraft = async () => { await handleSaveDraft(); setConfirmExit(false); close(); };
+  // A failed draft save keeps the dialog open, so nothing captured so far is lost.
+  const exitWithDraft = async () => { if (!(await handleSaveDraft())) return; setConfirmExit(false); close(); };
   const exitWithoutSaving = () => { setConfirmExit(false); close(); };
 
   const uploadFile = async (file: Blob, name: string, contentType?: string) =>
@@ -447,6 +463,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
     }
     setBusy(true);
     try {
+      setBusyStage("מעלה תמונות וקבצים…");
       const media = await uploadMedia();
       let attachedUrl: string | null = null;
       if (attachment) attachedUrl = await uploadFile(attachment, attachment.name);
@@ -455,6 +472,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
       if (attachment && attachment.type === "application/pdf" && !receiver) {
         pdfUrl = attachedUrl;
       } else {
+        setBusyStage("מפיק PDF…");
         const blob = await buildPdf(media, receiver ?? null, issuer ?? null);
         pdfUrl = await uploadFile(blob, "protocol.pdf", "application/pdf");
       }
@@ -469,7 +487,9 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
         pdf_url: pdfUrl,
         signed_at: new Date().toISOString(),
       }, media);
+      setBusyStage("שומר את הפרוטוקול…");
       await applyAssetsUpdate();
+      setBusyStage("שולח מייל לעובד…");
       await sendProtocolEmail(pdfUrl);
 
       toast({
@@ -485,12 +505,14 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
       toast({ title: "שגיאה בשמירת הפרוטוקול", description: describeUploadError(e), variant: "destructive" });
     } finally {
       setBusy(false);
+      setBusyStage(null);
     }
   };
 
   const handleSendRemote = async () => {
     setBusy(true);
     try {
+      setBusyStage("מעלה תמונות וקבצים…");
       const media = await uploadMedia();
       const issuer = issuerSigRef.current?.getDataUrl() ?? null;
       const rows = await insertForms({
@@ -500,6 +522,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
         media: media as any,
       }, media);
       await applyAssetsUpdate();
+      setBusyStage("שולח קישור לחתימה…");
       const { links, sent, reason } = await sendSignLink(
         rows.map((r) => r.id),
         rows.map((r) => signLinkFor(r.sign_token, (r as any).short_code)),
@@ -523,6 +546,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
       toast({ title: "שגיאה בשמירת הפרוטוקול", description: describeUploadError(e), variant: "destructive" });
     } finally {
       setBusy(false);
+      setBusyStage(null);
     }
   };
 
@@ -584,11 +608,11 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
         <StepBar step={step} withMedia={isPhysical} />
 
         <div className="flex items-center justify-between gap-2 -mt-1">
-          <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={handleSaveDraft}>
-            <Save className="w-4 h-4" /> שמור כטיוטה
+          <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => { void handleSaveDraft(); }} loading={savingDraft} loadingText="שומר טיוטה…" disabled={busy}>
+            <Save className="w-4 h-4" aria-hidden="true" /> שמור כטיוטה
           </Button>
           {draftSavedAt && (
-            <span className="text-[11px] text-muted-foreground">נשמר {formatDraftTime(draftSavedAt)}</span>
+            <span className="text-xs text-muted-foreground" role="status">נשמר {formatDraftTime(draftSavedAt)}</span>
           )}
         </div>
 
@@ -626,15 +650,15 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
             </div>
 
             <div>
-              <Label className="text-sm mb-1.5 block">הערות</Label>
-              <Textarea value={freeText} onChange={(e) => setFreeText(e.target.value)} rows={3} dir="rtl" />
+              <Label htmlFor="multihando-f1" className="text-sm mb-1.5 block">הערות</Label>
+              <Textarea id="multihando-f1" value={freeText} onChange={(e) => setFreeText(e.target.value)} rows={3} dir="rtl" />
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {quickTexts.map((t) => (
                   <button
                     key={t}
                     type="button"
                     onClick={() => setFreeText((prev) => (prev ? `${prev}\n${t}` : t))}
-                    className="text-[11px] px-2 py-1 rounded-full bg-muted hover:bg-muted/70"
+                    className="min-h-8 text-xs px-2.5 py-1 rounded-full bg-muted hover:bg-muted/70"
                   >
                     + {t}
                   </button>
@@ -643,7 +667,7 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
             </div>
 
             <div className="flex gap-2 pt-1">
-              <Button variant="outline" className="flex-1" onClick={close}>ביטול</Button>
+              <Button variant="outline" className="flex-1" onClick={requestClose}>ביטול</Button>
               <Button className="flex-1 gap-1" disabled={!employeeId} onClick={() => setStep(isPhysical ? "media" : "sign")}>
                 המשך <ChevronLeft className="w-4 h-4" />
               </Button>
@@ -654,39 +678,23 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
         {isPhysical && step === "media" && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <FilePickerButton
-                icon={<Camera className="w-4 h-4" />}
-                label="צילום תמונות של הפריטים"
+              <CaptureOrPick
+                icon={<Camera className="w-4 h-4" aria-hidden="true" />}
+                cameraLabel="צילום תמונות של הפריטים"
+                galleryLabel="בחירת תמונות מהגלריה"
                 accept="image/*"
-                capture="environment"
                 multiple
                 onFiles={(files) => setPhotos((prev) => [...prev, ...files])}
               />
-              {photos.length > 0 && (
-                <div className="grid grid-cols-3 gap-2">
-                  {photos.map((p, i) => (
-                    <div key={i} className="relative rounded-lg overflow-hidden border">
-                      <img src={URL.createObjectURL(p)} alt={`תיעוד ${i + 1}`} className="w-full h-20 object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => setPhotos((prev) => prev.filter((_, idx) => idx !== i))}
-                        className="absolute top-1 left-1 bg-background/90 rounded-full p-0.5"
-                        aria-label="הסר תמונה"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <FilePickerButton
-                icon={<Video className="w-4 h-4" />}
-                label={videoFile ? videoFile.name : "צילום סרטון קצר (עד 60 שניות)"}
+              <PhotoThumbs photos={photos} onRemove={(i) => setPhotos((prev) => prev.filter((_, idx) => idx !== i))} />
+              <CaptureOrPick
+                icon={<Video className="w-4 h-4" aria-hidden="true" />}
+                cameraLabel={videoFile ? videoFile.name : "צילום סרטון קצר (עד 60 שניות)"}
+                galleryLabel="בחירת סרטון מהגלריה"
                 accept="video/*"
-                capture="environment"
                 onFiles={(files) => setVideoFile(files[0] ?? null)}
               />
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 הסרטון יכווץ אוטומטית לפחות מ‑10 מ"ב לפני השמירה — השאירו את המסך פתוח עד הסיום.
               </p>
             </div>
@@ -704,13 +712,13 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
 
         {step === "sign" && (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" role="group" aria-label="אופן החתימה">
               <ModeButton active={mode === "on_site"} onClick={() => setMode("on_site")} icon={<PenTool className="w-4 h-4" />} title="חתימה במקום" />
               <ModeButton active={mode === "remote_sign"} onClick={() => setMode("remote_sign")} icon={<Send className="w-4 h-4" />} title="שליחה לחתימה" />
               <ModeButton active={mode === "manual_upload"} onClick={() => setMode("manual_upload")} icon={<Upload className="w-4 h-4" />} title="העלאת מסמך חתום" />
             </div>
 
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={handlePreview}>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={handlePreview} loadingText="מפיק תצוגה מקדימה…">
               <FileDown className="w-4 h-4" /> תצוגה מקדימה של הפרוטוקול
             </Button>
 
@@ -739,11 +747,13 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
                 onClick={mode === "remote_sign" ? handleSendRemote : handleSignNow}
               >
                 {busy ? (
-                  videoProgress !== null
-                    ? <span className="text-xs">מכווץ סרטון… {Math.round(videoProgress * 100)}%</span>
-                    : <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="inline-flex items-center gap-2 text-sm">
+                    <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                    {videoProgress !== null ? `מכווץ סרטון… ${Math.round(videoProgress * 100)}%` : (busyStage ?? "שומר…")}
+                  </span>
                 ) : mode === "remote_sign" ? "שלח לחתימה" : "סיים ושמור"}
               </Button>
+              <p role="status" className="sr-only">{busy ? (videoProgress !== null ? `מכווץ סרטון… ${Math.round(videoProgress * 100)}%` : busyStage ?? "") : ""}</p>
             </div>
           </div>
         )}
@@ -784,75 +794,3 @@ export function MultiHandoverFlow({ open, onOpenChange, assets, onAssigned }: Pr
   );
 }
 
-function StepBar({ step, withMedia = true }: { step: Step; withMedia?: boolean }) {
-  const steps: { key: Step; label: string }[] = [
-    { key: "details", label: "פרטים" },
-    ...(withMedia ? [{ key: "media" as Step, label: "תיעוד" }] : []),
-    { key: "sign", label: "חתימות" },
-  ];
-  const idx = steps.findIndex((s) => s.key === step);
-  return (
-    <div className="flex items-center gap-1.5 py-1">
-      {steps.map((s, i) => (
-        <div key={s.key} className="flex-1 flex items-center gap-1.5">
-          <div
-            className={`flex-1 h-1.5 rounded-full ${i <= idx ? "bg-primary" : "bg-muted"}`}
-            aria-hidden="true"
-          />
-          <span className={`text-[11px] whitespace-nowrap ${i === idx ? "text-primary font-medium" : "text-muted-foreground"}`}>
-            {s.label}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function ModeButton({ active, onClick, icon, title }: { active: boolean; onClick: () => void; icon: React.ReactNode; title: string }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`p-2.5 rounded-lg border-2 text-sm flex items-center justify-center gap-2 transition-colors ${
-        active ? "border-primary bg-primary/5 text-primary" : "border-border hover:bg-muted"
-      }`}
-    >
-      {icon}
-      {title}
-    </button>
-  );
-}
-
-function FilePickerButton({
-  icon, label, accept, capture, multiple, onFiles,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  accept: string;
-  capture?: "environment" | "user";
-  multiple?: boolean;
-  onFiles: (files: File[]) => void;
-}) {
-  const id = useRef(`file-${Math.random().toString(36).slice(2)}`).current;
-  return (
-    <label
-      htmlFor={id}
-      className="flex items-center gap-2 px-3 py-2.5 bg-muted rounded-lg text-sm cursor-pointer hover:bg-muted/70 focus-within:ring-2 focus-within:ring-ring"
-    >
-      {icon}
-      <span className="truncate">{label}</span>
-      <input
-        id={id}
-        type="file"
-        accept={accept}
-        capture={capture}
-        multiple={multiple}
-        className="sr-only"
-        onChange={(e) => {
-          onFiles(Array.from(e.target.files ?? []));
-          e.currentTarget.value = "";
-        }}
-      />
-    </label>
-  );
-}

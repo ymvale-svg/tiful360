@@ -165,7 +165,7 @@ export function HandoverFormsList({ forms, context, emptyText = "אין עדיי
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-8 gap-1 px-2 text-xs"
+                  className="h-10 gap-1 px-2 text-xs"
                   disabled={resendingId === f.id}
                   onClick={() => void resend(f)}
                   title="שליחת מייל חוזר לעובד עם קישור לחתימה"
@@ -192,7 +192,7 @@ export function HandoverFormsList({ forms, context, emptyText = "אין עדיי
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-8 gap-1 px-2 text-xs"
+                  className="h-10 gap-1 px-2 text-xs"
                   onClick={() => setMediaPreview({ items: media, title: `${title} · ${subject}` })}
                 >
                   <Images className="w-3.5 h-3.5" />
@@ -207,7 +207,7 @@ export function HandoverFormsList({ forms, context, emptyText = "אין עדיי
                   size="sm"
                   disabled={creatingPreview}
                   onClick={() => void openPreview(f, `${title} · ${subject}`, url)}
-                  className="h-8 gap-1 px-2 text-xs"
+                  className="h-10 gap-1 px-2 text-xs"
                 >
                   <Eye className="w-3.5 h-3.5" />
                   צפייה
@@ -215,10 +215,12 @@ export function HandoverFormsList({ forms, context, emptyText = "אין עדיי
                 <button
                   type="button"
                   onClick={() => void openHandoverFile(url)}
-                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary hover:underline"
+                  aria-label={`הורד ${title}`}
+                  title="הורדה"
+                  className="inline-flex min-h-10 min-w-10 items-center justify-center gap-1 rounded-md px-2 text-xs text-muted-foreground hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <FileDown className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">הורדה</span>
+                  <FileDown className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span className="hidden sm:inline" aria-hidden="true">הורדה</span>
                 </button>
               </div>
               )}

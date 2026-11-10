@@ -3,8 +3,16 @@ import SignatureCanvas from "react-signature-canvas";
 
 // react-signature-canvas ships class-component types that clash with
 // @types/react 18.3's JSX check (TS2786). Runtime is fine — cast only.
+// Its UMD build exports `{ __esModule: true, default: Component }`, and Vite's
+// optimized copy hands that whole object to the default import — so unwrap it,
+// otherwise React receives an object and the entire screen crashes to blank.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const SignatureCanvasView = SignatureCanvas as any;
+export function unwrapComponent(mod: unknown) {
+  const m = mod as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (m && typeof m === "object" && "default" in m ? m.default : m) as any;
+}
+export const SignatureCanvasView = unwrapComponent(SignatureCanvas);
 import { Button } from "@/components/ui/button";
 import { Eraser } from "lucide-react";
 

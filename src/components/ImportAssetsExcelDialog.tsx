@@ -1,15 +1,18 @@
-import { useState, useRef } from "react";
+import { useMemo, useState } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, Download } from "lucide-react";
+import { FileSpreadsheet, AlertCircle, CheckCircle, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAssetCategories } from "@/hooks/useData";
+import { useAssetCategories, useAssets } from "@/hooks/useData";
 import { loadXlsx, type XlsxModule } from "@/lib/xlsx";
+import { validateAssetImportRows } from "@/lib/assetImportValidation";
+import { runBatch } from "@/lib/batchProgress";
+import { FileDrop } from "@/components/feedback/FileDrop";
 
 interface Props {
   open: boolean;
@@ -107,11 +110,20 @@ export function ImportAssetsExcelDialog({ open, onOpenChange }: Props) {
   const [fileName, setFileName] = useState("");
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const { toast } = useToast();
   const { activeCompanyId } = useCompany();
   const { data: categories } = useAssetCategories();
+  const { data: existingAssets } = useAssets();
   const queryClient = useQueryClient();
+
+  // Checked in the preview, before anything is written.
+  const checks = useMemo(
+    () => validateAssetImportRows(rows, (categories ?? []) as any[], (existingAssets ?? []).map((a: any) => a.asset_code ?? "")),
+    [rows, categories, existingAssets],
+  );
+  const validCount = checks.filter((c) => c.issues.length === 0).length;
+  const invalidCount = rows.length - validCount;
 
   const reset = () => {
     setRows([]);
@@ -119,8 +131,7 @@ export function ImportAssetsExcelDialog({ open, onOpenChange }: Props) {
     setResult(null);
   };
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleFile = (file: File | undefined) => {
     if (!file) return;
     setFileName(file.name);
     setResult(null);
@@ -147,7 +158,7 @@ export function ImportAssetsExcelDialog({ open, onOpenChange }: Props) {
           mapped.status = STATUS_MAP[mapped.status.trim()] || "in_stock";
         }
         return mapped as ParsedAsset;
-      }).filter((r) => r.asset_name && r.asset_code);
+      }).filter((r) => r.asset_name || r.asset_code || r.category_name);
 
       setRows(parsed);
       if (parsed.length === 0) {
@@ -158,47 +169,37 @@ export function ImportAssetsExcelDialog({ open, onOpenChange }: Props) {
   };
 
   const handleImport = async () => {
-    if (!activeCompanyId || rows.length === 0) return;
+    if (!activeCompanyId || validCount === 0) return;
     setImporting(true);
-    const errors: string[] = [];
-    let success = 0;
+    // Rows that failed the preview check are reported, not sent.
+    const errors: string[] = checks
+      .map((c, i) => (c.issues.length ? `שורה ${i + 1} (${rows[i].asset_name || "ללא שם"}): ${c.issues.join(", ")}` : null))
+      .filter((e): e is string => !!e);
+    const ready = rows
+      .map((row, i) => ({ row, i, categoryId: checks[i].categoryId }))
+      .filter(({ i }) => checks[i].issues.length === 0);
 
-    // Build category lookup by name
-    const catMap = new Map<string, string>();
-    (categories ?? []).forEach((c) => catMap.set(c.category_name.trim().toLowerCase(), c.id));
-
-    for (let i = 0; i < rows.length; i++) {
-      const row = rows[i];
-      if (!row.asset_code || !row.asset_name) {
-        errors.push(`שורה ${i + 1}: חסרים שדות חובה (${row.asset_name || "ללא שם"})`);
-        continue;
-      }
-
-      const categoryId = catMap.get((row.category_name ?? "").trim().toLowerCase());
-      if (!categoryId) {
-        errors.push(`שורה ${i + 1} (${row.asset_name}): קטגוריה "${row.category_name}" לא נמצאה`);
-        continue;
-      }
-
+    setProgress({ done: 0, total: ready.length });
+    const { done, failed } = await runBatch(ready, async ({ row, categoryId }, idx) => {
+      setProgress({ done: idx, total: ready.length });
       const { error } = await supabase.from("assets").insert({
-        asset_code: row.asset_code,
-        asset_name: row.asset_name,
-        category_id: categoryId,
+        asset_code: row.asset_code!,
+        asset_name: row.asset_name!,
+        category_id: categoryId!,
         serial_number: row.serial_number || null,
         status: (row.status as any) || "in_stock",
         expiry_date: row.expiry_date || null,
         notes: row.notes || null,
         company_id: activeCompanyId,
       });
-      if (error) {
-        errors.push(`שורה ${i + 1} (${row.asset_name}): ${error.message}`);
-      } else {
-        success++;
-      }
-    }
+      if (error) throw new Error(error.message);
+    }, { name: "ייבוא ציוד מאקסל", unit: "שורה" });
+    failed.forEach(({ item, error }) => errors.push(`שורה ${item.i + 1} (${item.row.asset_name}): ${error}`));
 
-    setResult({ success, failed: errors.length, errors });
+    setResult({ success: done, failed: errors.length, errors });
+    setProgress(null);
     setImporting(false);
+    const success = done;
     queryClient.invalidateQueries({ queryKey: ["assets"] });
     queryClient.invalidateQueries({ queryKey: ["asset-categories"] });
     queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
@@ -222,8 +223,13 @@ export function ImportAssetsExcelDialog({ open, onOpenChange }: Props) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
+    <Dialog open={open} onOpenChange={(o) => { if (!o && importing) return; if (!o) reset(); onOpenChange(o); }}>
+      <DialogContent
+        className="max-w-2xl max-h-[90vh] overflow-y-auto"
+        dir="rtl"
+        onEscapeKeyDown={(e) => { if (importing) e.preventDefault(); }}
+        onInteractOutside={(e) => { if (importing) e.preventDefault(); }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="w-5 h-5 text-primary" />
@@ -243,30 +249,21 @@ export function ImportAssetsExcelDialog({ open, onOpenChange }: Props) {
             </Button>
           </div>
 
-          <div
-            className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
-            onClick={() => fileRef.current?.click()}
-          >
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              className="hidden"
-              onChange={handleFile}
-            />
-            <Upload className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-            {fileName ? (
-              <p className="text-sm font-medium text-foreground">{fileName}</p>
-            ) : (
-              <p className="text-sm text-muted-foreground">לחץ להעלאת קובץ או גרור לכאן</p>
-            )}
-            <p className="text-xs text-muted-foreground mt-1">xlsx, xls, csv</p>
-          </div>
+          <FileDrop
+            accept=".xlsx,.xls,.csv"
+            disabled={importing}
+            onFiles={(files) => handleFile(files[0])}
+            title={fileName ? fileName : "גררו קובץ אקסל לכאן או לחצו לבחירה"}
+            hint={fileName ? "לחצו או גררו קובץ אחר כדי להחליף" : "xlsx, xls, csv"}
+          />
 
           {rows.length > 0 && !result && (
             <div className="space-y-3">
               <p className="text-sm font-medium">
-                נמצאו <span className="text-primary font-bold">{rows.length}</span> שורות לייבוא
+                נמצאו <span className="text-primary font-bold">{rows.length}</span> שורות
+                {invalidCount > 0
+                  ? <> — <span className="text-success">{validCount} מוכנות לייבוא</span>, <span className="text-destructive">{invalidCount} עם בעיות שלא ייובאו</span></>
+                  : " — כולן מוכנות לייבוא"}
               </p>
               <div className="max-h-48 overflow-auto border border-border rounded-lg">
                 <table className="w-full text-xs">
@@ -277,16 +274,31 @@ export function ImportAssetsExcelDialog({ open, onOpenChange }: Props) {
                       <th className="p-2 text-start">שם פריט</th>
                       <th className="p-2 text-start">קטגוריה</th>
                       <th className="p-2 text-start">סטטוס</th>
+                      <th className="p-2 text-start">בדיקה</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.slice(0, 10).map((r, i) => (
-                      <tr key={i} className="border-t border-border">
+                    {/* Rows with problems first, so they are seen before importing. */}
+                    {rows.map((r, i) => ({ r, i })).sort((a, b) => Number(checks[b.i].issues.length > 0) - Number(checks[a.i].issues.length > 0)).slice(0, 10).map(({ r, i }) => (
+                      <tr key={i} className={`border-t border-border ${checks[i].issues.length ? "bg-destructive/5" : ""}`}>
                         <td className="p-2 text-muted-foreground">{i + 1}</td>
                         <td className="p-2 font-mono">{r.asset_code}</td>
                         <td className="p-2">{r.asset_name}</td>
                         <td className="p-2">{r.category_name ?? "—"}</td>
                         <td className="p-2">{r.status ?? "במלאי"}</td>
+                        <td className="p-2">
+                          {checks[i].issues.length ? (
+                            <span className="inline-flex items-start gap-1 text-destructive">
+                              <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" aria-hidden="true" />
+                              {checks[i].issues.join(", ")}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-success">
+                              <CheckCircle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                              תקין
+                            </span>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -298,16 +310,21 @@ export function ImportAssetsExcelDialog({ open, onOpenChange }: Props) {
                 )}
               </div>
 
-              <Button className="w-full gap-2" onClick={handleImport} disabled={importing}>
-                {importing ? "מייבא..." : `ייבא ${rows.length} פריטים`}
+              <Button className="w-full gap-2" onClick={handleImport} disabled={importing || validCount === 0} aria-busy={importing || undefined}>
+                {importing
+                  ? `מייבא… שורה ${(progress?.done ?? 0) + 1} מתוך ${progress?.total ?? validCount}`
+                  : validCount === 0
+                    ? "אין שורות תקינות לייבוא"
+                    : invalidCount > 0 ? `ייבא ${validCount} פריטים תקינים` : `ייבא ${validCount} פריטים`}
               </Button>
+              {importing && <p className="text-xs text-muted-foreground text-center" role="status">אפשר לסגור את החלון רק בסיום הייבוא.</p>}
             </div>
           )}
 
           {result && (
-            <div className="space-y-3">
+            <div className="space-y-3" role="status">
               <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
-                <CheckCircle className="w-8 h-8 text-success flex-shrink-0" />
+                <CheckCircle className="w-8 h-8 text-success flex-shrink-0" aria-hidden="true" />
                 <div>
                   <p className="font-medium">{result.success} פריטים יובאו בהצלחה</p>
                   {result.failed > 0 && (
@@ -320,7 +337,7 @@ export function ImportAssetsExcelDialog({ open, onOpenChange }: Props) {
                 <div className="max-h-32 overflow-auto border border-destructive/20 rounded-lg p-3 space-y-1">
                   {result.errors.map((err, i) => (
                     <p key={i} className="text-xs text-destructive flex items-start gap-1">
-                      <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                      <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" aria-hidden="true" />
                       {err}
                     </p>
                   ))}

@@ -98,9 +98,9 @@ export function TrainingDetailsPanel({ asset }: Props) {
       <div className="grid grid-cols-2 gap-x-4 gap-y-3">
         <FieldEditable label="ספק / מדריך" value={cf.provider} editing={editing} v={form.provider} onChange={(v) => setForm({ ...form, provider: v })} />
         <div>
-          <Label className="text-xs text-muted-foreground">תאריך השלמה</Label>
+          <Label htmlFor="trainingde-f1" className="text-xs text-muted-foreground">תאריך השלמה</Label>
           {editing ? (
-            <Input type="date" value={form.completed_at} onChange={(e) => setForm({ ...form, completed_at: e.target.value })} className="mt-1 text-left" dir="ltr" />
+            <Input id="trainingde-f1" type="date" value={form.completed_at} onChange={(e) => setForm({ ...form, completed_at: e.target.value })} className="mt-1 text-left" dir="ltr" />
           ) : (
             <div className="font-medium mt-1 text-sm">
               {cf.completed_at ? new Date(cf.completed_at).toLocaleDateString("en-GB") : "—"}
@@ -109,9 +109,9 @@ export function TrainingDetailsPanel({ asset }: Props) {
         </div>
         <FieldEditable label="ציון/תוצאה" value={cf.score} editing={editing} v={form.score} onChange={(v) => setForm({ ...form, score: v })} />
         <div>
-          <Label className="text-xs text-muted-foreground">קישור לתעודה</Label>
+          <Label htmlFor="trainingde-f2" className="text-xs text-muted-foreground">קישור לתעודה</Label>
           {editing ? (
-            <Input value={form.certificate_url} onChange={(e) => setForm({ ...form, certificate_url: e.target.value })} className="mt-1 text-left" dir="ltr" />
+            <Input id="trainingde-f2" value={form.certificate_url} onChange={(e) => setForm({ ...form, certificate_url: e.target.value })} className="mt-1 text-left" dir="ltr" />
           ) : cf.certificate_url ? (
             <a href={cf.certificate_url} target="_blank" rel="noreferrer" className="font-medium mt-1 text-primary inline-flex items-center gap-1 hover:underline text-sm" dir="ltr">
               פתח תעודה <ExternalLink className="w-3 h-3" />

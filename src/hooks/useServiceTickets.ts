@@ -49,6 +49,33 @@ export function useSaveSlaSetting() {
 }
 
 /** Assets currently assigned to a given employee (for linking to a ticket) */
+/**
+ * Saves every SLA row in one upsert request, so a failure leaves nothing half-saved
+ * (the old per-row loop could stop midway without saying which rows were written).
+ */
+export function useSaveSlaSettings() {
+  const { activeCompanyId } = useCompany();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (rows: SlaSettingRow[]) => {
+      if (!activeCompanyId) throw new Error("לא נבחרה חברה");
+      if (!rows.length) return;
+      const { error } = await supabase.from("sla_settings").upsert(
+        rows.map((row) => ({
+          company_id: activeCompanyId,
+          subject_category: row.subject_category,
+          priority: row.priority,
+          target_hours: row.target_hours,
+          notify_on_breach: row.notify_on_breach,
+        })),
+        { onConflict: "company_id,subject_category,priority" },
+      );
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sla-settings"] }),
+  });
+}
+
 export function useEmployeeAssetOptions(employeeId?: string | null) {
   return useQuery({
     queryKey: ["employee-asset-options", employeeId],
@@ -157,16 +184,32 @@ export function useUpdateTicketStatus() {
   });
 }
 
-/** Upload ticket attachments; returns stored file references */
+/**
+ * Upload ticket attachments. Returns the stored file references plus the names
+ * of files that failed, so callers never report a full success when some
+ * attachments are missing.
+ */
 export async function uploadTicketAttachments(companyId: string, files: File[]) {
-  const out: { name: string; url: string }[] = [];
+  const uploaded: { name: string; url: string }[] = [];
+  const failed: string[] = [];
   for (const f of files) {
     const path = `it-tickets/${companyId}/${Date.now()}-${f.name}`;
-    const { error } = await uploadFile("documents", path, f, { upsert: false });
-    if (!error) {
+    try {
+      const { error } = await uploadFile("documents", path, f, { upsert: false });
+      if (error) {
+        failed.push(f.name);
+        continue;
+      }
       const { data } = supabase.storage.from("documents").getPublicUrl(path);
-      out.push({ name: f.name, url: data.publicUrl });
+      uploaded.push({ name: f.name, url: data.publicUrl });
+    } catch {
+      failed.push(f.name);
     }
   }
-  return out;
+  return { uploaded, failed };
+}
+
+/** Message for a ticket that was created while some attachments failed to upload. */
+export function failedAttachmentsMessage(failed: string[]) {
+  return `הקריאה נפתחה, אבל ${failed.length} קבצים לא הועלו: ${failed.join(", ")}`;
 }

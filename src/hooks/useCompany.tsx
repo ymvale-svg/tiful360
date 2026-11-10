@@ -31,7 +31,7 @@ const CompanyContext = createContext<CompanyContextType>({
 });
 
 export function CompanyProvider({ children }: { children: ReactNode }) {
-  const { user, roles } = useAuth();
+  const { user, roles, setRoleCompanyId } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [activeCompanyId, setActiveCompanyIdState] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -90,6 +90,11 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     setActiveCompanyIdState(id);
     localStorage.setItem("activeCompanyId", id);
   };
+
+  // Roles are per company: tell auth which company the user is working in.
+  useEffect(() => {
+    if (activeCompanyId) setRoleCompanyId(activeCompanyId);
+  }, [activeCompanyId, setRoleCompanyId]);
 
   const activeCompany = companies.find((c) => c.id === activeCompanyId) ?? null;
 

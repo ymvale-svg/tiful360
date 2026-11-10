@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useUploadJobCount } from "@/lib/floatingLayer";
+import { cn } from "@/lib/utils";
 import { Smartphone, X, Share, Plus, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,7 +49,15 @@ function recentlyDismissed(): boolean {
   }
 }
 
-export function InstallAppBanner() {
+interface InstallAppBannerProps {
+  /** The page has a fixed bottom tab bar on phones (employee portal): sit above it. */
+  aboveTabBar?: boolean;
+}
+
+export function InstallAppBanner({ aboveTabBar = false }: InstallAppBannerProps = {}) {
+  const bannerRef = useRef<HTMLDivElement>(null);
+  // Steps aside while the upload progress center (same corner, z-[100]) is showing jobs.
+  const uploadsActive = useUploadJobCount() > 0;
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   const [show, setShow] = useState(false);
   const [showIOSDialog, setShowIOSDialog] = useState(false);
@@ -107,18 +117,48 @@ export function InstallAppBanner() {
     setShowAndroidDialog(true);
   };
 
+  const visible = show && !uploadsActive;
+
+  // Reserve room at the bottom of the page while the banner is up, so it never hides content.
+  useEffect(() => {
+    const el = bannerRef.current;
+    if (!visible || !el) return;
+    const prev = document.body.style.paddingBottom;
+    const apply = () => {
+      // Desktop shows a small corner card that doesn't span the content; only reserve on phones.
+      const reserve = window.matchMedia("(min-width: 768px)").matches ? 0 : el.offsetHeight + 16;
+      document.body.style.paddingBottom = reserve ? `${reserve}px` : prev;
+    };
+    apply();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(apply) : null;
+    ro?.observe(el);
+    window.addEventListener("resize", apply);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener("resize", apply);
+      document.body.style.paddingBottom = prev;
+    };
+  }, [visible]);
+
   if (!show) return null;
 
   return (
     <>
+      {visible && (
       <div
+        ref={bannerRef}
         role="region"
         aria-label="התקנת אפליקציה"
-        className="fixed bottom-4 right-4 left-4 z-50 md:right-auto md:left-auto md:bottom-6 md:max-w-sm md:right-6"
+        className={cn(
+          "fixed right-4 left-4 z-40 md:left-auto md:max-w-sm md:right-6",
+          aboveTabBar
+            ? "bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] md:bottom-[calc(1.5rem+env(safe-area-inset-bottom,0px))]"
+            : "bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] md:bottom-[calc(1.5rem+env(safe-area-inset-bottom,0px))]",
+        )}
       >
         <div className="rounded-xl border border-border bg-card shadow-lg p-4 flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Smartphone className="h-5 w-5" />
+            <Smartphone className="h-5 w-5" aria-hidden="true" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-foreground">התקנת הפורטל בטלפון</p>
@@ -126,24 +166,26 @@ export function InstallAppBanner() {
               גישה מהירה כמו אפליקציה — אייקון על המסך הראשי
             </p>
             <div className="mt-3 flex gap-2">
-              <Button size="sm" onClick={handleInstall} className="gap-1.5">
+              <Button onClick={handleInstall} className="gap-1.5 min-h-11">
                 <Download className="h-4 w-4" />
                 התקן
               </Button>
-              <Button size="sm" variant="ghost" onClick={dismiss}>
+              <Button variant="ghost" onClick={dismiss} className="min-h-11">
                 לא עכשיו
               </Button>
             </div>
           </div>
           <button
+            type="button"
             onClick={dismiss}
-            aria-label="סגור"
-            className="text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="סגור את הודעת ההתקנה"
+            className="-m-2 h-11 w-11 shrink-0 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5" />
           </button>
         </div>
       </div>
+      )}
 
       {/* iOS install instructions */}
       <Dialog open={showIOSDialog} onOpenChange={setShowIOSDialog}>
@@ -197,7 +239,7 @@ export function InstallAppBanner() {
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
                 2
               </span>
-              <span>לחץ על תפריט שלוש הנקודות (⋮) בפינה הימנית העליונה</span>
+              <span>לחץ על תפריט שלוש הנקודות בפינה הימנית העליונה</span>
             </li>
             <li className="flex gap-3">
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">

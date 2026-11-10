@@ -162,6 +162,76 @@
       "when": 1793028142251,
       "tag": "0022_guides_topic_optional",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1793280000000,
+      "tag": "0023_portal_learning_bucket",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793784297409,
+      "tag": "0024_fix_employee_autoapprove_and_payroll_leave_files",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793784322149,
+      "tag": "0025_tighten_employee_correction_insert",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793787439873,
+      "tag": "0026_permission_groups",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1793867761694,
+      "tag": "0027_hr_company_wide_employee_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1793867870886,
+      "tag": "0028_hr_attendance_map",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793868297967,
+      "tag": "0029_hr_manage_punches",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1793868339127,
+      "tag": "0030_hr_edit_punch_time",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1793873427582,
+      "tag": "0031_allow_onboarding_employee_signup",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1793873522578,
+      "tag": "0032_asset_groups_allow_hr",
+      "breakpoints": true
     }
   ]
 }

@@ -1,26 +1,19 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate, useLocation } from "react-router-dom";
-
-type AppRole = "admin" | "it_manager" | "employee" | "super_admin" | "direct_manager" | "payroll" | "hr" | "operations" | "finance" | "legal" | "secretariat" | "ceo";
+import { SplashScreen } from "@/components/SplashScreen";
+import { canAccess, type RoleList } from "@/lib/screenAccess";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRoles?: AppRole[];
+  requiredRoles?: RoleList;
 }
 
 export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps) {
-  const { session, loading, roles, accessBlocked, signOut } = useAuth();
+  const { session, loading, roles, rolesLoading, accessBlocked, signOut } = useAuth();
   const location = useLocation();
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">טוען...</p>
-        </div>
-      </div>
-    );
+    return <SplashScreen />;
   }
 
   if (!session) {
@@ -53,13 +46,11 @@ export function ProtectedRoute({ children, requiredRoles }: ProtectedRouteProps)
 
   // If specific roles required, check access
   if (requiredRoles && requiredRoles.length > 0) {
-    if (roles.length === 0) {
+    if (rolesLoading) {
       // Roles still loading — render nothing (shell stays visible, avoids flash)
       return null;
     }
-    const isSuperAdmin = roles.includes("super_admin");
-    const hasAccess = isSuperAdmin || requiredRoles.some((r) => roles.includes(r));
-    if (!hasAccess) {
+    if (!canAccess(roles, roles.includes("super_admin"), requiredRoles)) {
       return <Navigate to="/portal" replace />;
     }
   }

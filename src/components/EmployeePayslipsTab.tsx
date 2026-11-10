@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { PayslipSummaryDialog } from "@/components/PayslipSummaryDialog";
+import { IconButton } from "@/components/feedback/IconButton";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -247,7 +248,7 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary, hideBa
           <ShieldAlert className="w-4 h-4 text-warning shrink-0" />
           נתוני שכר חסויים — נחשפו לאחר אימות זהות.
         </span>
-        <Button size="sm" variant="ghost" className="h-7 gap-1" onClick={() => setUnlocked(false)}>
+        <Button size="sm" variant="ghost" className="gap-1" onClick={() => setUnlocked(false)}>
           <Lock className="w-3.5 h-3.5" />
           הסתר
         </Button>
@@ -333,22 +334,20 @@ export function EmployeePayslipsTab({ employeeId, employee, canSeeSalary, hideBa
                     <td className="font-mono">{p.work_days_num ?? p.work_days ?? "—"}</td>
                     <td>
                       <div className="flex gap-1">
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="סיכום" onClick={() => setSummaryPayslip(p)}>
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="הורדה" onClick={() => openPayslip(p)}>
-                          <Download className="w-4 h-4" />
-                        </Button>
+                        <IconButton label={`סיכום תלוש ${MONTHS[p.period_month - 1]} ${p.period_year}`} onClick={() => setSummaryPayslip(p)}>
+                          <Eye />
+                        </IconButton>
+                        <IconButton label={`הורדת תלוש ${MONTHS[p.period_month - 1]} ${p.period_year}`} onClick={() => openPayslip(p)}>
+                          <Download />
+                        </IconButton>
                         {canSeeSalary && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                            title="מחיקה"
+                          <IconButton
+                            label={`מחיקת תלוש ${MONTHS[p.period_month - 1]} ${p.period_year}`}
+                            className="text-destructive hover:text-destructive"
                             onClick={() => setDeleteTarget(p)}
                           >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                            <Trash2 />
+                          </IconButton>
                         )}
                       </div>
                     </td>

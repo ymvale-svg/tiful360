@@ -1,57 +1,34 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { LayoutDashboard, UserRound, Loader2 } from "lucide-react";
+import { LayoutDashboard, UserRound } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { hasDualAccess } from "@/lib/dualAccess";
-
-function getOpsRoute(opts: {
-  isSuperAdmin: boolean;
-  isAdmin: boolean;
-  isPayroll: boolean;
-  isOperations: boolean;
-  isIT: boolean;
-  isDirectManager: boolean;
-}): string {
-  if (opts.isSuperAdmin || opts.isAdmin) return "/";
-  if (opts.isPayroll) return "/leave-requests";
-  if (opts.isOperations) return "/employees";
-  if (opts.isIT) return "/it-tickets";
-  if (opts.isDirectManager) return "/leave-requests";
-  return "/";
-}
+import { landingRoute, opsHomeRoute, setStoredExperience } from "@/lib/landingRoute";
+import { SplashScreen } from "@/components/SplashScreen";
 
 export default function SelectExperience() {
-  const auth = useAuth();
-  const { loading, roles } = auth;
+  const { loading, roles } = useAuth();
   const navigate = useNavigate();
 
   // If the user is not dual-role, route them to their natural home.
   useEffect(() => {
     if (loading) return;
     if (!hasDualAccess(roles)) {
-      if (roles.includes("employee") && roles.length === 1) {
-        navigate("/portal", { replace: true });
-      } else {
-        navigate(getOpsRoute(auth), { replace: true });
-      }
+      navigate(landingRoute(roles), { replace: true });
     }
-  }, [loading, roles, navigate, auth]);
+  }, [loading, roles, navigate]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
+    return <SplashScreen />;
   }
 
   const goOps = () => {
-    sessionStorage.setItem("activeExperience", "ops");
-    navigate(getOpsRoute(auth), { replace: true });
+    setStoredExperience("ops");
+    navigate(opsHomeRoute(roles), { replace: true });
   };
 
   const goPortal = () => {
-    sessionStorage.setItem("activeExperience", "portal");
+    setStoredExperience("portal");
     navigate("/portal", { replace: true });
   };
 
@@ -67,11 +44,12 @@ export default function SelectExperience() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <button
+            type="button"
             onClick={goOps}
-            className="group bg-card rounded-2xl border border-border shadow-card p-6 text-right hover:border-primary hover:shadow-lg transition-all"
+            className="group bg-card rounded-2xl border border-border shadow-card p-6 text-right hover:border-primary hover:shadow-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
-              <LayoutDashboard className="w-7 h-7 text-primary" />
+              <LayoutDashboard className="w-7 h-7 text-primary" aria-hidden="true" />
             </div>
             <h2 className="text-lg font-semibold mb-1">תפעול 360</h2>
             <p className="text-sm text-muted-foreground">
@@ -80,11 +58,12 @@ export default function SelectExperience() {
           </button>
 
           <button
+            type="button"
             onClick={goPortal}
-            className="group bg-card rounded-2xl border border-border shadow-card p-6 text-right hover:border-primary hover:shadow-lg transition-all"
+            className="group bg-card rounded-2xl border border-border shadow-card p-6 text-right hover:border-primary hover:shadow-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
-              <UserRound className="w-7 h-7 text-primary" />
+              <UserRound className="w-7 h-7 text-primary" aria-hidden="true" />
             </div>
             <h2 className="text-lg font-semibold mb-1">פורטל עובדים</h2>
             <p className="text-sm text-muted-foreground">

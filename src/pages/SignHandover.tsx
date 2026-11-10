@@ -27,6 +27,9 @@ export default function SignHandover() {
   const sigRef = useRef<SignaturePadHandle>(null);
   const [sigUrl, setSigUrl] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewFailed, setPreviewFailed] = useState(false);
+  const [previewAttempt, setPreviewAttempt] = useState(0);
+  const [busyStage, setBusyStage] = useState<string | null>(null);
 
   // Short links (/h/:code) resolve to the full sign token before anything else.
   const [token, setToken] = useState<string | null>(tokenParam ?? null);
@@ -83,6 +86,7 @@ export default function SignHandover() {
     if (!record) return;
     let cancelled = false;
     let createdUrl: string | null = null;
+    setPreviewFailed(false);
     (async () => {
       try {
         const blob = await buildPdfForRecord(record.form_snapshot, sigUrl);
@@ -94,13 +98,14 @@ export default function SignHandover() {
         });
       } catch (e) {
         console.error("preview pdf failed", e);
+        if (!cancelled) setPreviewFailed(true);
       }
     })();
     return () => {
       cancelled = true;
       if (createdUrl) URL.revokeObjectURL(createdUrl);
     };
-  }, [record, sigUrl]);
+  }, [record, sigUrl, previewAttempt]);
 
   const goToLogin = () => {
     sessionStorage.setItem("oauth_return_path", signPath);
@@ -120,6 +125,7 @@ export default function SignHandover() {
 
       let attachedUrl = record.attached_document_url;
       if (attachment) {
+        setBusyStage("מעלה את המסמך המצורף…");
         attachedUrl = await uploadViaSignedToken({
           sign_token: token!,
           form_type: "handover",
@@ -128,7 +134,9 @@ export default function SignHandover() {
         });
       }
 
+      setBusyStage("מפיק את הטופס החתום…");
       const pdfBlob = await buildPdfForRecord(record.form_snapshot, sig);
+      setBusyStage("מעלה את הטופס החתום…");
       const pdfUrl = await uploadViaSignedToken({
         sign_token: token!,
         form_type: "handover",
@@ -138,6 +146,7 @@ export default function SignHandover() {
         contentType: "application/pdf",
       });
 
+      setBusyStage("שומר את החתימה…");
       const { error } = await supabase.rpc("sign_handover_form_by_token", {
         _token: token!,
         _signature: sig,
@@ -157,6 +166,7 @@ export default function SignHandover() {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
     } finally {
       setBusy(false);
+      setBusyStage(null);
     }
   };
 
@@ -194,7 +204,17 @@ export default function SignHandover() {
   }
 
   if (!record) {
-    return <div className="min-h-screen flex items-center justify-center text-destructive" role="alert">קישור לא תקף</div>;
+    return (
+      <main className="min-h-screen flex flex-col items-center justify-center gap-3 p-6 text-center" dir="rtl">
+        <FileSignature className="w-14 h-14 text-muted-foreground" aria-hidden="true" />
+        <h1 className="text-xl font-bold" role="alert">הקישור לחתימה אינו תקף</h1>
+        <p className="text-sm text-muted-foreground max-w-sm">
+          ייתכן שהקישור הועתק באופן חלקי, שהטופס כבר נחתם או שהשולח ביטל אותו. טפסים שממתינים לחתימתכם מופיעים באזור האישי.
+          אם הטופס לא שם, בקשו מהשולח קישור חדש.
+        </p>
+        <Button onClick={() => navigate("/portal")}>לאזור האישי</Button>
+      </main>
+    );
   }
 
   if (done || record.status === "signed") {
@@ -222,6 +242,11 @@ export default function SignHandover() {
         {/* Mobile: readable HTML protocol. Desktop: the full PDF preview. */}
         <div className="bg-card border rounded-xl p-4 sm:hidden">
           <ProtocolPreview snapshot={record.form_snapshot} />
+          {previewFailed && !previewUrl && (
+            <Button variant="outline" className="w-full mt-4" onClick={() => setPreviewAttempt((n) => n + 1)}>
+              לא הצלחנו להפיק PDF — נסה שוב
+            </Button>
+          )}
           {previewUrl && (
             <Button
               variant="outline"
@@ -241,6 +266,12 @@ export default function SignHandover() {
               className="w-full"
               style={{ height: "85vh", border: 0 }}
             />
+          ) : previewFailed ? (
+            <div className="p-12 text-center space-y-3" role="alert">
+              <p className="text-sm font-medium">לא הצלחנו להציג את הטופס.</p>
+              <p className="text-sm text-muted-foreground">אפשר לנסות שוב, או לקרוא את פרטי הטופס במסך צר.</p>
+              <Button variant="outline" onClick={() => setPreviewAttempt((n) => n + 1)}>נסה שוב</Button>
+            </div>
           ) : (
             <div className="p-12 text-center text-sm text-muted-foreground" role="status" aria-live="polite">טוען תצוגת טופס...</div>
           )}
@@ -264,7 +295,7 @@ export default function SignHandover() {
           </div>
 
           <Button className="w-full h-12 text-base hidden sm:flex" disabled={busy} onClick={handleSign} aria-busy={busy}>
-            {busy ? "שומר..." : "אישור וחתימה"}
+            {busy ? (busyStage ?? "שומר...") : "אישור וחתימה"}
           </Button>
         </div>
       </div>
@@ -272,9 +303,10 @@ export default function SignHandover() {
       {/* Sticky action bar keeps the primary action reachable on phones. */}
       <div className="sm:hidden fixed bottom-0 inset-x-0 p-3 bg-background/95 backdrop-blur border-t">
         <Button className="w-full h-12 text-base" disabled={busy} onClick={handleSign} aria-busy={busy}>
-          {busy ? "שומר..." : "אישור וחתימה"}
+          {busy ? (busyStage ?? "שומר...") : "אישור וחתימה"}
         </Button>
       </div>
+      <p role="status" className="sr-only">{busy ? busyStage ?? "" : ""}</p>
     </main>
   );
 }

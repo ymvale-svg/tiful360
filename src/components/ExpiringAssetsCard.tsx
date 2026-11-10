@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CalendarClock, ChevronLeft, ExternalLink } from "lucide-react";
+import { CalendarClock, CheckCircle2, ChevronLeft, ExternalLink } from "lucide-react";
 import { useExpiringAssets, expiryUrgency, DOMAIN_LABELS, DOMAIN_STYLES, type ExpiringAsset, type ProtocolDomain } from "@/hooks/useExpiringAssets";
 import { RenewExpiryDialog } from "@/components/RenewExpiryDialog";
-import { getDomain, domainKeyToSlug } from "@/lib/assetDomains";
+import { getExpiringResourceTargets } from "@/lib/expiringResourceTargets";
+import { useAssetCategories } from "@/hooks/useData";
+import { IconButton } from "@/components/feedback/IconButton";
+import { ListSkeleton } from "@/components/feedback/StateView";
 import { cn } from "@/lib/utils";
 
 interface ExpiringAssetsCardProps {
@@ -16,14 +19,11 @@ export function ExpiringAssetsCard({ domains, title }: ExpiringAssetsCardProps =
   const { data, isLoading } = useExpiringAssets(14);
   const [selected, setSelected] = useState<ExpiringAsset | null>(null);
   const navigate = useNavigate();
+  const { data: categories } = useAssetCategories();
 
-  const navigateToSource = (item: ExpiringAsset) => {
-    if (item.source_type === "digital_access" && item.current_owner_id) {
-      navigate(`/employees/${item.current_owner_id}?tab=assets`);
-    } else if (item.asset_id) {
-      navigate(`/assets/${domainKeyToSlug(getDomain({ domain: item.domain } as any))}/${item.asset_id}`);
-    }
-  };
+  /** The parent resource's page, resolved the same way as every other expiry chip. */
+  const sourceHref = (item: ExpiringAsset) =>
+    getExpiringResourceTargets([item], (categories ?? []) as any[])[0]?.href ?? null;
 
 
   const allItems = data ?? [];
@@ -47,7 +47,7 @@ export function ExpiringAssetsCard({ domains, title }: ExpiringAssetsCardProps =
     <div className="bg-card rounded-xl border border-border/50 shadow-card">
       <div className="p-5 border-b border-border/50 flex items-center justify-between">
         <h2 className="font-semibold flex items-center gap-2">
-          <CalendarClock className="w-4 h-4 text-primary" />
+          <CalendarClock className="w-4 h-4 text-primary" aria-hidden="true" />
           {heading}
         </h2>
 
@@ -66,33 +66,46 @@ export function ExpiringAssetsCard({ domains, title }: ExpiringAssetsCardProps =
       </div>
       <div className="divide-y divide-border/50 max-h-96 overflow-y-auto">
         {isLoading ? (
-          <div className="p-6 text-center text-sm text-muted-foreground">טוען...</div>
+          <div role="status" aria-busy="true">
+            <span className="sr-only">טוען תוקפים…</span>
+            <ListSkeleton rows={3} />
+          </div>
         ) : items.length === 0 ? (
-          <div className="p-6 text-center text-sm text-muted-foreground">אין תוקפים לטיפול 🎉</div>
+          <div className="p-6 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-success" aria-hidden="true" />
+            אין תוקפים לטיפול
+          </div>
         ) : (
           items.map((item) => {
             const urgency = expiryUrgency(item.days_left);
             const isLease = item.category_prefix === "LEASE";
             const direction = isLease ? (item.custom_fields as any)?.["כיוון חוזה"] : null;
+            const href = sourceHref(item);
             return (
-              <button
+              // Two sibling actions per row (renew / open item) — never a button inside a button.
+              <div
                 key={`${item.source_type}-${item.source_id}-${item.field_key ?? "main"}`}
-                onClick={() => setSelected(item)}
-                className="w-full text-right p-4 hover:bg-muted/40 transition-colors flex items-center gap-3"
+                className="flex items-center gap-1 pe-2 hover:bg-muted/40 transition-colors"
               >
-                <div className={cn("w-2 h-12 rounded-full shrink-0", urgency.bg.replace("/10", ""))} />
+              <button
+                type="button"
+                onClick={() => setSelected(item)}
+                aria-label={`חידוש תוקף: ${item.asset_name} — ${item.field_label}, ${urgency.label}`}
+                className="flex-1 min-w-0 text-right p-4 flex items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+              >
+                <div className={cn("w-2 h-12 rounded-full shrink-0", urgency.bg.replace("/10", ""))} aria-hidden="true" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-medium truncate">{item.asset_name}</span>
                     <span className="text-xs text-muted-foreground font-mono">{item.asset_code}</span>
-                    <span className={cn("px-1.5 py-0.5 rounded text-[10px]", DOMAIN_STYLES[item.domain] ?? DOMAIN_STYLES.physical)}>
+                    <span className={cn("px-1.5 py-0.5 rounded text-xs", DOMAIN_STYLES[item.domain] ?? DOMAIN_STYLES.physical)}>
                       {DOMAIN_LABELS[item.domain] ?? item.domain}
                     </span>
                     {!item.is_assignable && (
-                      <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px]">מוסדי</span>
+                      <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-xs">מוסדי</span>
                     )}
                     {direction && (
-                      <span className="px-1.5 py-0.5 rounded bg-info/10 text-info text-[10px]">
+                      <span className="px-1.5 py-0.5 rounded bg-info/10 text-info text-xs">
                         {direction === "החברה שוכרת" ? "שוכרים" : "משכירים"}
                       </span>
                     )}
@@ -106,18 +119,18 @@ export function ExpiringAssetsCard({ domains, title }: ExpiringAssetsCardProps =
                 <div className={cn("shrink-0 text-xs font-medium px-2 py-1 rounded-md border", urgency.color, urgency.bg, urgency.border)}>
                   {urgency.label}
                 </div>
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={(e) => { e.stopPropagation(); navigateToSource(item); }}
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); navigateToSource(item); } }}
-                  title="פתח פריט"
-                  className="shrink-0 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                </span>
-                <ChevronLeft className="w-4 h-4 text-muted-foreground shrink-0" />
+                <ChevronLeft className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden="true" />
               </button>
+              {href && (
+                <IconButton
+                  label={`פתח את ${item.asset_name}`}
+                  onClick={() => navigate(href)}
+                  className="shrink-0 text-muted-foreground hover:text-foreground"
+                >
+                  <ExternalLink aria-hidden="true" />
+                </IconButton>
+              )}
+              </div>
             );
           })
         )}

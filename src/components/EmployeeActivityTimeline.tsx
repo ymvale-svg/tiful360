@@ -2,6 +2,10 @@ import { useMemo, useState } from "react";
 import { UserPlus, Package, PackageOpen, Palmtree, Stethoscope, Activity, UserMinus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEmployeeResourceHistory } from "@/hooks/useEmployeeResourceHistory";
+import { ActivityTimeline, type TimelineTone } from "@/components/ui/activity-timeline";
+import { EmptyState } from "@/components/feedback/StateView";
+
+const KIND_TONE: Record<EventKind, TimelineTone> = { employment: "primary", asset: "info", leave: "warning", other: "muted" };
 
 type EventKind = "employment" | "asset" | "leave" | "other";
 
@@ -193,31 +197,9 @@ export function EmployeeActivityTimeline({
       </div>
 
       {shown.length > 0 ? (
-        <div className="relative">
-          <div className="absolute top-0 bottom-0 right-[15px] w-0.5 bg-border" aria-hidden="true" />
-          <ol className="space-y-5">
-            {shown.map((e) => {
-              const Icon = e.icon;
-              return (
-                <li key={e.id} className="flex items-start gap-4 relative">
-                  <span className="z-10 shrink-0 w-8 h-8 rounded-full bg-muted border border-border flex items-center justify-center">
-                    <Icon className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium break-words">{e.title}</p>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
-                      <time className="text-xs text-muted-foreground">{fmt(e.at)}</time>
-                      {e.detail && <span className="text-xs text-muted-foreground">{e.detail}</span>}
-                      {e.actor && <span className="text-xs text-muted-foreground">בוצע על ידי: {e.actor}</span>}
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
-        </div>
+        <ActivityTimeline items={shown.map((e) => ({ ...e, tone: KIND_TONE[e.kind] }))} />
       ) : (
-        <div className="text-center py-8 text-muted-foreground">אין אירועים להצגה</div>
+        <EmptyState title="אין אירועים להצגה" description={filter === "all" ? undefined : "נסו סוג אירוע אחר."} />
       )}
     </div>
   );

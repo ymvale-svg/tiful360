@@ -4,6 +4,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.103.0";
 import { fmtDateIL } from "../_shared/formatDate.ts";
 import { sendHtmlEmailLogged } from "../_shared/send-email-logged.ts";
+import { leaveAttachmentPath } from "../_shared/leaveAttachmentPath.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -383,14 +384,13 @@ Deno.serve(async (req) => {
       const html = baseLayout(
         `${docLabel} התקבל`,
         `<h2 style="margin:0 0 8px;font-size:18px;">📎 ${escapeHtml(docLabel)} — ${escapeHtml(employee?.full_name ?? "עובד")}</h2>
-         <p style="color:#475569;font-size:14px;">העובד/ת העלה/תה ${escapeHtml(docLabel)} במערכת. האישור מצורף בקישור להלן.</p>
+         <p style="color:#475569;font-size:14px;">העובד/ת העלה/תה ${escapeHtml(docLabel)} במערכת. ניתן לצפות באישור מתוך הדיווח במערכת (נדרשת התחברות).</p>
          ${detailsTable([...baseDetails, ["ת.ז.", employee?.id_number ?? "—"], ["מנהל ישיר", manager?.full_name ?? "—"]])}
-         <p style="margin:18px 0;">
-           <a href="${request.attachment_url}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:11px 22px;border-radius:8px;font-weight:600;font-size:14px;">📎 הורדת ${escapeHtml(docLabel)}</a>
-         </p>
-         ${ctaButton(reviewUrl, "צפייה בדיווח")}`,
+         ${ctaButton(reviewUrl, "צפייה בדיווח ובאישור")}`,
       );
       const subj = `📎 ${docLabel} — ${employee?.full_name}`;
+      // Stable per file: the object path (legacy signed-URL rows resolve to the same path).
+      const attachmentKey = leaveAttachmentPath(request.attachment_url) ?? request.attachment_url;
       const attachRecipients = new Set<string>(payrollEmails);
       for (const to of attachRecipients) {
         await enqueueEmail(
@@ -399,7 +399,7 @@ Deno.serve(async (req) => {
           subj,
           html,
           "leave-attachment-payroll",
-          `leave-attachment-payroll-${request.id}-${to}-${request.attachment_url.slice(-24)}`,
+          `leave-attachment-payroll-${request.id}-${to}-${attachmentKey}`,
           request.company_id,
         );
       }
@@ -457,9 +457,9 @@ Deno.serve(async (req) => {
         .map((s: string) => s.trim())
         .filter((s: string) => s.length > 0 && /^\S+@\S+\.\S+$/.test(s));
       if (payrollList.length > 0) {
-        const attachments: Array<{ filename: string; url: string }> = [];
-        if (request.attachment_url)
-          attachments.push({ filename: "אישור_מחלה", url: request.attachment_url });
+        // No direct file links in email: the attachment is viewed in the app,
+        // where a short-lived signed URL is created on open.
+        const hasAttachment = !!request.attachment_url;
 
         const detailsForPayroll: Array<[string, string]> = [
           ...baseDetails,
@@ -475,13 +475,9 @@ Deno.serve(async (req) => {
            ${detailsTable(detailsForPayroll)}
            ${gcalButton}
            ${
-             attachments.length > 0
-               ? `<p style="font-size:13px;color:#475569;">קישורים מצורפים:</p><ul style="font-size:13px;">${attachments
-                   .map(
-                     (a) =>
-                       `<li><a href="${a.url}" style="color:#2563eb;">${escapeHtml(a.filename)}</a></li>`,
-                   )
-                   .join("")}</ul>`
+             hasAttachment
+               ? `<p style="font-size:13px;color:#475569;">צורף אישור — ניתן לצפות בו מתוך הדיווח במערכת (נדרשת התחברות).</p>
+                  ${ctaButton(reviewUrl, "צפייה בדיווח ובאישור")}`
                : ""
            }`,
         );

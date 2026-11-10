@@ -26,6 +26,8 @@ import { OWNER_ROLE_LABEL, OWNER_ROLE_OPTIONS } from "@/lib/domainConfig";
 import { formatDateTimeDMY } from "@/lib/utils";
 import { CheckCircle2, Printer, Package, StickyNote, Trash2, Plus, RotateCcw, Pencil } from "lucide-react";
 import { NewOnboardingDialog } from "@/components/onboarding/NewOnboardingDialog";
+import { IconButton } from "@/components/feedback/IconButton";
+import { useConfirm } from "@/components/feedback/ConfirmDialog";
 
 interface Props {
   process: OnboardingProcess | null;
@@ -56,6 +58,9 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
   const [newNotes, setNewNotes] = useState("");
   const [adding, setAdding] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  // Items whose done/undone writes are running; the row stays locked until they finish.
+  const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
+  const confirm = useConfirm();
 
 
   const items = useMemo(
@@ -106,6 +111,7 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
   };
 
   const completeItem = async (item: (typeof items)[number], checked: boolean) => {
+    if (savingIds.has(item.id)) return;
     if (checked && !item.asset_id) {
       toast({
         title: "בחרו פריט מהמלאי",
@@ -115,6 +121,31 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
       return;
     }
 
+    if (!checked && item.asset_id) {
+      const asset = (assets as any[]).find((a) => a.id === item.asset_id);
+      const ok = await confirm({
+        title: "לבטל את סימון הביצוע?",
+        description: `${asset?.asset_name ?? item.title} ינותק מ${emp?.full_name ?? "העובד"} ויחזור למלאי.`,
+        confirmLabel: "בטל סימון והחזר למלאי",
+        cancelLabel: "השאר מסומן",
+        destructive: true,
+      });
+      if (!ok) return;
+    }
+
+    setSavingIds((prev) => new Set(prev).add(item.id));
+    try {
+      await runCompleteItem(item, checked);
+    } finally {
+      setSavingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(item.id);
+        return next;
+      });
+    }
+  };
+
+  const runCompleteItem = async (item: (typeof items)[number], checked: boolean) => {
     const now = new Date().toISOString();
     await setItem(item.id, {
       status: checked ? "done" : "pending",
@@ -171,15 +202,18 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
     }
   };
 
-  const removeItem = async (item: (typeof items)[number]) => {
-    try {
-      await deleteItem.mutateAsync(item.id);
-      await appendOnboardingAudit(process.id, `פריט הוסר מהתהליך: ${item.title}`);
-      toast({ title: "הפריט הוסר" });
-    } catch (e: any) {
-      toast({ title: "שגיאה", description: e.message, variant: "destructive" });
-    }
-  };
+  const removeItem = (item: (typeof items)[number]) =>
+    confirm({
+      title: `להסיר את "${item.title}" מהתהליך?`,
+      description: "הפריט יוסר מצ'קליסט הקליטה. אפשר להוסיף אותו שוב מאוחר יותר.",
+      confirmLabel: "הסר פריט",
+      destructive: true,
+      onConfirm: async () => {
+        await deleteItem.mutateAsync(item.id);
+        await appendOnboardingAudit(process.id, `פריט הוסר מהתהליך: ${item.title}`);
+        toast({ title: "הפריט הוסר" });
+      },
+    });
 
   // Items can be added at any stage — also after the process was sent or completed.
   const addItem = async () => {
@@ -233,10 +267,12 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
   const finish = async () => {
     setFinishing(true);
     try {
-      await completeProcess.mutateAsync({ processId: process.id });
+      const built = await completeProcess.mutateAsync({ processId: process.id });
+      const version = (built as { version?: number } | undefined)?.version
+        ?? Math.max(2, (((process as any).protocol_version as number | undefined) ?? 1) + 1);
       toast({
         title: "תהליך הקליטה הושלם",
-        description: "הופק פרוטוקול מעודכן (גרסה 2) ונשמר בתיק העובד",
+        description: `הופק פרוטוקול מעודכן (גרסה ${version}) ונשמר בתיק העובד`,
       });
     } catch (e: any) {
       toast({ title: "שגיאה", description: e.message, variant: "destructive" });
@@ -294,10 +330,13 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
               <Button
                 size="sm"
                 className="gap-1.5"
-                onClick={finish}
-                disabled={doneCount < items.length || finishing}
+                onClick={() => { void finish(); }}
+                disabled={doneCount < items.length}
+                loading={finishing}
+                loadingText="מפיק פרוטוקול…"
+                aria-describedby={doneCount < items.length ? "onb-finish-hint" : undefined}
               >
-                <CheckCircle2 className="w-4 h-4" /> {finishing ? "מפיק פרוטוקול..." : "סיום תהליך"}
+                <CheckCircle2 className="w-4 h-4" /> סיום תהליך
               </Button>
             )}
             {process.status === "done" && (
@@ -308,6 +347,12 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
 
           </div>
         </div>
+
+        {process.status !== "done" && doneCount < items.length && (
+          <p id="onb-finish-hint" className="text-xs text-muted-foreground mb-3">
+            {items.length - doneCount === 1 ? "נותר פריט אחד לסימון" : `נותרו ${items.length - doneCount} פריטים לסימון`} לפני סיום התהליך.
+          </p>
+        )}
 
         <div className="space-y-4">
           {grouped.map(({ category, subs }) => (
@@ -320,12 +365,15 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
                     <div className="space-y-3">
                       {subItems
                         .filter((item: any) => !ownerFilter || item.owner_role === ownerFilter)
-                        .map((item: any) => (
-                          <div key={item.id} className="rounded-lg bg-muted/40 p-3">
-                            <div className="flex items-start gap-2.5">
+                        .map((item: any) => {
+                          const rowSaving = savingIds.has(item.id);
+                          return (
+                          <div key={item.id} className={`rounded-lg bg-muted/40 p-3 transition-opacity ${rowSaving ? "opacity-60" : ""}`} aria-busy={rowSaving || undefined}>
+                            <fieldset disabled={rowSaving} className="flex items-start gap-2.5 min-w-0">
                               <Checkbox
                                 checked={item.status === "done"}
-                                onCheckedChange={(v) => completeItem(item, !!v)}
+                                onCheckedChange={(v) => { void completeItem(item, !!v); }}
+                                aria-label={item.title}
                                 className="mt-0.5"
                               />
                               <div className="flex-1 min-w-0">
@@ -341,15 +389,14 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
                                       הוצמד ב-{formatDateTimeDMY(item.assigned_at)}
                                     </span>
                                   )}
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-6 w-6 mr-auto text-muted-foreground hover:text-destructive"
-                                    onClick={() => removeItem(item)}
-                                    aria-label="הסר פריט"
+                                  {rowSaving && <span role="status" className="text-xs text-muted-foreground">שומר…</span>}
+                                  <IconButton
+                                    label={`הסר את ${item.title}`}
+                                    className="mr-auto text-muted-foreground hover:text-destructive"
+                                    onClick={() => { void removeItem(item); }}
                                   >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </Button>
+                                    <Trash2 />
+                                  </IconButton>
                                 </div>
                                 {item.notes && (
                                   <p className="text-xs mt-1.5 px-2.5 py-1.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-foreground flex items-start gap-1.5">
@@ -383,9 +430,10 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
                                   );
                                 })()}
                               </div>
-                            </div>
+                            </fieldset>
                           </div>
-                        ))}
+                          );
+                        })}
                     </div>
                   </div>
                 ))}
@@ -406,6 +454,7 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
                 placeholder="שם הפריט / ההרשאה"
+                aria-label="שם הפריט החדש"
                 className="w-full px-3 py-2 bg-card border border-border rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
               />
               <SearchableSelect
@@ -419,10 +468,11 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
               value={newNotes}
               onChange={(e) => setNewNotes(e.target.value)}
               placeholder="הערה לאחראי (לא חובה)"
+              aria-label="הערה לאחראי"
               className="w-full px-3 py-2 bg-card border border-border rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
             />
-            <Button size="sm" className="gap-1.5" onClick={addItem} disabled={!newTitle.trim() || adding}>
-              <Plus className="w-4 h-4" /> {adding ? "מוסיף..." : "הוסף פריט"}
+            <Button size="sm" className="gap-1.5" onClick={() => { void addItem(); }} disabled={!newTitle.trim()} loading={adding} loadingText="מוסיף…">
+              <Plus className="w-4 h-4" /> הוסף פריט
             </Button>
           </div>
         </div>

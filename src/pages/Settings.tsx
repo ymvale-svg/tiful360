@@ -1,9 +1,12 @@
+import { lazyWithReload } from "@/lib/lazyWithReload";
 import { uploadFile } from "@/lib/uploadWithProgress";
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { FormField } from "@/components/feedback/FormField";
+import { Input } from "@/components/ui/input";
 import {
   Settings as SettingsIcon, Bell, Shield, Database, Users,
-  Building2, Save, Smartphone, Upload, Trash2, FileText,
+  Building2, Save, Smartphone, Upload, Trash2, FileText, Building, UsersRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,6 +23,14 @@ import { SlaSettingsCard } from "@/components/settings/SlaSettingsCard";
 import { Mail } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { PermissionAuditTab } from "@/components/settings/PermissionAuditTab";
+import { PermissionGroupsTab } from "@/components/settings/PermissionGroupsTab";
+import { AnnouncementsManager } from "@/components/portal/AnnouncementsManager";
+import { ListSkeleton } from "@/components/feedback/StateView";
+import { useHubTab } from "@/hooks/useHubTab";
+import { ANNOUNCEMENT_ROLES, canAccess, hubPath, tabRoles } from "@/lib/screenAccess";
+
+// Company management (super admin) is a tab here; its own chunk.
+const Companies = lazyWithReload(() => import("@/pages/Companies"));
 
 // ============================
 // Generic Emails Settings (per column)
@@ -34,9 +45,12 @@ function EmailsSettings({
   const [loaded, setLoaded] = useState(false);
 
   // Load current recipients via the security-definer RPC (direct column reads
-  // are restricted for non-admin roles).
+  // are restricted for non-admin roles). Reload from scratch whenever the
+  // active company changes so one company's addresses are never saved into another.
   useEffect(() => {
-    if (!activeCompanyId || loaded) return;
+    setEmails("");
+    setLoaded(false);
+    if (!activeCompanyId) return;
     let cancelled = false;
     supabase
       .rpc("get_company_routing_emails", { _company_id: activeCompanyId })
@@ -48,7 +62,7 @@ function EmailsSettings({
         setLoaded(true);
       });
     return () => { cancelled = true; };
-  }, [activeCompanyId, columnKey, loaded]);
+  }, [activeCompanyId, columnKey]);
 
   const updateMutation = useMutation({
     mutationFn: async () => {
@@ -74,169 +88,198 @@ function EmailsSettings({
   return (
     <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 space-y-4 max-w-xl">
       <div className="flex items-center gap-3 mb-2">
-        <Mail className="w-5 h-5 text-primary" />
+        <Mail className="w-5 h-5 text-primary" aria-hidden="true" />
         <h3 className="font-semibold">{title}</h3>
       </div>
-      <p className="text-xs text-muted-foreground">{description}</p>
-      <div>
-        <label className="text-sm font-medium mb-1.5 block">כתובות דוא"ל</label>
-        <input
+      <FormField label='כתובות דוא"ל' hint={description} id={`emails-${columnKey}`}>
+        <Input
+          type="text"
+          inputMode="email"
+          autoComplete="off"
           value={emails}
           onChange={(e) => setEmails(e.target.value)}
           placeholder={placeholder}
-          className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 font-mono"
+          disabled={!loaded}
+          className="font-mono"
           dir="ltr"
         />
-      </div>
-      <Button className="gap-1.5" onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>
-        <Save className="w-4 h-4" />
-        {updateMutation.isPending ? "שומר..." : "שמור שינויים"}
+      </FormField>
+      <Button className="gap-1.5" onClick={() => updateMutation.mutateAsync()} disabled={!loaded} loading={updateMutation.isPending} loadingText="שומר…" successText="נשמר">
+        <Save className="w-4 h-4" aria-hidden="true" />
+        שמור שינויים
       </Button>
     </div>
   );
 }
 
+const TAB_ICONS: Record<string, typeof SettingsIcon> = {
+  general: SettingsIcon,
+  sub_employers: Building2,
+  portal: Smartphone,
+  email_templates: Mail,
+  protocols: FileText,
+  alerts: Bell,
+  groups: UsersRound,
+  permission_audit: Shield,
+  companies: Building,
+};
+
 export default function Settings() {
   const navigate = useNavigate();
-  const { isAdmin, isSuperAdmin, isOperations } = useAuth();
-  const canManageProtocols = isAdmin || isSuperAdmin || isOperations;
+  const { roles, isSuperAdmin } = useAuth();
+  // Tabs and their role lists come from screenAccess; the active tab lives in ?tab=.
+  const { tabs, active: activeTab, setActive: changeTab } = useHubTab("settings");
+  const isSettingsAdmin = canAccess(roles, isSuperAdmin, ["admin", "super_admin"]);
+  const canAnnounce = canAccess(roles, isSuperAdmin, ANNOUNCEMENT_ROLES);
 
   const shortcuts = [
-    { icon: Database, title: "מחולל קטגוריות", desc: "הוספה ועריכת סוגי ציוד", path: "/categories" },
-    { icon: Users, title: "ניהול משתמשים", desc: "הוספת מנהלי מערכת", path: "/user-management" },
-    { icon: Shield, title: "ניהול חברות", desc: "ניהול חברות במערכת", path: "/companies" },
-  ];
+    { icon: Database, title: "מחולל קטגוריות", desc: "הוספה ועריכת סוגי ציוד", path: hubPath("/assets", "categories"), roles: tabRoles("assets", "categories") },
+    { icon: Users, title: "ניהול משתמשים", desc: "הוספת מנהלי מערכת", path: hubPath("/employees", "users"), roles: tabRoles("employees", "users") },
+  ].filter((item) => canAccess(roles, isSuperAdmin, item.roles));
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="page-header">
-        <h1 className="page-title">הגדרות</h1>
-        <p className="page-subtitle">ניהול הגדרות המערכת, התראות ואבטחה</p>
+        <h1 className="page-title">{isSettingsAdmin ? "ניהול והגדרות" : "ניהול פורטל העובדים"}</h1>
+        <p className="page-subtitle">
+          {isSettingsAdmin ? "הגדרות המערכת, פורטל העובדים, קבוצות והרשאות" : "הודעות שמוצגות לעובדים בפורטל"}
+        </p>
       </div>
 
-      <Tabs defaultValue={new URLSearchParams(window.location.search).get("tab") || "general"} dir="rtl">
-        <TabsList className="mb-4">
-          <TabsTrigger value="general" className="gap-1.5">
-            <SettingsIcon className="w-4 h-4" />
-            כללי
-          </TabsTrigger>
-          <TabsTrigger value="sub_employers" className="gap-1.5">
-            <Building2 className="w-4 h-4" />
-            מעסיקים / תת-חברות
-          </TabsTrigger>
-          <TabsTrigger value="portal" className="gap-1.5">
-            <Smartphone className="w-4 h-4" />
-            פורטל עובדים
-          </TabsTrigger>
-          <TabsTrigger value="email_templates" className="gap-1.5">
-            <Mail className="w-4 h-4" />
-            תבניות מייל
-          </TabsTrigger>
-          {canManageProtocols && (
-            <TabsTrigger value="protocols" className="gap-1.5">
-              <FileText className="w-4 h-4" />
-              פרוטוקולי מסירה
-            </TabsTrigger>
-          )}
-          <TabsTrigger value="alerts" className="gap-1.5">
-            <Bell className="w-4 h-4" />
-            חוקי התראות
-          </TabsTrigger>
-          {(isAdmin || isSuperAdmin) && (
-            <TabsTrigger value="permission_audit" className="gap-1.5">
-              <Shield className="w-4 h-4" />
-              לוג הרשאות
-            </TabsTrigger>
-          )}
-        </TabsList>
+      <Tabs value={activeTab ?? undefined} onValueChange={changeTab} dir="rtl">
+        {tabs.length > 1 && (
+          <TabsList className="mb-4" aria-label="ניהול">
+            {tabs.map((t) => {
+              const Icon = TAB_ICONS[t.key] ?? SettingsIcon;
+              return (
+                <TabsTrigger key={t.key} value={t.key} className="gap-1.5">
+                  <Icon className="w-4 h-4" aria-hidden="true" />
+                  {t.label}
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+        )}
 
-        {(isAdmin || isSuperAdmin) && (
+        {activeTab === "permission_audit" && (
           <TabsContent value="permission_audit">
             <PermissionAuditTab />
           </TabsContent>
         )}
 
-        <TabsContent value="general">
-          <div className="space-y-6">
-            <GeneralSettings />
-            <GoogleCalendarSyncCard />
-          </div>
-        </TabsContent>
+        {activeTab === "groups" && (
+          <TabsContent value="groups">
+            <PermissionGroupsTab />
+          </TabsContent>
+        )}
 
+        {activeTab === "companies" && (
+          <TabsContent value="companies">
+            <Suspense fallback={<ListSkeleton rows={5} />}>
+              <Companies />
+            </Suspense>
+          </TabsContent>
+        )}
 
-        <TabsContent value="sub_employers">
-          <SubEmployersTab />
-        </TabsContent>
+        {activeTab === "general" && (
+          <TabsContent value="general">
+            <div className="space-y-6">
+              <GeneralSettings />
+              <GoogleCalendarSyncCard />
+            </div>
+          </TabsContent>
+        )}
 
-        <TabsContent value="portal">
-          <PortalSettingsTab />
-          <div className="mt-6 space-y-6">
-            <EmailsSettings
-              columnKey="operations_emails"
-              title="נמענים לקריאות שירות (תפעול)"
-              description='כתובות דוא"ל של התפעול שיקבלו כל קריאת שירות חדשה שנפתחת (מופרדות בפסיק). עותק נשלח תמיד לפותח הקריאה.'
-              placeholder="ops@company.com"
-            />
-            <EmailsSettings
-              columnKey="it_emails"
-              title='נמענים להתראות IT'
-              description='כתובות דוא"ל נוספות שיקבלו התראה בעת פתיחת קריאה חדשה (מופרדות בפסיק)'
-              placeholder="it@company.com, ops@company.com"
-            />
-            <EmailsSettings
-              columnKey="secretariat_emails"
-              title="נמענים לזימוני יומן (מזכירות)"
-              description='כתובות דוא"ל של המזכירות שיקבלו זימון ליומן על כל חופשה / מחלה / מילואים מאושרת (מופרדות בפסיק)'
-              placeholder="office@company.com"
-            />
-            <EmailsSettings
-              columnKey="expiry_notification_emails"
-              title="נמענים להתראות תפוגה"
-              description='כתובות דוא"ל שיקבלו סיכום יומי של ציוד שמתקרב לתפוגה (מופרדות בפסיק). אם ריק - לא יישלחו התראות.'
-              placeholder="ops@company.com, manager@company.com"
-            />
-          </div>
-        </TabsContent>
+        {activeTab === "sub_employers" && (
+          <TabsContent value="sub_employers">
+            <SubEmployersTab />
+          </TabsContent>
+        )}
 
-        <TabsContent value="email_templates">
-          <EmailTemplatesTab />
-        </TabsContent>
+        {activeTab === "portal" && (
+          <TabsContent value="portal">
+            <div className="space-y-6">
+              {/* Announcements are part of portal management, not a screen of their own. */}
+              {canAnnounce && <AnnouncementsManager />}
+              {isSettingsAdmin && (
+                <>
+                  <PortalSettingsTab />
+                  <EmailsSettings
+                    columnKey="operations_emails"
+                    title="נמענים לקריאות שירות (תפעול)"
+                    description='כתובות דוא"ל של התפעול שיקבלו כל קריאת שירות חדשה שנפתחת (מופרדות בפסיק). עותק נשלח תמיד לפותח הקריאה.'
+                    placeholder="ops@company.com"
+                  />
+                  <EmailsSettings
+                    columnKey="it_emails"
+                    title='נמענים להתראות IT'
+                    description='כתובות דוא"ל נוספות שיקבלו התראה בעת פתיחת קריאה חדשה (מופרדות בפסיק)'
+                    placeholder="it@company.com, ops@company.com"
+                  />
+                  <EmailsSettings
+                    columnKey="secretariat_emails"
+                    title="נמענים לזימוני יומן (מזכירות)"
+                    description='כתובות דוא"ל של המזכירות שיקבלו זימון ליומן על כל חופשה / מחלה / מילואים מאושרת (מופרדות בפסיק)'
+                    placeholder="office@company.com"
+                  />
+                  <EmailsSettings
+                    columnKey="expiry_notification_emails"
+                    title="נמענים להתראות תפוגה"
+                    description='כתובות דוא"ל שיקבלו סיכום יומי של ציוד שמתקרב לתפוגה (מופרדות בפסיק). אם ריק - לא יישלחו התראות.'
+                    placeholder="ops@company.com, manager@company.com"
+                  />
+                </>
+              )}
+            </div>
+          </TabsContent>
+        )}
 
-        {canManageProtocols && (
+        {activeTab === "email_templates" && (
+          <TabsContent value="email_templates">
+            <EmailTemplatesTab />
+          </TabsContent>
+        )}
+
+        {activeTab === "protocols" && (
           <TabsContent value="protocols">
             <ProtocolTemplatesTab />
           </TabsContent>
         )}
 
-        <TabsContent value="alerts">
-          <div className="space-y-6">
-            <SlaSettingsCard />
-            <AlertRulesSettings />
-          </div>
-        </TabsContent>
+        {activeTab === "alerts" && (
+          <TabsContent value="alerts">
+            <div className="space-y-6">
+              <SlaSettingsCard />
+              <AlertRulesSettings />
+            </div>
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Quick links */}
-      <div>
-        <h2 className="text-sm font-medium text-muted-foreground mb-3">קיצורים</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {shortcuts.map((item) => (
-            <button
-              key={item.title}
-              onClick={() => navigate(item.path)}
-              className="bg-card rounded-xl border border-border/50 p-4 hover:shadow-md hover:border-primary/30 transition-all text-right flex items-center gap-3"
-            >
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                <item.icon className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="font-medium text-sm">{item.title}</p>
-                <p className="text-xs text-muted-foreground">{item.desc}</p>
-              </div>
-            </button>
-          ))}
+      {shortcuts.length > 0 && (
+        <div>
+          <h2 className="text-sm font-medium text-muted-foreground mb-3">קיצורים</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {shortcuts.map((item) => (
+              <button
+                key={item.title}
+                type="button"
+                onClick={() => navigate(item.path)}
+                className="bg-card rounded-xl border border-border/50 p-4 hover:shadow-md hover:border-primary/30 transition-all text-right flex items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <item.icon className="w-5 h-5 text-primary" aria-hidden="true" />
+                </div>
+                <div>
+                  <p className="font-medium text-sm">{item.title}</p>
+                  <p className="text-xs text-muted-foreground">{item.desc}</p>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -279,6 +322,12 @@ function GeneralSettings() {
     },
   });
 
+  // One save model for the whole card: uploading or removing the logo only changes the draft;
+  // "שמור שינויים" writes name + logo together.
+  const savedName = activeCompany?.name ?? "";
+  const savedLogo = activeCompany?.logo_url ?? "";
+  const dirty = name !== savedName || (logoUrl || "") !== (savedLogo || "");
+
   const handleUpload = async (file: File) => {
     if (!activeCompanyId) return;
     if (file.size > 5 * 1024 * 1024) {
@@ -296,12 +345,8 @@ function GeneralSettings() {
       });
       if (upErr) throw upErr;
       const { data: pub } = supabase.storage.from("company-logos").getPublicUrl(path);
-      const url = pub.publicUrl;
-      const { error: updErr } = await supabase.from("companies").update({ logo_url: url }).eq("id", activeCompanyId);
-      if (updErr) throw updErr;
-      setLogoUrl(url);
-      queryClient.invalidateQueries({ queryKey: ["companies"] });
-      toast({ title: "הלוגו הועלה בהצלחה" });
+      setLogoUrl(pub.publicUrl);
+      toast({ title: "הלוגו הועלה", description: "לחצו \"שמור שינויים\" כדי להחיל אותו." });
     } catch (e: any) {
       toast({ title: "שגיאה בהעלאה", description: e.message, variant: "destructive" });
     } finally {
@@ -310,17 +355,7 @@ function GeneralSettings() {
     }
   };
 
-  const removeLogo = async () => {
-    if (!activeCompanyId) return;
-    setLogoUrl("");
-    const { error } = await supabase.from("companies").update({ logo_url: null }).eq("id", activeCompanyId);
-    if (error) {
-      toast({ title: "שגיאה", description: error.message, variant: "destructive" });
-      return;
-    }
-    queryClient.invalidateQueries({ queryKey: ["companies"] });
-    toast({ title: "הלוגו הוסר" });
-  };
+  const removeLogo = () => setLogoUrl("");
 
   if (!activeCompanyId) {
     return <div className="text-center py-8 text-muted-foreground">לא נבחרה חברה</div>;
@@ -329,26 +364,21 @@ function GeneralSettings() {
   return (
     <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 space-y-4 max-w-xl">
       <div className="flex items-center gap-3 mb-2">
-        <Building2 className="w-5 h-5 text-primary" />
+        <Building2 className="w-5 h-5 text-primary" aria-hidden="true" />
         <h3 className="font-semibold">פרטי החברה</h3>
       </div>
-      <div>
-        <label className="text-sm font-medium mb-1.5 block">שם החברה</label>
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
-        />
-      </div>
+      <FormField label="שם החברה" id="company-name">
+        <Input value={name} onChange={(e) => setName(e.target.value)} autoComplete="organization" />
+      </FormField>
 
-      <div>
-        <label className="text-sm font-medium mb-1.5 block">לוגו החברה</label>
+      <div role="group" aria-labelledby="company-logo-label">
+        <p id="company-logo-label" className="text-sm font-medium mb-1.5">לוגו החברה</p>
         <div className="flex items-center gap-4">
           <div className="w-24 h-24 rounded-lg border border-border/50 overflow-hidden bg-muted flex items-center justify-center shrink-0">
             {logoUrl ? (
-              <img src={logoUrl} alt="לוגו" className="max-w-full max-h-full object-contain" />
+              <img src={logoUrl} alt="לוגו החברה" className="max-w-full max-h-full object-contain" />
             ) : (
-              <Building2 className="w-8 h-8 text-muted-foreground" />
+              <Building2 className="w-8 h-8 text-muted-foreground" aria-label="אין לוגו" />
             )}
           </div>
           <div className="flex flex-col gap-2">
@@ -357,6 +387,7 @@ function GeneralSettings() {
               type="file"
               accept="image/png,image/jpeg,image/svg+xml,image/webp"
               className="hidden"
+              aria-label="בחירת קובץ לוגו"
               onChange={(e) => {
                 const f = e.target.files?.[0];
                 if (f) handleUpload(f);
@@ -365,40 +396,48 @@ function GeneralSettings() {
             <Button
               type="button"
               variant="outline"
-              size="sm"
               className="gap-1.5"
               onClick={() => fileRef.current?.click()}
-              disabled={uploading}
+              loading={uploading}
+              loadingText="מעלה…"
             >
-              <Upload className="w-4 h-4" />
-              {uploading ? "מעלה..." : "העלאת לוגו"}
+              <Upload className="w-4 h-4" aria-hidden="true" />
+              העלאת לוגו
             </Button>
             {logoUrl && (
-              <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-destructive" onClick={removeLogo}>
-                <Trash2 className="w-4 h-4" />
+              <Button type="button" variant="ghost" className="gap-1.5 text-destructive" onClick={removeLogo} disabled={uploading}>
+                <Trash2 className="w-4 h-4" aria-hidden="true" />
                 הסר לוגו
               </Button>
             )}
-            <p className="text-xs text-muted-foreground">PNG / JPG / SVG עד 5MB. הלוגו יופיע ממורכז בתחילת מיילים שנשלחים לעובדים.</p>
+            <p className="text-xs text-muted-foreground">PNG / JPG / SVG עד 5MB. הלוגו יופיע ממורכז בתחילת מיילים שנשלחים לעובדים. השינוי נשמר בלחיצה על "שמור שינויים".</p>
           </div>
         </div>
       </div>
 
-      <div>
-        <label className="text-sm font-medium mb-1.5 block">או הדבק כתובת לוגו (URL)</label>
-        <input
+      <FormField label="או הדבק כתובת לוגו (URL)" id="company-logo-url">
+        <Input
+          type="url"
           value={logoUrl}
           onChange={(e) => setLogoUrl(e.target.value)}
           placeholder="https://example.com/logo.png"
-          className="w-full px-3 py-2.5 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 font-mono"
+          className="font-mono"
           dir="ltr"
         />
-      </div>
+      </FormField>
 
-      <Button className="gap-1.5" onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>
-        <Save className="w-4 h-4" />
-        {updateMutation.isPending ? "שומר..." : "שמור שינויים"}
-      </Button>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button className="gap-1.5" onClick={() => updateMutation.mutateAsync()} disabled={uploading || !dirty} loading={updateMutation.isPending} loadingText="שומר…" successText="נשמר">
+          <Save className="w-4 h-4" aria-hidden="true" />
+          שמור שינויים
+        </Button>
+        {dirty && !updateMutation.isPending && (
+          <>
+            <span className="text-xs text-muted-foreground" role="status">יש שינויים שלא נשמרו</span>
+            <Button type="button" variant="ghost" onClick={() => { setName(savedName); setLogoUrl(savedLogo); }} disabled={uploading}>בטל שינויים</Button>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -407,54 +446,43 @@ function GeneralSettings() {
 // Alert Rules Settings
 // ============================
 function AlertRulesSettings() {
-  const { activeCompanyId } = useCompany();
-  const { toast } = useToast();
-
-  const [rules, setRules] = useState([
+  // There is no table behind these rules yet: they are fixed in the system, so
+  // show them as information only instead of toggles that pretend to save.
+  const rules = [
     { id: "expiry", label: "התראה על ציוד שפג תוקפו", desc: "שלח התראה 30 יום לפני תפוגת ציוד", enabled: true },
     { id: "leaving", label: "התראה על עובד עוזב", desc: "הצג התראה כשעובד עובר לסטטוס ׳עוזב׳", enabled: true },
     { id: "unassigned", label: "ציוד ללא שיוך", desc: "הצג ציוד שנמצא במלאי מעל 60 יום", enabled: false },
     { id: "license", label: "חידוש רישיונות", desc: "תזכורת לחידוש רישיונות תוכנה", enabled: true },
-  ]);
-
-  const toggle = (id: string) => {
-    setRules(rules.map(r => r.id === id ? { ...r, enabled: !r.enabled } : r));
-    toast({ title: "חוק עודכן" });
-  };
+  ];
 
   return (
     <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 space-y-3 max-w-xl">
       <div className="flex items-center gap-3 mb-2">
-        <Bell className="w-5 h-5 text-primary" />
+        <Bell className="w-5 h-5 text-primary" aria-hidden="true" />
         <h3 className="font-semibold">חוקי התראות</h3>
       </div>
-      <p className="text-xs text-muted-foreground">הגדר אילו התראות אוטומטיות יופעלו במערכת</p>
+      <p className="text-xs text-muted-foreground">כללי ההתראות מוגדרים במערכת ואינם ניתנים לשינוי מכאן.</p>
 
-      <div className="space-y-2 mt-3">
+      <ul className="space-y-2 mt-3">
         {rules.map((rule) => (
-          <div
+          <li
             key={rule.id}
-            className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-background"
+            className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border/50 bg-background"
           >
             <div>
               <p className="text-sm font-medium">{rule.label}</p>
               <p className="text-xs text-muted-foreground">{rule.desc}</p>
             </div>
-            <button
-              onClick={() => toggle(rule.id)}
-              className={`w-11 h-6 rounded-full transition-colors relative ${
-                rule.enabled ? "bg-primary" : "bg-muted"
+            <span
+              className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                rule.enabled ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
               }`}
             >
-              <div
-                className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                  rule.enabled ? "right-0.5" : "left-0.5"
-                }`}
-              />
-            </button>
-          </div>
+              {rule.enabled ? "פעיל" : "כבוי"}
+            </span>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }

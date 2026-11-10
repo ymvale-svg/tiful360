@@ -24,6 +24,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useCompany } from "@/hooks/useCompany";
 import { openHandoverFile } from "@/lib/handoverUrl";
+import { IconButton } from "@/components/feedback/IconButton";
+import { useConfirm } from "@/components/feedback/ConfirmDialog";
 
 interface Asset {
   id: string;
@@ -60,6 +62,7 @@ interface RowState {
 
 export function OffboardingFormsManager({ employee, assets }: Props) {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const queryClient = useQueryClient();
   const { activeCompany } = useCompany();
 
@@ -177,14 +180,24 @@ export function OffboardingFormsManager({ employee, assets }: Props) {
     }
   };
 
-  const handleDelete = async (formId: string) => {
-    if (!confirm("למחוק טופס זה? פריטיו יחזרו להיות זמינים ליצירת טופס חדש.")) return;
-    const { error } = await supabase.from("offboarding_forms").delete().eq("id", formId);
-    if (error) {
-      toast({ title: "שגיאה", description: error.message, variant: "destructive" });
-      return;
-    }
-    refetch();
+  const handleDelete = (formId: string, formIndex: number) =>
+    confirm({
+      title: `למחוק את טופס #${formIndex}?`,
+      description: "קישור החתימה יפסיק לעבוד, והפריטים שבטופס יחזרו להיות זמינים ליצירת טופס חדש.",
+      confirmLabel: "מחק טופס",
+      destructive: true,
+      onConfirm: async () => {
+        const { error } = await supabase.from("offboarding_forms").delete().eq("id", formId);
+        if (error) throw error;
+        toast({ title: "הטופס נמחק" });
+        refetch();
+      },
+    });
+
+  const allSelected = availableAssets.length > 0 && availableAssets.every((a) => rows[a.id]?.selected);
+  const someSelected = availableAssets.some((a) => rows[a.id]?.selected);
+  const toggleAll = (v: boolean) => {
+    for (const a of availableAssets) updateRow(a.id, { selected: v });
   };
 
   const buildSignUrl = (token: string) =>
@@ -216,9 +229,9 @@ export function OffboardingFormsManager({ employee, assets }: Props) {
                 >
                   <div className="flex items-center gap-2">
                     {signed ? (
-                      <CheckCircle2 className="w-4 h-4 text-green-600" />
+                      <CheckCircle2 className="w-4 h-4 text-green-600" aria-hidden="true" />
                     ) : (
-                      <Clock className="w-4 h-4 text-amber-600" />
+                      <Clock className="w-4 h-4 text-amber-600" aria-hidden="true" />
                     )}
                     <span className="font-medium text-sm">טופס #{f.form_index}</span>
                     <span className="text-xs text-muted-foreground">
@@ -236,7 +249,7 @@ export function OffboardingFormsManager({ employee, assets }: Props) {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 gap-1"
+                          className="gap-1"
                           onClick={() => copyLink(f.sign_token)}
                         >
                           <Copy className="w-3 h-3" />
@@ -245,7 +258,7 @@ export function OffboardingFormsManager({ employee, assets }: Props) {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 gap-1"
+                          className="gap-1"
                           asChild
                         >
                           <a
@@ -257,21 +270,20 @@ export function OffboardingFormsManager({ employee, assets }: Props) {
                             פתח
                           </a>
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 text-destructive"
-                          onClick={() => handleDelete(f.id)}
+                        <IconButton
+                          label={`מחק טופס #${f.form_index}`}
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => { void handleDelete(f.id, f.form_index); }}
                         >
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
+                          <Trash2 />
+                        </IconButton>
                       </>
                     )}
                     {signed && f.pdf_url && (
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-8 gap-1"
+                        className="gap-1"
                         onClick={() => void openHandoverFile(f.pdf_url!)}
                       >
                         <Download className="w-3 h-3" />
@@ -298,7 +310,13 @@ export function OffboardingFormsManager({ employee, assets }: Props) {
             <table className="w-full text-sm">
               <thead className="bg-muted/40">
                 <tr>
-                  <th className="p-2 text-start w-10"></th>
+                  <th className="p-2 text-start w-10">
+                    <Checkbox
+                      checked={allSelected ? true : someSelected ? "indeterminate" : false}
+                      onCheckedChange={(v) => toggleAll(v === true)}
+                      aria-label="בחר את כל הפריטים"
+                    />
+                  </th>
                   <th className="p-2 text-start">פריט</th>
                   <th className="p-2 text-start">מס׳ סידורי</th>
                   <th className="p-2 text-start w-32">מצב</th>
@@ -320,6 +338,7 @@ export function OffboardingFormsManager({ employee, assets }: Props) {
                           onCheckedChange={(v) =>
                             updateRow(a.id, { selected: !!v })
                           }
+                          aria-label={`בחר ${a.asset_name}`}
                         />
                       </td>
                       <td className="p-2">
@@ -339,7 +358,7 @@ export function OffboardingFormsManager({ employee, assets }: Props) {
                           }
                           disabled={!r.selected}
                         >
-                          <SelectTrigger className="h-8 text-xs">
+                          <SelectTrigger className="text-xs" aria-label={`מצב ${a.asset_name}`}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -356,7 +375,8 @@ export function OffboardingFormsManager({ employee, assets }: Props) {
                             updateRow(a.id, { notes: e.target.value })
                           }
                           disabled={!r.selected}
-                          className="h-8 text-xs"
+                          className="text-xs"
+                          aria-label={`הערות ${a.asset_name}`}
                           placeholder="—"
                         />
                       </td>
@@ -372,11 +392,13 @@ export function OffboardingFormsManager({ employee, assets }: Props) {
               <Button
                 size="sm"
                 onClick={handleCreate}
-                disabled={creating || selectedAssets.length === 0}
+                disabled={selectedAssets.length === 0}
+                loading={creating}
+                loadingText="יוצר טופס…"
                 className="gap-1"
               >
                 <FileSignature className="w-4 h-4" />
-                {creating ? "יוצר..." : "צור טופס לחתימה"}
+                צור טופס לחתימה
               </Button>
             </div>
           </div>

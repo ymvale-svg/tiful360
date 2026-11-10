@@ -73,14 +73,15 @@ export function SubCategorySelect({
             if (e.key === "Escape") { setAdding(false); setNewName(""); }
           }}
           placeholder="שם תת-קטגוריה חדשה"
+          aria-label="שם תת-קטגוריה חדשה"
           dir="rtl"
-          className="text-right h-9"
+          className="text-right h-10"
         />
-        <Button size="sm" onClick={handleCreate} disabled={!newName.trim() || createGroup.isPending}>
-          <Check className="w-4 h-4" />
+        <Button size="icon" onClick={handleCreate} disabled={!newName.trim() || createGroup.isPending} aria-label="צור תת-קטגוריה" title="צור תת-קטגוריה">
+          <Check className="w-4 h-4" aria-hidden="true" />
         </Button>
-        <Button size="sm" variant="ghost" onClick={() => { setAdding(false); setNewName(""); }}>
-          <X className="w-4 h-4" />
+        <Button size="icon" variant="ghost" onClick={() => { setAdding(false); setNewName(""); }} aria-label="בטל יצירת תת-קטגוריה" title="ביטול">
+          <X className="w-4 h-4" aria-hidden="true" />
         </Button>
       </div>
     );
@@ -99,9 +100,9 @@ export function SubCategorySelect({
         <button
           type="button"
           onClick={() => setAdding(true)}
-          className="text-[11px] text-muted-foreground hover:text-primary inline-flex items-center gap-1"
+          className="min-h-9 text-xs text-muted-foreground hover:text-primary inline-flex items-center gap-1"
         >
-          <Plus className="w-3 h-3" />
+          <Plus className="w-3 h-3" aria-hidden="true" />
           תת-קטגוריה חדשה
         </button>
       )}

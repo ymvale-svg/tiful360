@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
+import { SearchInput } from "@/components/ui/search-input";
 import { useLiveEmployeeLocations } from "@/hooks/useLiveEmployeeLocations";
 import { EmployeeMapView } from "@/components/attendance/EmployeeMapView";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, RefreshCw, Search, Users } from "lucide-react";
+import { MapPin, RefreshCw, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function AttendanceMap() {
@@ -60,17 +61,13 @@ export default function AttendanceMap() {
       <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 lg:flex-1 lg:min-h-0">
         {/* Sidebar list */}
         <Card className="p-3 flex flex-col gap-3 min-h-0 max-h-[55dvh] lg:max-h-none">
-          <div className="relative">
-            <Search className="absolute right-2 top-2.5 w-4 h-4 text-muted-foreground" aria-hidden="true" />
-            <Input
-              type="search"
-              aria-label="חיפוש עובד במפה"
-              placeholder="חיפוש עובד..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pr-8"
-            />
-          </div>
+          <SearchInput
+            size="sm"
+            label="חיפוש עובד במפה"
+            placeholder="חיפוש עובד..."
+            value={search}
+            onValueChange={setSearch}
+          />
 
           {departments.length > 0 && (
             <div className="flex flex-wrap gap-1">

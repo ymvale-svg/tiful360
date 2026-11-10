@@ -25,7 +25,7 @@ export function ThemeToggle() {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="p-2 rounded-lg hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="grid h-10 w-10 place-items-center rounded-lg hover:bg-muted transition-colors [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           aria-label="בחירת ערכת נושא"
         >
           <ActiveIcon className="w-5 h-5 text-muted-foreground" aria-hidden="true" />

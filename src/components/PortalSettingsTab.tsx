@@ -7,6 +7,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PortalLearningManager } from "@/components/settings/PortalLearningManager";
+import { Input } from "@/components/ui/input";
+import { FormField } from "@/components/feedback/FormField";
+import { IconButton } from "@/components/feedback/IconButton";
+import { useConfirm } from "@/components/feedback/ConfirmDialog";
 
 export function PortalSettingsTab() {
   const { activeCompanyId } = useCompany();
@@ -26,6 +30,7 @@ export function PortalSettingsTab() {
 
 function LinksManager({ companyId }: { companyId: string }) {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const queryClient = useQueryClient();
   const [newLabel, setNewLabel] = useState("");
   const [newUrl, setNewUrl] = useState("");
@@ -70,14 +75,21 @@ function LinksManager({ companyId }: { companyId: string }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["portal_links"] });
-      toast({ title: "קישור הוסר" });
+      toast({ title: "הקישור הוסר" });
     },
+  });
+  const removeLink = (link: { id: string; label: string }) => confirm({
+    title: `להסיר את הקישור "${link.label}"?`,
+    description: "הקישור ייעלם מהפורטל של כל העובדים.",
+    confirmLabel: "הסר קישור",
+    destructive: true,
+    onConfirm: () => deleteLink.mutateAsync(link.id),
   });
 
   return (
     <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 space-y-4">
       <div className="flex items-center gap-3 mb-2">
-        <Link2 className="w-5 h-5 text-primary" />
+        <Link2 className="w-5 h-5 text-primary" aria-hidden="true" />
         <h3 className="font-semibold">קישורים מהירים בפורטל</h3>
       </div>
 
@@ -88,29 +100,22 @@ function LinksManager({ companyId }: { companyId: string }) {
               <p className="text-sm font-medium truncate">{link.label}</p>
               <p className="text-xs text-muted-foreground truncate" dir="ltr">{link.url}</p>
             </div>
-            <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8 text-destructive" onClick={() => deleteLink.mutate(link.id)}>
+            <IconButton label={`הסר את הקישור ${link.label}`} className="shrink-0 text-destructive" onClick={() => { void removeLink(link); }}>
               <Trash2 className="w-4 h-4" />
-            </Button>
+            </IconButton>
           </div>
         ))}
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-border/50">
-        <input
-          value={newLabel}
-          onChange={(e) => setNewLabel(e.target.value)}
-          placeholder="שם הקישור"
-          className="flex-1 px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
-        />
-        <input
-          value={newUrl}
-          onChange={(e) => setNewUrl(e.target.value)}
-          placeholder="https://..."
-          dir="ltr"
-          className="flex-1 px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 font-mono"
-        />
-        <Button size="sm" className="gap-1.5 shrink-0" onClick={() => addLink.mutate()} disabled={addLink.isPending}>
-          <Plus className="w-4 h-4" />
+      <div className="flex flex-col sm:flex-row sm:items-end gap-2 pt-2 border-t border-border/50">
+        <FormField label="שם הקישור" id="portal-link-label" className="flex-1">
+          <Input value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder="למשל: מערכת שכר" />
+        </FormField>
+        <FormField label="כתובת" id="portal-link-url" className="flex-1">
+          <Input type="url" value={newUrl} onChange={(e) => setNewUrl(e.target.value)} placeholder="https://..." dir="ltr" className="font-mono" />
+        </FormField>
+        <Button className="gap-1.5 shrink-0" onClick={() => addLink.mutate()} loading={addLink.isPending} loadingText="מוסיף…">
+          <Plus className="w-4 h-4" aria-hidden="true" />
           הוסף
         </Button>
       </div>
@@ -120,6 +125,7 @@ function LinksManager({ companyId }: { companyId: string }) {
 
 function ContactsManager({ companyId }: { companyId: string }) {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const queryClient = useQueryClient();
   const [form, setForm] = useState({ name: "", role: "", department: "", phone: "", email: "" });
 
@@ -168,21 +174,29 @@ function ContactsManager({ companyId }: { companyId: string }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["portal_contacts"] });
       queryClient.invalidateQueries({ queryKey: ["company-contacts-merged"] });
-      toast({ title: "איש קשר הוסר" });
+      toast({ title: "איש הקשר הוסר" });
     },
   });
+  const removeContact = (c: { id: string; name: string }) => confirm({
+    title: `להסיר את ${c.name} מאנשי הקשר?`,
+    description: "איש הקשר ייעלם מהפורטל של כל העובדים.",
+    confirmLabel: "הסר איש קשר",
+    destructive: true,
+    onConfirm: () => deleteContact.mutateAsync(c.id),
+  });
+  const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
   return (
     <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 space-y-4">
       <div className="flex items-center justify-between gap-3 mb-2">
         <div className="flex items-center gap-3">
-          <Phone className="w-5 h-5 text-primary" />
+          <Phone className="w-5 h-5 text-primary" aria-hidden="true" />
           <h3 className="font-semibold">אנשי קשר חיצוניים</h3>
         </div>
-        <Link to="/employees" className="text-xs text-primary hover:underline flex items-center gap-1 shrink-0">
-          <Users className="w-3.5 h-3.5" />
+        <Link to="/employees" className="text-sm text-primary hover:underline flex items-center gap-1 shrink-0 min-h-10">
+          <Users className="w-3.5 h-3.5" aria-hidden="true" />
           לניהול עובדים
-          <ExternalLink className="w-3 h-3" />
+          <ExternalLink className="w-3 h-3" aria-hidden="true" />
         </Link>
       </div>
 
@@ -200,22 +214,22 @@ function ContactsManager({ companyId }: { companyId: string }) {
                 {c.email ? <> | <span dir="ltr">{c.email}</span></> : null}
               </p>
             </div>
-            <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8 text-destructive" onClick={() => deleteContact.mutate(c.id)}>
+            <IconButton label={`הסר את ${c.name}`} className="shrink-0 text-destructive" onClick={() => { void removeContact(c); }}>
               <Trash2 className="w-4 h-4" />
-            </Button>
+            </IconButton>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/50">
-        <input value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} placeholder="שם" className="px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30" />
-        <input value={form.role} onChange={(e) => setForm(f => ({ ...f, role: e.target.value }))} placeholder="תפקיד" className="px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30" />
-        <input value={form.department} onChange={(e) => setForm(f => ({ ...f, department: e.target.value }))} placeholder="מחלקה" className="px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30" />
-        <input value={form.phone} onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="טלפון" className="px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30" dir="ltr" />
-        <input value={form.email} onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))} placeholder="דוא״ל (אופציונלי)" className="px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30 col-span-2" dir="ltr" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-border/50">
+        <FormField label="שם" required id="portal-contact-name"><Input value={form.name} onChange={set("name")} autoComplete="off" /></FormField>
+        <FormField label="תפקיד" id="portal-contact-role"><Input value={form.role} onChange={set("role")} /></FormField>
+        <FormField label="מחלקה" id="portal-contact-dept"><Input value={form.department} onChange={set("department")} /></FormField>
+        <FormField label="טלפון" required id="portal-contact-phone"><Input type="tel" inputMode="tel" value={form.phone} onChange={set("phone")} dir="ltr" /></FormField>
+        <FormField label="דוא״ל (לא חובה)" id="portal-contact-email" className="sm:col-span-2"><Input type="email" value={form.email} onChange={set("email")} dir="ltr" /></FormField>
       </div>
-      <Button size="sm" className="gap-1.5" onClick={() => addContact.mutate()} disabled={addContact.isPending}>
-        <Plus className="w-4 h-4" />
+      <Button className="gap-1.5" onClick={() => addContact.mutate()} loading={addContact.isPending} loadingText="מוסיף…">
+        <Plus className="w-4 h-4" aria-hidden="true" />
         הוסף איש קשר חיצוני
       </Button>
     </div>

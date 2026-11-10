@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useUpdateSickLeaveRequest } from "@/hooks/useLeaveRequests";
 import { Upload, Paperclip } from "lucide-react";
+import { LeaveAttachmentLink } from "@/components/LeaveAttachmentLink";
 
 interface Props {
   request: any | null;
@@ -101,11 +102,11 @@ export function EditSickLeaveDialog({ request, onClose }: Props) {
               {hasExistingAttachment ? `החלפת ${docLabel}` : `העלאת ${docLabel}`}
             </Label>
             {hasExistingAttachment && (
-              <a href={request.attachment_url} target="_blank" rel="noopener noreferrer"
+              <LeaveAttachmentLink value={request.attachment_url}
                  className="inline-flex items-center gap-1 text-primary text-xs my-1">
                 <Paperclip className="w-3 h-3" />
                 אישור קיים
-              </a>
+              </LeaveAttachmentLink>
             )}
             <label htmlFor="sick-file" className="mt-1 flex items-center gap-2 px-3 py-2 border border-dashed border-border rounded-lg cursor-pointer hover:bg-muted text-sm text-muted-foreground">
               <Upload className="w-4 h-4" aria-hidden="true" />

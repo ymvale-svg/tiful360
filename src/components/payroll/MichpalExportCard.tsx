@@ -201,9 +201,9 @@ export function MichpalExportCard() {
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="text-xs text-muted-foreground block mb-1">מקור הנתונים</label>
+            <label htmlFor="michpal-source" className="text-xs text-muted-foreground block mb-1">מקור הנתונים</label>
             <Select value={source} onValueChange={(v) => setSource(v as MichpalSource)}>
-              <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+              <SelectTrigger id="michpal-source" className="w-44"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="clock">שעון בלבד</SelectItem>
                 <SelectItem value="remote">החתמה מרחוק בלבד</SelectItem>
@@ -213,9 +213,9 @@ export function MichpalExportCard() {
           </div>
 
           <div>
-            <label className="text-xs text-muted-foreground block mb-1">סיומת קובץ</label>
+            <label htmlFor="michpal-format" className="text-xs text-muted-foreground block mb-1">סיומת קובץ</label>
             <Select value={fileFormat} onValueChange={(v) => setFileFormat(v as MichpalFileFormat)}>
-              <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+              <SelectTrigger id="michpal-format" className="w-44"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="csv">CSV (ברירת מחדל)</SelectItem>
                 <SelectItem value="dat">DAT</SelectItem>
@@ -225,26 +225,26 @@ export function MichpalExportCard() {
 
           {!useCustomRange ? (
             <div>
-              <label className="text-xs text-muted-foreground block mb-1">חודש</label>
-              <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="w-40" />
+              <label htmlFor="michpal-month" className="text-xs text-muted-foreground block mb-1">חודש</label>
+              <Input id="michpal-month" type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="w-40" />
             </div>
           ) : (
             <>
               <div>
-                <label className="text-xs text-muted-foreground block mb-1">מתאריך</label>
-                <Input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="w-40" />
+                <label htmlFor="michpal-from" className="text-xs text-muted-foreground block mb-1">מתאריך</label>
+                <Input id="michpal-from" type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="w-40" />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground block mb-1">עד תאריך</label>
-                <Input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="w-40" />
+                <label htmlFor="michpal-to" className="text-xs text-muted-foreground block mb-1">עד תאריך</label>
+                <Input id="michpal-to" type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="w-40" />
               </div>
             </>
           )}
 
           <div>
-            <label className="text-xs text-muted-foreground block mb-1">מחלקה</label>
+            <label htmlFor="michpal-dept" className="text-xs text-muted-foreground block mb-1">מחלקה</label>
             <Select value={department} onValueChange={(v) => { setDepartment(v); setEmployeeId("all"); }}>
-              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+              <SelectTrigger id="michpal-dept" className="w-40"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">כל המחלקות</SelectItem>
                 {departments.map((d) => (
@@ -255,9 +255,9 @@ export function MichpalExportCard() {
           </div>
 
           <div>
-            <label className="text-xs text-muted-foreground block mb-1">עובד</label>
+            <label htmlFor="michpal-emp" className="text-xs text-muted-foreground block mb-1">עובד</label>
             <Select value={employeeId} onValueChange={setEmployeeId}>
-              <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+              <SelectTrigger id="michpal-emp" className="w-48"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">כל העובדים</SelectItem>
                 {(department === "all"

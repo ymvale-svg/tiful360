@@ -7,6 +7,9 @@ import { useCompany } from "@/hooks/useCompany";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useConfirm } from "@/components/feedback/ConfirmDialog";
+import { FormField } from "@/components/feedback/FormField";
+import { cn } from "@/lib/utils";
 
 const TEMPLATE_KEY = "payslip-available";
 
@@ -48,6 +51,20 @@ export function EmailTemplatesTab() {
   const [subject, setSubject] = useState(DEFAULT_SUBJECT);
   const [body, setBody] = useState(DEFAULT_BODY);
   const [showPreview, setShowPreview] = useState(false);
+  const confirm = useConfirm();
+
+  const restoreDefault = async () => {
+    if (subject === DEFAULT_SUBJECT && body === DEFAULT_BODY) return;
+    const ok = await confirm({
+      title: "לשחזר את נוסח ברירת המחדל?",
+      description: "הנושא וגוף המייל שבעורך יוחלפו בנוסח המקורי. התבנית השמורה לא תשתנה עד שתלחצו \"שמור תבנית\".",
+      confirmLabel: "שחזר ברירת מחדל",
+      destructive: true,
+    });
+    if (!ok) return;
+    setSubject(DEFAULT_SUBJECT);
+    setBody(DEFAULT_BODY);
+  };
 
   const { data: template } = useQuery({
     queryKey: ["company-email-template", activeCompanyId, TEMPLATE_KEY],
@@ -104,10 +121,12 @@ export function EmailTemplatesTab() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 space-y-4">
+    <div className={cn("space-y-6", showPreview ? "max-w-7xl" : "max-w-4xl")}>
+      {/* Wide screens: the preview sits beside the editor so edits can be checked without scrolling. */}
+      <div className={cn("grid gap-6", showPreview && "xl:grid-cols-2 xl:items-start")}>
+      <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 space-y-4 min-w-0">
         <div className="flex items-center gap-3">
-          <Mail className="w-5 h-5 text-primary" />
+          <Mail className="w-5 h-5 text-primary" aria-hidden="true" />
           <div>
             <h3 className="font-semibold">תבנית מייל — זמינות תלוש שכר</h3>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -116,42 +135,54 @@ export function EmailTemplatesTab() {
           </div>
         </div>
 
-        <div>
-          <label className="text-sm font-medium mb-1.5 block">נושא המייל</label>
+        <FormField label="נושא המייל" id="email-template-subject">
           <Input value={subject} onChange={(e) => setSubject(e.target.value)} dir="rtl" />
-        </div>
+        </FormField>
 
-        <div>
-          <label className="text-sm font-medium mb-1.5 block">גוף המייל (HTML)</label>
+        <FormField label="גוף המייל (HTML)" id="email-template-body">
           <Textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
             dir="ltr"
             className="min-h-[260px] font-mono text-xs"
           />
-        </div>
+        </FormField>
 
         <div className="flex flex-wrap gap-2">
-          <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="gap-1.5">
-            <Save className="w-4 h-4" />
-            {saveMutation.isPending ? "שומר..." : "שמור תבנית"}
+          <Button onClick={() => saveMutation.mutate()} loading={saveMutation.isPending} loadingText="שומר…" className="gap-1.5">
+            <Save className="w-4 h-4" aria-hidden="true" />
+            שמור תבנית
           </Button>
-          <Button variant="outline" onClick={() => setShowPreview((s) => !s)} className="gap-1.5">
-            <Eye className="w-4 h-4" />
+          <Button variant="outline" onClick={() => setShowPreview((s) => !s)} className="gap-1.5" aria-expanded={showPreview} aria-controls="email-template-preview">
+            <Eye className="w-4 h-4" aria-hidden="true" />
             {showPreview ? "הסתר תצוגה מקדימה" : "תצוגה מקדימה"}
           </Button>
           <Button
             variant="ghost"
-            onClick={() => {
-              setSubject(DEFAULT_SUBJECT);
-              setBody(DEFAULT_BODY);
-            }}
+            onClick={() => { void restoreDefault(); }}
             className="gap-1.5"
           >
-            <RotateCcw className="w-4 h-4" />
+            <RotateCcw className="w-4 h-4" aria-hidden="true" />
             שחזר ברירת מחדל
           </Button>
         </div>
+      </div>
+
+      {showPreview && (
+        <div id="email-template-preview" className="bg-card rounded-xl border border-border/50 shadow-card p-6 space-y-3 min-w-0 xl:sticky xl:top-4">
+          <h4 className="font-semibold text-sm">תצוגה מקדימה (עם ערכים לדוגמה)</h4>
+          <div className="text-xs text-muted-foreground">
+            <strong>נושא:</strong> {renderPreview(subject)}
+          </div>
+          {/* Sandboxed iframe prevents any HTML/JS in the template from executing in the admin's session. */}
+          <iframe
+            title="תצוגה מקדימה של המייל"
+            sandbox=""
+            srcDoc={renderPreview(body)}
+            className="w-full min-h-[420px] border border-border/50 rounded-lg bg-background"
+          />
+        </div>
+      )}
       </div>
 
       <div className="bg-card rounded-xl border border-border/50 shadow-card p-6">
@@ -165,7 +196,8 @@ export function EmailTemplatesTab() {
               key={v.key}
               type="button"
               onClick={() => navigator.clipboard.writeText(v.key).then(() => toast({ title: "הועתק", description: v.key }))}
-              className="text-right p-3 rounded-lg bg-muted/40 hover:bg-muted transition-colors"
+              className="text-right p-3 rounded-lg bg-muted/40 hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label={`העתק את המשתנה ${v.key}: ${v.desc}`}
             >
               <code className="text-xs font-mono text-primary">{v.key}</code>
               <div className="text-xs text-muted-foreground mt-1">{v.desc}</div>
@@ -173,22 +205,6 @@ export function EmailTemplatesTab() {
           ))}
         </div>
       </div>
-
-      {showPreview && (
-        <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 space-y-3">
-          <h4 className="font-semibold text-sm">תצוגה מקדימה (עם ערכים לדוגמה)</h4>
-          <div className="text-xs text-muted-foreground">
-            <strong>נושא:</strong> {renderPreview(subject)}
-          </div>
-          {/* Sandboxed iframe prevents any HTML/JS in the template from executing in the admin's session. */}
-          <iframe
-            title="email-preview"
-            sandbox=""
-            srcDoc={renderPreview(body)}
-            className="w-full min-h-[320px] border border-border/50 rounded-lg bg-background"
-          />
-        </div>
-      )}
 
     </div>
   );

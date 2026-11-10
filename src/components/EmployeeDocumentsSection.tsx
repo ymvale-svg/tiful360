@@ -13,6 +13,11 @@ import {
 } from "@/hooks/useEmployeeDocuments";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { FormField } from "@/components/feedback/FormField";
+import { FileDrop } from "@/components/feedback/FileDrop";
+import { IconButton } from "@/components/feedback/IconButton";
+import { useConfirm } from "@/components/feedback/ConfirmDialog";
 
 interface Props {
   employeeId: string;
@@ -23,6 +28,7 @@ export function EmployeeDocumentsSection({ employeeId }: Props) {
   const upload = useUploadEmployeeDocument();
   const del = useDeleteEmployeeDocument();
   const { toast } = useToast();
+  const confirm = useConfirm();
 
   const [showForm, setShowForm] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -41,13 +47,24 @@ export function EmployeeDocumentsSection({ employeeId }: Props) {
     e.preventDefault();
     setIsDragging(false);
     const files = Array.from(e.dataTransfer.files ?? []);
+    if (!files.length) return;
+    const failed: string[] = [];
     for (const f of files) {
       try {
         await upload.mutateAsync({ employee_id: employeeId, file: f, document_type: "other" });
-        toast({ title: `הועלה: ${f.name}` });
-      } catch (err: any) {
-        toast({ title: `שגיאה בהעלאת ${f.name}`, description: err.message, variant: "destructive" });
+      } catch {
+        failed.push(f.name);
       }
+    }
+    // One summary for the whole drop instead of a toast per file.
+    const ok = files.length - failed.length;
+    if (ok > 0) toast({ title: ok === 1 ? "מסמך אחד הועלה" : `${ok} מסמכים הועלו` });
+    if (failed.length > 0) {
+      toast({
+        title: failed.length === 1 ? "מסמך אחד לא הועלה" : `${failed.length} מסמכים לא הועלו`,
+        description: failed.join(", "),
+        variant: "destructive",
+      });
     }
   };
 
@@ -93,15 +110,17 @@ export function EmployeeDocumentsSection({ employeeId }: Props) {
     setPreview({ url, name, fileName: doc.file_name });
   };
 
-  const handleDelete = async (doc: EmployeeDocument) => {
-    if (!confirm(`למחוק את "${doc.document_label || doc.file_name}"?`)) return;
-    try {
-      await del.mutateAsync(doc);
-      toast({ title: "המסמך נמחק" });
-    } catch (err: any) {
-      toast({ title: "שגיאה במחיקה", description: err.message, variant: "destructive" });
-    }
-  };
+  const handleDelete = (doc: EmployeeDocument) =>
+    confirm({
+      title: `למחוק את "${doc.document_label || doc.file_name}"?`,
+      description: "המסמך יימחק מתיק העובד ומאחסון הקבצים. אי אפשר לשחזר אותו.",
+      confirmLabel: "מחק מסמך",
+      destructive: true,
+      onConfirm: async () => {
+        await del.mutateAsync(doc);
+        toast({ title: "המסמך נמחק" });
+      },
+    });
 
   const fmtSize = (bytes: number | null) => {
     if (!bytes) return "";
@@ -145,62 +164,40 @@ export function EmployeeDocumentsSection({ employeeId }: Props) {
 
       {showForm && (
         <div className="border rounded-lg p-3 space-y-2 bg-muted/20">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <div>
-              <label className="text-xs font-medium mb-1 block">סוג מסמך</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <FormField label="סוג מסמך">
               <SearchableSelect
                 value={docType}
                 onChange={setDocType}
                 options={EMPLOYEE_DOCUMENT_TYPES.map((d) => ({ value: d.value, label: d.label }))}
               />
-            </div>
-            <div>
-              <label className="text-xs font-medium mb-1 block">תאריך תפוגה (אופציונלי)</label>
-              <input
-                type="date"
-                value={expiryDate}
-                onChange={(e) => setExpiryDate(e.target.value)}
-                className="w-full px-2.5 py-1.5 bg-background rounded-md text-sm outline-none focus:ring-2 focus:ring-primary/30 border"
-                dir="ltr"
-              />
-            </div>
+            </FormField>
+            <FormField label="תאריך תפוגה (אופציונלי)">
+              <Input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} dir="ltr" />
+            </FormField>
           </div>
-          <div>
-            <label className="text-xs font-medium mb-1 block">תווית/תיאור</label>
-            <input
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              placeholder="למשל: חוזה העסקה 2026"
-              className="w-full px-2.5 py-1.5 bg-background rounded-md text-sm outline-none focus:ring-2 focus:ring-primary/30 border"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-medium mb-1 block">הערות</label>
-            <input
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="w-full px-2.5 py-1.5 bg-background rounded-md text-sm outline-none focus:ring-2 focus:ring-primary/30 border"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-medium mb-1 block">קובץ</label>
-            <input
-              type="file"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="w-full text-xs file:ml-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:bg-primary file:text-primary-foreground"
-            />
-          </div>
+          <FormField label="תווית/תיאור">
+            <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="למשל: חוזה העסקה 2026" />
+          </FormField>
+          <FormField label="הערות">
+            <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
+          </FormField>
+          <FileDrop
+            onFiles={(files) => setFile(files[0] ?? null)}
+            title={file ? file.name : "גררו קובץ לכאן או לחצו לבחירה"}
+            hint={file ? "לחצו או גררו קובץ אחר כדי להחליף" : undefined}
+          />
           <div className="flex gap-2 pt-1">
-            <Button size="sm" variant="outline" className="flex-1" onClick={reset}>ביטול</Button>
-            <Button size="sm" className="flex-1" onClick={handleUpload} disabled={upload.isPending || !file}>
-              {upload.isPending ? "מעלה..." : "העלה"}
+            <Button variant="outline" className="flex-1" onClick={reset} disabled={upload.isPending}>ביטול</Button>
+            <Button className="flex-1" onClick={handleUpload} disabled={!file} loading={upload.isPending} loadingText="מעלה…">
+              העלה
             </Button>
           </div>
         </div>
       )}
 
       {isLoading ? (
-        <p className="text-xs text-muted-foreground text-center py-4">טוען...</p>
+        <p role="status" className="text-xs text-muted-foreground text-center py-4">טוען מסמכים…</p>
       ) : !documents || documents.length === 0 ? (
         <p className="text-xs text-muted-foreground text-center py-4">אין מסמכים בתיק העובד</p>
       ) : (
@@ -221,17 +218,17 @@ export function EmployeeDocumentsSection({ employeeId }: Props) {
                     <span className="font-medium text-foreground break-words break-all">
                       {doc.document_label || doc.file_name}
                     </span>
-                    <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground text-[10px]">
+                    <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground text-xs">
                       {typeLabel(doc.document_type)}
                     </span>
                     {isExpired && (
-                      <span className="px-1.5 py-0.5 rounded bg-destructive/10 text-destructive text-[10px] flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" /> פג תוקף
+                      <span className="px-1.5 py-0.5 rounded bg-destructive/10 text-destructive text-xs flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" aria-hidden="true" /> פג תוקף
                       </span>
                     )}
                     {isWarning && (
-                      <span className="px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 text-[10px] flex items-center gap-1">
-                        <Calendar className="w-3 h-3" /> {daysLeft} ימים
+                      <span className="px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 text-xs flex items-center gap-1">
+                        <Calendar className="w-3 h-3" aria-hidden="true" /> פג בעוד {daysLeft} ימים
                       </span>
                     )}
                   </div>
@@ -243,27 +240,15 @@ export function EmployeeDocumentsSection({ employeeId }: Props) {
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    onClick={() => handlePreview(doc)}
-                    className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary"
-                    title="צפה"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDownload(doc)}
-                    className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-                    title="הורד"
-                  >
-                    <Download className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(doc)}
-                    className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-destructive"
-                    title="מחק"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <IconButton label={`צפה ב${doc.document_label || doc.file_name}`} className="text-muted-foreground hover:text-primary" onClick={() => handlePreview(doc)}>
+                    <Eye />
+                  </IconButton>
+                  <IconButton label={`הורד את ${doc.document_label || doc.file_name}`} className="text-muted-foreground hover:text-foreground" onClick={() => handleDownload(doc)}>
+                    <Download />
+                  </IconButton>
+                  <IconButton label={`מחק את ${doc.document_label || doc.file_name}`} className="text-muted-foreground hover:text-destructive" onClick={() => { void handleDelete(doc); }}>
+                    <Trash2 />
+                  </IconButton>
                 </div>
               </li>
             );

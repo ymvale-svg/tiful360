@@ -57,7 +57,7 @@ export function PayslipSummaryDialog({ open, onClose, payslip, employeeName, can
                 {t.label}
               </div>
               <p className={`text-2xl font-bold mt-1.5 ${t.color}`}>{t.value}</p>
-              <p className="text-[10px] text-muted-foreground">{t.suffix}</p>
+              <p className="text-xs text-muted-foreground">{t.suffix}</p>
             </div>
           ))}
         </div>

@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Building2, Plus, Users, Pencil, Trash2 } from "lucide-react";
+import { Building2, Plus, Users, Pencil, Trash2, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { he } from "date-fns/locale";
 import { ExportExcelButton } from "@/components/ExcelActionButtons";
@@ -28,6 +28,7 @@ export default function Companies() {
   const [portalPrimaryColor, setPortalPrimaryColor] = useState("");
   const [logoUploading, setLogoUploading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [deleteConfirmName, setDeleteConfirmName] = useState("");
 
   const { data: companies = [], isLoading } = useQuery({
     queryKey: ["companies"],
@@ -98,6 +99,7 @@ export default function Companies() {
       queryClient.invalidateQueries({ queryKey: ["company-access-counts"] });
       toast({ title: "חברה נמחקה בהצלחה" });
       setDeleteTarget(null);
+      setDeleteConfirmName("");
     },
     onError: (err: any) => {
       toast({ title: "שגיאה במחיקה", description: err.message, variant: "destructive" });
@@ -249,10 +251,10 @@ export default function Companies() {
 
               <Button
                 onClick={() => saveMutation.mutate()}
-                disabled={!name.trim() || saveMutation.isPending}
+                disabled={!name.trim() || saveMutation.isPending || logoUploading}
                 className="w-full"
               >
-                {saveMutation.isPending ? "שומר..." : editId ? "עדכן" : "צור חברה"}
+                {saveMutation.isPending ? "שומר..." : logoUploading ? "מעלה לוגו..." : editId ? "עדכן" : "צור חברה"}
               </Button>
             </div>
           </DialogContent>
@@ -308,20 +310,21 @@ export default function Companies() {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="gap-1">
-                        <Users className="w-3 h-3" />
+                        <Users className="w-3 h-3" aria-hidden="true" />
                         {countForCompany(c.id)}
+                        <span className="sr-only">משתמשים</span>
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {format(new Date(c.created_at), "dd/MM/yyyy", { locale: he })}
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(c)} className="gap-1">
-                        <Pencil className="w-3 h-3" />
+                      <Button variant="ghost" size="sm" onClick={() => handleEdit(c)} className="gap-1" aria-label={`ערוך את ${c.name}`}>
+                        <Pencil className="w-3 h-3" aria-hidden="true" />
                         ערוך
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(c)} className="gap-1 text-destructive hover:text-destructive">
-                        <Trash2 className="w-3 h-3" />
+                      <Button variant="ghost" size="sm" onClick={() => { setDeleteConfirmName(""); setDeleteTarget(c); }} className="gap-1 text-destructive hover:text-destructive" aria-label={`מחק את ${c.name}`}>
+                        <Trash2 className="w-3 h-3" aria-hidden="true" />
                         מחק
                       </Button>
                     </TableCell>
@@ -333,20 +336,45 @@ export default function Companies() {
         </CardContent>
       </Card>
 
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <AlertDialogContent>
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (open || deleteMutation.isPending) return;
+          setDeleteTarget(null);
+          setDeleteConfirmName("");
+        }}
+      >
+        <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
             <AlertDialogTitle>מחיקת חברה</AlertDialogTitle>
             <AlertDialogDescription>
-              האם אתה בטוח שברצונך למחוק את החברה "{deleteTarget?.name}"? פעולה זו תמחק את כל הנתונים הקשורים לחברה (עובדים, נכסים, קטגוריות ועוד) ולא ניתן לשחזר אותם.
+              מחיקת החברה "{deleteTarget?.name}" תמחק את כל הנתונים הקשורים אליה (עובדים, נכסים, קטגוריות ועוד) ולא ניתן לשחזר אותם.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="space-y-1.5">
+            <Label htmlFor="delete-company-confirm">
+              לאישור, הקלידו את שם החברה: <span className="font-semibold">{deleteTarget?.name}</span>
+            </Label>
+            <Input
+              id="delete-company-confirm"
+              value={deleteConfirmName}
+              onChange={(e) => setDeleteConfirmName(e.target.value)}
+              autoComplete="off"
+              disabled={deleteMutation.isPending}
+            />
+          </div>
           <AlertDialogFooter>
-            <AlertDialogCancel>ביטול</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>ביטול</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+              disabled={!deleteTarget || deleteConfirmName.trim() !== String(deleteTarget.name ?? "").trim() || deleteMutation.isPending}
+              onClick={(e) => {
+                // Keep the dialog open until the cascade delete finishes.
+                e.preventDefault();
+                if (deleteTarget) deleteMutation.mutate(deleteTarget.id);
+              }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
+              {deleteMutation.isPending && <Loader2 className="w-4 h-4 me-1.5 animate-spin" />}
               {deleteMutation.isPending ? "מוחק..." : "מחק חברה"}
             </AlertDialogAction>
           </AlertDialogFooter>

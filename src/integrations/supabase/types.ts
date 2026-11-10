@@ -2893,6 +2893,92 @@ export type Database = {
         }
         Relationships: []
       }
+      permission_group_members: {
+        Row: {
+          added_by: string | null
+          company_id: string
+          created_at: string
+          group_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          added_by?: string | null
+          company_id: string
+          created_at?: string
+          group_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          added_by?: string | null
+          company_id?: string
+          created_at?: string
+          group_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permission_group_members_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "permission_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "permission_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      permission_groups: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          roles: Database["public"]["Enums"]["app_role"][]
+          system_key: Database["public"]["Enums"]["app_role"] | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          roles?: Database["public"]["Enums"]["app_role"][]
+          system_key?: Database["public"]["Enums"]["app_role"] | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          roles?: Database["public"]["Enums"]["app_role"][]
+          system_key?: Database["public"]["Enums"]["app_role"] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permission_groups_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       portal_contacts: {
         Row: {
           company_id: string | null
@@ -3713,6 +3799,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_assignable_roles: {
+        Args: never
+        Returns: Database["public"]["Enums"]["app_role"][]
+      }
       admin_edit_punch_time: {
         Args: { _new_punch_at: string; _punch_id: string }
         Returns: {
@@ -3744,6 +3834,14 @@ export type Database = {
       }
       can_manage_announcements: {
         Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_manage_group_members: {
+        Args: { _company_id: string }
+        Returns: boolean
+      }
+      can_manage_permission_groups: {
+        Args: { _company_id: string }
         Returns: boolean
       }
       can_view_permission_audit: {
@@ -4211,6 +4309,10 @@ export type Database = {
       my_access_blocked: { Args: never; Returns: boolean }
       my_self_edit_count_this_month: { Args: never; Returns: number }
       resolve_handover_short_code: { Args: { _code: string }; Returns: string }
+      seed_default_permission_groups: {
+        Args: { _company_id: string }
+        Returns: undefined
+      }
       set_company_attendance_auto_approve: {
         Args: { _company_id: string; _value: boolean }
         Returns: boolean
@@ -4385,6 +4487,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      sync_user_roles_from_groups: {
+        Args: { _user_id: string }
+        Returns: undefined
       }
       update_my_birthday_preference: {
         Args: {

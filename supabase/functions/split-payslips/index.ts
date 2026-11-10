@@ -173,6 +173,19 @@ function extractFields(text: string, fallbackPeriod: { year: number; month: numb
   };
 }
 
+// Logs go to Supabase's log store, outside RLS: never log ID numbers, names, salaries or emails.
+// Refer to a payslip group by its first page number only.
+const groupLogRef = (group: { pageIndices?: number[] }) => `pages from ${group.pageIndices?.[0] ?? '?'}`;
+// Log only the error code and message. Postgres errors carry `details` such as
+// "Failing row contains (...)", which can include ID numbers, names and salaries.
+const errLog = (e: unknown) => {
+  if (e && typeof e === 'object') {
+    const { code, message } = e as { code?: unknown; message?: unknown };
+    return { code: code ?? null, message: typeof message === 'string' ? message : String(e) };
+  }
+  return { code: null, message: String(e) };
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -201,9 +214,12 @@ Deno.serve(async (req) => {
     const admin = createClient(supabaseUrl, serviceKey);
 
     const body = await req.json();
-    const { company_id, period_year, period_month, pdf_base64, original_filename } = body;
+    // The PDF arrives either inline (pdf_base64, the original contract) or as a
+    // path the caller already uploaded to the payslips bucket (pdf_storage_path),
+    // which avoids base64-inflating a large file into the request body.
+    const { company_id, period_year, period_month, pdf_base64, pdf_storage_path, original_filename } = body;
 
-    if (!company_id || !period_year || !period_month || !pdf_base64) {
+    if (!company_id || !period_year || !period_month || (!pdf_base64 && !pdf_storage_path)) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -214,7 +230,7 @@ Deno.serve(async (req) => {
     const roleSet = new Set((roles ?? []).map((r: any) => r.role));
     const isSuper = roleSet.has('super_admin');
     if (!isSuper) {
-      if (!(roleSet.has('admin') || roleSet.has('it_manager') || roleSet.has('payroll'))) {
+      if (!(roleSet.has('admin') || roleSet.has('it_manager') || roleSet.has('payroll') || roleSet.has('hr'))) {
         return new Response(JSON.stringify({ error: 'Forbidden' }), {
           status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -228,7 +244,27 @@ Deno.serve(async (req) => {
       }
     }
 
-    const binary = Uint8Array.from(atob(pdf_base64), (c) => c.charCodeAt(0));
+    let binary: Uint8Array;
+    if (pdf_storage_path) {
+      // Only a fresh upload from PayslipsUploadDialog may be read (and then
+      // removed); the service role would otherwise let a caller pull or delete
+      // any payslip, including another tenant's.
+      const storagePath = String(pdf_storage_path);
+      const uploadPattern = /^(.+)\/\d{4}-\d{2}\/_source_upload_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.pdf$/;
+      if (uploadPattern.exec(storagePath)?.[1] !== String(company_id)) {
+        return new Response(JSON.stringify({ error: 'Invalid storage path' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const { data: blob, error: dlErr } = await admin.storage.from('payslips').download(storagePath);
+      if (dlErr || !blob) throw dlErr ?? new Error('Uploaded PDF not found');
+      binary = new Uint8Array(await blob.arrayBuffer());
+      // The upload was only a transport for this request; the batch keeps its
+      // own _source_ copy below. Best effort — a leftover file is harmless.
+      admin.storage.from('payslips').remove([storagePath]).catch(() => {});
+    } else {
+      binary = Uint8Array.from(atob(pdf_base64), (c) => c.charCodeAt(0));
+    }
 
     // Extract text for ALL pages in one pass
     const pdfProxy = await getDocumentProxy(binary);
@@ -370,13 +406,13 @@ Deno.serve(async (req) => {
             .from('payslips')
             .upload(path, bytes, { contentType: 'application/pdf', upsert: true });
           if (upErr) {
-            console.error('per-group upload failed:', group.idNumber, upErr);
+            console.error('per-group upload failed:', groupLogRef(group), errLog(upErr));
             return;
           }
           groupPdfPaths.set(groupIndex, path);
           groupPdfBytes.set(groupIndex, bytes);
         } catch (e) {
-          console.error('split failed for group:', group.idNumber, e);
+          console.error('split failed for group:', groupLogRef(group), errLog(e));
         }
       }));
       // yield to event loop
@@ -473,7 +509,7 @@ Deno.serve(async (req) => {
             }
             const args = JSON.parse(toolCall.function.arguments);
             aiResults.set(groupIndex, args);
-            console.log(`AI group ${groupIndex} (${groups[groupIndex].idNumber}):`, JSON.stringify(args));
+            console.log(`AI group ${groupIndex}: fields=${Object.keys(args ?? {}).join(',')}`);
           } catch (e) {
             console.error(`AI call failed for group ${groupIndex}:`, e instanceof Error ? e.message : e);
           }
@@ -543,7 +579,7 @@ Deno.serve(async (req) => {
         ].filter((v) => v != null).length;
         const status = filledCount >= 4 ? 'success' : (filledCount > 0 ? 'partial' : 'failed');
 
-        console.log(`group ${normalizedId}: vac=${group.primary.vacationBalance} sick=${group.primary.sickBalance} gross=${group.primary.grossSalary} net=${group.primary.netSalary} workDays=${group.primary.workDays} period=${recordMonth}/${recordYear} aiUsed=${aiUsed} status=${status} pdfPath=${groupPdfPath}`);
+        console.log(`group ${gi}: period=${recordMonth}/${recordYear} aiUsed=${aiUsed} status=${status} hasPdf=${groupPdfPath ? 'yes' : 'no'}`);
 
         if (matched) {
           const { data: prevEmp } = await admin.from('employees')
@@ -653,7 +689,7 @@ Deno.serve(async (req) => {
           });
         }
       } catch (e) {
-        console.error('Group failed:', group.idNumber, e);
+        console.error('Group failed:', groupLogRef(group), errLog(e));
         const failureMessage = e instanceof Error ? e.message : String(e);
         try {
           await admin.from('payslips').insert({
@@ -679,7 +715,7 @@ Deno.serve(async (req) => {
             created_by: user.id,
           });
         } catch (recordErr) {
-          console.error('Failed to record failed payslip row:', group.idNumber, recordErr);
+          console.error('Failed to record failed payslip row:', groupLogRef(group), errLog(recordErr));
         }
         failedCount++;
         failedPayslips.push({
@@ -776,7 +812,7 @@ Deno.serve(async (req) => {
           companyId: company_id,
         });
       } catch (e) {
-        console.error('payslip email failed for', n.to, e);
+        console.error('payslip email failed for employee', n.employee_id, e);
       }
     }
 
@@ -832,7 +868,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (e) {
-    console.error('split-payslips error:', e);
+    console.error('split-payslips error:', errLog(e));
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : 'Unknown error' }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

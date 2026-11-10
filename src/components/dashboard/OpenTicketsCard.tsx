@@ -7,6 +7,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useITTickets } from "@/hooks/useData";
 import { PRIORITY_LABELS, STATUS_LABELS, subjectLabel } from "@/lib/serviceTickets";
 import { cn } from "@/lib/utils";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { FormField } from "@/components/feedback/FormField";
 
 const priorityDot = {
   critical: "bg-destructive",
@@ -19,10 +23,11 @@ export function OpenTicketsCard() {
   const { data: tickets, isLoading } = useITTickets();
   const queryClient = useQueryClient();
   const [sendingId, setSendingId] = useState<string | null>(null);
+  /** The ticket whose "send to IT" note dialog is open. */
+  const [noteFor, setNoteFor] = useState<string | null>(null);
+  const [note, setNote] = useState("");
 
-  const sendToIT = async (ticketId: string) => {
-    const note = window.prompt("הערה לאיש ה-IT (לא חובה):");
-    if (note === null) return;
+  const sendToIT = async (ticketId: string, note: string) => {
     setSendingId(ticketId);
     try {
       const { data, error } = await supabase.functions.invoke("notify-it-ticket", {
@@ -36,6 +41,8 @@ export function OpenTicketsCard() {
       toast.error("שליחה ל-IT נכשלה", { description: e?.message } as any);
     } finally {
       setSendingId(null);
+      setNoteFor(null);
+      setNote("");
     }
   };
 
@@ -71,16 +78,15 @@ export function OpenTicketsCard() {
           <div className="p-6 text-center text-muted-foreground text-sm">אין קריאות פתוחות</div>
         )}
         {open.map((ticket: any) => (
-          <Link
-            key={ticket.id}
-            to={`/it-tickets?selected=${ticket.id}`}
-            className="block p-4 hover:bg-muted/30 transition-colors"
-          >
+          <div key={ticket.id} className="relative p-4 hover:bg-muted/30 transition-colors focus-within:bg-muted/30">
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">
+                <Link
+                  to={`/it-tickets?selected=${ticket.id}`}
+                  className="block text-sm font-medium truncate after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-ring"
+                >
                   {ticket.title || "ללא כותרת"}
-                </p>
+                </Link>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {subjectLabel(ticket.subject_category ?? ticket.ticket_type)}
                   {ticket.employees?.full_name && ` • ${ticket.employees.full_name}`}
@@ -121,13 +127,9 @@ export function OpenTicketsCard() {
                 {!(Array.isArray(ticket.it_forwards) && ticket.it_forwards.length > 0) && !ticket.mesimon_task_id && (
                 <button
                   type="button"
-                  className="mt-0.5 inline-flex items-center gap-1 text-[0.8125rem] font-medium text-primary border border-primary/40 bg-primary/10 rounded-md px-2 py-1 hover:bg-primary/15 transition-colors disabled:opacity-50"
+                  className="relative z-10 mt-0.5 inline-flex min-h-9 items-center gap-1 text-[0.8125rem] font-medium text-primary border border-primary/40 bg-primary/10 rounded-md px-2.5 py-1 hover:bg-primary/15 transition-colors disabled:opacity-50 [@media(pointer:coarse)]:min-h-11"
                   disabled={sendingId === ticket.id}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    sendToIT(ticket.id);
-                  }}
+                  onClick={() => setNoteFor(ticket.id)}
                 >
                   <Send className="w-3 h-3" aria-hidden="true" />
                   {sendingId === ticket.id ? "שולח..." : "שלח לאיש IT"}
@@ -140,13 +142,33 @@ export function OpenTicketsCard() {
                 <Clock className="w-3 h-3" aria-hidden="true" />
                 <span>יעד טיפול: {new Date(ticket.sla_deadline).toLocaleString("en-GB", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })}</span>
                 {new Date(ticket.sla_deadline) < new Date() && (
-                  <AlertTriangle className="w-3 h-3 text-destructive" aria-hidden="true" />
+                  <span className="inline-flex items-center gap-0.5 font-medium text-destructive">
+                    <AlertTriangle className="w-3 h-3" aria-hidden="true" />
+                    חרג מהיעד
+                  </span>
                 )}
               </div>
             )}
-          </Link>
+          </div>
         ))}
       </div>
+      <Dialog open={!!noteFor} onOpenChange={(o) => { if (!o && !sendingId) { setNoteFor(null); setNote(""); } }}>
+        <DialogContent dir="rtl" className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>שליחה לאיש IT</DialogTitle>
+            <DialogDescription>הקריאה תישלח במייל לכתובות ה-IT שהוגדרו לחברה.</DialogDescription>
+          </DialogHeader>
+          <FormField label="הערה לאיש ה-IT" hint="לא חובה">
+            <Textarea id="it-note" value={note} onChange={(e) => setNote(e.target.value)} rows={3} />
+          </FormField>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => { setNoteFor(null); setNote(""); }} disabled={!!sendingId}>ביטול</Button>
+            <Button onClick={() => noteFor && sendToIT(noteFor, note)} loadingText="שולח…">
+              <Send aria-hidden="true" /> שלח לאיש IT
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

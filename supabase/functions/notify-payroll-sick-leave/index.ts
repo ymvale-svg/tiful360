@@ -2,6 +2,8 @@ import { enqueueTransactionalEmail } from "../_shared/enqueueEmail.ts";
 import { fmtDateIL } from "../_shared/formatDate.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.103.0";
 
+const APP_URL = "https://tiful360.com";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -88,7 +90,8 @@ Deno.serve(async (req) => {
     const attachmentUrl = (request as any).attachment_url as string | null;
     const attachmentBlock = attachmentUrl
       ? `<div style="margin-top: 20px; padding: 12px 16px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;">
-           <a href="${attachmentUrl}" target="_blank" style="color: #1d4ed8; text-decoration: none; font-weight: 600; font-size: 14px;">📎 הורדת אישור מחלה מצורף</a>
+           <p style="margin: 0 0 8px; font-size: 14px; color: #1f2937;">📎 צורף אישור מחלה — ניתן לצפות בו מתוך הדיווח במערכת (נדרשת התחברות).</p>
+           <a href="${APP_URL}/leave-requests" target="_blank" style="color: #1d4ed8; text-decoration: none; font-weight: 600; font-size: 14px;">צפייה בדיווח במערכת</a>
          </div>`
       : `<p style="margin-top: 20px; padding: 10px; background: #fef3c7; border-radius: 8px; font-size: 13px; color: #92400e;">⚠️ לא צורף אישור מחלה</p>`;
     const html = `
@@ -121,7 +124,7 @@ Deno.serve(async (req) => {
         });
         if (ok) enqueued.push(1);
       } catch (e) {
-        console.error("enqueue failed for", to, e);
+        console.error("enqueue failed", { request_id, error: e instanceof Error ? e.message : String(e) });
       }
     }
 
@@ -129,7 +132,7 @@ Deno.serve(async (req) => {
       .update({ payroll_notified_at: new Date().toISOString() })
       .eq("id", request_id);
 
-    return new Response(JSON.stringify({ enqueued: enqueued.length, recipients }), {
+    return new Response(JSON.stringify({ enqueued: enqueued.length, recipients: recipients.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {

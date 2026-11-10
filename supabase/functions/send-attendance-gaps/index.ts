@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
   const hasAccess = (accessRows ?? []).length > 0
   const isAuthorized =
     roles.includes('super_admin') ||
-    (hasAccess && (roles.includes('admin') || roles.includes('payroll')))
+    (hasAccess && (roles.includes('admin') || roles.includes('payroll') || roles.includes('hr')))
   if (!isAuthorized) {
     return new Response(JSON.stringify({ error: 'Forbidden' }), {
       status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -1,3 +1,4 @@
+import { hebrewizeNode } from "@/lib/hebrewError";
 import * as React from "react";
 
 import type { ToastActionElement, ToastProps } from "@/components/ui/toast";
@@ -137,6 +138,10 @@ type Toast = Omit<ToasterToast, "id">;
 
 function toast({ ...props }: Toast) {
   const id = genId();
+  if (props.variant === "destructive") {
+    props.title = hebrewizeNode(props.title);
+    props.description = hebrewizeNode(props.description);
+  }
 
   const update = (props: ToasterToast) =>
     dispatch({

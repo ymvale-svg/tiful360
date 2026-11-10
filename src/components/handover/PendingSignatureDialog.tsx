@@ -89,7 +89,7 @@ export function PendingSignatureDialog({ formId, open, onOpenChange }: Props) {
           </DialogDescription>
         </DialogHeader>
 
-        {isLoading && <div className="p-4 text-center text-sm text-muted-foreground">טוען פרטי טופס...</div>}
+        {isLoading && <div role="status" className="p-4 text-center text-sm text-muted-foreground">טוען פרטי טופס...</div>}
 
         {!isLoading && form && (
           <div className="space-y-4">
@@ -115,7 +115,7 @@ export function PendingSignatureDialog({ formId, open, onOpenChange }: Props) {
               </div>
               <div className="flex justify-between gap-2">
                 <span className="text-muted-foreground">סטטוס</span>
-                <Badge variant="warning" className="text-[10px] px-1.5 py-0.5">
+                <Badge variant="warning" className="text-xs px-1.5 py-0.5">
                   ממתין לחתימה
                 </Badge>
               </div>
@@ -125,11 +125,12 @@ export function PendingSignatureDialog({ formId, open, onOpenChange }: Props) {
               <div className="space-y-2">
                 <div className="text-sm font-medium">קישור ישיר לחתימה מרחוק</div>
                 <div className="flex gap-2">
-                  <Input readOnly value={link} dir="ltr" className="text-xs" onFocus={(e) => e.currentTarget.select()} />
-                  <Button type="button" variant="outline" size="icon" onClick={copy}>
-                    {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                  <Input readOnly value={link} dir="ltr" className="text-xs" aria-label="קישור ישיר לחתימה" onFocus={(e) => e.currentTarget.select()} />
+                  <Button type="button" variant="outline" size="icon" onClick={copy} aria-label={copied ? "הקישור הועתק" : "העתק קישור"} title="העתק קישור">
+                    {copied ? <Check className="w-4 h-4 text-green-600" aria-hidden="true" /> : <Copy className="w-4 h-4" aria-hidden="true" />}
                   </Button>
                 </div>
+                <span role="status" className="sr-only">{copied ? "הקישור הועתק" : ""}</span>
                 <div className="flex flex-wrap gap-2">
                   <Button
                     type="button"

@@ -236,7 +236,7 @@ async function notifyUnmatched(
         idempotencyKey,
       });
       if (!result.sent && result.error) {
-        console.error("send failed", to, result.error);
+        console.error("send failed", { companyId, error: result.error });
       }
     }
   }

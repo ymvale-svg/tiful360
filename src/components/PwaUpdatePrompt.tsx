@@ -50,21 +50,23 @@ export function PwaUpdatePrompt() {
   return (
     <div
       role="status"
-      className="fixed bottom-4 inset-x-4 z-50 mx-auto max-w-md rounded-xl border border-border bg-card shadow-lg p-3 flex items-center gap-3"
+      // Phones: top of the screen, clear of the bottom-left upload center, AI launcher and install
+      // banner. Wider screens: bottom centre, between them. See src/lib/floatingLayer.ts.
+      className="fixed inset-x-4 z-50 mx-auto max-w-md top-[calc(0.75rem+env(safe-area-inset-top,0px))] md:top-auto md:bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] rounded-xl border border-border bg-card shadow-lg p-3 flex items-center gap-3"
     >
       <RefreshCw className="w-4 h-4 text-primary shrink-0" aria-hidden="true" />
       <p className="text-sm flex-1 m-0">גרסה חדשה של המערכת זמינה.</p>
       <button
         type="button"
         onClick={() => apply?.()}
-        className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        className="min-h-11 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
         רענן
       </button>
       <button
         type="button"
         onClick={() => setUpdateReady(false)}
-        className="rounded-lg px-2 py-1.5 text-sm text-muted-foreground hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="min-h-11 rounded-lg px-3 text-sm text-muted-foreground hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         aria-label="סגור את הודעת העדכון"
       >
         אחר כך

@@ -1,4 +1,9 @@
 import { RowContextMenu, copyAction } from "@/components/context/RowContextMenu";
+import { ActiveFilters } from "@/components/ui/active-filters";
+import { TicketBoard, type BoardStatus } from "@/components/TicketBoard";
+import { usePersistentFilter } from "@/hooks/usePersistentFilter";
+import { LayoutList, Kanban } from "lucide-react";
+import { EMPTY_ICONS } from "@/components/feedback/emptyIcons";
 import { useEffect, useMemo, useState } from "react";
 import {
   Wrench, CheckCircle2, User, Timer, ChevronLeft, Plus, Package,
@@ -12,7 +17,9 @@ import { useITTickets } from "@/hooks/useData";
 import { useCompany } from "@/hooks/useCompany";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { StateView } from "@/components/feedback/StateView";
+import { undoToast } from "@/components/feedback/undoToast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -124,7 +131,7 @@ function EditSlaDialog({ ticket, open, onOpenChange, holidays }: { ticket: any; 
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(v) => { if (!saving) onOpenChange(v); }}>
       <DialogContent dir="rtl" className="max-w-md">
         <DialogHeader><DialogTitle>עריכת יעד טיפול (SLA)</DialogTitle></DialogHeader>
         <div className="space-y-4">
@@ -143,19 +150,25 @@ function EditSlaDialog({ ticket, open, onOpenChange, holidays }: { ticket: any; 
             <Label htmlFor="sla-reason">סיבה</Label>
             <Textarea id="sla-reason" value={reason} onChange={(e) => setReason(e.target.value)} rows={2} />
           </div>
-          <Link to="/settings?tab=alerts" className="text-xs text-primary hover:underline">ערוך זמני תקן כלליים</Link>
+          <Link to="/settings?tab=alerts" className="inline-flex min-h-11 items-center text-sm text-primary hover:underline">ערוך זמני תקן כלליים</Link>
         </div>
-        <DialogFooter>
-          <Button onClick={save} disabled={saving}>{saving ? "שומר..." : "שמור"}</Button>
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>ביטול</Button>
+          <Button onClick={save} loading={saving} loadingText="שומר…">שמור</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
 
+type TicketRow = NonNullable<ReturnType<typeof useITTickets>["data"]>[number];
+
+const STATUS_FILTER_LABELS: Record<string, string> = { open: "נפתחו", in_progress: "בטיפול", done: "טופלו", all: "הכל" };
+const FORWARD_FILTER_LABELS: Record<string, string> = { it: "נשלח לאיש IT", mesimon: "נשלח למשימון", none: "ללא העברה" };
+
 export default function ITTickets() {
   const navigate = useNavigate();
-  const { data: tickets, isLoading } = useITTickets();
+  const { data: tickets, isLoading, error: ticketsError, refetch: refetchTickets } = useITTickets();
   const { activeCompanyId, setActiveCompanyId } = useCompany();
   const updateStatus = useUpdateTicketStatus();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -164,6 +177,7 @@ export default function ITTickets() {
   const holidays = useCompanyHolidaySet();
   const [statusFilter, setStatusFilter] = useState<string>("open_all");
   const [forwardFilter, setForwardFilter] = useState<string>("any");
+  const [view, setView] = usePersistentFilter<"list" | "board">("tickets:view", "list");
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Deep link from email: /it-tickets?ticket=<id|ticket_code> — and from header search / open-tickets card: ?selected=<id>
@@ -182,6 +196,7 @@ export default function ITTickets() {
     if (match) {
       setSelectedId(match.id);
       setStatusFilter("all");
+      setView("list");
       clearParam();
       return;
     }
@@ -221,8 +236,9 @@ export default function ITTickets() {
     if (value === "none") return byStatus.filter((t: any) => !hasItForward(t) && !t.mesimon_task_id).length;
     return byStatus.length;
   };
-  const changeStatusFilter = (value: unknown) => setStatusFilter(validateTicketFilter(value));
-  const openVisibleTicket = (value: unknown) => setSelectedId(visibleTicketId(value, filtered));
+  // The status filter only exists in the list view, so an agent changing it brings that view up.
+  const changeStatusFilter = (value: unknown) => { setStatusFilter(validateTicketFilter(value)); setView("list"); };
+  const openVisibleTicket = (value: unknown) => { setSelectedId(visibleTicketId(value, filtered)); setView("list"); };
   useWebMCP({
     name: "read_visible_service_tickets",
     description: "קרא את הקריאות המוצגות במסך בהתאם לחברה ולסינון הנוכחי.",
@@ -242,10 +258,12 @@ export default function ITTickets() {
   });
   const selectedTicket: any = tickets?.find((t: any) => t.id === selectedId);
   const [sendingIT, setSendingIT] = useState(false);
+  const [itNoteOpen, setItNoteOpen] = useState(false);
+  const [itNote, setItNote] = useState("");
+  const openSendToIT = () => { setItNote(""); setItNoteOpen(true); };
   const sendToIT = async () => {
     if (!selectedTicket) return;
-    const note = window.prompt("הערה לאיש ה-IT (לא חובה):") ;
-    if (note === null) return;
+    const note = itNote.trim();
     setSendingIT(true);
     try {
       const { data, error } = await supabase.functions.invoke("notify-it-ticket", {
@@ -257,6 +275,7 @@ export default function ITTickets() {
         await queryClient.invalidateQueries({ queryKey: ["it-tickets"] });
         toast.success(`הקריאה נשלחה ל-IT (${data.sent} נמענים)`);
       }
+      setItNoteOpen(false);
     } catch (e: any) {
       toast.error("שליחה ל-IT נכשלה", { description: e?.message } as any);
     } finally {
@@ -318,19 +337,67 @@ export default function ITTickets() {
     }
   };
 
+  /** Closing a ticket is confirmed in a dialog first; the status only changes when it's confirmed. */
+  const [doneOpen, setDoneOpen] = useState(false);
+  const [doneNote, setDoneNote] = useState("");
+  const [doneNotify, setDoneNotify] = useState(true);
+
+  const applyStatus = async (ticket: any, status: string) => {
+    const previous = ticket.status as string;
+    await updateStatus.mutateAsync({ id: ticket.id, status });
+    undoToast(status === "done" ? "הקריאה סומנה כטופלה" : `הסטטוס עודכן ל"${STATUS_LABELS[status] ?? status}"`, {
+      onUndo: () => updateStatus.mutateAsync({ id: ticket.id, status: previous }),
+    });
+  };
+
   const changeStatus = async (status: string) => {
-    if (!selectedTicket) return;
+    if (!selectedTicket || status === selectedTicket.status) return;
+    if (status === "done") {
+      setDoneNote("");
+      setDoneNotify(true);
+      setDoneOpen(true);
+      return;
+    }
     try {
-      await updateStatus.mutateAsync({ id: selectedTicket.id, status });
-      toast.success("סטטוס הקריאה עודכן");
-      if (status === "done" && selectedTicket.status !== "done") {
-        const note = window.prompt("הודעה לעובד שהקריאה טופלה (לא חובה):", "");
-        if (note !== null) await sendReply("done", note);
-      }
+      await applyStatus(selectedTicket, status);
     } catch (err: any) {
       toast.error(err?.message ?? "שגיאה בעדכון הסטטוס");
     }
   };
+
+  /** Board moves: closing still goes through the confirm dialog, everything else applies with undo. */
+  const [movingId, setMovingId] = useState<string | null>(null);
+  const moveTicket = async (ticket: TicketRow, status: BoardStatus) => {
+    if (status === "done") {
+      setSelectedId(ticket.id);
+      setDoneNote("");
+      setDoneNotify(true);
+      setDoneOpen(true);
+      return;
+    }
+    setMovingId(ticket.id);
+    try {
+      await applyStatus(ticket, status);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "שגיאה בעדכון הסטטוס");
+    } finally {
+      setMovingId(null);
+    }
+  };
+
+  const confirmDone = async () => {
+    if (!selectedTicket) return;
+    try {
+      await applyStatus(selectedTicket, "done");
+      setDoneOpen(false);
+      if (doneNotify) await sendReply("done", doneNote.trim());
+    } catch (err: any) {
+      toast.error(err?.message ?? "שגיאה בעדכון הסטטוס");
+    }
+  };
+
+  const filtersActive = statusFilter !== "open_all" || forwardFilter !== "any";
+  const clearFilters = () => { setStatusFilter("open_all"); setForwardFilter("any"); };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -340,8 +407,27 @@ export default function ITTickets() {
           <p className="page-subtitle">קריאות עובדים בטיפול מחלקת התפעול</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+          <div className="inline-flex rounded-lg border border-border bg-card p-1" role="group" aria-label="תצוגה">
+            {([
+              { v: "list", label: "רשימה", icon: LayoutList },
+              { v: "board", label: "לוח", icon: Kanban },
+            ] as const).map((o) => (
+              <button
+                key={o.v}
+                type="button"
+                aria-pressed={view === o.v}
+                onClick={() => { setView(o.v); if (o.v === "board") setSelectedId(null); }}
+                className={cn(
+                  "inline-flex min-h-9 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [@media(pointer:coarse)]:min-h-11",
+                  view === o.v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+              >
+                <o.icon className="h-4 w-4" aria-hidden="true" />{o.label}
+              </button>
+            ))}
+          </div>
+          {view === "list" && <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-40" aria-label="סינון לפי סטטוס"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="open_all">פתוחות ובטיפול</SelectItem>
               <SelectItem value="open">נפתחו</SelectItem>
@@ -349,7 +435,7 @@ export default function ITTickets() {
               <SelectItem value="done">טופלו</SelectItem>
               <SelectItem value="all">הכל</SelectItem>
             </SelectContent>
-          </Select>
+          </Select>}
           <ExportExcelButton
             disabled={!filtered.length}
             onClick={() => {
@@ -385,8 +471,27 @@ export default function ITTickets() {
 
       <NewITTicketDialog open={newOpen} onOpenChange={setNewOpen} />
 
-      {isLoading ? (
-        <div className="text-center py-12 text-muted-foreground">טוען...</div>
+      {isLoading || (ticketsError && !tickets) ? (
+        <div className="bg-card rounded-xl border border-border/50">
+          <StateView loading={isLoading} error={ticketsError} onRetry={() => { void refetchTickets(); }} label="את קריאות השירות">{null}</StateView>
+        </div>
+      ) : view === "board" ? (
+        <TicketBoard
+          tickets={(tickets ?? []).filter((t) =>
+            forwardFilter === "it" ? hasItForward(t) : forwardFilter === "mesimon" ? !!t.mesimon_task_id : forwardFilter === "none" ? !hasItForward(t) && !t.mesimon_task_id : true)}
+          busyId={movingId}
+          onOpen={(t) => { setView("list"); setSelectedId(t.id); }}
+          onMove={(t, status) => { void moveTicket(t, status); }}
+          priorityLabel={(p) => PRIORITY_LABELS[p] ?? p}
+          priorityClass={(p) => priorityColors[p] ?? ""}
+          renderMeta={(t) => (
+            <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+              {subjectLabel(t.subject_category ?? t.ticket_type)} ·
+              <EmployeeLink employeeId={t.employee_id} name={t.employees?.full_name} />
+              {t.status !== "done" && <SlaBadge deadline={t.sla_deadline} done={false} holidays={holidays} />}
+            </span>
+          )}
+        />
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(20rem,26rem)_minmax(0,1fr)] gap-6">
           {/* Ticket list */}
@@ -406,7 +511,7 @@ export default function ITTickets() {
                     aria-pressed={active}
                     onClick={() => setForwardFilter(active && chip.value !== "any" ? "any" : chip.value)}
                     className={cn(
-                      "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors hover:opacity-85",
+                      "inline-flex min-h-11 sm:min-h-8 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       active ? chip.activeClasses : cn("bg-background", chip.classes),
                     )}
                   >
@@ -416,6 +521,14 @@ export default function ITTickets() {
                 );
               })}
             </div>
+            <ActiveFilters
+              summary={`${filtered.length} קריאות`}
+              onClearAll={clearFilters}
+              filters={[
+                ...(statusFilter !== "open_all" ? [{ id: "status", label: "סטטוס", value: STATUS_FILTER_LABELS[statusFilter] ?? statusFilter, onRemove: () => setStatusFilter("open_all") }] : []),
+                ...(forwardFilter !== "any" ? [{ id: "forward", label: "העברה", value: FORWARD_FILTER_LABELS[forwardFilter] ?? forwardFilter, onRemove: () => setForwardFilter("any") }] : []),
+              ]}
+            />
             {filtered.map((ticket: any) => (
               <RowContextMenu key={ticket.id} actions={[
                 { label: "פתח קריאה", onSelect: () => openVisibleTicket(ticket.id) },
@@ -423,18 +536,10 @@ export default function ITTickets() {
                 copyAction("העתק מס' קריאה", ticket.ticket_code, true),
                 copyAction("העתק כותרת", ticket.title),
               ]}>
+              {/* The title is the row's button, stretched over the card; EmployeeLink sits above it as a sibling. */}
               <div
-                role="button"
-                tabIndex={0}
-                onClick={() => openVisibleTicket(ticket.id)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    openVisibleTicket(ticket.id);
-                  }
-                }}
                 className={cn(
-                  "w-full text-right bg-card rounded-xl border p-4 transition-all hover:shadow-md cursor-pointer",
+                  "relative w-full text-right bg-card rounded-xl border p-4 transition-all hover:shadow-md focus-within:ring-2 focus-within:ring-ring",
                   ticket.ticket_type === "offboarding" ? "border-destructive/30" : "border-border/50",
                   selectedId === ticket.id && "ring-2 ring-primary",
                 )}
@@ -462,10 +567,17 @@ export default function ITTickets() {
                         </span>
                       )}
                     </div>
-                    <p className="text-sm font-medium truncate">{ticket.title}</p>
+                    <button
+                      type="button"
+                      onClick={() => openVisibleTicket(ticket.id)}
+                      aria-current={selectedId === ticket.id ? "true" : undefined}
+                      className="block w-full truncate text-right text-sm font-medium focus:outline-none after:absolute after:inset-0 after:rounded-xl after:content-['']"
+                    >
+                      {ticket.title}
+                    </button>
                     <p className="text-xs text-muted-foreground mt-1">
                       {subjectLabel(ticket.subject_category ?? ticket.ticket_type)} ·{" "}
-                      <EmployeeLink employeeId={ticket.employee_id} name={ticket.employees?.full_name} />
+                      <span className="relative z-10"><EmployeeLink employeeId={ticket.employee_id} name={ticket.employees?.full_name} /></span>
                     </p>
                   </div>
                   {ticket.status === "done"
@@ -476,7 +588,21 @@ export default function ITTickets() {
               </RowContextMenu>
             ))}
             {filtered.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">אין קריאות להצגה</div>
+              <StateView
+                isEmpty
+                empty={filtersActive
+                  ? {
+                      icons: EMPTY_ICONS.noMatch,
+                      title: "אין קריאות שתואמות לסינון",
+                      description: (tickets ?? []).length ? `יש ${(tickets ?? []).length} קריאות בסך הכל.` : undefined,
+                      action: <Button variant="outline" onClick={clearFilters}>נקה סינון</Button>,
+                    }
+                  : (tickets ?? []).length
+                    ? { icons: EMPTY_ICONS.ticketsDone, title: "אין קריאות פתוחות", description: "כל הקריאות טופלו.", action: <Button variant="outline" onClick={() => setStatusFilter("all")}>הצג את כל הקריאות</Button> }
+                    : { icons: EMPTY_ICONS.tickets, title: "עדיין אין קריאות שירות", description: "קריאות שעובדים פותחים בפורטל יופיעו כאן.", action: <Button variant="outline" onClick={() => setNewOpen(true)}>פתיחת קריאה</Button> }}
+              >
+                {null}
+              </StateView>
             )}
           </div>
 
@@ -485,7 +611,7 @@ export default function ITTickets() {
             {selectedTicket ? (
               <div id="ticket-details" className="bg-card rounded-xl border border-border/50 shadow-card animate-fade-in">
                 <div className="p-5 border-b border-border/50">
-                  <button onClick={() => setSelectedId(null)} className="xl:hidden flex items-center gap-1 min-h-11 text-sm text-muted-foreground mb-3">
+                  <button type="button" onClick={() => setSelectedId(null)} className="xl:hidden flex items-center gap-1 min-h-11 text-sm text-muted-foreground mb-3">
                     <ChevronLeft className="w-4 h-4 rotate-180" aria-hidden="true" />
                     חזרה
                   </button>
@@ -531,7 +657,7 @@ export default function ITTickets() {
                       <EditSlaDialog ticket={selectedTicket} open={slaEditOpen} onOpenChange={setSlaEditOpen} holidays={holidays} />
                       <button
                         type="button"
-                        onClick={sendToIT}
+                        onClick={openSendToIT}
                         disabled={sendingIT}
                         className="text-sm px-3 min-h-11 sm:min-h-9 rounded-md border border-border hover:bg-muted flex items-center gap-1 disabled:opacity-50"
                         title="שליחת הקריאה במייל לאנשי ה-IT שהוגדרו לחברה"
@@ -540,8 +666,8 @@ export default function ITTickets() {
                         {sendingIT ? "שולח..." : "שלח לאיש IT"}
                       </button>
                       <SendToMesimonButton ticket={selectedTicket} />
-                      <Select value={selectedTicket.status} onValueChange={changeStatus}>
-                        <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                      <Select value={selectedTicket.status} onValueChange={(v) => { void changeStatus(v); }} disabled={updateStatus.isPending}>
+                        <SelectTrigger className="w-36 min-h-11 sm:min-h-10" aria-label="סטטוס הקריאה" aria-busy={updateStatus.isPending || undefined}><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="open">נפתחה</SelectItem>
                           <SelectItem value="in_progress">בטיפול</SelectItem>
@@ -670,8 +796,8 @@ export default function ITTickets() {
                       aria-label="תגובה לעובד"
                       rows={3}
                     />
-                    <Button size="sm" disabled={sendingReply || !replyText.trim()} onClick={() => sendReply("reply", replyText)}>
-                      {sendingReply ? "שולח..." : "שלח תגובה לעובד במייל"}
+                    <Button disabled={!replyText.trim()} loading={sendingReply} loadingText="שולח…" onClick={() => sendReply("reply", replyText)}>
+                      שלח תגובה לעובד במייל
                     </Button>
                   </div>
 
@@ -681,7 +807,7 @@ export default function ITTickets() {
                       <ul className="space-y-1">
                         {attachments.map((a, i) => (
                           <li key={i}>
-                            <a href={a.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm text-primary hover:underline">
+                            <a href={a.url} target="_blank" rel="noreferrer" className="inline-flex min-h-10 items-center gap-2 text-sm text-primary hover:underline">
                               <Paperclip className="w-3.5 h-3.5" aria-hidden="true" />{a.name}
                             </a>
                           </li>
@@ -700,6 +826,54 @@ export default function ITTickets() {
           </div>
         </div>
       )}
+
+      {/* Replaces window.prompt: optional note for the IT contacts. */}
+      <Dialog open={itNoteOpen} onOpenChange={(v) => { if (!sendingIT) setItNoteOpen(v); }}>
+        <DialogContent dir="rtl" className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>שליחת הקריאה לאיש IT</DialogTitle>
+            <DialogDescription>הקריאה תישלח במייל לאנשי ה-IT שהוגדרו לחברה.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label htmlFor="it-note">הערה לאיש ה-IT (לא חובה)</Label>
+            <Textarea id="it-note" value={itNote} onChange={(e) => setItNote(e.target.value)} rows={3} />
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setItNoteOpen(false)} disabled={sendingIT}>ביטול</Button>
+            <Button onClick={sendToIT} loading={sendingIT} loadingText="שולח…">
+              <Send aria-hidden="true" /> שלח לאיש IT
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Replaces window.prompt: the status changes to "טופלה" only after this is confirmed. */}
+      <Dialog open={doneOpen} onOpenChange={(v) => { if (!updateStatus.isPending && !sendingReply) setDoneOpen(v); }}>
+        <DialogContent dir="rtl" className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>לסמן את הקריאה כטופלה?</DialogTitle>
+            <DialogDescription>{selectedTicket ? `${selectedTicket.ticket_code ?? ""} · ${selectedTicket.title}` : ""}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Checkbox id="done-notify" checked={doneNotify} onCheckedChange={(v) => setDoneNotify(v === true)} />
+              <Label htmlFor="done-notify" className="cursor-pointer">שלח לעובד מייל שהקריאה טופלה</Label>
+            </div>
+            {doneNotify && (
+              <div className="space-y-1.5">
+                <Label htmlFor="done-note">הודעה לעובד (לא חובה)</Label>
+                <Textarea id="done-note" value={doneNote} onChange={(e) => setDoneNote(e.target.value)} rows={3} placeholder="למשל: החלפנו את המטען, אפשר לאסוף מהמשרד" />
+              </div>
+            )}
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setDoneOpen(false)} disabled={updateStatus.isPending}>ביטול</Button>
+            <Button onClick={confirmDone} loading={updateStatus.isPending || sendingReply} loadingText="מעדכן…">
+              <CheckCircle2 aria-hidden="true" /> סמן כטופלה
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

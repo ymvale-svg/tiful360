@@ -1,9 +1,14 @@
+import { lazyWithReload } from "@/lib/lazyWithReload";
 import { RowContextMenu, copyAction, openInNewTab } from "@/components/context/RowContextMenu";
-import { useState, useMemo, useEffect } from "react";
+import { SearchInput } from "@/components/ui/search-input";
+import { ActiveFilters } from "@/components/ui/active-filters";
+import { BulkActionBar } from "@/components/ui/bulk-action-bar";
+import { EMPTY_ICONS } from "@/components/feedback/emptyIcons";
+import { lazy, Suspense, useState, useMemo } from "react";
 import { usePersistentFilter } from "@/hooks/usePersistentFilter";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { Search, Plus, UserMinus, Mail, Send, ShieldCheck, ShieldAlert, UserCheck, UserX } from "lucide-react";
-import { ExportExcelButton, ImportExcelButton } from "@/components/ExcelActionButtons";
+import { Link, useNavigate } from "react-router-dom";
+import { Plus, UserMinus, Mail, Send, ShieldCheck, ShieldAlert, UserCheck, UserX, Download } from "lucide-react";
+import { ImportExcelButton } from "@/components/ExcelActionButtons";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -15,14 +20,23 @@ import { useUpdateEmployee } from "@/hooks/useMutations";
 import { EmployeeSetupWizard } from "@/components/EmployeeSetupWizard";
 import { ImportExcelDialog } from "@/components/ImportExcelDialog";
 import { UsersAndRolesTab } from "@/components/UsersAndRolesTab";
+import { useHubTab } from "@/hooks/useHubTab";
+import { ListSkeleton } from "@/components/feedback/StateView";
 import { useAuth } from "@/hooks/useAuth";
 import { exportToExcel } from "@/lib/exportExcel";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { EMPLOYEE_CONTACT_HEADERS, buildEmployeeContactRows } from "@/lib/employeeContactExport";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { undoToast } from "@/components/feedback/undoToast";
+import { EmptyState, StateView } from "@/components/feedback/StateView";
 
 type EmployeeStatus = "active" | "onboarding" | "leaving" | "inactive";
+
+// Onboarding was its own screen; it is now a tab of the employees hub (own chunk).
+const Onboarding = lazyWithReload(() => import("@/pages/Onboarding"));
 
 const statusLabels: Record<EmployeeStatus, string> = {
   active: "פעיל",
@@ -66,7 +80,7 @@ async function inviteEmployees(payload: {
 }
 
 export default function Employees() {
-  const { data: employees, isLoading } = useEmployees();
+  const { data: employees, isLoading, error: employeesError, refetch: refetchEmployees } = useEmployees();
   const { activeCompanyId } = useCompany();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -74,15 +88,8 @@ export default function Employees() {
   const navigate = useNavigate();
   const { isAdmin, isSuperAdmin, isHR, isPayroll, isOperations, isIT } = useAuth();
   const canManageUsers = isAdmin || isSuperAdmin || isHR || isPayroll || isOperations || isIT;
-  const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = searchParams.get("tab") === "users" && canManageUsers ? "users" : "employees";
-  const [tab, setTab] = useState<"employees" | "users">(initialTab);
-
-  useEffect(() => {
-    const t = searchParams.get("tab");
-    if (t === "users" && tab !== "users") setTab("users");
-    if ((!t || t === "employees") && tab !== "employees") setTab("employees");
-  }, [searchParams]);
+  // Employees, onboarding and users are tabs of one hub; each tab keeps its own role list.
+  const { tabs, active: tab, setActive: switchTab } = useHubTab("employees");
 
   const [search, setSearch] = usePersistentFilter<string>("employees:search", "");
   const [statusFilter, setStatusFilter] = usePersistentFilter<EmployeeStatus | "all">("employees:status", "active");
@@ -94,12 +101,12 @@ export default function Employees() {
   const { data: fullRows } = useQuery({
     queryKey: ["employees-full", activeCompanyId],
     queryFn: async () => {
-      let q = supabase.from("employees").select("id,email,linked_user_id,exclude_from_contacts,direct_manager_id");
+      let q = supabase.from("employees").select("id,email,phone,linked_user_id,exclude_from_contacts,direct_manager_id");
       if (activeCompanyId) q = q.eq("company_id", activeCompanyId);
       const { data, error } = await q;
       if (error) throw error;
       return data as Array<{
-        id: string; email: string | null; linked_user_id: string | null;
+        id: string; email: string | null; phone: string | null; linked_user_id: string | null;
         exclude_from_contacts: boolean | null; direct_manager_id: string | null;
       }>;
     },
@@ -118,6 +125,28 @@ export default function Employees() {
     const matchStatus = statusFilter === "all" || emp.status === statusFilter;
     return matchSearch && matchStatus;
   });
+
+  const hasFilters = !!search || statusFilter !== "all";
+  const clearFilters = () => { setSearch(""); setStatusFilter("all"); };
+  const filterSummary = [
+    search && `חיפוש "${search}"`,
+    statusFilter !== "all" && `סטטוס "${statusLabels[statusFilter]}"`,
+  ].filter(Boolean).join(" ו");
+  const emptyState = hasFilters && (employees ?? []).length > 0 ? (
+    <EmptyState
+      icons={EMPTY_ICONS.noMatch}
+      title="אין עובדים שתואמים לסינון"
+      description={`מסונן לפי ${filterSummary}. ${(employees ?? []).length} עובדים רשומים בסך הכל.`}
+      action={<Button variant="outline" size="sm" onClick={clearFilters}>נקה סינון</Button>}
+    />
+  ) : (
+    <EmptyState
+      icons={EMPTY_ICONS.employees}
+      title="עדיין אין עובדים"
+      description="הוסיפו עובד חדש או ייבאו רשימה מאקסל."
+      action={<Button size="sm" className="gap-2" onClick={() => setAddOpen(true)}><Plus className="w-4 h-4" />עובד חדש</Button>}
+    />
+  );
 
   const inviteMutation = useMutation({
     mutationFn: inviteEmployees,
@@ -168,13 +197,20 @@ export default function Employees() {
   }, [employees]);
 
   const handleManagerChange = async (employeeId: string, newManagerId: string) => {
+    const previous = fullById.get(employeeId)?.direct_manager_id ?? null;
+    const next = newManagerId === "__none__" ? null : newManagerId;
+    if (previous === next) return;
     try {
-      await updateEmployee.mutateAsync({
-        id: employeeId,
-        direct_manager_id: newManagerId === "__none__" ? null : newManagerId,
-      });
-      toast({ title: "מנהל ישיר עודכן" });
+      await updateEmployee.mutateAsync({ id: employeeId, direct_manager_id: next });
       queryClient.invalidateQueries({ queryKey: ["employees-full"] });
+      const empName = empById.get(employeeId)?.full_name ?? "העובד";
+      const mgrName = next ? empById.get(next)?.full_name ?? "המנהל שנבחר" : null;
+      undoToast(mgrName ? `${mgrName} הוגדר כמנהל הישיר של ${empName}` : `הוסר המנהל הישיר של ${empName}`, {
+        onUndo: async () => {
+          await updateEmployee.mutateAsync({ id: employeeId, direct_manager_id: previous });
+          queryClient.invalidateQueries({ queryKey: ["employees-full"] });
+        },
+      });
     } catch (e: any) {
       toast({ title: "שגיאה בעדכון", description: e.message, variant: "destructive" });
     }
@@ -206,12 +242,33 @@ export default function Employees() {
     });
   };
 
-  const switchTab = (v: string) => {
-    const newTab = v === "users" ? "users" : "employees";
-    setTab(newTab);
-    const sp = new URLSearchParams(searchParams);
-    if (newTab === "users") sp.set("tab", "users"); else sp.delete("tab");
-    setSearchParams(sp, { replace: true });
+  const exportFullList = () => {
+    if (!employees?.length) return;
+    exportToExcel(
+      employees.map((e) => ({
+        ...e,
+        status_label: statusLabels[e.status as EmployeeStatus] ?? e.status,
+        start_date_fmt: new Date(e.start_date).toLocaleDateString("en-GB"),
+      })),
+      [
+        { key: "employee_code", label: "מזהה עובד" },
+        { key: "full_name", label: "שם מלא" },
+        { key: "role", label: "תפקיד" },
+        { key: "department", label: "מחלקה" },
+        { key: "start_date_fmt", label: "תאריך התחלה" },
+        { key: "status_label", label: "סטטוס" },
+      ],
+      "רשימת_עובדים",
+    );
+  };
+
+  const exportContactList = () => {
+    if (!filtered.length) return;
+    exportToExcel(
+      buildEmployeeContactRows(filtered, fullById),
+      EMPLOYEE_CONTACT_HEADERS,
+      "רשימת_קשר_עובדים",
+    );
   };
 
   return (
@@ -222,34 +279,48 @@ export default function Employees() {
           <p className="page-subtitle">{employees?.length ?? 0} עובדים רשומים במערכת</p>
         </div>
 
-        <Tabs value={tab} onValueChange={switchTab} dir="rtl">
-          <TabsList>
-            <TabsTrigger value="employees">עובדים</TabsTrigger>
-            {canManageUsers && <TabsTrigger value="users">משתמשים ותפקידים</TabsTrigger>}
-          </TabsList>
+        <Tabs value={tab ?? undefined} onValueChange={switchTab} dir="rtl">
+          {tabs.length > 1 && (
+            <TabsList aria-label="עובדים">
+              {tabs.map((t) => <TabsTrigger key={t.key} value={t.key}>{t.label}</TabsTrigger>)}
+            </TabsList>
+          )}
 
           <TabsContent value="employees" className="space-y-4 mt-4">
             <div className="flex items-start justify-between">
               <div />
               <div className="flex gap-2">
-                <ExportExcelButton
-                  disabled={!employees?.length}
-                  onClick={() => {
-                    if (!employees?.length) return;
-                    exportToExcel(employees.map(e => ({
-                      ...e,
-                      status_label: statusLabels[e.status as EmployeeStatus] ?? e.status,
-                      start_date_fmt: new Date(e.start_date).toLocaleDateString("en-GB"),
-                    })), [
-                      { key: "employee_code", label: "מזהה עובד" },
-                      { key: "full_name", label: "שם מלא" },
-                      { key: "role", label: "תפקיד" },
-                      { key: "department", label: "מחלקה" },
-                      { key: "start_date_fmt", label: "תאריך התחלה" },
-                      { key: "status_label", label: "סטטוס" },
-                    ], "רשימת_עובדים");
-                  }}
-                />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="gap-2"
+                      disabled={!employees?.length}
+                      aria-label="ייצוא רשימת עובדים"
+                    >
+                      <Download className="w-4 h-4" />
+                      ייצוא
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-72">
+                    <DropdownMenuItem onClick={exportFullList}>
+                      <div className="space-y-0.5">
+                        <div>רשימה מלאה</div>
+                        <div className="text-xs text-muted-foreground">
+                          מזהה, שם, תפקיד, מחלקה, תאריך התחלה, סטטוס
+                        </div>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={exportContactList}>
+                      <div className="space-y-0.5">
+                        <div>רשימת קשר — שם, מחלקה, טלפון, מייל</div>
+                        <div className="text-xs text-muted-foreground">
+                          {filtered.length} עובדים לפי הסינון הנוכחי
+                        </div>
+                      </div>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <ImportExcelButton onClick={() => setImportOpen(true)} />
                 <Button className="gap-2" onClick={() => setAddOpen(true)}>
                   <Plus className="w-4 h-4" />
@@ -260,17 +331,13 @@ export default function Employees() {
 
             {/* Filters */}
             <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 min-h-11 w-full sm:w-72">
-                <Search className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-                <input
-                  type="search"
-                  aria-label="חיפוש עובדים"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="חיפוש לפי שם, מזהה, תפקיד..."
-                  className="bg-transparent text-base outline-none w-full"
-                />
-              </div>
+              <SearchInput
+                wrapperClassName="sm:w-72"
+                label="חיפוש עובדים"
+                placeholder="חיפוש לפי שם, מזהה, תפקיד..."
+                value={search}
+                onValueChange={setSearch}
+              />
 
               <div className="flex items-center gap-1 bg-card border border-border rounded-lg p-1 max-w-full overflow-x-auto">
                 {(["all", "active", "onboarding", "leaving", "inactive"] as const).map((s) => (
@@ -290,38 +357,41 @@ export default function Employees() {
                 ))}
               </div>
 
-              {canManageUsers && selected.size > 0 && (
-                <div className="flex items-center gap-2 mr-auto">
-                  <span className="text-sm text-muted-foreground">{selected.size} נבחרו</span>
-                  <Button
-                    size="sm"
-                    className="gap-2"
-                    onClick={handleBulkInvite}
-                    disabled={inviteMutation.isPending}
-                  >
-                    <Send className="w-4 h-4" />
-                    שלח הזמנות ({selected.size})
-                  </Button>
-                </div>
-              )}
             </div>
+
+            <ActiveFilters
+              summary={`${filtered.length} מתוך ${(employees ?? []).length} עובדים`}
+              onClearAll={clearFilters}
+              filters={[
+                ...(search ? [{ id: "search", label: "חיפוש", value: search, onRemove: () => setSearch("") }] : []),
+                ...(statusFilter !== "all" ? [{ id: "status", label: "סטטוס", value: statusLabels[statusFilter], onRemove: () => setStatusFilter("all") }] : []),
+              ]}
+            />
+
+            {canManageUsers && (
+              <BulkActionBar count={selected.size} noun="עובדים" onClear={() => setSelected(new Set())}>
+                <Button size="sm" className="gap-2" onClick={handleBulkInvite} loading={inviteMutation.isPending} loadingText="שולח…">
+                  <Send className="w-4 h-4" aria-hidden="true" />
+                  שלח הזמנות
+                </Button>
+              </BulkActionBar>
+            )}
 
             {/* Mobile: one card per employee with the identifying fields. */}
             <div className="sm:hidden space-y-2">
-              {isLoading ? (
-                <div className="p-8 text-center text-muted-foreground">טוען...</div>
+              {isLoading || employeesError ? (
+                <StateView loading={isLoading} error={employeesError} onRetry={() => refetchEmployees()} label="עובדים">{null}</StateView>
               ) : filtered.length === 0 ? (
-                <div className="p-8 text-center text-muted-foreground">לא נמצאו עובדים</div>
+                <div className="bg-card rounded-xl border border-border/50">{emptyState}</div>
               ) : (
                 filtered.map((emp) => {
                   const full = fullById.get(emp.id);
                   const canInvite = canManageUsers && !!full?.email && !full?.linked_user_id;
                   return (
                     <div key={emp.id} className="bg-card rounded-xl border border-border/50 shadow-card p-3">
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/employees/${emp.id}`)}
-                        className="w-full text-right flex items-start justify-between gap-3 min-h-11"
+                      <Link
+                        to={`/employees/${emp.id}`}
+                        className="w-full text-right flex items-start justify-between gap-3 min-h-11 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         <span className="min-w-0">
                           <span className="block font-semibold text-base break-words">{emp.full_name}</span>
@@ -333,7 +403,7 @@ export default function Employees() {
                         <span className={`status-badge shrink-0 ${statusClasses[emp.status as EmployeeStatus] ?? "status-inactive"}`}>
                           {statusLabels[emp.status as EmployeeStatus] ?? emp.status}
                         </span>
-                      </button>
+                      </Link>
                       {canInvite && (
                         <Button
                           size="touch"
@@ -354,8 +424,8 @@ export default function Employees() {
 
             {/* Table */}
             <div className="hidden sm:block bg-card rounded-xl border border-border/50 shadow-card overflow-auto">
-              {isLoading ? (
-                <div className="p-8 text-center text-muted-foreground">טוען...</div>
+              {isLoading || employeesError ? (
+                <StateView loading={isLoading} error={employeesError} onRetry={() => refetchEmployees()} label="עובדים">{null}</StateView>
               ) : (
                 <table className="data-table data-table-lg">
                   <thead>
@@ -410,7 +480,15 @@ export default function Employees() {
                             </td>
                           )}
                           <td className="font-mono text-xs text-muted-foreground">{emp.employee_code}</td>
-                          <td className="font-medium">{emp.full_name}</td>
+                          <td className="font-medium">
+                            <Link
+                              to={`/employees/${emp.id}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="hover:underline underline-offset-4 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              {emp.full_name}
+                            </Link>
+                          </td>
                           <td>{emp.role}</td>
                           <td>{emp.department}</td>
                           <td onClick={(e) => e.stopPropagation()} className="min-w-[200px]">
@@ -421,14 +499,14 @@ export default function Employees() {
                               placeholder="ללא מנהל"
                               searchPlaceholder="חיפוש מנהל..."
                               emptyText="לא נמצאו עובדים"
-                              className="h-8 text-xs"
+                              className="text-sm"
                             />
                           </td>
                           {canManageUsers && (
                             <td onClick={(e) => e.stopPropagation()}>
                               {hasAccount ? (
                                 <Badge variant="outline" className="gap-1 text-[0.8125rem] bg-success/10 text-success border-success/20">
-                                  <ShieldCheck className="w-3 h-3" />
+                                  <ShieldCheck className="w-3 h-3" aria-hidden="true" />
                                   פעיל
                                 </Badge>
                               ) : hasEmail ? (
@@ -457,9 +535,15 @@ export default function Employees() {
                           )}
                           <td>
                             {inContacts ? (
-                              <UserCheck className="w-4 h-4 text-success" />
+                              <span className="inline-flex items-center gap-1 text-[0.8125rem] text-success">
+                                <UserCheck className="w-4 h-4" aria-hidden="true" />
+                                מוצג
+                              </span>
                             ) : (
-                              <UserX className="w-4 h-4 text-muted-foreground" />
+                              <span className="inline-flex items-center gap-1 text-[0.8125rem] text-muted-foreground">
+                                <UserX className="w-4 h-4" aria-hidden="true" />
+                                מוסתר
+                              </span>
                             )}
                           </td>
                           <td>
@@ -473,7 +557,7 @@ export default function Employees() {
                       );
                     })}
                     {filtered.length === 0 && (
-                      <tr><td colSpan={canManageUsers ? 9 : 7} className="text-center py-8 text-muted-foreground">לא נמצאו עובדים</td></tr>
+                      <tr><td colSpan={canManageUsers ? 9 : 7} className="p-0">{emptyState}</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -481,7 +565,15 @@ export default function Employees() {
             </div>
           </TabsContent>
 
-          {canManageUsers && (
+          {tab === "onboarding" && (
+            <TabsContent value="onboarding" className="mt-4">
+              <Suspense fallback={<ListSkeleton rows={5} />}>
+                <Onboarding />
+              </Suspense>
+            </TabsContent>
+          )}
+
+          {tab === "users" && (
             <TabsContent value="users" className="mt-4">
               <UsersAndRolesTab />
             </TabsContent>

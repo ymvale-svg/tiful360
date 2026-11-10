@@ -1,19 +1,13 @@
-import { useState } from "react";
 import { CalendarPlus, Link2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
-
-const STORAGE_KEY = "leaveCalendarAutoSync";
 
 /**
  * Google Calendar sync settings.
- * Auto-sync is offered as an option but requires connecting a Google account —
- * until then approved leave requests expose a manual "add to calendar" button.
+ * Auto-sync requires connecting an organisational Google account, which is not
+ * available yet — so the switch is shown disabled and nothing is saved. Until
+ * then approved leave requests expose a manual "add to calendar" button.
  */
 export function GoogleCalendarSyncCard() {
-  const { toast } = useToast();
-  const [enabled, setEnabled] = useState(() => localStorage.getItem(STORAGE_KEY) === "1");
-
   return (
     <div className="bg-card rounded-xl border border-border/50 shadow-card p-6 space-y-4 max-w-xl">
       <div className="flex items-center gap-3">
@@ -28,21 +22,16 @@ export function GoogleCalendarSyncCard() {
 
       <div className="flex items-center justify-between gap-3 rounded-lg border border-border/50 p-3">
         <div>
-          <p className="text-sm font-medium">סנכרון אוטומטי לכל בקשה מאושרת</p>
-          <p className="text-xs text-muted-foreground">לא פעיל — דורש חיבור חשבון גוגל</p>
+          <p id="calendar-auto-sync-label" className="text-sm font-medium">סנכרון אוטומטי לכל בקשה מאושרת</p>
+          <p id="calendar-auto-sync-hint" className="text-xs text-muted-foreground">
+            לא זמין עדיין — האפשרות תיפתח אחרי חיבור חשבון גוגל ארגוני. בינתיים מוסיפים ליומן בכפתור שליד כל חופשה מאושרת.
+          </p>
         </div>
         <Switch
-          checked={enabled}
-          onCheckedChange={(v) => {
-            setEnabled(v);
-            localStorage.setItem(STORAGE_KEY, v ? "1" : "0");
-            toast({
-              title: v ? "הבקשה נרשמה" : "הסנכרון האוטומטי כובה",
-              description: v
-                ? "עד לחיבור חשבון גוגל ארגוני ההוספה ליומן נעשית בכפתור שליד כל חופשה מאושרת."
-                : undefined,
-            });
-          }}
+          checked={false}
+          disabled
+          aria-labelledby="calendar-auto-sync-label"
+          aria-describedby="calendar-auto-sync-hint"
         />
       </div>
 

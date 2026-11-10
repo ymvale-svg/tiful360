@@ -123,9 +123,9 @@ export function LicenseDetailsPanel({ asset }: Props) {
         )}
         {show("account_url", asset.account_url) && (
           <div className="col-span-2">
-            <Label className="text-xs text-muted-foreground">כתובת / URL</Label>
+            <Label htmlFor="licensedet-f1" className="text-xs text-muted-foreground">כתובת / URL</Label>
             {editing ? (
-              <Input value={form.account_url} onChange={(e) => setForm({ ...form, account_url: e.target.value })} className="mt-1 text-left" dir="ltr" />
+              <Input id="licensedet-f1" value={form.account_url} onChange={(e) => setForm({ ...form, account_url: e.target.value })} className="mt-1 text-left" dir="ltr" />
             ) : asset.account_url ? (
               <a href={asset.account_url} target="_blank" rel="noreferrer" className="font-medium mt-1 text-primary inline-flex items-center gap-1 hover:underline text-sm" dir="ltr">
                 {asset.account_url} <ExternalLink className="w-3 h-3" />
