@@ -77,6 +77,17 @@ export async function addResource(
   return data as AccessResource;
 }
 
+/** Renames a hand-added resource that has no sub-resources; its path is its parent's path plus the new name. */
+export async function renameResource(db: Db, resource: Pick<AccessResource, "id" | "path" | "parent_id">, name: string) {
+  const clean = name.trim().replace(/\\/g, "/");
+  if (!clean) throw new Error("יש להזין שם");
+  const cut = resource.path.lastIndexOf("\\");
+  const path = resource.parent_id && cut >= 0 ? `${resource.path.slice(0, cut)}\\${clean}` : clean;
+  const { error } = await db.from("system_access_resources").update({ name: clean, path }).eq("id", resource.id);
+  if (error?.code === "23505") throw new Error("כבר קיים פריט בשם הזה במערכת");
+  fail(error);
+}
+
 export async function setResourceActive(db: Db, resourceId: string, isActive: boolean) {
   const { error } = await db.from("system_access_resources").update({ is_active: isActive }).eq("id", resourceId);
   fail(error);
