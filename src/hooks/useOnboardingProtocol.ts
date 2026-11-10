@@ -22,6 +22,7 @@ const ITEM_KIND_LABEL: Record<string, string> = {
   access: "הרשאה דיגיטלית",
   license: "רישיון / תוכנה",
   subscription: "מנוי",
+  task: "משימה",
 };
 
 export const ONBOARDING_DOCUMENT_TYPE = "onboarding_protocol";

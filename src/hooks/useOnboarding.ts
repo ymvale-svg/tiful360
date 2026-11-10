@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
+import { completeOnboardingItem, listOnboardingAssetPicks } from "@/services/onboarding";
 
 export type OnboardingStatus = "draft" | "sent" | "in_progress" | "done";
 
@@ -20,6 +21,8 @@ export interface OnboardingItem {
   notes: string | null;
   completed_at: string | null;
   assigned_at?: string | null;
+  completion_note?: string | null;
+  asset_prior_owner_id?: string | null;
   created_at: string;
 }
 
@@ -213,6 +216,33 @@ export function useUpsertOnboardingItem() {
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["onboarding-processes"] }),
+  });
+}
+
+/** Tick or untick a checklist item; the hand-over and its log happen in one DB transaction. */
+export function useCompleteOnboardingItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ itemId, done, note }: { itemId: string; done: boolean; note?: string | null }) =>
+      completeOnboardingItem(supabase, itemId, done, note),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["onboarding-processes"] });
+      qc.invalidateQueries({ queryKey: ["onboarding-asset-picks"] });
+      qc.invalidateQueries({ queryKey: ["assets"] });
+      qc.invalidateQueries({ queryKey: ["employee-assets"] });
+      qc.invalidateQueries({ queryKey: ["activity-log"] });
+      qc.invalidateQueries({ queryKey: ["asset-assignment-history"] });
+    },
+  });
+}
+
+/** Asset picks of all onboarding items, so one asset is never offered to two items. */
+export function useOnboardingAssetPicks() {
+  const { activeCompanyId } = useCompany();
+  return useQuery({
+    queryKey: ["onboarding-asset-picks", activeCompanyId],
+    queryFn: () => listOnboardingAssetPicks(supabase),
+    enabled: !!activeCompanyId,
   });
 }
 
