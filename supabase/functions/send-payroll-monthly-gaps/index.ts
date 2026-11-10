@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
     if (error) continue
     for (const r of data ?? []) {
       if (requestedCompany && r.company_id !== requestedCompany) continue
-      const cur = perCompany.get(r.company_id) ?? { name: r.company_name, rows: [] }
+      const cur = perCompany.get(r.company_id) ?? { name: r.company_name, rows: [] as any[] }
       cur.rows.push({ ...r, day })
       perCompany.set(r.company_id, cur)
     }
