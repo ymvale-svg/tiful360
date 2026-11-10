@@ -256,6 +256,7 @@ export type Database = {
           default_owner_role: string | null
           description: string | null
           domain: string
+          fulfillment_track: string | null
           icon: string | null
           id: string
           is_assignable: boolean
@@ -263,6 +264,7 @@ export type Database = {
           prefix: string
           protocol_field_defaults: Json
           protocol_type: Database["public"]["Enums"]["protocol_domain"]
+          show_in_onboarding: boolean | null
           signing_protocol: string | null
           skip_handover_form: boolean
           skip_return_form: boolean
@@ -276,6 +278,7 @@ export type Database = {
           default_owner_role?: string | null
           description?: string | null
           domain?: string
+          fulfillment_track?: string | null
           icon?: string | null
           id?: string
           is_assignable?: boolean
@@ -283,6 +286,7 @@ export type Database = {
           prefix: string
           protocol_field_defaults?: Json
           protocol_type?: Database["public"]["Enums"]["protocol_domain"]
+          show_in_onboarding?: boolean | null
           signing_protocol?: string | null
           skip_handover_form?: boolean
           skip_return_form?: boolean
@@ -296,6 +300,7 @@ export type Database = {
           default_owner_role?: string | null
           description?: string | null
           domain?: string
+          fulfillment_track?: string | null
           icon?: string | null
           id?: string
           is_assignable?: boolean
@@ -303,6 +308,7 @@ export type Database = {
           prefix?: string
           protocol_field_defaults?: Json
           protocol_type?: Database["public"]["Enums"]["protocol_domain"]
+          show_in_onboarding?: boolean | null
           signing_protocol?: string | null
           skip_handover_form?: boolean
           skip_return_form?: boolean

@@ -260,6 +260,13 @@
       "when": 1794325081719,
       "tag": "0036_onboarding_checklist_integrity",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1794325102001,
+      "tag": "0037_onboarding_fulfillment_tracks",
+      "breakpoints": true
     }
   ]
 }
