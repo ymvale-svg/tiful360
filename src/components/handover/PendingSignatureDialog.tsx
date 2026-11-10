@@ -127,7 +127,7 @@ export function PendingSignatureDialog({ formId, open, onOpenChange }: Props) {
                 <div className="flex gap-2">
                   <Input readOnly value={link} dir="ltr" className="text-xs" aria-label="קישור ישיר לחתימה" onFocus={(e) => e.currentTarget.select()} />
                   <Button type="button" variant="outline" size="icon" onClick={copy} aria-label={copied ? "הקישור הועתק" : "העתק קישור"} title="העתק קישור">
-                    {copied ? <Check className="w-4 h-4 text-green-600" aria-hidden="true" /> : <Copy className="w-4 h-4" aria-hidden="true" />}
+                    {copied ? <Check className="w-4 h-4 text-success" aria-hidden="true" /> : <Copy className="w-4 h-4" aria-hidden="true" />}
                   </Button>
                 </div>
                 <span role="status" className="sr-only">{copied ? "הקישור הועתק" : ""}</span>

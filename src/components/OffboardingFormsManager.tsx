@@ -229,9 +229,9 @@ export function OffboardingFormsManager({ employee, assets }: Props) {
                 >
                   <div className="flex items-center gap-2">
                     {signed ? (
-                      <CheckCircle2 className="w-4 h-4 text-green-600" aria-hidden="true" />
+                      <CheckCircle2 className="w-4 h-4 text-success" aria-hidden="true" />
                     ) : (
-                      <Clock className="w-4 h-4 text-amber-600" aria-hidden="true" />
+                      <Clock className="w-4 h-4 text-warning" aria-hidden="true" />
                     )}
                     <span className="font-medium text-sm">טופס #{f.form_index}</span>
                     <span className="text-xs text-muted-foreground">

@@ -1,4 +1,4 @@
-import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, Link, useSearchParams } from "react-router-dom";
 import { AttendanceHeatmap } from "@/components/attendance/AttendanceHeatmap";
 import {
   ArrowRight, Shield, Key, Clock, AlertTriangle, UserMinus,
@@ -37,6 +37,7 @@ import { isVehicleAsset } from "@/lib/vehicleLinkedGroups";
 import { useEmployeeOnboardingProcess, ONBOARDING_STATUS_LABEL, daysUntil } from "@/hooks/useOnboarding";
 import { EmployeeOnboardingTab } from "@/components/onboarding/EmployeeOnboardingTab";
 import { useConfirm } from "@/components/feedback/ConfirmDialog";
+import { StateView } from "@/components/feedback/StateView";
 
 
 
@@ -107,20 +108,16 @@ export default function EmployeeDetail() {
   const [assignAssetOpen, setAssignAssetOpen] = useState(false);
   const [pickAssetId, setPickAssetId] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
-  const { data: employee, isLoading } = useEmployee(id!);
-  const { data: assets } = useEmployeeAssets(id!);
+  const { data: employee, isLoading, error: employeeError, refetch: refetchEmployee } = useEmployee(id!);
+  const { data: assets, isLoading: assetsLoading, error: assetsError, refetch: refetchAssets } = useEmployeeAssets(id!);
   const { data: allAssets } = useAssets();
   
   const { data: activityLog } = useActivityLog(id);
   const unassignAsset = useUnassignAsset();
   const { data: leaveRequests } = useEmployeeLeaveRequests(id!);
   const { data: handoverForms } = useEmployeeHandoverForms(id);
-  const navigate = useNavigate();
 
-  const goToAsset = (asset: any) => {
-    const slug = domainKeyToSlug(getDomain(asset.asset_categories ?? {}));
-    navigate(`/assets/${slug}/${asset.id}`);
-  };
+  const assetPath = (asset: any) => `/assets/${domainKeyToSlug(getDomain(asset.asset_categories ?? {}))}/${asset.id}`;
 
 
 
@@ -220,6 +217,14 @@ export default function EmployeeDetail() {
     return <div role="status" className="flex items-center justify-center p-12 text-muted-foreground">טוען את תיק העובד…</div>;
   }
 
+  if (employeeError && !employee) {
+    return (
+      <StateView error={employeeError} onRetry={() => void refetchEmployee()} label="את תיק העובד">
+        {null}
+      </StateView>
+    );
+  }
+
   if (!employee) {
     return <div className="text-center p-12 text-muted-foreground">עובד לא נמצא</div>;
   }
@@ -278,15 +283,15 @@ export default function EmployeeDetail() {
 
         <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-border/50">
           <div className="text-center">
-            <p className="text-2xl font-bold text-primary">{assets?.length ?? 0}</p>
+            <p className="text-2xl font-bold text-primary tabular-nums">{assets?.length ?? 0}</p>
             <p className="text-xs text-muted-foreground mt-1">פריטי ציוד</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-info">{digitalAccessAssets.length}</p>
+            <p className="text-2xl font-bold text-info-text tabular-nums">{digitalAccessAssets.length}</p>
             <p className="text-xs text-muted-foreground mt-1">הרשאות דיגיטליות</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-foreground">{activityLog?.length ?? 0}</p>
+            <p className="text-2xl font-bold text-foreground tabular-nums">{activityLog?.length ?? 0}</p>
             <p className="text-xs text-muted-foreground mt-1">פעולות בהיסטוריה</p>
           </div>
         </div>
@@ -350,24 +355,30 @@ export default function EmployeeDetail() {
               שייך ציוד חדש
             </Button>
           </div>
+          <StateView
+            loading={assetsLoading}
+            error={assetsError}
+            onRetry={() => void refetchAssets()}
+            label="את הציוד של העובד"
+          >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {nonVehicleAssets.map((asset) => (
+              // The whole card opens the item through the stretched link on its name; the action
+              // buttons sit above that link (relative z-10) so nothing interactive is nested.
               <div
                 key={asset.id}
-                role="link"
-                tabIndex={0}
-                onClick={() => goToAsset(asset)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    goToAsset(asset);
-                  }
-                }}
-                className="bg-card rounded-xl border border-border/50 shadow-card p-5 hover:shadow-md hover:border-primary/40 transition-all cursor-pointer"
+                className="relative bg-card rounded-xl border border-border/50 shadow-card p-5 hover:shadow-md hover:border-primary/40 transition-all"
               >
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="font-medium">{asset.asset_name}</p>
+                    <p className="font-medium">
+                      <Link
+                        to={assetPath(asset)}
+                        className="after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring"
+                      >
+                        {asset.asset_name}
+                      </Link>
+                    </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {(asset as any).asset_categories?.category_name} • {asset.asset_code}
                     </p>
@@ -386,12 +397,12 @@ export default function EmployeeDetail() {
 
                 {asset.expiry_date && (
                   <div className="mt-3 pt-3 border-t border-border/50 flex items-center gap-2 text-xs text-muted-foreground">
-                    <AlertTriangle className="w-3 h-3 text-warning" />
+                    <AlertTriangle className="w-3 h-3 text-warning" aria-hidden="true" />
                     <span>תפוגה: {new Date(asset.expiry_date).toLocaleDateString("en-GB")}</span>
                   </div>
                 )}
-                <div className="flex items-center gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
-                  <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={(e) => { e.stopPropagation(); setTransferAsset(asset); }}>
+                <div className="relative z-10 flex items-center gap-2 mt-3">
+                  <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setTransferAsset(asset)}>
                     <RefreshCw className="w-3 h-3" />
                     העבר בעלות
                   </Button>
@@ -425,6 +436,7 @@ export default function EmployeeDetail() {
               <div className="col-span-2 text-center py-8 text-muted-foreground">אין ציוד רשום</div>
             )}
           </div>
+          </StateView>
 
         </div>
       )}
@@ -528,7 +540,7 @@ export default function EmployeeDetail() {
                 <div>
                   <p className="text-sm font-medium mb-1 flex items-center gap-2" id="work-days-label">
                     ימי עבודה
-                    <span role="status" aria-live="polite" className="text-xs font-normal text-success inline-flex items-center gap-1">
+                    <span role="status" aria-live="polite" className="text-xs font-normal text-success-text inline-flex items-center gap-1">
                       {savedWorkDays && <><Check className="w-3.5 h-3.5" aria-hidden="true" />נשמר</>}
                       {savingAttendance && <span className="text-muted-foreground">שומר…</span>}
                     </span>

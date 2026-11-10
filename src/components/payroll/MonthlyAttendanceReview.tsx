@@ -290,7 +290,7 @@ export function MonthlyAttendanceReview() {
 
   const allIds = (employees as any[]).map((e) => e.id);
   const selIds = [...selected];
-  const toggle = (id: string) => setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggle = (id: string) => setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
 
   return (
     <Card dir="rtl">
@@ -332,9 +332,10 @@ export function MonthlyAttendanceReview() {
               const shown = onlyGaps ? rows.filter((r) => isGapDay(r) || pend.some((c) => c.correction_date === r.day)) : rows;
               return (
                 <Fragment key={e.id}>
+                  {/* Row click is a mouse shortcut; the name button below is the keyboard/AT control for the same toggle. */}
                   <tr className={cn("border-t cursor-pointer hover:bg-muted/30", isOpen && "bg-muted/40")} onClick={() => { void toggleOpen(e.id); }}>
-                    <td className="p-2" onClick={(ev) => ev.stopPropagation()}>
-                      <Checkbox aria-label={`סמן ${e.full_name}`} checked={selected.has(e.id)} onCheckedChange={() => toggle(e.id)} />
+                    <td className="p-2">
+                      <Checkbox aria-label={`סמן ${e.full_name}`} checked={selected.has(e.id)} onCheckedChange={() => toggle(e.id)} onClick={(ev) => ev.stopPropagation()} />
                     </td>
                     <td className="p-2 font-medium">
                       <button
@@ -349,16 +350,16 @@ export function MonthlyAttendanceReview() {
                         <span className="sr-only">{isOpen ? " — סגור פירוט ימים" : " — הצג פירוט ימים"}</span>
                       </button>
                     </td>
-                    <td className="p-2">{e.employee_code ?? "—"}</td>
-                    <td className="p-2">{gaps ? <Badge variant="destructive">{gaps}</Badge> : <Badge variant="secondary">0</Badge>}</td>
-                    <td className="p-2">{rows.filter((r) => r.status === "leave").length}</td>
-                    <td className="p-2">{pend.length ? <Badge>{pend.length} ממתינות</Badge> : "—"}</td>
+                    <td className="p-2 tabular-nums">{e.employee_code ?? "—"}</td>
+                    <td className="p-2 tabular-nums">{gaps ? <Badge variant="destructive">{gaps}</Badge> : <Badge variant="secondary">0</Badge>}</td>
+                    <td className="p-2 tabular-nums">{rows.filter((r) => r.status === "leave").length}</td>
+                    <td className="p-2 tabular-nums">{pend.length ? <Badge>{pend.length} ממתינות</Badge> : "—"}</td>
                     <td className="p-2"><ReportStatus status={pend.length && reportOf(e.id)?.status !== "approved" ? "pending" : reportOf(e.id)?.status} /></td>
                   </tr>
                   {isOpen && (
                     <tr id={`mar-days-${e.id}`}><td colSpan={7} className="p-3 bg-muted/20">
                       <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <label className="flex items-center gap-1 text-sm min-h-10"><Checkbox checked={onlyGaps} onCheckedChange={async (v) => { if (await confirmDiscard()) setOnlyGaps(!!v); }} />רק חוסרים</label>
+                        <div className="flex items-center gap-1 text-sm min-h-10"><Checkbox id={`mar-only-gaps-${e.id}`} checked={onlyGaps} onCheckedChange={async (v) => { if (await confirmDiscard()) setOnlyGaps(!!v); }} /><label htmlFor={`mar-only-gaps-${e.id}`} className="cursor-pointer">רק חוסרים</label></div>
                         <Button size="sm" variant="outline" disabled={busy} onClick={() => { void sendEmail([e.id]); }}><Mail className="w-4 h-4 ml-1" />שלח לעובד במייל</Button>
                         <Button size="sm" variant="outline" onClick={() => exportPdf([e.id])}><FileDown className="w-4 h-4 ml-1" />PDF</Button>
                         {canApprove && reportOf(e.id)?.status !== "approved" && (
@@ -419,13 +420,13 @@ function DayRow({ r, emp, pending, busy, canApprove, onTime, onAbsence, onReview
   return (
     <>
       <tr className={cn("border-t", gap && "bg-destructive/15")}>
-        <td className="p-1">{fmtDate(r.day)}</td><td className="p-1">{dow(r.day)}</td>
+        <td className="p-1 tabular-nums">{fmtDate(r.day)}</td><td className="p-1">{dow(r.day)}</td>
         <td className="p-1"><Input type="time" className="h-10 w-32" value={inT} onChange={(e) => setInT(e.target.value)} aria-label={`כניסה ${fmtDate(r.day)}`} /></td>
         <td className="p-1"><Input type="time" className="h-10 w-32" value={outT} onChange={(e) => setOutT(e.target.value)} aria-label={`יציאה ${fmtDate(r.day)}`} /></td>
         <td className="p-1">
           {r.leave ? <Badge variant="secondary">{r.leave}</Badge>
-            : r.status === "missing" ? <span className="text-destructive font-medium">לא החתים</span>
-            : r.status === "partial" ? <span className="text-destructive font-medium">חסרה החתמה</span>
+            : r.status === "missing" ? <span className="text-destructive-text font-medium">לא החתים</span>
+            : r.status === "partial" ? <span className="text-destructive-text font-medium">חסרה החתמה</span>
             : <span className="text-muted-foreground">תקין</span>}
         </td>
         <td className="p-1">

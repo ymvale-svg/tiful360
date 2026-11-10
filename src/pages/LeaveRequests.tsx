@@ -9,6 +9,7 @@ import { StateView } from "@/components/feedback/StateView";
 import { ExportExcelButton } from "@/components/ExcelActionButtons";
 import { buildGoogleCalendarUrl } from "@/lib/googleCalendar";
 import { exportToExcel } from "@/lib/exportExcel";
+import { StatusChip } from "@/components/feedback/StatusChip";
 
 const TYPE_LABELS: Record<string, string> = { vacation: "חופשה", sick: "מחלה", reserve: "מילואים", personal: "יום אישי", other: "אחר" };
 const STATUS_LABELS: Record<string, string> = { approved: "מאושר", rejected: "נדחה", cancelled: "בוטל", pending: "ממתין" };
@@ -125,8 +126,8 @@ export default function LeaveRequests() {
               <t.icon className="w-4 h-4" aria-hidden="true" />
               {t.label}
               <span
-                className={`min-w-5 px-1.5 rounded-full text-xs ${
-                  tab === t.id ? "bg-primary-foreground/20" : t.id === "pending" && t.count > 0 ? "bg-warning/15 text-warning" : "bg-muted"
+                className={`min-w-5 px-1.5 rounded-full text-xs tabular-nums ${
+                  tab === t.id ? "bg-primary-foreground/20" : t.id === "pending" && t.count > 0 ? "bg-warning/15 text-warning-text" : "bg-muted"
                 }`}
               >
                 {t.count}
@@ -178,7 +179,7 @@ export default function LeaveRequests() {
                     {r.employee?.department} • {TYPE_LABELS[r.request_type as string]} •{" "}
                     {r.end_date ? `${r.total_days} ימים • ` : ""}
                     {new Date(r.start_date).toLocaleDateString("en-GB")} –{" "}
-                    {r.end_date ? new Date(r.end_date).toLocaleDateString("en-GB") : <span className="text-warning">טרם עודכן</span>}
+                    {r.end_date ? new Date(r.end_date).toLocaleDateString("en-GB") : <span className="text-warning-text">טרם עודכן</span>}
                   </p>
                   {r.reason && <p className="text-sm text-muted-foreground mt-1">{r.reason}</p>}
                   {r.attachment_url && (
@@ -209,18 +210,12 @@ export default function LeaveRequests() {
                     </Button>
                   )}
                   {(
-                    <span className={`text-[0.8125rem] px-2 py-1 rounded-full font-medium ${
-                      r.status === "approved" ? "bg-success/15 text-success" :
-                      r.status === "rejected" ? "bg-destructive/15 text-destructive" :
-                      r.status === "pending" ? "bg-warning/15 text-warning" :
-                      "bg-muted text-muted-foreground"
-                    }`}>
-                      {r.status === "approved" ? <CheckCircle2 className="inline w-3.5 h-3.5 ml-1" aria-hidden="true" />
-                        : r.status === "rejected" ? <XCircle className="inline w-3.5 h-3.5 ml-1" aria-hidden="true" />
-                        : r.status === "pending" ? <Clock className="inline w-3.5 h-3.5 ml-1" aria-hidden="true" />
-                        : <Ban className="inline w-3.5 h-3.5 ml-1" aria-hidden="true" />}
+                    <StatusChip
+                      tone={r.status === "approved" ? "success" : r.status === "rejected" ? "critical" : r.status === "pending" ? "warning" : "neutral"}
+                      icon={r.status === "approved" ? CheckCircle2 : r.status === "rejected" ? XCircle : r.status === "pending" ? Clock : Ban}
+                    >
                       {STATUS_LABELS[r.status as string] ?? r.status}
-                    </span>
+                    </StatusChip>
                   )}
                 </div>
               </div>

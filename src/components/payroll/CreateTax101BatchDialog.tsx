@@ -21,7 +21,7 @@ interface Props {
 export function CreateTax101BatchDialog({ open, onOpenChange }: Props) {
   const { toast } = useToast();
   const { activeCompanyId } = useCompany();
-  const { data: employees = [] } = useEmployees();
+  const { data: employees = [], isLoading: employeesLoading, error: employeesError } = useEmployees();
   const createBatch = useCreateTax101Batch();
 
   const { data: emailMap = {} } = useQuery({
@@ -168,36 +168,40 @@ export function CreateTax101BatchDialog({ open, onOpenChange }: Props) {
 
           <div className="border border-border rounded-lg overflow-hidden">
             <div className="bg-muted/40 px-3 py-2 flex items-center justify-between text-xs">
-              <label className="flex items-center gap-2">
-                <Checkbox checked={allFilteredSelected} onCheckedChange={toggleAll} />
-                בחר הכל ({filtered.length})
-              </label>
-              <span className="font-semibold">{selectedIds.size} נבחרו</span>
+              <div className="flex items-center gap-2">
+                <Checkbox id="t101-batch-all" checked={allFilteredSelected} onCheckedChange={toggleAll} />
+                <label htmlFor="t101-batch-all" className="cursor-pointer">בחר הכל (<span className="tabular-nums">{filtered.length}</span>)</label>
+              </div>
+              <span className="font-semibold tabular-nums">{selectedIds.size} נבחרו</span>
             </div>
             <div className="max-h-64 overflow-y-auto divide-y divide-border/40">
-              {filtered.length === 0 ? (
+              {employeesLoading ? (
+                <p role="status" className="p-4 text-center text-sm text-muted-foreground">טוען עובדים…</p>
+              ) : employeesError ? (
+                <p role="alert" className="p-4 text-center text-sm text-destructive-text">לא הצלחנו לטעון את רשימת העובדים. סגרו ופתחו שוב את החלון.</p>
+              ) : filtered.length === 0 ? (
                 <p className="p-4 text-center text-sm text-muted-foreground">אין עובדים תואמים</p>
               ) : (
                 filtered.map((e) => (
-                  <label key={e.id} className="flex items-center gap-3 p-2.5 hover:bg-muted/30 cursor-pointer">
-                    <Checkbox checked={selectedIds.has(e.id)} onCheckedChange={() => toggle(e.id)} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{e.full_name}</p>
-                      <p className="text-xs text-muted-foreground">
+                  <div key={e.id} className="flex items-center gap-3 p-2.5 hover:bg-muted/30">
+                    <Checkbox id={`t101-batch-emp-${e.id}`} checked={selectedIds.has(e.id)} onCheckedChange={() => toggle(e.id)} />
+                    <label htmlFor={`t101-batch-emp-${e.id}`} className="flex-1 min-w-0 cursor-pointer">
+                      <span className="block text-sm font-medium truncate">{e.full_name}</span>
+                      <span className="block text-xs text-muted-foreground">
                         {e.employee_code} • {e.department}
-                        {!emailMap[e.id] && <span className="text-warning"> • אין מייל</span>}
-                      </p>
-                    </div>
-                  </label>
+                        {!emailMap[e.id] && <span className="text-warning-text"> • אין מייל</span>}
+                      </span>
+                    </label>
+                  </div>
                 ))
               )}
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm">
-            <Checkbox checked={sendInvites} onCheckedChange={(v) => setSendInvites(!!v)} />
-            שלח גם לינק במייל לעובדים נבחרים (אם קיים מייל)
-          </label>
+          <div className="flex items-center gap-2 text-sm">
+            <Checkbox id="t101-batch-send-invites" checked={sendInvites} onCheckedChange={(v) => setSendInvites(!!v)} />
+            <label htmlFor="t101-batch-send-invites" className="cursor-pointer">שלח גם לינק במייל לעובדים נבחרים (אם קיים מייל)</label>
+          </div>
         </div>
 
         <DialogFooter>

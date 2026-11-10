@@ -64,7 +64,7 @@ export function MichpalExportCard() {
     return { from: iso(new Date(y, m - 1, 1)), to: iso(new Date(y, m, 0)) };
   }, [useCustomRange, customFrom, customTo, month]);
 
-  const { data: employees = [] } = useQuery({
+  const { data: employees = [], error: employeesError } = useQuery({
     queryKey: ["michpal-employees", activeCompanyId],
     queryFn: async () => {
       if (!activeCompanyId) return [];
@@ -94,7 +94,7 @@ export function MichpalExportCard() {
     enabled: !!activeCompanyId,
   });
 
-  const { data: punches = [], isFetching: punchesLoading } = useQuery({
+  const { data: punches = [], isFetching: punchesLoading, error: punchesError } = useQuery({
     queryKey: ["michpal-punches", activeCompanyId, from, to],
     queryFn: async () => {
       if (!activeCompanyId) return [];
@@ -112,7 +112,7 @@ export function MichpalExportCard() {
     enabled: !!activeCompanyId,
   });
 
-  const { data: leaves = [] } = useQuery({
+  const { data: leaves = [], error: leavesError } = useQuery({
     queryKey: ["michpal-leaves", activeCompanyId, from, to],
     queryFn: async () => {
       if (!activeCompanyId) return [];
@@ -176,7 +176,11 @@ export function MichpalExportCard() {
     };
   }, [punches, leaves, codeByEmployee, source, includeAbsences, absenceCodes, from, to]);
 
+  // A failed load must never read as "no rows" — block the export until the data is really here.
+  const loadError = employeesError || punchesError || (includeAbsences ? leavesError : null);
+
   const handleDownload = () => {
+    if (punchesLoading || loadError) return;
     if (result.rows.length === 0) {
       toast({ title: "אין נתונים לייצוא", description: "לא נמצאו שורות בטווח שנבחר", variant: "destructive" });
       return;
@@ -193,7 +197,7 @@ export function MichpalExportCard() {
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex flex-wrap items-center gap-2">
-          <FileDown className="w-4 h-4 text-primary" />
+          <FileDown className="w-4 h-4 text-primary" aria-hidden="true" />
           ייצוא נתוני נוכחות למיכפל
           <Badge variant="outline" className="font-mono text-xs">{fileFormat.toUpperCase()} · Windows-1255</Badge>
         </CardTitle>
@@ -272,26 +276,35 @@ export function MichpalExportCard() {
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <Checkbox checked={useCustomRange} onCheckedChange={(v) => setUseCustomRange(!!v)} />
-            טווח תאריכים חופשי
-          </label>
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <Checkbox checked={includeAbsences} onCheckedChange={(v) => setIncludeAbsences(!!v)} />
-            כלול היעדרויות מאושרות (חופשה / מחלה / מילואים)
-          </label>
+          <div className="flex items-center gap-2 text-sm">
+            <Checkbox id="michpal-custom-range" checked={useCustomRange} onCheckedChange={(v) => setUseCustomRange(!!v)} />
+            <label htmlFor="michpal-custom-range" className="cursor-pointer">טווח תאריכים חופשי</label>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <Checkbox id="michpal-include-absences" checked={includeAbsences} onCheckedChange={(v) => setIncludeAbsences(!!v)} />
+            <label htmlFor="michpal-include-absences" className="cursor-pointer">כלול היעדרויות מאושרות (חופשה / מחלה / מילואים)</label>
+          </div>
         </div>
 
         <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-1">
-          <div className="flex flex-wrap gap-x-6 gap-y-1">
+          {loadError ? (
+            <div role="alert" className="flex items-start gap-2 text-destructive-text">
+              <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
+              לא הצלחנו לטעון את נתוני הנוכחות לטווח שנבחר. בדקו את החיבור ונסו שוב.
+            </div>
+          ) : punchesLoading ? (
+            <div role="status" className="text-muted-foreground">טוען נתוני נוכחות…</div>
+          ) : (
+          <>
+          <div className="flex flex-wrap gap-x-6 gap-y-1 tabular-nums">
             <span>שורות בקובץ: <strong>{result.rows.length}</strong></span>
             <span>החתמות: <strong>{result.punchRows}</strong></span>
             {includeAbsences && <span>שורות היעדרות: <strong>{result.absenceRows}</strong></span>}
             <span>עובדים: <strong>{result.employees}</strong></span>
           </div>
           {(missingCodes > 0 || result.skippedNoCode > 0 || result.skippedUnknownDirection > 0) && (
-            <div className="flex items-start gap-2 text-xs text-amber-700 dark:text-amber-500 pt-1">
-              <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+            <div className="flex items-start gap-2 text-xs text-warning-text pt-1">
+              <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" aria-hidden="true" />
               <div className="space-y-0.5">
                 {missingCodes > 0 && <div>{missingCodes} עובדים ללא קוד עובד — לא ייכללו בקובץ</div>}
                 {result.skippedNoCode > 0 && <div>{result.skippedNoCode} החתמות ללא שיוך/קוד עובד הושמטו</div>}
@@ -301,11 +314,13 @@ export function MichpalExportCard() {
               </div>
             </div>
           )}
+          </>
+          )}
         </div>
 
         <div className="flex justify-end">
-          <Button onClick={handleDownload} disabled={punchesLoading || result.rows.length === 0}>
-            <Download className="w-4 h-4 ml-1" />
+          <Button onClick={handleDownload} disabled={punchesLoading || !!loadError || result.rows.length === 0}>
+            <Download className="w-4 h-4 ml-1" aria-hidden="true" />
             הורדת קובץ למיכפל
           </Button>
         </div>

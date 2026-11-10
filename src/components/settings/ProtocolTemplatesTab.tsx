@@ -540,7 +540,7 @@ function TemplateEditorPanel({
               </span>
             )}
             {dirty && (
-              <span role="status" className="text-xs px-2 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-400 flex items-center gap-1">
+              <span role="status" className="text-xs px-2 py-0.5 rounded bg-warning/10 text-warning-text flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" aria-hidden="true" /> שינויים שלא נשמרו
               </span>
             )}
@@ -551,7 +551,7 @@ function TemplateEditorPanel({
             <Eye className="w-3.5 h-3.5" aria-hidden="true" /> תצוגה מקדימה
           </Button>
           {isOverride && (
-            <Button variant="ghost" className="gap-1.5 text-destructive" onClick={() => { void onReset(); }}>
+            <Button variant="ghost" className="gap-1.5 text-destructive-text" onClick={() => { void onReset(); }}>
               <Trash2 className="w-3.5 h-3.5" aria-hidden="true" /> מחק תבנית
             </Button>
           )}
@@ -798,7 +798,7 @@ function NewProtocolDialog({
           )}
 
           {duplicate && (
-            <div className="text-xs rounded-md border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400 p-2.5 flex items-start gap-2">
+            <div className="text-xs rounded-md border border-warning/40 bg-warning/10 text-warning-text p-2.5 flex items-start gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>כבר קיימת תבנית ליעד זה. אפשר לעבור אליה לעריכה במקום ליצור כפילות.</span>
             </div>

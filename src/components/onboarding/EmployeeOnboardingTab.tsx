@@ -6,6 +6,7 @@ import { useAssetGroups } from "@/hooks/useAssetGroups";
 import { getEmployeeDocumentSignedUrl } from "@/hooks/useEmployeeDocuments";
 import { useToast } from "@/hooks/use-toast";
 import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
+import { StatusChip, type StatusTone } from "@/components/feedback/StatusChip";
 import {
   ONBOARDING_STATUS_LABEL,
   daysUntil,
@@ -26,11 +27,11 @@ interface Props {
   process: OnboardingProcess;
 }
 
-const STATUS_CLASS: Record<string, string> = {
-  draft: "bg-muted text-muted-foreground",
-  sent: "bg-info/10 text-info",
-  in_progress: "bg-warning/10 text-warning",
-  done: "bg-success/10 text-success",
+const STATUS_TONE: Record<string, StatusTone> = {
+  draft: "neutral",
+  sent: "info",
+  in_progress: "warning",
+  done: "success",
 };
 
 /** Read-only summary of the employee's onboarding process, with access to the checklist. */
@@ -87,13 +88,9 @@ export function EmployeeOnboardingTab({ process }: Props) {
           <div className="flex items-center gap-2.5">
             <ClipboardList className="w-5 h-5 text-primary" />
             <h3 className="font-semibold">תהליך קליטת עובד</h3>
-            <span
-              className={`text-xs px-2 py-0.5 rounded-full ${
-                STATUS_CLASS[process.status] ?? "bg-muted text-muted-foreground"
-              }`}
-            >
+            <StatusChip tone={STATUS_TONE[process.status] ?? "neutral"}>
               {ONBOARDING_STATUS_LABEL[process.status] ?? process.status}
-            </span>
+            </StatusChip>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button size="sm" className="gap-1.5" onClick={() => setChecklistOpen(true)}>
@@ -171,14 +168,14 @@ export function EmployeeOnboardingTab({ process }: Props) {
                               {OWNER_ROLE_LABEL[item.owner_role] ?? item.owner_role}
                             </span>
                             {item.assigned_at && (
-                              <span className="text-[0.8125rem] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600">
+                              <span className="text-[0.8125rem] px-1.5 py-0.5 rounded bg-success/10 text-success-text">
                                 הוצמד ב-{formatDateTimeDMY(item.assigned_at)}
                               </span>
                             )}
                           </div>
                           {item.notes && (
-                            <p className="text-xs mt-1.5 px-2.5 py-1.5 rounded-md bg-amber-500/10 border border-amber-500/30 flex items-start gap-1.5">
-                              <StickyNote className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-600" />
+                            <p className="text-xs mt-1.5 px-2.5 py-1.5 rounded-md bg-warning/10 border border-warning/40 flex items-start gap-1.5">
+                              <StickyNote className="w-3.5 h-3.5 mt-0.5 shrink-0 text-warning" />
                               <span>
                                 <span className="font-medium">הערה לתפעול: </span>
                                 {item.notes}

@@ -55,7 +55,7 @@ export function SignLinkDialog({ open, onOpenChange, links, employeeName, emailS
               <div className="flex gap-2">
                 <Input readOnly value={url} dir="ltr" className="text-xs" aria-label={links.length > 1 ? `קישור לחתימה — טופס ${i + 1}` : "קישור לחתימה"} onFocus={(e) => e.currentTarget.select()} />
                 <Button type="button" variant="outline" size="icon" onClick={() => copy(url, i)} aria-label={copied === i ? "הקישור הועתק" : "העתק קישור"} title="העתק קישור">
-                  {copied === i ? <Check className="w-4 h-4 text-green-600" aria-hidden="true" /> : <Copy className="w-4 h-4" aria-hidden="true" />}
+                  {copied === i ? <Check className="w-4 h-4 text-success" aria-hidden="true" /> : <Copy className="w-4 h-4" aria-hidden="true" />}
                 </Button>
               </div>
               <span role="status" className="sr-only">{copied === i ? "הקישור הועתק" : ""}</span>

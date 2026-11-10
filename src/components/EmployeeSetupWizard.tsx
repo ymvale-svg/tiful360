@@ -304,7 +304,7 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
   });
 
   const errMsg = (k: string) => errors[k] && (
-    <p id={`wiz-${k}-error`} role="alert" className="text-xs text-destructive mt-1 flex items-center gap-1">
+    <p id={`wiz-${k}-error`} role="alert" className="text-xs text-destructive-text mt-1 flex items-center gap-1">
       <AlertCircle className="w-3 h-3" aria-hidden="true" />
       {errors[k]}
     </p>
@@ -335,10 +335,10 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
                 <Switch id="wiz-freelancer" checked={form.is_freelancer} onCheckedChange={(v) => set("is_freelancer", v)} />
               </div>
               {!form.is_freelancer && <div>
-                <label htmlFor="wiz-employee_number" className="text-sm font-medium mb-1 block">מס' עובד<span className="text-destructive mr-1">*</span></label>
+                <label htmlFor="wiz-employee_number" className="text-sm font-medium mb-1 block">מס' עובד<span className="text-destructive mr-1" aria-hidden="true">*</span></label>
                 <div className="flex gap-2 items-center" dir="ltr">
                   <span className="px-3 py-2 bg-muted/60 rounded-lg text-sm font-mono text-muted-foreground select-none">EMP-</span>
-                  <input{...fieldProps("employee_number")}
+                  <input {...fieldProps("employee_number")} aria-required
                     value={form.employee_number}
                     onChange={(e) => set("employee_number", e.target.value.replace(/\D/g, "").slice(0, 6))}
                     placeholder="009" inputMode="numeric" dir="ltr"
@@ -348,19 +348,19 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
                 {errMsg("employee_number")}
               </div>}
               <div>
-                <label htmlFor="wiz-full_name" className="text-sm font-medium mb-1 block">שם מלא<span className="text-destructive mr-1">*</span></label>
-                <input{...fieldProps("full_name")} value={form.full_name} maxLength={100} onChange={(e) => set("full_name", e.target.value)} placeholder="ישראל ישראלי" className={inputCls("full_name")} />
+                <label htmlFor="wiz-full_name" className="text-sm font-medium mb-1 block">שם מלא<span className="text-destructive mr-1" aria-hidden="true">*</span></label>
+                <input {...fieldProps("full_name")} aria-required value={form.full_name} maxLength={100} onChange={(e) => set("full_name", e.target.value)} placeholder="ישראל ישראלי" className={inputCls("full_name")} />
                 {errMsg("full_name")}
               </div>
               <div>
-                <label htmlFor="wiz-id_number" className="text-sm font-medium mb-1 block">תעודת זהות<span className="text-destructive mr-1">*</span></label>
-                <input{...fieldProps("id_number")} value={form.id_number} maxLength={9} onChange={(e) => set("id_number", e.target.value.replace(/\D/g, ""))} placeholder="123456789" dir="ltr" className={inputCls("id_number")} />
+                <label htmlFor="wiz-id_number" className="text-sm font-medium mb-1 block">תעודת זהות<span className="text-destructive mr-1" aria-hidden="true">*</span></label>
+                <input {...fieldProps("id_number")} aria-required value={form.id_number} maxLength={9} onChange={(e) => set("id_number", e.target.value.replace(/\D/g, ""))} placeholder="123456789" dir="ltr" className={inputCls("id_number")} />
                 {errMsg("id_number")}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="wiz-email" className="text-sm font-medium mb-1 block">דוא"ל<span className="text-destructive mr-1">*</span></label>
-                  <input{...fieldProps("email")} value={form.email} maxLength={255} onChange={(e) => set("email", e.target.value)} placeholder="user@company.co.il" dir="ltr" className={inputCls("email")} />
+                  <label htmlFor="wiz-email" className="text-sm font-medium mb-1 block">דוא"ל<span className="text-destructive mr-1" aria-hidden="true">*</span></label>
+                  <input {...fieldProps("email")} aria-required value={form.email} maxLength={255} onChange={(e) => set("email", e.target.value)} placeholder="user@company.co.il" dir="ltr" className={inputCls("email")} />
                   {errMsg("email")}
                 </div>
                 <div>
@@ -387,32 +387,36 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
           {step === 1 && (
             <div className="space-y-3 animate-fade-in">
               <div>
-                <label className="text-sm font-medium mb-1 block">תפקיד<span className="text-destructive mr-1">*</span></label>
+                <label htmlFor="wiz-role" className="text-sm font-medium mb-1 block">תפקיד<span className="text-destructive mr-1" aria-hidden="true">*</span></label>
                 <SearchableSelect
+                  {...fieldProps("role")} aria-required
                   value={form.role} onChange={(v) => set("role", v)} options={roleOptions}
                   placeholder="בחר או הוסף תפקיד" searchPlaceholder="חפש או הקלד תפקיד חדש..." allowCreate error={!!errors.role}
                 />
                 {errMsg("role")}
               </div>
               <div>
-                <label className="text-sm font-medium mb-1 block">מחלקה<span className="text-destructive mr-1">*</span></label>
+                <label htmlFor="wiz-department" className="text-sm font-medium mb-1 block">מחלקה<span className="text-destructive mr-1" aria-hidden="true">*</span></label>
                 <SearchableSelect
+                  {...fieldProps("department")} aria-required
                   value={form.department} onChange={(v) => set("department", v)} options={departmentOptions}
                   placeholder="בחר או הוסף מחלקה" searchPlaceholder="חפש או הקלד מחלקה חדשה..." allowCreate error={!!errors.department}
                 />
                 {errMsg("department")}
               </div>
               <div>
-                <label className="text-sm font-medium mb-1 block">מנהל ישיר</label>
+                <label htmlFor="wiz-direct_manager_id" className="text-sm font-medium mb-1 block">מנהל ישיר</label>
                 <SearchableSelect
+                  id="wiz-direct_manager_id"
                   value={form.direct_manager_id} onChange={(v) => set("direct_manager_id", v)}
                   options={[{ value: "", label: "ללא" }, ...managerOptions]}
                   placeholder="בחר מנהל ישיר (אופציונלי)" searchPlaceholder="חפש עובד..."
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-1 block">מעסיק</label>
+                <label htmlFor="wiz-sub_employer_id" className="text-sm font-medium mb-1 block">מעסיק</label>
                 <SearchableSelect
+                  id="wiz-sub_employer_id"
                   value={form.sub_employer_id} onChange={(v) => set("sub_employer_id", v)}
                   options={[
                     { value: "", label: `החברה הראשית — ${activeCompany?.name ?? ""}` },
@@ -424,13 +428,14 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="wiz-start_date" className="text-sm font-medium mb-1 block">תאריך התחלה<span className="text-destructive mr-1">*</span></label>
-                  <DateInput {...fieldProps("start_date")} type="date" value={form.start_date} onChange={(e) => set("start_date", e.target.value)} className={inputCls("start_date")} dir="ltr" />
+                  <label htmlFor="wiz-start_date" className="text-sm font-medium mb-1 block">תאריך התחלה<span className="text-destructive mr-1" aria-hidden="true">*</span></label>
+                  <DateInput {...fieldProps("start_date")} aria-required type="date" value={form.start_date} onChange={(e) => set("start_date", e.target.value)} className={inputCls("start_date")} dir="ltr" />
                   {errMsg("start_date")}
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-1 block">סטטוס</label>
+                  <label htmlFor="wiz-status" className="text-sm font-medium mb-1 block">סטטוס</label>
                   <SearchableSelect
+                    id="wiz-status"
                     value={form.status} onChange={(v) => set("status", v)}
                     options={[{ value: "active", label: "פעיל" }, { value: "onboarding", label: "בקליטה" }]}
                   />
@@ -502,8 +507,9 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
                   גישה למערכת
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-1 block">תפקיד מערכת</label>
+                  <label htmlFor="wiz-system_role" className="text-sm font-medium mb-1 block">תפקיד מערכת</label>
                   <SearchableSelect
+                    {...fieldProps("system_role")}
                     value={form.system_role} onChange={(v) => set("system_role", v as AppRole)}
                     options={allowedSystemRoles}
                   />

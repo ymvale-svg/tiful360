@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Pencil, Check, X, ChevronRight, Users } from "lucide-react";
@@ -46,6 +46,11 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
   const [newName, setNewName] = useState("");
   const [newOwnerRole, setNewOwnerRole] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
+  // Move focus into the rename field only when the user starts renaming (no autoFocus on mount).
+  useEffect(() => {
+    if (editingId) editInputRef.current?.focus();
+  }, [editingId]);
   const [editName, setEditName] = useState("");
 
   const catGroups = useMemo(
@@ -255,7 +260,7 @@ export function ManageGroupsDialog({ open, onOpenChange, categoryId, categoryNam
                             onKeyDown={(e) => { if (e.key === "Enter") void handleRename(g.id); if (e.key === "Escape") setEditingId(null); }}
                             aria-label={`שם חדש עבור ${g.name}`}
                             className="flex-1 px-2 py-1 bg-background rounded text-sm outline-none focus:ring-2 focus:ring-primary/30"
-                            autoFocus
+                            ref={editInputRef}
                           />
                           <IconButton label="שמור שם" className="text-primary" onClick={() => handleRename(g.id)}>
                             <Check className="w-4 h-4" />

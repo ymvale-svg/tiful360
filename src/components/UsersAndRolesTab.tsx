@@ -23,6 +23,7 @@ import { usePermissionGroups, useSetGroupMembership } from "@/hooks/usePermissio
 import { canGrantRoles } from "@/lib/permissionGroups";
 import { format } from "date-fns";
 import { he } from "date-fns/locale";
+import { StatusChip } from "@/components/feedback/StatusChip";
 
 
 const ROLE_LABELS: Record<string, string> = {
@@ -40,20 +41,8 @@ const ROLE_LABELS: Record<string, string> = {
   employee: "עובד",
 };
 
-const ROLE_COLORS: Record<string, string> = {
-  super_admin: "bg-primary/10 text-primary border-primary/20",
-  admin: "bg-destructive/10 text-destructive border-destructive/20",
-  ceo: "bg-indigo-500/10 text-indigo-600 border-indigo-500/20 dark:text-indigo-400",
-  it_manager: "bg-accent text-accent-foreground border-accent",
-  operations: "bg-cyan-500/10 text-cyan-600 border-cyan-500/20 dark:text-cyan-400",
-  secretariat: "bg-teal-500/10 text-teal-600 border-teal-500/20 dark:text-teal-400",
-  direct_manager: "bg-orange-500/10 text-orange-600 border-orange-500/20 dark:text-orange-400",
-  hr: "bg-pink-500/10 text-pink-600 border-pink-500/20 dark:text-pink-400",
-  payroll: "bg-purple-500/10 text-purple-600 border-purple-500/20 dark:text-purple-400",
-  finance: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400",
-  legal: "bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-400",
-  employee: "bg-secondary text-secondary-foreground border-secondary",
-};
+/** Badge for the super-admin role (the only role badge this tab renders). */
+const SUPER_ADMIN_BADGE = "bg-primary/10 text-primary border-primary/20";
 
 
 
@@ -73,7 +62,7 @@ export function UsersAndRolesTab() {
   const { data: groups = [] } = usePermissionGroups(activeCompanyId);
   const setMembership = useSetGroupMembership();
 
-  const { data: users = [], isLoading, refetch } = useQuery({
+  const { data: users = [], isLoading, error: usersError, refetch } = useQuery({
     queryKey: ["managed-users", activeCompanyId],
     queryFn: () => fetchUsers(activeCompanyId),
   });
@@ -236,7 +225,7 @@ export function UsersAndRolesTab() {
             <CardTitle className="text-sm font-medium text-muted-foreground">סה"כ משתמשים</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{users.length}</div>
+            <div className="text-2xl font-bold text-foreground tabular-nums">{users.length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -244,7 +233,7 @@ export function UsersAndRolesTab() {
             <CardTitle className="text-sm font-medium text-muted-foreground">מנהלים</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">
+            <div className="text-2xl font-bold text-foreground tabular-nums">
               {users.filter((u) => u.roles.includes("admin")).length}
             </div>
           </CardContent>
@@ -254,7 +243,7 @@ export function UsersAndRolesTab() {
             <CardTitle className="text-sm font-medium text-muted-foreground">מושהים</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">
+            <div className="text-2xl font-bold text-destructive-text tabular-nums">
               {users.filter((u) => u.banned).length}
             </div>
           </CardContent>
@@ -280,6 +269,16 @@ export function UsersAndRolesTab() {
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     טוען משתמשים...
+                  </TableCell>
+                </TableRow>
+              ) : usersError ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8" role="alert">
+                    <p className="text-sm font-semibold">לא הצלחנו לטעון את המשתמשים</p>
+                    <p className="text-sm text-muted-foreground">בדקו את החיבור לאינטרנט ונסו שוב.</p>
+                    <Button variant="outline" size="sm" className="mt-2 gap-2" onClick={() => refetch()}>
+                      <RefreshCw className="w-4 h-4" aria-hidden="true" /> נסה שוב
+                    </Button>
                   </TableCell>
                 </TableRow>
               ) : filteredUsers.length === 0 ? (
@@ -320,7 +319,7 @@ export function UsersAndRolesTab() {
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
                         {u.roles.includes("super_admin") && (
-                          <Badge variant="outline" className={`text-xs ${ROLE_COLORS.super_admin}`}>{ROLE_LABELS.super_admin}</Badge>
+                          <Badge variant="outline" className={`text-xs ${SUPER_ADMIN_BADGE}`}>{ROLE_LABELS.super_admin}</Badge>
                         )}
                         {(u.groups ?? []).map((g) => (
                           <Badge key={g.id} variant="outline" className="text-xs">{g.name}</Badge>
@@ -339,9 +338,9 @@ export function UsersAndRolesTab() {
                     </TableCell>
                     <TableCell>
                       {u.banned ? (
-                        <Badge variant="destructive" className="text-xs">מושהה</Badge>
+                        <StatusChip tone="critical" icon={Ban}>מושהה</StatusChip>
                       ) : (
-                        <Badge className="bg-success/10 text-success border-success/20 text-xs">פעיל</Badge>
+                        <StatusChip tone="success">פעיל</StatusChip>
                       )}
                     </TableCell>
                     <TableCell>

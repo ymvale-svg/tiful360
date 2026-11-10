@@ -6,7 +6,9 @@ import { Card } from "@/components/ui/card";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileText, MapPin, RefreshCw, Users } from "lucide-react";
+import { FileText, LogIn, LogOut, MapPin, RefreshCw, Users } from "lucide-react";
+import { StateView } from "@/components/feedback/StateView";
+import { StatusChip } from "@/components/feedback/StatusChip";
 import { cn } from "@/lib/utils";
 import { useSearchParams } from "react-router-dom";
 import { AttendanceLocationReport } from "@/components/attendance/AttendanceLocationReport";
@@ -55,7 +57,7 @@ export default function AttendanceMap() {
 }
 
 function LiveMap() {
-  const { data: locations = [], isLoading, refetch, isFetching } = useLiveEmployeeLocations();
+  const { data: locations = [], isLoading, error, refetch, isFetching } = useLiveEmployeeLocations();
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState<string | null>(null);
 
@@ -81,7 +83,7 @@ function LiveMap() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
-            <MapPin className="w-6 h-6 text-primary" />
+            <MapPin className="w-6 h-6 text-primary" aria-hidden="true" />
             מפת נוכחות חיה
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -90,12 +92,12 @@ function LiveMap() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline" className="gap-1">
-            <span className="w-2 h-2 rounded-full bg-green-600 inline-block" />
-            בעבודה: {inCount}
+            <LogIn className="w-3.5 h-3.5 text-success" aria-hidden="true" />
+            בעבודה: <span className="tabular-nums">{inCount}</span>
           </Badge>
           <Badge variant="outline" className="gap-1">
-            <span className="w-2 h-2 rounded-full bg-gray-500 inline-block" />
-            יצא: {outCount}
+            <LogOut className="w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
+            יצא: <span className="tabular-nums">{outCount}</span>
           </Badge>
           <Button size="icon-touch" variant="outline" onClick={() => refetch()} disabled={isFetching} aria-label="רענן מיקומי עובדים">
             <RefreshCw className={cn("w-4 h-4", isFetching && "animate-spin")} aria-hidden="true" />
@@ -139,15 +141,34 @@ function LiveMap() {
           )}
 
           <div className="flex-1 overflow-y-auto space-y-2 -mx-1 px-1">
-            {isLoading && (
-              <p className="text-xs text-muted-foreground text-center py-4">טוען...</p>
-            )}
-            {!isLoading && filtered.length === 0 && (
-              <div className="text-center text-sm text-muted-foreground py-8">
-                <Users className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                אין עובדים עם מיקום היום
-              </div>
-            )}
+            <StateView
+              loading={isLoading}
+              error={error}
+              onRetry={() => refetch()}
+              label="מיקומי עובדים"
+              isEmpty={filtered.length === 0}
+              empty={{
+                title: locations.length === 0 ? "אין עובדים עם מיקום היום" : "אין עובדים שתואמים לסינון",
+                description:
+                  locations.length === 0
+                    ? "מיקום מופיע כאן אחרי שעובד מחתים עם GPS."
+                    : undefined,
+                icon: <Users className="h-6 w-6" />,
+                action:
+                  locations.length > 0 ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSearch("");
+                        setDeptFilter(null);
+                      }}
+                    >
+                      נקה סינון
+                    </Button>
+                  ) : undefined,
+              }}
+            >
             {filtered.map((loc) => (
               <div
                 key={loc.employee_id}
@@ -160,18 +181,13 @@ function LiveMap() {
                       {loc.role}{loc.department && ` • ${loc.department}`}
                     </div>
                   </div>
-                  <span
-                    className={cn(
-                      "text-[0.8125rem] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap",
-                      loc.direction === "in"
-                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                        : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400",
-                    )}
-                  >
-                    {loc.direction === "in" ? "בעבודה" : "יצא"}
-                  </span>
+                  {loc.direction === "in" ? (
+                    <StatusChip tone="success" icon={LogIn}>בעבודה</StatusChip>
+                  ) : (
+                    <StatusChip tone="neutral" icon={LogOut}>יצא</StatusChip>
+                  )}
                 </div>
-                <div className="text-[0.8125rem] text-muted-foreground mt-1 flex items-center justify-between">
+                <div className="text-[0.8125rem] text-muted-foreground mt-1 flex items-center justify-between tabular-nums">
                   <span>
                     {new Date(loc.punch_at).toLocaleTimeString("he-IL", {
                       hour: "2-digit",
@@ -182,6 +198,7 @@ function LiveMap() {
                 </div>
               </div>
             ))}
+            </StateView>
           </div>
         </Card>
 

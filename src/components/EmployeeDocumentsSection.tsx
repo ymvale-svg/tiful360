@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FileText, Upload, Trash2, Download, AlertCircle, Calendar, Eye } from "lucide-react";
 import { DocumentPreviewDialog } from "@/components/DocumentPreviewDialog";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,7 @@ interface Props {
 }
 
 export function EmployeeDocumentsSection({ employeeId }: Props) {
-  const { data: documents, isLoading } = useEmployeeDocuments(employeeId);
+  const { data: documents, isLoading, error: documentsError } = useEmployeeDocuments(employeeId);
   const upload = useUploadEmployeeDocument();
   const del = useDeleteEmployeeDocument();
   const { toast } = useToast();
@@ -43,10 +43,10 @@ export function EmployeeDocumentsSection({ employeeId }: Props) {
     setFile(null); setDocType("other"); setLabel(""); setExpiryDate(""); setNotes(""); setShowForm(false);
   };
 
-  const handleDrop = async (e: React.DragEvent) => {
+  const handleDrop = async (e: DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    const files = Array.from(e.dataTransfer.files ?? []);
+    const files = Array.from(e.dataTransfer?.files ?? []);
     if (!files.length) return;
     const failed: string[] = [];
     for (const f of files) {
@@ -122,6 +122,27 @@ export function EmployeeDocumentsSection({ employeeId }: Props) {
       },
     });
 
+  // Dropping files anywhere on the card is a mouse shortcut for "העלה מסמך" (the keyboard path).
+  // Listeners are attached natively so the card keeps its region semantics.
+  const sectionRef = useRef<HTMLElement>(null);
+  const dropRef = useRef(handleDrop);
+  dropRef.current = handleDrop;
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const onOver = (e: DragEvent) => { e.preventDefault(); setIsDragging(true); };
+    const onLeave = (e: DragEvent) => { e.preventDefault(); setIsDragging(false); };
+    const onDrop = (e: DragEvent) => { void dropRef.current(e); };
+    el.addEventListener("dragover", onOver);
+    el.addEventListener("dragleave", onLeave);
+    el.addEventListener("drop", onDrop);
+    return () => {
+      el.removeEventListener("dragover", onOver);
+      el.removeEventListener("dragleave", onLeave);
+      el.removeEventListener("drop", onDrop);
+    };
+  }, []);
+
   const fmtSize = (bytes: number | null) => {
     if (!bytes) return "";
     if (bytes < 1024) return `${bytes} B`;
@@ -132,18 +153,17 @@ export function EmployeeDocumentsSection({ employeeId }: Props) {
   const typeLabel = (t: string) => EMPLOYEE_DOCUMENT_TYPES.find((d) => d.value === t)?.label ?? t;
 
   return (
-    <div
+    <section
+      aria-labelledby={`employee-docs-title-${employeeId}`}
       className={cn(
         "bg-card rounded-xl border border-border/50 shadow-card p-4 sm:p-6 space-y-4 transition-colors",
         isDragging && "border-primary border-2 bg-primary/5"
       )}
-      onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-      onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
-      onDrop={handleDrop}
+      ref={sectionRef}
     >
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <h2 className="text-base font-semibold flex items-center gap-2">
-          <FileText className="w-4 h-4 text-primary" />
+        <h2 id={`employee-docs-title-${employeeId}`} className="text-base font-semibold flex items-center gap-2">
+          <FileText className="w-4 h-4 text-primary" aria-hidden="true" />
           מסמכים
           {documents && documents.length > 0 && (
             <span className="text-xs text-muted-foreground font-normal">({documents.length})</span>
@@ -152,7 +172,7 @@ export function EmployeeDocumentsSection({ employeeId }: Props) {
         </h2>
         {!showForm && (
           <Button size="sm" className="gap-1.5" onClick={() => setShowForm(true)}>
-            <Upload className="w-4 h-4" />
+            <Upload className="w-4 h-4" aria-hidden="true" />
             העלה מסמך
           </Button>
         )}
@@ -198,6 +218,8 @@ export function EmployeeDocumentsSection({ employeeId }: Props) {
 
       {isLoading ? (
         <p role="status" className="text-xs text-muted-foreground text-center py-4">טוען מסמכים…</p>
+      ) : documentsError ? (
+        <p role="alert" className="text-xs text-destructive-text text-center py-4">לא הצלחנו לטעון את המסמכים. רעננו את הדף ונסו שוב.</p>
       ) : !documents || documents.length === 0 ? (
         <p className="text-xs text-muted-foreground text-center py-4">אין מסמכים בתיק העובד</p>
       ) : (
@@ -222,12 +244,12 @@ export function EmployeeDocumentsSection({ employeeId }: Props) {
                       {typeLabel(doc.document_type)}
                     </span>
                     {isExpired && (
-                      <span className="px-1.5 py-0.5 rounded bg-destructive/10 text-destructive text-xs flex items-center gap-1">
+                      <span className="px-1.5 py-0.5 rounded bg-destructive/10 text-destructive-text text-xs flex items-center gap-1">
                         <AlertCircle className="w-3 h-3" aria-hidden="true" /> פג תוקף
                       </span>
                     )}
                     {isWarning && (
-                      <span className="px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 text-xs flex items-center gap-1">
+                      <span className="px-1.5 py-0.5 rounded bg-warning/10 text-warning-text text-xs flex items-center gap-1">
                         <Calendar className="w-3 h-3" aria-hidden="true" /> פג בעוד {daysLeft} ימים
                       </span>
                     )}
@@ -262,6 +284,6 @@ export function EmployeeDocumentsSection({ employeeId }: Props) {
         fileName={preview?.fileName ?? ""}
         title={preview?.name ?? ""}
       />
-    </div>
+    </section>
   );
 }
