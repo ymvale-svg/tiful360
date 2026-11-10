@@ -41,6 +41,11 @@
 
     --info: 199 89% 48%;
     --info-foreground: 0 0% 100%;
+    /* Text-strength status colours: 4.5:1 on background/card (MASTER.md). */
+    --success-text: 142 72% 26%;
+    --warning-text: 30 90% 30%;
+    --info-text: 200 90% 30%;
+    --destructive-text: 0 72% 40%;
 
     /* Breadcrumb / hierarchy links — each level has its own frame color */
     --link-back: 265 55% 48%;
@@ -110,6 +115,10 @@
     --warning: 38 85% 55%;
     --warning-foreground: 38 60% 10%;
     --info: 199 80% 55%;
+    --success-text: 142 60% 60%;
+    --warning-text: 38 90% 62%;
+    --info-text: 199 85% 65%;
+    --destructive-text: 0 85% 70%;
     --info-foreground: 199 60% 10%;
 
     --link-back: 265 65% 72%;
@@ -343,4 +352,16 @@
   .dark .portal-tile--green  { --tile: 140 50% 60%; --tile-bg: 140 30% 13%; }
   .dark .portal-tile--rose   { --tile: 332 65% 72%; --tile-bg: 332 35% 16%; }
   .dark .portal-tile--indigo { --tile: 232 70% 74%; --tile-bg: 232 35% 17%; }
+}
+
+/* MASTER.md: everything respects prefers-reduced-motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
