@@ -9,6 +9,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAccessSystems, useGenerateAccessProtocol, useHeldGrants, useRequestRevocation } from "@/hooks/useSystemAccess";
 import { buildMatrix, bySystem, departmentsOf, filterMatrix, accessTarget } from "@/domain/systemAccess/matrix";
 import { formatIsraelDateTime } from "@/domain/systemAccess/protocol";
+import { unusualGrant } from "@/domain/suggestions/peers";
+import { useEmployees } from "@/hooks/useData";
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 const selectClass = "min-h-10 px-2 bg-card border border-border rounded-lg text-sm";
@@ -28,6 +30,13 @@ export function MatrixTab() {
   const [department, setDepartment] = useState("");
   const [systemId, setSystemId] = useState("");
   const [protocolFor, setProtocolFor] = useState<string | null>(null);
+  const [unusualOnly, setUnusualOnly] = useState(false);
+  const { data: employees = [] } = useEmployees();
+  // Access no peer in the same role (and department) holds: what a periodic review looks at first.
+  const unusual = useMemo(
+    () => new Set(grants.filter((g) => unusualGrant(g, employees, grants)).map((g) => g.id)),
+    [grants, employees],
+  );
 
   const matrix = useMemo(() => buildMatrix(grants), [grants]);
   const departments = useMemo(() => departmentsOf(matrix), [matrix]);
@@ -36,13 +45,15 @@ export function MatrixTab() {
     () => systems.filter((s) => s.is_active || grants.some((g) => g.system_id === s.id)),
     [systems, grants],
   );
-  const rows = filterMatrix(matrix, { query, department: department || null, systemId: view === "employee" ? systemId || null : null });
+  const rows = filterMatrix(matrix, { query, department: department || null, systemId: view === "employee" ? systemId || null : null })
+    .filter((r) => !unusualOnly || Object.values(r.cells).flat().some((c) => unusual.has(c.grantId)));
   const selectedSystem = systemId || columns[0]?.id || "";
   const systemRows = useMemo(
     () => (view === "system" && selectedSystem ? bySystem(grants, selectedSystem) : [])
       .filter((r) => (!query.trim() || (r.grant.employees?.full_name ?? "").includes(query.trim()))
-        && (!department || r.grant.employees?.department === department)),
-    [view, selectedSystem, grants, query, department],
+        && (!department || r.grant.employees?.department === department)
+        && (!unusualOnly || unusual.has(r.grant.id))),
+    [view, selectedSystem, grants, query, department, unusualOnly, unusual],
   );
 
   const makeProtocol = async (employeeId: string, name: string) => {
@@ -96,6 +107,15 @@ export function MatrixTab() {
           {view === "employee" && <option value="">כל המערכות</option>}
           {columns.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
+        <Button
+          size="sm"
+          variant={unusualOnly ? "default" : "outline"}
+          aria-pressed={unusualOnly}
+          onClick={() => setUnusualOnly((v) => !v)}
+          title="הרשאות שאף עובד אחר באותו תפקיד ומחלקה לא מחזיק"
+        >
+          רק חריגים ({unusual.size})
+        </Button>
       </div>
 
       <StateView
@@ -136,11 +156,15 @@ export function MatrixTab() {
                           {(r.cells[s.id] ?? []).map((c) => (
                             <span
                               key={c.grantId}
-                              className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${c.revoking ? "bg-warning/10 text-warning line-through" : "bg-primary/10 text-primary"}`}
-                              title={c.revoking ? "ממתין לניתוק" : undefined}
+                              className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${
+                                c.revoking ? "bg-warning/10 text-warning line-through"
+                                  : unusual.has(c.grantId) ? "bg-warning/15 text-foreground ring-1 ring-warning/50"
+                                  : "bg-primary/10 text-primary"}`}
+                              title={c.revoking ? "ממתין לניתוק" : unusual.has(c.grantId) ? "חריג: אף עובד דומה לא מחזיק הרשאה זו" : undefined}
                             >
                               {c.label}
                               {c.revoking && <span className="sr-only"> (ממתין לניתוק)</span>}
+                              {!c.revoking && unusual.has(c.grantId) && <span className="sr-only"> (חריג לתפקיד)</span>}
                             </span>
                           ))}
                         </div>
@@ -199,6 +223,7 @@ export function MatrixTab() {
                     <td className="py-2 px-3">
                       {accessTarget(g)}
                       {revoking && <span className="ms-2 text-xs text-warning">ממתין לניתוק</span>}
+                      {!revoking && unusual.has(g.id) && <span className="ms-2 text-xs text-warning">חריג לתפקיד</span>}
                     </td>
                     <td className="py-2 px-3 tabular-nums whitespace-nowrap">{formatIsraelDateTime(g.effective_from)}</td>
                     <td className="py-2 px-3 whitespace-nowrap">

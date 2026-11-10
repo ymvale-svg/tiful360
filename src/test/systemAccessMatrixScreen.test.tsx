@@ -20,6 +20,13 @@ const GRANTS = [
 const mutation = (fn: ReturnType<typeof vi.fn>) => ({ mutate: fn, mutateAsync: fn, isPending: false });
 
 vi.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast }) }));
+const PEOPLE = [
+  { id: "e1", role: "מהנדס", department: "הנדסה", status: "active" },
+  { id: "e2", role: "חשבת", department: "כספים", status: "active" },
+  { id: "e3", role: "מהנדס", department: "הנדסה", status: "active" },
+  { id: "e4", role: "מהנדס", department: "הנדסה", status: "active" },
+];
+vi.mock("@/hooks/useData", () => ({ useEmployees: () => ({ data: PEOPLE }) }));
 vi.mock("@/hooks/useAuth", () => ({ useAuth: () => ({ hasRole: (r: string) => r === "hr" }) }));
 vi.mock("@/hooks/useSystemAccess", () => ({
   useHeldGrants: () => ({ data: GRANTS, isLoading: false, error: null, refetch: vi.fn() }),
@@ -65,5 +72,16 @@ describe("access matrix screen", () => {
     fireEvent.click(within(dana).getByRole("button", { name: /נתק/ }));
     fireEvent.click(await screen.findByRole("button", { name: "פתח בקשת ניתוק" }));
     await waitFor(() => expect(revoke).toHaveBeenCalledWith({ employeeId: "e2", grantIds: ["g3"], note: "ניתוק ממטריצת ההרשאות" }));
+  });
+});
+
+describe("unusual access in the matrix", () => {
+  it("marks access no peer holds and filters to it", () => {
+    render(<ConfirmProvider><MatrixTab /></ConfirmProvider>);
+    // e1's peers (e3, e4) hold nothing: both of e1's grants are unusual; e2 has no peers.
+    expect(screen.getByRole("button", { name: /רק חריגים \(2\)/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /רק חריגים/ }));
+    expect(screen.queryByRole("rowheader", { name: /דנה לוי/ })).toBeNull();
+    expect(screen.getAllByText("(חריג לתפקיד)").length).toBe(1);
   });
 });

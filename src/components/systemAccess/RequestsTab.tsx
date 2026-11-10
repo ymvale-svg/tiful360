@@ -13,6 +13,7 @@ import {
   useAccessRequests,
   useDispatchAccess,
   useGenerateAccessProtocol,
+  useHeldGrants,
   useProvisionTiful360,
   useRequestAccess,
   useResolveGrant,
@@ -36,6 +37,7 @@ import {
 } from "@/domain/systemAccess/picks";
 import { GRANT_STATUS_LABEL, grantLabel, type AccessGrant, type AccessRequest, type GrantStatus } from "@/domain/systemAccess/types";
 import type { GrantAction } from "@/services/systemAccess";
+import { PEER_BASIS_LABEL, unusualGrant, type PeerEmployee } from "@/domain/suggestions/peers";
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 const inputClass = "w-full min-h-10 px-3 bg-card border border-border rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30";
@@ -62,6 +64,9 @@ export function RequestsTab() {
   const [mineOnly, setMineOnly] = useState(!actor.isManager);
   const [newOpen, setNewOpen] = useState(false);
   const { data: requests = [], isLoading, error, refetch } = useAccessRequests(status);
+  // For the "unusual for the role" warning: who holds what, and everyone's role and department.
+  const { data: heldGrants = [] } = useHeldGrants();
+  const { data: employees = [] } = useEmployees();
 
   const shown = useMemo(
     () =>
@@ -103,7 +108,7 @@ export function RequestsTab() {
         }}
       >
         <div className="space-y-3">
-          {shown.map((r) => <RequestCard key={r.id} request={r} actor={actor} />)}
+          {shown.map((r) => <RequestCard key={r.id} request={r} actor={actor} employees={employees} heldGrants={heldGrants} />)}
         </div>
       </StateView>
 
@@ -112,7 +117,12 @@ export function RequestsTab() {
   );
 }
 
-function RequestCard({ request, actor }: { request: AccessRequest; actor: Actor }) {
+function RequestCard({ request, actor, employees, heldGrants }: {
+  request: AccessRequest;
+  actor: Actor;
+  employees: PeerEmployee[];
+  heldGrants: AccessGrant[];
+}) {
   const { toast } = useToast();
   const dispatch = useDispatchAccess();
   const provision = useProvisionTiful360();
@@ -235,6 +245,14 @@ function RequestCard({ request, actor }: { request: AccessRequest; actor: Actor 
                     {label}
                     {g.external_username && <div className="text-xs font-normal text-muted-foreground">משתמש: <span dir="ltr">{g.external_username}</span></div>}
                     {g.note && <div className="text-xs font-normal text-muted-foreground">{g.note}</div>}
+                    {!revoke && (g.status === "requested" || g.status === "dispatched") && (() => {
+                      const unusual = unusualGrant(g, employees, heldGrants);
+                      return unusual && (
+                        <div className="text-xs font-normal text-warning mt-0.5">
+                          חריג: אף אחד מ-{unusual.peers} העובדים {PEER_BASIS_LABEL[unusual.basis]} לא מחזיק הרשאה זו
+                        </div>
+                      );
+                    })()}
                     {g.rejection_reason && <div className="text-xs font-normal text-destructive">סיבת דחייה: {g.rejection_reason}</div>}
                   </th>
                   <td className="py-2 px-2 tabular-nums whitespace-nowrap">

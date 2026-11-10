@@ -19,11 +19,12 @@ import { appendOnboardingAudit } from "@/hooks/useOnboardingProtocol";
 import { useQueryClient } from "@tanstack/react-query";
 import { groupByTrack, itemTypeForCategory, showInOnboarding, TRACK_HINT, TRACK_LABEL } from "@/domain/onboarding/tracks";
 import { useAuth } from "@/hooks/useAuth";
-import { useAccessSystems } from "@/hooks/useSystemAccess";
+import { useAccessSystems, useHeldGrants } from "@/hooks/useSystemAccess";
+import { PEER_BASIS_LABEL, peersOf, suggestAccess, suggestEquipment } from "@/domain/suggestions/peers";
 import { AccessPicker } from "@/components/systemAccess/AccessPicker";
 import { defaultEffectiveLocal, itemsToPicks, picksToItems, type PickState } from "@/domain/systemAccess/picks";
 import { resolveOwnerRole, OWNER_ROLE_OPTIONS, OWNER_ROLE_LABEL } from "@/lib/domainConfig";
-import { Send, Copy, UserPlus, CalendarDays, AlertCircle, X } from "lucide-react";
+import { Send, Copy, UserPlus, CalendarDays, AlertCircle, X, Sparkles } from "lucide-react";
 import { EmployeeSetupWizard } from "@/components/EmployeeSetupWizard";
 import { SendToOpsDialog } from "@/components/onboarding/SendToOpsDialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -65,6 +66,7 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
   // With systems defined in the access catalog, access is picked there instead of from asset categories.
   const useAccessCatalog = accessSystems.some((s) => s.is_active);
   const [accessPicks, setAccessPicks] = useState<PickState>({});
+  const { data: heldGrants = [] } = useHeldGrants();
 
   const [employeeId, setEmployeeId] = useState("");
   const [selected, setSelected] = useState<Record<string, SelectedEntry>>({});
@@ -277,6 +279,53 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
     });
     setSelected(next);
     toast({ title: "הועתק", description: `נבחרו ${theirs.length} פריטים מהעובד שנבחר` });
+  };
+
+  // What employees in the same role (and department) hold today, merged into the selection.
+  const suggestFromPeers = () => {
+    if (!employee) return;
+    const group = peersOf(employee, employees);
+    if (!group) {
+      toast({ title: "אין מספיק עובדים דומים", description: "צריך לפחות שני עובדים פעילים באותו תפקיד או באותה מחלקה." });
+      return;
+    }
+    const visible = new Set(blocks.flatMap((b) => b.cats.map((c: { id: string }) => c.id)));
+    const equipment = suggestEquipment(group.peerIds, assets).filter((s) => visible.has(s.key.category_id));
+    const next: Record<string, SelectedEntry> = { ...selected };
+    let addedItems = 0;
+    for (const { key } of equipment) {
+      const entry = next[key.category_id] ?? { groupIds: [], notes: {}, owners: {}, models: {} };
+      const cat = categories.find((c) => c.id === key.category_id);
+      if (key.group_id && !entry.groupIds.includes(key.group_id)) {
+        entry.groupIds = [...entry.groupIds, key.group_id];
+        entry.owners = { ...entry.owners, [key.group_id]: resolveOwnerRole(groups.find((g) => g.id === key.group_id), cat) };
+        addedItems++;
+      } else if (!next[key.category_id]) {
+        addedItems++;
+      }
+      next[key.category_id] = entry;
+    }
+    setSelected(next);
+
+    let addedAccess = 0;
+    if (useAccessCatalog) {
+      const activeSystems = new Set(accessSystems.filter((s) => s.is_active).map((s) => s.id));
+      const picks: PickState = { ...accessPicks };
+      for (const { key } of suggestAccess(group.peerIds, heldGrants)) {
+        if (!activeSystems.has(key.system_id)) continue;
+        const entry = picks[key.system_id] ?? { groupIds: [], resourceIds: [], effectiveFrom: accessFrom };
+        if (key.group_id && !entry.groupIds.includes(key.group_id)) entry.groupIds = [...entry.groupIds, key.group_id];
+        else if (key.resource_id && !entry.resourceIds.includes(key.resource_id)) entry.resourceIds = [...entry.resourceIds, key.resource_id];
+        else if (picks[key.system_id]) continue;
+        picks[key.system_id] = entry;
+        addedAccess++;
+      }
+      setAccessPicks(picks);
+    }
+    toast({
+      title: addedItems + addedAccess ? "נוספה הצעה לפי עובדים דומים" : "לא נמצא מה להוסיף",
+      description: `${addedItems} פריטים ו-${addedAccess} הרשאות שמחזיקים לפחות חצי מ-${group.peerIds.length} העובדים ${PEER_BASIS_LABEL[group.basis]}. אפשר להסיר כל אחד.`,
+    });
   };
 
   const buildItems = (): NewOnboardingItem[] =>
@@ -506,6 +555,17 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
                   options={(employees as any[]).map((e) => ({ value: e.id, label: e.full_name }))}
                   placeholder="בחר עובד להעתקה..."
                 />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="mt-2 gap-1.5"
+                  onClick={suggestFromPeers}
+                  disabled={!employee}
+                  title="מוסיף ציוד והרשאות שמחזיקים רוב העובדים באותו תפקיד ומחלקה"
+                >
+                  <Sparkles className="w-4 h-4" /> הצע לי סט לפי עובדים דומים
+                </Button>
               </div>
             </div>
 

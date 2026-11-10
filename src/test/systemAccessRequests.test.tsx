@@ -31,13 +31,16 @@ vi.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast: vi.fn() }) }));
 vi.mock("@/hooks/useAuth", () => ({
   useAuth: () => ({ ...auth, hasRole: (r: string) => auth.roles.includes(r) }),
 }));
-vi.mock("@/hooks/useData", () => ({ useEmployees: () => ({ data: [] }) }));
+let peopleList: Array<{ id: string; role: string; department: string; status: string; full_name: string }> = [];
+let held: unknown[] = [];
+vi.mock("@/hooks/useData", () => ({ useEmployees: () => ({ data: peopleList }) }));
 vi.mock("@/hooks/useSystemAccess", () => ({
   useAccessRequests: () => ({ data: [REQUEST], isLoading: false, error: null, refetch: vi.fn() }),
   useDispatchAccess: () => mutation(dispatch),
   useResolveGrant: () => mutation(resolve),
   useProvisionTiful360: () => mutation(provision),
   useGenerateAccessProtocol: () => mutation(vi.fn()),
+  useHeldGrants: () => ({ data: held }),
   useRequestAccess: () => mutation(vi.fn()),
   useAccessSystems: () => ({ data: [] }),
   useAccessPickerCatalog: () => ({ data: { groups: [], resources: [] } }),
@@ -125,5 +128,27 @@ describe("revocation requests", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "סימון כנותק" }));
     await waitFor(() => expect(resolve).toHaveBeenCalledWith(expect.objectContaining({ grantId: "g5", action: "done" })));
     expect(screen.getByRole("button", { name: /שלח לאחראי לניתוק/ })).toBeTruthy();
+  });
+});
+
+describe("unusual access warning", () => {
+  it("warns when no peer in the same role and department holds the requested access", () => {
+    auth = { user: { id: "manager" }, roles: ["admin"] };
+    REQUEST.kind = "grant";
+    REQUEST.system_access_grants = [
+      grant("g6", "פריוריטי", "admin", "requested", { system_id: "prio", resource_id: "fin" }) as unknown as AccessRequest["system_access_grants"][number],
+      grant("g7", "כונן P", "it_manager", "requested", { system_id: "p", group_id: "eng" }) as unknown as AccessRequest["system_access_grants"][number],
+    ];
+    peopleList = [
+      { id: "e1", role: "מהנדס ביצוע", department: "הנדסה", status: "onboarding", full_name: "אחמד" },
+      { id: "p1", role: "מהנדס ביצוע", department: "הנדסה", status: "active", full_name: "א" },
+      { id: "p2", role: "מהנדס ביצוע", department: "הנדסה", status: "active", full_name: "ב" },
+    ];
+    held = [{ employee_id: "p1", system_id: "p", group_id: "eng", resource_id: null }];
+    render(<ConfirmProvider><RequestsTab /></ConfirmProvider>);
+    expect(within(row("פריוריטי")).getByText(/חריג: אף אחד מ-2 העובדים באותו תפקיד ובאותה מחלקה/)).toBeTruthy();
+    expect(within(row("כונן P")).queryByText(/חריג/)).toBeNull();
+    peopleList = [];
+    held = [];
   });
 });
