@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { formatDateTimeDMY } from "@/lib/utils";
 import { Megaphone, Plus, Pencil, Trash2, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -11,6 +10,7 @@ import { IconButton } from "@/components/feedback/IconButton";
 import { useConfirm } from "@/components/feedback/ConfirmDialog";
 import { useDirtyGuard } from "@/components/feedback/useDirtyGuard";
 import { StateView } from "@/components/feedback/StateView";
+import { StatusChip, type StatusTone } from "@/components/feedback/StatusChip";
 import { useToast } from "@/hooks/use-toast";
 import {
   useCompanyAnnouncements, useAnnouncementMutations, useSignatureDefaults,
@@ -24,10 +24,10 @@ function toLocalInput(iso: string | null): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-const STATUS_META: Record<string, { label: string; className: string }> = {
-  scheduled: { label: "מתוזמנת", className: "bg-amber-500/10 text-amber-600 border-amber-500/20" },
-  active: { label: "פעילה", className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
-  expired: { label: "פגה", className: "bg-muted text-muted-foreground border-border" },
+const STATUS_META: Record<string, { label: string; tone: StatusTone }> = {
+  scheduled: { label: "מתוזמנת", tone: "warning" },
+  active: { label: "פעילה", tone: "success" },
+  expired: { label: "פגה", tone: "neutral" },
 };
 
 /**
@@ -160,7 +160,7 @@ export function AnnouncementsManager() {
                 <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-semibold text-sm">{a.title}</h3>
-                    <Badge variant="outline" className={status.className}>{status.label}</Badge>
+                    <StatusChip tone={status.tone}>{status.label}</StatusChip>
                   </div>
                   <div className="flex items-center gap-1">
                     <IconButton label={`ערוך את ההודעה ${a.title}`} onClick={() => openEdit(a)}>

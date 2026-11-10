@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Clock4 } from "lucide-react";
+import { Clock4, PartyPopper } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { StatusChip } from "@/components/feedback/StatusChip";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 
@@ -23,7 +25,7 @@ export function AttendanceMissingCard() {
   const { activeCompanyId } = useCompany();
   const date = todayIso();
 
-  const { data: rows = [], isLoading } = useQuery<GapRow[]>({
+  const { data: rows = [], isLoading, error, refetch } = useQuery<GapRow[]>({
     queryKey: ["attendance-gaps-today", activeCompanyId, date],
     queryFn: async () => {
       if (!activeCompanyId) return [];
@@ -42,16 +44,24 @@ export function AttendanceMissingCard() {
     <div className="bg-card rounded-xl border border-border/50 shadow-card">
       <div className="p-5 border-b border-border/50 flex items-center justify-between">
         <h2 className="font-semibold flex items-center gap-2">
-          <Clock4 className="w-4 h-4 text-warning" />
+          <Clock4 className="w-4 h-4 text-warning" aria-hidden="true" />
           חוסרי החתמה היום
         </h2>
         <Link to="/payroll" className="text-xs text-primary hover:underline">הכל</Link>
       </div>
       <div className="divide-y divide-border/50 max-h-80 overflow-y-auto">
         {isLoading ? (
-          <div className="p-6 text-center text-sm text-muted-foreground">טוען...</div>
+          <div className="p-6 text-center text-sm text-muted-foreground" role="status">טוען...</div>
+        ) : error ? (
+          <div className="p-6 text-center text-sm" role="alert">
+            <p className="font-medium">לא הצלחנו לטעון את חוסרי ההחתמה</p>
+            <Button variant="outline" size="sm" className="mt-2" onClick={() => { void refetch(); }}>נסו שוב</Button>
+          </div>
         ) : rows.length === 0 ? (
-          <div className="p-6 text-center text-sm text-muted-foreground">אין חוסרי החתמה היום 🎉</div>
+          <div className="p-6 flex items-center justify-center gap-1.5 text-sm text-muted-foreground">
+            אין חוסרי החתמה היום
+            <PartyPopper className="w-4 h-4 text-primary" aria-hidden="true" />
+          </div>
         ) : (
           rows.slice(0, 8).map((r) => (
             <Link
@@ -65,9 +75,9 @@ export function AttendanceMissingCard() {
                   {r.gap_type === "empty" ? "ללא החתמה" : `החתמה חלקית · ${r.punch_times}`}
                 </p>
               </div>
-              <span className="text-xs px-2 py-1 rounded-md bg-warning/10 text-warning shrink-0">
+              <StatusChip tone="warning" className="shrink-0">
                 {r.gap_type === "empty" ? "חסר" : "חלקי"}
-              </span>
+              </StatusChip>
             </Link>
           ))
         )}

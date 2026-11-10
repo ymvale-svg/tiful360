@@ -49,6 +49,7 @@ export function CustomizeDashboardDialog({
             const hidden = prefs.hidden.includes(key);
             const wide = prefs.wide.includes(key);
             return (
+              // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- drag reorder only; the row's arrow buttons do the same from the keyboard
               <div
                 key={key}
                 draggable
@@ -74,18 +75,18 @@ export function CustomizeDashboardDialog({
                       className="text-muted-foreground hover:text-foreground disabled:opacity-30"
                       disabled={index === 0}
                       onClick={() => shift(key, -1)}
-                      aria-label="הזז למעלה"
+                      aria-label={`הזז למעלה: ${WIDGET_LABELS[key]}`}
                     >
-                      <ChevronUp className="w-3.5 h-3.5" />
+                      <ChevronUp className="w-3.5 h-3.5" aria-hidden="true" />
                     </button>
                     <button
                       type="button"
                       className="text-muted-foreground hover:text-foreground disabled:opacity-30"
                       disabled={index === widgets.length - 1}
                       onClick={() => shift(key, 1)}
-                      aria-label="הזז למטה"
+                      aria-label={`הזז למטה: ${WIDGET_LABELS[key]}`}
                     >
-                      <ChevronDown className="w-3.5 h-3.5" />
+                      <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" />
                     </button>
                   </div>
                   <span className="text-sm font-medium truncate">{WIDGET_LABELS[key]}</span>

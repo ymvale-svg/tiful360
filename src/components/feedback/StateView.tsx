@@ -15,7 +15,7 @@ interface EmptyProps {
   className?: string;
 }
 
-const TILE = "grid h-12 w-12 place-items-center rounded-xl bg-card text-muted-foreground shadow-lg ring-1 ring-border transition-transform duration-500 group-hover:duration-200 motion-reduce:transition-none";
+const TILE = "grid h-12 w-12 place-items-center rounded-xl bg-card text-muted-foreground shadow-lg ring-1 ring-border transition-transform duration-200 motion-reduce:transition-none";
 
 /**
  * An empty state that says why the list is empty and what to do next. The fanned icon cards are

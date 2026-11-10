@@ -38,7 +38,7 @@ export function AppLayout() {
       <SkipLink />
       <AppSidebar mobileOpen={mobileMenuOpen} onMobileOpenChange={setMobileMenuOpen} />
       
-      <div className="min-h-screen min-w-0 overflow-x-hidden transition-[margin] duration-300" style={{ marginRight: "var(--sidebar-width, 240px)" }}>
+      <div className="min-h-screen min-w-0 overflow-x-hidden transition-[margin] duration-200" style={{ marginRight: "var(--sidebar-width, 240px)" }}>
         <header role="banner" className="sticky top-0 z-30 h-16 bg-card/80 backdrop-blur-md border-b border-border flex items-center justify-between px-3 sm:px-6 gap-2">
           <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
             <button
@@ -78,7 +78,7 @@ export function AppLayout() {
               </div>
               <div className="text-right hidden sm:block max-w-[140px]">
                 <p className="text-sm font-medium truncate">{profile?.display_name || user?.email}</p>
-                <p className="text-[11px] text-muted-foreground truncate">{roleLabel}</p>
+                <p className="text-xs text-muted-foreground truncate">{roleLabel}</p>
               </div>
             </div>
             <button

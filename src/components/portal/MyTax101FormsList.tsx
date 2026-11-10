@@ -20,8 +20,8 @@ export function MyTax101FormsList({ employeeId }: { employeeId: string | undefin
         const isSigned = f.status !== "pending";
         return (
           <div key={f.id} className="bg-muted/40 rounded-lg p-3 flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isSigned ? "bg-success/15" : "bg-amber-100 dark:bg-amber-950/40"}`}>
-              {isSigned ? <CheckCircle2 className="w-4 h-4 text-success" aria-hidden="true" /> : <Clock className="w-4 h-4 text-amber-600" aria-hidden="true" />}
+            <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isSigned ? "bg-success/15" : "bg-warning/15"}`}>
+              {isSigned ? <CheckCircle2 className="w-4 h-4 text-success" aria-hidden="true" /> : <Clock className="w-4 h-4 text-warning" aria-hidden="true" />}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium">טופס 101 — שנת {f.tax_year}</p>

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { Wrench, Clock, AlertTriangle, ChevronLeft, Send, ListTodo } from "lucide-react";
+import { Wrench, Clock, AlertTriangle, ChevronLeft, Send, ListTodo, CircleDot, Loader } from "lucide-react";
+import { StatusChip } from "@/components/feedback/StatusChip";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useITTickets } from "@/hooks/useData";
@@ -20,7 +21,7 @@ const priorityDot = {
 };
 
 export function OpenTicketsCard() {
-  const { data: tickets, isLoading } = useITTickets();
+  const { data: tickets, isLoading, error, refetch } = useITTickets();
   const queryClient = useQueryClient();
   const [sendingId, setSendingId] = useState<string | null>(null);
   /** The ticket whose "send to IT" note dialog is open. */
@@ -74,7 +75,13 @@ export function OpenTicketsCard() {
         {isLoading && (
           <div className="p-6 text-center text-muted-foreground text-sm">טוען קריאות...</div>
         )}
-        {!isLoading && open.length === 0 && (
+        {!isLoading && error && (
+          <div className="p-6 text-center text-sm" role="alert">
+            <p className="font-medium">לא הצלחנו לטעון את הקריאות</p>
+            <Button variant="outline" size="sm" className="mt-2" onClick={() => { void refetch(); }}>נסו שוב</Button>
+          </div>
+        )}
+        {!isLoading && !error && open.length === 0 && (
           <div className="p-6 text-center text-muted-foreground text-sm">אין קריאות פתוחות</div>
         )}
         {open.map((ticket: any) => (
@@ -93,30 +100,21 @@ export function OpenTicketsCard() {
                 </p>
               </div>
               <div className="flex flex-col items-end gap-1.5 shrink-0">
-                <span
-                  className={cn(
-                    "text-[0.8125rem] px-1.5 py-0.5 rounded-full border",
-                    ticket.status === "in_progress"
-                      ? "bg-info/15 text-info border-info/40"
-                      : "bg-warning/15 text-warning-foreground border-warning/40",
-                  )}
+                <StatusChip
+                  tone={ticket.status === "in_progress" ? "warning" : "info"}
+                  icon={ticket.status === "in_progress" ? Loader : CircleDot}
                 >
                   {STATUS_LABELS[ticket.status] ?? ticket.status}
-                </span>
+                </StatusChip>
                 {Array.isArray(ticket.it_forwards) && ticket.it_forwards.length > 0 && (
-                  <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-info/10 text-info border border-info/30">
-                    <Send className="w-3 h-3" aria-hidden="true" />
-                    נשלח לאיש IT
-                  </span>
+                  <StatusChip tone="info" icon={Send}>נשלח לאיש IT</StatusChip>
                 )}
                 {ticket.mesimon_task_id && (
-                  <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-success/10 text-success border border-success/30">
-                    <ListTodo className="w-3 h-3" aria-hidden="true" />
-                    נשלח למשימון
-                  </span>
+                  <StatusChip tone="success" icon={ListTodo}>נשלח למשימון</StatusChip>
                 )}
                 <span className="text-[0.8125rem] text-muted-foreground flex items-center gap-1">
                   <span
+                    aria-hidden="true"
                     className={cn(
                       "w-1.5 h-1.5 rounded-full",
                       priorityDot[ticket.priority as keyof typeof priorityDot] ?? priorityDot.medium,
@@ -138,11 +136,11 @@ export function OpenTicketsCard() {
               </div>
             </div>
             {ticket.sla_deadline && (
-              <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
+              <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground tabular-nums">
                 <Clock className="w-3 h-3" aria-hidden="true" />
                 <span>יעד טיפול: {new Date(ticket.sla_deadline).toLocaleString("en-GB", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })}</span>
                 {new Date(ticket.sla_deadline) < new Date() && (
-                  <span className="inline-flex items-center gap-0.5 font-medium text-destructive">
+                  <span className="inline-flex items-center gap-0.5 font-medium text-destructive-text">
                     <AlertTriangle className="w-3 h-3" aria-hidden="true" />
                     חרג מהיעד
                   </span>

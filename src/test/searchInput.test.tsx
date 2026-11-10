@@ -6,6 +6,7 @@ import { SearchInput } from "@/components/ui/search-input";
 function Harness({ initial = "", onOuterKey }: { initial?: string; onOuterKey?: () => void }) {
   const [v, setV] = useState(initial);
   return (
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- test harness: catches keys that bubble out of the input
     <div onKeyDown={onOuterKey}>
       <SearchInput label="חיפוש עובדים" value={v} onValueChange={setV} trailing={<kbd>⌘K</kbd>} />
     </div>

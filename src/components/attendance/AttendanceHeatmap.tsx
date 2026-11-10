@@ -80,12 +80,12 @@ export function AttendanceHeatmap({ employeeId, leaves }: {
           </p>
           <div className="overflow-x-auto pb-1" aria-hidden="true">
             <div className="inline-flex gap-1">
-              <div className="flex flex-col gap-1 pt-4 text-[10px] leading-3 text-muted-foreground">
+              <div className="flex flex-col gap-1 pt-4 text-xs leading-3 text-muted-foreground">
                 {DAY_NAMES.map((d, i) => <span key={d} className={cn("h-3", i % 2 && "invisible")}>{d}</span>)}
               </div>
               {weeks.map((w, i) => (
                 <div key={w[0].date} className="flex flex-col gap-1">
-                  <span className="h-3 whitespace-nowrap text-[10px] leading-3 text-muted-foreground">{months[i]}</span>
+                  <span className="h-3 whitespace-nowrap text-xs leading-3 text-muted-foreground">{months[i]}</span>
                   {w.map((c) => (
                     <span key={c.date} title={cellTitle(c)} className={cn("h-3 w-3 rounded-[3px]", cellClass(c), c.kind === "future" && "border border-dashed border-border/50")} />
                   ))}
@@ -93,7 +93,7 @@ export function AttendanceHeatmap({ employeeId, leaves }: {
               ))}
             </div>
           </div>
-          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground" aria-hidden="true">
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground" aria-hidden="true">
             <span className="flex items-center gap-1">פחות {LEVEL.map((l) => <span key={l} className={cn("h-2.5 w-2.5 rounded-[2px]", l)} />)} יותר שעות</span>
             <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-[2px] bg-warning/60" />היעדרות מאושרת</span>
           </div>

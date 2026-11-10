@@ -197,7 +197,7 @@ export function GlobalSearch() {
       >
         <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
         <span className="flex-1 truncate text-right">חיפוש עובדים, ציוד, קריאות...</span>
-        <kbd className="hidden lg:inline rounded border border-border bg-background px-1.5 font-mono text-[11px]" dir="ltr">{isMac ? "⌘K" : "Ctrl K"}</kbd>
+        <kbd className="hidden lg:inline rounded border border-border bg-background px-1.5 font-mono text-xs" dir="ltr">{isMac ? "⌘K" : "Ctrl K"}</kbd>
       </button>
       <button
         type="button"

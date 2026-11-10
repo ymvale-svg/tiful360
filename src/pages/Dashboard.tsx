@@ -20,7 +20,9 @@ import { resolveDashboardConfig, type KpiKey, type WidgetKey } from "@/lib/dashb
 import { useDashboardPrefs, applyWidgetOrder } from "@/hooks/useDashboardPrefs";
 import { cn } from "@/lib/utils";
 import { KpiTile } from "@/components/ui/kpi-tile";
-import { EmptyState, ListSkeleton } from "@/components/feedback/StateView";
+import { ListSkeleton, StateView } from "@/components/feedback/StateView";
+import { StatusChip } from "@/components/feedback/StatusChip";
+import { Button } from "@/components/ui/button";
 import { ActivityTimeline } from "@/components/ui/activity-timeline";
 import { Skeleton } from "@/components/ui/skeleton";
 import { notificationCenter } from "@/lib/notificationCenter";
@@ -30,9 +32,9 @@ import { canAccess, hubPath, tabRoles } from "@/lib/screenAccess";
 export default function Dashboard() {
   const { roles, loading, user, isSuperAdmin } = useAuth();
   const { data: stats } = useDashboardStats();
-  const { data: alerts } = useAlerts();
+  const { data: alerts, isLoading: alertsLoading, error: alertsError, refetch: refetchAlerts } = useAlerts();
   const { data: employees } = useEmployees();
-  const { data: activityLog } = useActivityLog();
+  const { data: activityLog, isLoading: activityLoading, error: activityError, refetch: refetchActivity } = useActivityLog();
   const { data: trends } = useDashboardTrends(stats);
   const { prefs, toggleHidden, toggleWide, setOrder, reset, isCustomized } = useDashboardPrefs(user?.id);
   const [customizeOpen, setCustomizeOpen] = useState(false);
@@ -101,10 +103,18 @@ export default function Dashboard() {
       <div className="p-5 border-b border-border/50 flex items-center justify-between">
         <h2 className="font-semibold">פעילות אחרונה</h2>
       </div>
-      {activityLog && activityLog.length > 0 ? (
+      <StateView
+        loading={activityLoading}
+        error={activityError}
+        onRetry={() => { void refetchActivity(); }}
+        label="את הפעילות האחרונה"
+        isEmpty={!activityLog?.length}
+        empty={{ title: "אין פעילות עדיין", description: "שיוכים, קליטות ועזיבות יופיעו כאן." }}
+        skeleton={<ListSkeleton rows={4} />}
+      >
         <ActivityTimeline
           className="p-5"
-          items={activityLog.slice(0, 6).map((item) => ({
+          items={(activityLog ?? []).slice(0, 6).map((item) => ({
             id: item.id,
             at: item.created_at,
             icon: Clock,
@@ -114,16 +124,14 @@ export default function Dashboard() {
             tone: "primary" as const,
           }))}
         />
-      ) : (
-        <EmptyState title="אין פעילות עדיין" description="שיוכים, קליטות ועזיבות יופיעו כאן." />
-      )}
+      </StateView>
     </div>
   );
 
   const SEVERITY = {
-    critical: { label: "קריטי", icon: OctagonAlert, cls: "bg-destructive/10 text-destructive" },
-    warning: { label: "אזהרה", icon: AlertTriangle, cls: "bg-warning/15 text-warning" },
-    info: { label: "מידע", icon: Info, cls: "bg-info/10 text-info" },
+    critical: { label: "קריטי", icon: OctagonAlert, tone: "critical" },
+    warning: { label: "אזהרה", icon: AlertTriangle, tone: "warning" },
+    info: { label: "מידע", icon: Info, tone: "info" },
   } as const;
 
   const alertsWidget = (
@@ -139,9 +147,7 @@ export default function Dashboard() {
           const sev = SEVERITY[alert.severity as keyof typeof SEVERITY] ?? SEVERITY.info;
           return (
             <li key={alert.id} className="p-4 flex items-center gap-3">
-              <span className={cn("inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold", sev.cls)}>
-                <sev.icon className="h-3 w-3" aria-hidden="true" />{sev.label}
-              </span>
+              <StatusChip tone={sev.tone} icon={sev.icon} className="shrink-0">{sev.label}</StatusChip>
               <div className="flex-1 min-w-0">
                 <p className="text-sm truncate">{alert.title}</p>
                 <p className="text-xs text-muted-foreground tabular-nums">
@@ -151,7 +157,16 @@ export default function Dashboard() {
             </li>
           );
         })}
-        {(!alerts || alerts.length === 0) && (
+        {alertsLoading && (
+          <li className="p-4" role="status" aria-busy="true"><span className="sr-only">טוען התראות…</span><ListSkeleton rows={2} /></li>
+        )}
+        {alertsError && !alertsLoading && (
+          <li className="p-6 text-center text-sm" role="alert">
+            <p className="font-medium">לא הצלחנו לטעון את ההתראות</p>
+            <Button variant="outline" size="sm" className="mt-2" onClick={() => { void refetchAlerts(); }}>נסו שוב</Button>
+          </li>
+        )}
+        {!alertsLoading && !alertsError && (!alerts || alerts.length === 0) && (
           <li className="p-6 text-center text-sm">
             <p className="font-medium">אין התראות פתוחות</p>
             <p className="text-muted-foreground mt-1">תפוגות וציוד ללא שיוך יופיעו כאן.</p>
@@ -164,8 +179,8 @@ export default function Dashboard() {
   const leavingWidget = leavingEmployees.length > 0 ? (
     <div className="bg-card rounded-xl border border-destructive/20 shadow-card">
       <div className="p-5 border-b border-destructive/20 flex items-center gap-2">
-        <UserMinus className="w-4 h-4 text-destructive" />
-        <h2 className="font-semibold text-destructive">עובדים בתהליך עזיבה</h2>
+        <UserMinus className="w-4 h-4 text-destructive" aria-hidden="true" />
+        <h2 className="font-semibold text-destructive-text">עובדים בתהליך עזיבה</h2>
       </div>
       <div className="divide-y divide-border/50">
         {leavingEmployees.map((emp) => (
@@ -202,6 +217,7 @@ export default function Dashboard() {
           <p className="page-subtitle">סקירה כללית של משאבי החברה</p>
         </div>
         <button
+          type="button"
           onClick={() => setCustomizeOpen(true)}
           className={cn(
             "inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-border/60",
@@ -209,7 +225,7 @@ export default function Dashboard() {
             isCustomized && "border-primary/40 text-primary",
           )}
         >
-          <SlidersHorizontal className="w-3.5 h-3.5" />
+          <SlidersHorizontal className="w-3.5 h-3.5" aria-hidden="true" />
           התאמה אישית
         </button>
       </div>

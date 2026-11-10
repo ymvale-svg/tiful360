@@ -2,11 +2,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Plus, Wrench, Clock, CheckCircle2, CircleDot, Loader, Paperclip, MessageSquare, MapPin, Phone, ChevronLeft } from "lucide-react";
-import { cn, formatDateDMY, formatDateTimeDMY } from "@/lib/utils";
+import { formatDateDMY, formatDateTimeDMY } from "@/lib/utils";
 import { useMyServiceTickets } from "@/hooks/useServiceTickets";
 import { NewPortalTicketDialog } from "@/components/portal/NewPortalTicketDialog";
 import { StateView } from "@/components/feedback/StateView";
-import { PRIORITY_LABELS, STATUS_CLASSES, STATUS_LABELS, subjectLabel } from "@/lib/serviceTickets";
+import { StatusChip, type StatusTone } from "@/components/feedback/StatusChip";
+import { PRIORITY_LABELS, STATUS_LABELS, subjectLabel } from "@/lib/serviceTickets";
 
 interface Props {
   employeeId: string;
@@ -18,14 +19,14 @@ interface Props {
 
 const STATUS_ICONS: Record<string, typeof CheckCircle2> = { open: CircleDot, in_progress: Loader, done: CheckCircle2 };
 
-/** Status as text + icon, never colour alone. */
-function StatusChip({ status }: { status: string }) {
-  const Icon = STATUS_ICONS[status] ?? CircleDot;
+const STATUS_TONES: Record<string, StatusTone> = { open: "info", in_progress: "warning", done: "success" };
+
+/** Status as text + icon, never colour alone (the shared chip). */
+function TicketStatusChip({ status }: { status: string }) {
   return (
-    <span className={cn("inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border font-medium", STATUS_CLASSES[status])}>
-      <Icon className="w-3 h-3" aria-hidden="true" />
+    <StatusChip tone={STATUS_TONES[status] ?? "neutral"} icon={STATUS_ICONS[status] ?? CircleDot}>
       {STATUS_LABELS[status] ?? status}
-    </span>
+    </StatusChip>
   );
 }
 
@@ -73,7 +74,7 @@ export function MyTicketsTab({ employeeId, employeeName, employeePhone, showNewB
                   aria-label={`פתח קריאה ${t.ticket_code ?? ""}: ${t.title}`}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <StatusChip status={t.status} />
+                    <TicketStatusChip status={t.status} />
                     <span className="font-mono text-xs text-muted-foreground">{t.ticket_code}</span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -128,7 +129,7 @@ function TicketDetail({ ticket }: { ticket: any }) {
     <div className="space-y-5 text-right">
       <SheetHeader className="text-right space-y-2">
         <div className="flex items-center gap-2">
-          <StatusChip status={ticket.status} />
+          <TicketStatusChip status={ticket.status} />
           <span className="font-mono text-xs text-muted-foreground">{ticket.ticket_code}</span>
         </div>
         <SheetTitle className="text-lg">{ticket.title}</SheetTitle>

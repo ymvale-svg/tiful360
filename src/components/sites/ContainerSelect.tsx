@@ -33,7 +33,7 @@ export function ContainerSelect({ siteId, value, onChange, label = "מכולה" 
         searchPlaceholder="חיפוש מכולה..."
         emptyText={`אין פריטים בקטגוריית "${CONTAINER_CATEGORY_NAME}" זמינים לאתר זה`}
       />
-      <p className="text-[11px] text-muted-foreground mt-1">
+      <p className="text-xs text-muted-foreground mt-1">
         הרשימה מגיעה ממלאי "{CONTAINER_CATEGORY_NAME}" — להוספת מכולה חדשה יש להוסיף פריט בקטגוריה זו.
       </p>
     </div>

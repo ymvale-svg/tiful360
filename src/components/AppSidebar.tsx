@@ -226,7 +226,7 @@ export function AppSidebar({ mobileOpen = false, onMobileOpenChange }: AppSideba
   const sidebar = (
     <aside
       className={cn(
-        "fixed top-0 right-0 h-[100dvh] bg-sidebar flex flex-col z-50 transition-all duration-300 border-l border-sidebar-border",
+        "fixed top-0 right-0 h-[100dvh] bg-sidebar flex flex-col z-50 transition-all duration-200 border-l border-sidebar-border",
         mobileOpen ? "w-[280px] translate-x-0" : "w-[280px] translate-x-full lg:translate-x-0",
         collapsed ? "lg:w-[68px]" : "lg:w-[240px]"
       )}

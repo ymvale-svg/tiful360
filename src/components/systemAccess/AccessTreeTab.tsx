@@ -198,7 +198,7 @@ function SystemTree({ system }: { system: AccessSystem }) {
                     <span className="w-8" aria-hidden="true" />
                   )}
                   <span className={row.is_active ? "font-medium" : "text-muted-foreground line-through"}>{q ? row.path : row.name}</span>
-                  {row.missing_since && <span className="text-xs text-warning">לא נמצא בייבוא האחרון</span>}
+                  {row.missing_since && <span className="text-xs text-warning-text">לא נמצא בייבוא האחרון</span>}
                   <span className="flex-1" />
                   {tags.map(({ group, level: l }) => (
                     <span key={group.id} className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">
@@ -221,6 +221,12 @@ function SystemTree({ system }: { system: AccessSystem }) {
               );
             })}
           </ul>
+          {q && rows.length === 0 && (
+            <p className="py-4 text-center text-sm text-muted-foreground" role="status">
+              אין תיקיות שמתאימות ל„{q}”.{" "}
+              <button type="button" onClick={() => setQuery("")} className="font-medium text-primary underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded">נקה חיפוש</button>
+            </p>
+          )}
         </StateView>
 
         <TreeScanPanel system={system} />

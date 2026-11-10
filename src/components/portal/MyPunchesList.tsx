@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FormField } from "@/components/feedback/FormField";
 import { useConfirm } from "@/components/feedback/ConfirmDialog";
+import { StatusChip } from "@/components/feedback/StatusChip";
 import { useEditOwnPunchTime, useAddOwnPunch, useMySelfEditCount, type AttendancePunch } from "@/hooks/useAttendancePunches";
 import { useCompanyHolidaySet } from "@/hooks/useCompanyHolidays";
 
@@ -242,9 +243,7 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
             >
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold">{day}</span>
-                <span className="text-[0.8125rem] px-2 py-0.5 rounded-full font-medium bg-sky-500/15 text-sky-700 dark:text-sky-300">
-                  {leaveLabel}
-                </span>
+                <StatusChip tone="info" icon={null}>{leaveLabel}</StatusChip>
               </div>
               <p className="text-[0.8125rem] text-muted-foreground mt-2">היעדרות מאושרת — לא נדרשת החתמה</p>
             </div>
@@ -274,7 +273,7 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
             className={cn(
               "bg-card rounded-xl border p-3 transition-all",
               isHighlighted && "border-primary ring-2 ring-primary/30 shadow-sm",
-              !isHighlighted && hasMissing && "border-amber-500/40",
+              !isHighlighted && hasMissing && "border-warning/40",
               !isHighlighted && !hasMissing && "border-border/50",
             )}
           >
@@ -282,9 +281,9 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
               <span className="text-sm font-semibold">{day}</span>
               <div className="flex items-center gap-1.5">
                 {hasMissing && (
-                  <span className="text-[0.8125rem] px-2 py-0.5 rounded-full font-medium bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                  <StatusChip tone="warning">
                     {sorted.length === 0 ? "ללא החתמה" : "חסרה החתמה"}
-                  </span>
+                  </StatusChip>
                 )}
                 {sorted.length > 0 && (
                   <span className={cn(
@@ -411,8 +410,8 @@ function PunchSlot({
   const [val, setVal] = useState(timeStr);
 
   const accentClasses = accent === "emerald"
-    ? { chip: "bg-emerald-500/10 border-emerald-500/30", text: "text-emerald-700 dark:text-emerald-300", icon: "text-emerald-600 dark:text-emerald-400" }
-    : { chip: "bg-rose-500/10 border-rose-500/30", text: "text-rose-700 dark:text-rose-300", icon: "text-rose-600 dark:text-rose-400" };
+    ? { chip: "bg-success/10 border-success/30", text: "text-success-text", icon: "text-success" }
+    : { chip: "bg-destructive/10 border-destructive/30", text: "text-destructive-text", icon: "text-destructive" };
 
   const startEdit = () => {
     setVal(timeStr || defaultTime);
@@ -454,7 +453,7 @@ function PunchSlot({
               className="h-11 px-2 text-base font-mono w-[120px]"
             />
             <Button size="icon" variant="ghost" className="h-11 w-11" onClick={submit} disabled={pending} aria-label={`שמור שעת ${label}`}>
-              <Check className="w-5 h-5 text-emerald-600" />
+              <Check className="w-5 h-5 text-success" aria-hidden="true" />
             </Button>
             <Button size="icon" variant="ghost" className="h-11 w-11" onClick={cancel} aria-label="בטל עריכה">
               <X className="w-5 h-5" />

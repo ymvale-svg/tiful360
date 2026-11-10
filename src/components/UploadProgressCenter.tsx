@@ -73,7 +73,7 @@ function JobCard({ job }: { job: UploadJob }) {
         >
           <div
             className={cn(
-              "h-full rounded-full transition-[width] duration-300 ease-out motion-reduce:transition-none",
+              "h-full rounded-full transition-[width] duration-200 ease-out motion-reduce:transition-none",
               failed ? "bg-destructive" : done ? "bg-success" : "bg-primary",
               job.stage === "prepare" && "w-1/4 animate-pulse",
             )}
@@ -81,7 +81,7 @@ function JobCard({ job }: { job: UploadJob }) {
           />
         </div>
         <div className="mt-1.5 flex items-center justify-between gap-2 text-xs tabular-nums">
-          <span className={cn("truncate", failed ? "text-destructive" : done ? "text-success" : "text-muted-foreground")}>{status}</span>
+          <span className={cn("truncate", failed ? "text-destructive-text" : done ? "text-success-text" : "text-muted-foreground")}>{status}</span>
           {sizeLine && !failed && <span className="shrink-0 text-muted-foreground" dir="ltr">{sizeLine}</span>}
         </div>
       </div>
