@@ -2676,6 +2676,7 @@ export type Database = {
       }
       onboarding_processes: {
         Row: {
+          access_picks: Json | null
           audit_log: Json
           company_id: string
           completed_at: string | null
@@ -2691,6 +2692,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          access_picks?: Json | null
           audit_log?: Json
           company_id: string
           completed_at?: string | null
@@ -2706,6 +2708,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          access_picks?: Json | null
           audit_log?: Json
           company_id?: string
           completed_at?: string | null
@@ -3499,6 +3502,129 @@ export type Database = {
         }
         Relationships: []
       }
+      system_access_grants: {
+        Row: {
+          company_id: string
+          created_at: string
+          dispatch_ticket_id: string | null
+          dispatched_at: string | null
+          effective_from: string
+          employee_id: string
+          executed_at: string | null
+          executed_by: string | null
+          executed_by_name: string | null
+          external_username: string | null
+          group_id: string | null
+          id: string
+          note: string | null
+          rejection_reason: string | null
+          request_id: string
+          resource_id: string | null
+          revoked_at: string | null
+          status: string
+          system_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          dispatch_ticket_id?: string | null
+          dispatched_at?: string | null
+          effective_from: string
+          employee_id: string
+          executed_at?: string | null
+          executed_by?: string | null
+          executed_by_name?: string | null
+          external_username?: string | null
+          group_id?: string | null
+          id?: string
+          note?: string | null
+          rejection_reason?: string | null
+          request_id: string
+          resource_id?: string | null
+          revoked_at?: string | null
+          status?: string
+          system_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          dispatch_ticket_id?: string | null
+          dispatched_at?: string | null
+          effective_from?: string
+          employee_id?: string
+          executed_at?: string | null
+          executed_by?: string | null
+          executed_by_name?: string | null
+          external_username?: string | null
+          group_id?: string | null
+          id?: string
+          note?: string | null
+          rejection_reason?: string | null
+          request_id?: string
+          resource_id?: string | null
+          revoked_at?: string | null
+          status?: string
+          system_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_access_grants_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_grants_dispatch_ticket_id_fkey"
+            columns: ["dispatch_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "it_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_grants_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_grants_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_grants_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "system_access_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_grants_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "system_access_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_grants_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "system_access_resources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_grants_system_id_fkey"
+            columns: ["system_id"]
+            isOneToOne: false
+            referencedRelation: "system_access_systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_access_group_resources: {
         Row: {
           company_id: string
@@ -3572,6 +3698,87 @@ export type Database = {
             columns: ["system_id"]
             isOneToOne: false
             referencedRelation: "system_access_systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      system_access_requests: {
+        Row: {
+          company_id: string
+          completed_at: string | null
+          employee_id: string
+          hub_ticket_id: string | null
+          id: string
+          kind: string
+          note: string | null
+          onboarding_process_id: string | null
+          requested_at: string
+          requested_by: string
+          requested_by_name: string
+          status: string
+        }
+        Insert: {
+          company_id: string
+          completed_at?: string | null
+          employee_id: string
+          hub_ticket_id?: string | null
+          id?: string
+          kind?: string
+          note?: string | null
+          onboarding_process_id?: string | null
+          requested_at?: string
+          requested_by: string
+          requested_by_name: string
+          status?: string
+        }
+        Update: {
+          company_id?: string
+          completed_at?: string | null
+          employee_id?: string
+          hub_ticket_id?: string | null
+          id?: string
+          kind?: string
+          note?: string | null
+          onboarding_process_id?: string | null
+          requested_at?: string
+          requested_by?: string
+          requested_by_name?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_access_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_requests_hub_ticket_id_fkey"
+            columns: ["hub_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "it_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_requests_onboarding_process_id_fkey"
+            columns: ["onboarding_process_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_processes"
             referencedColumns: ["id"]
           },
         ]
@@ -4240,6 +4447,10 @@ export type Database = {
         Args: { _company_id: string }
         Returns: undefined
       }
+      dispatch_system_access: {
+        Args: { _grant_ids: string[]; _note?: string }
+        Returns: Json
+      }
       edit_own_punch_time: {
         Args: { _new_punch_at: string; _punch_id: string }
         Returns: {
@@ -4619,7 +4830,52 @@ export type Database = {
         Args: { _item_type: string }
         Returns: boolean
       }
+      request_system_access: {
+        Args: {
+          _employee_id: string
+          _items: Json
+          _note?: string
+          _onboarding_process_id?: string
+        }
+        Returns: Json
+      }
       resolve_handover_short_code: { Args: { _code: string }; Returns: string }
+      resolve_system_access_grant: {
+        Args: {
+          _action: string
+          _executed_at?: string
+          _external_username?: string
+          _grant_id: string
+          _note?: string
+        }
+        Returns: {
+          company_id: string
+          created_at: string
+          dispatch_ticket_id: string | null
+          dispatched_at: string | null
+          effective_from: string
+          employee_id: string
+          executed_at: string | null
+          executed_by: string | null
+          executed_by_name: string | null
+          external_username: string | null
+          group_id: string | null
+          id: string
+          note: string | null
+          rejection_reason: string | null
+          request_id: string
+          resource_id: string | null
+          revoked_at: string | null
+          status: string
+          system_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "system_access_grants"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       seed_default_permission_groups: {
         Args: { _company_id: string }
         Returns: undefined
@@ -4799,10 +5055,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      sync_system_access_tickets: {
+        Args: { _request_id: string }
+        Returns: undefined
+      }
       sync_user_roles_from_groups: {
         Args: { _user_id: string }
         Returns: undefined
       }
+      system_access_actor_name: { Args: { _uid: string }; Returns: string }
       system_access_can_manage: {
         Args: { _company_id: string }
         Returns: boolean
@@ -4811,6 +5072,18 @@ export type Database = {
         Args: { _company_id: string }
         Returns: boolean
       }
+      system_access_grant_label: {
+        Args: {
+          _grant: Database["public"]["Tables"]["system_access_grants"]["Row"]
+        }
+        Returns: string
+      }
+      system_access_is_manager: {
+        Args: { _company_id: string }
+        Returns: boolean
+      }
+      system_access_is_owner: { Args: { _system_id: string }; Returns: boolean }
+      system_access_status_label: { Args: { _status: string }; Returns: string }
       update_my_birthday_preference: {
         Args: {
           _hebrew_day?: number
