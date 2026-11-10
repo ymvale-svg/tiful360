@@ -117,7 +117,7 @@ var get_ticket_default = defineTool3({
 });
 
 // src/lib/mcp/index.ts
-var projectRef = "ci-placeholder";
+var projectRef = "rhzmhiknbcipucfvgkok";
 var mcp_default = defineMcp({
   name: "360",
   title: "\u05EA\u05E4\u05E2\u05D5\u05DC 360",
