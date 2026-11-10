@@ -11,18 +11,23 @@ function mergeStyle(element: any, styles: Record<string, string>) {
   element.setAttribute('style', `${element.getAttribute('style') || ''};${extra}`)
 }
 
+function all(root: any, selector: string): any[] {
+  return Array.from(root.querySelectorAll(selector))
+}
+
 /** Format legacy authored HTML without changing its text, links or data cells. */
 export function formatEmailHtml(html: string, brand: EmailBrand = {}): string {
   if (html.includes('data-tiful-email="v1"')) return html
   const source = /<body[\s>]/i.test(html) ? html : `<html><head></head><body>${html}</body></html>`
-  const { document } = parseHTML(source)
+  // linkedom's typings model a browser Window; its DOM nodes are used untyped here.
+  const { document } = parseHTML(source) as unknown as { document: any }
   const body = document.body
 
   // Legacy full-width layout tables have one cell per row. Flatten only those;
   // data tables and multi-column layouts retain their original ordering.
-  for (const table of Array.from(body.querySelectorAll('table')).reverse()) {
+  for (const table of all(body, 'table').reverse()) {
     if (table.getAttribute('role') !== 'presentation') continue
-    const rows = Array.from(table.querySelectorAll(':scope > tr, :scope > tbody > tr'))
+    const rows = all(table, ':scope > tr, :scope > tbody > tr')
     if (!rows.length || rows.some((row) => row.children.length !== 1)) continue
     const replacement = document.createElement('div')
     for (const row of rows) {
@@ -36,37 +41,37 @@ export function formatEmailHtml(html: string, brand: EmailBrand = {}): string {
   }
 
   // Existing company-logo blocks are replaced by exactly one shared header.
-  for (const image of Array.from(body.querySelectorAll('img'))) {
+  for (const image of all(body, 'img')) {
     const src = image.getAttribute('src') || ''
     if ((brand.companyLogoUrl && (src.includes('/company-logos/') || src === brand.companyLogoUrl)) || src.includes('/email-assets/logo.')) {
       image.remove()
     }
   }
-  for (const el of Array.from(body.querySelectorAll('div, table, td, section'))) {
+  for (const el of all(body, 'div, table, td, section')) {
     if (el.tagName === 'TD') continue
     mergeStyle(el, { background: emailTheme.surface, 'box-shadow': 'none', 'max-width': '100%', 'box-sizing': 'border-box', direction: 'rtl', 'text-align': 'right' })
   }
-  for (const el of Array.from(body.querySelectorAll('h1,h2,h3,h4,h5,h6'))) {
+  for (const el of all(body, 'h1,h2,h3,h4,h5,h6')) {
     mergeStyle(el, { color: emailTheme.primary, 'text-align': 'center', direction: 'rtl', 'font-weight': '700', 'font-size': el.tagName === 'H1' || el.tagName === 'H2' ? '24px' : '19px', 'line-height': '1.4', margin: '22px 0 18px' })
     el.setAttribute('align', 'center')
   }
-  for (const el of Array.from(body.querySelectorAll('p,li'))) {
+  for (const el of all(body, 'p,li')) {
     mergeStyle(el, { 'text-align': 'right', direction: 'rtl', color: emailTheme.foreground, 'line-height': '1.8' })
     el.setAttribute('align', 'right')
   }
-  for (const table of Array.from(body.querySelectorAll('table'))) {
+  for (const table of all(body, 'table')) {
     table.setAttribute('dir', 'rtl')
     table.removeAttribute('width')
     mergeStyle(table, { direction: 'rtl', width: '100%', 'border-collapse': 'collapse', 'font-size': '14px', margin: '16px 0' })
-    const rows = Array.from(table.querySelectorAll('tr'))
+    const rows = all(table, 'tr')
     rows.forEach((row, index) => mergeStyle(row, { background: index % 2 ? emailTheme.alternate : emailTheme.surface }))
   }
-  for (const cell of Array.from(body.querySelectorAll('td,th'))) {
+  for (const cell of all(body, 'td,th')) {
     cell.setAttribute('align', 'right')
     cell.setAttribute('dir', 'rtl')
     mergeStyle(cell, { 'text-align': 'right', direction: 'rtl', padding: '10px 12px', color: emailTheme.foreground, border: `1px solid ${emailTheme.border}`, ...(cell.tagName === 'TH' ? { background: emailTheme.accent, 'font-weight': '700' } : {}) })
   }
-  for (const anchor of Array.from(body.querySelectorAll('a'))) {
+  for (const anchor of all(body, 'a')) {
     if (/background(?:-color)?\s*:/i.test(anchor.getAttribute('style') || '')) {
       mergeStyle(anchor, { background: emailTheme.primary, color: emailTheme.surface, 'border-radius': '6px', padding: '12px 24px', 'font-weight': '700', 'text-decoration': 'none', display: 'inline-block' })
     }
