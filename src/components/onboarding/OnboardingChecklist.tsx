@@ -6,21 +6,27 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useToast } from "@/hooks/use-toast";
 import { useAssets, useAssetCategories } from "@/hooks/useData";
 import { useAssetGroups } from "@/hooks/useAssetGroups";
-import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useAssetGroupModels } from "@/hooks/useAssetGroupModels";
 import {
   ONBOARDING_STATUS_LABEL,
   useUpdateOnboardingProcess,
   useUpsertOnboardingItem,
   useDeleteOnboardingItem,
+  useCompleteOnboardingItem,
+  useOnboardingAssetPicks,
   daysUntil,
   type OnboardingProcess,
 } from "@/hooks/useOnboarding";
+import { canRemoveItem, itemNeedsAsset, reservedAssetIds, stockOptionsFor } from "@/domain/onboarding/checklist";
+import { useProcessAccessGrants } from "@/hooks/useSystemAccess";
+import { isOpenGrant } from "@/domain/systemAccess/picks";
+import { GRANT_STATUS_LABEL, grantLabel } from "@/domain/systemAccess/types";
+import { Link } from "react-router-dom";
+import { VehicleItemAction } from "@/components/vehicles/VehicleItemAction";
 import {
   appendOnboardingAudit,
   useCompleteOnboardingProcess,
 } from "@/hooks/useOnboardingProtocol";
-import { useCompany } from "@/hooks/useCompany";
 import { EditAssetDialog } from "@/components/EditAssetDialog";
 import { OWNER_ROLE_LABEL, OWNER_ROLE_OPTIONS } from "@/lib/domainConfig";
 import { formatDateTimeDMY } from "@/lib/utils";
@@ -41,9 +47,11 @@ const FULFILLMENT_OPTIONS = [
 
 export function OnboardingChecklist({ process, onOpenChange }: Props) {
   const { toast } = useToast();
-  const qc = useQueryClient();
-  const { activeCompanyId } = useCompany();
   const { data: assets = [] } = useAssets();
+  const { data: groupModels = [] } = useAssetGroupModels();
+  const { data: assetPicks = [] } = useOnboardingAssetPicks();
+  const completeItemMutation = useCompleteOnboardingItem();
+  const { data: accessGrants = [] } = useProcessAccessGrants(process?.id ?? null);
   const { data: categories = [] } = useAssetCategories();
   const { data: groups = [] } = useAssetGroups();
   const upsertItem = useUpsertOnboardingItem();
@@ -60,6 +68,8 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
   const [editOpen, setEditOpen] = useState(false);
   // Items whose done/undone writes are running; the row stays locked until they finish.
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
+  // Completion notes typed on items that need no asset (tasks, access), keyed by item id.
+  const [completionNotes, setCompletionNotes] = useState<Record<string, string>>({});
   const confirm = useConfirm();
 
 
@@ -91,16 +101,16 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
   const emp = process.employees;
   const dLeft = daysUntil(emp?.start_date);
   const doneCount = items.filter((i) => i.status === "done").length;
+  const openGrants = accessGrants.filter(isOpenGrant).length;
+  const canFinish = doneCount === items.length && openGrants === 0;
 
-  const assetOptions = (categoryId: string | null, groupId: string | null) =>
-    (assets as any[])
-      .filter(
-        (a) =>
-          (!categoryId || a.category_id === categoryId) &&
-          (!groupId || a.group_id === groupId) &&
-          (!a.current_owner_id || a.current_owner_id === process.employee_id)
-      )
+  const assetOptions = (item: (typeof items)[number]) => {
+    const preferredModel = item.selected_model_id
+      ? groupModels.find((m) => m.id === item.selected_model_id)?.name
+      : null;
+    return stockOptionsFor(item, assets as any[], process.employee_id, reservedAssetIds(assetPicks, item.id), preferredModel)
       .map((a) => ({ value: a.id, label: `${a.asset_name} · ${a.asset_code}` }));
+  };
 
   const setItem = async (id: string, patch: any) => {
     try {
@@ -112,7 +122,7 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
 
   const completeItem = async (item: (typeof items)[number], checked: boolean) => {
     if (savingIds.has(item.id)) return;
-    if (checked && !item.asset_id) {
+    if (checked && !item.asset_id && itemNeedsAsset(item.item_type)) {
       toast({
         title: "בחרו פריט מהמלאי",
         description: "יש לבחור את הפריט שיוצמד לעובד לפני סימון 'בוצע'",
@@ -125,8 +135,8 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
       const asset = (assets as any[]).find((a) => a.id === item.asset_id);
       const ok = await confirm({
         title: "לבטל את סימון הביצוע?",
-        description: `${asset?.asset_name ?? item.title} ינותק מ${emp?.full_name ?? "העובד"} ויחזור למלאי.`,
-        confirmLabel: "בטל סימון והחזר למלאי",
+        description: `ההצמדה של ${asset?.asset_name ?? item.title} ל${emp?.full_name ?? "עובד"} בקליטה תבוטל, והפריט יחזור למצבו הקודם.`,
+        confirmLabel: "בטל סימון והצמדה",
         cancelLabel: "השאר מסומן",
         destructive: true,
       });
@@ -145,51 +155,14 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
     }
   };
 
+  // One DB transaction: item status, asset hand-over (or its reversal), activity log and the
+  // process moving from "sent" to "in progress".
   const runCompleteItem = async (item: (typeof items)[number], checked: boolean) => {
-    const now = new Date().toISOString();
-    await setItem(item.id, {
-      status: checked ? "done" : "pending",
-      assigned_at: checked ? now : null,
-    });
-
-    if (item.asset_id) {
-      // Every "done" tick assigns the item to the employee immediately.
-      const { error } = await supabase
-        .from("assets")
-        .update(
-          checked
-            ? { current_owner_id: process.employee_id, status: "in_use" }
-            : { current_owner_id: null, status: "in_stock" }
-        )
-        .eq("id", item.asset_id);
-      if (error) {
-        toast({ title: "שגיאה בהצמדת הפריט", description: error.message, variant: "destructive" });
-        return;
-      }
-
-      const asset = (assets as any[]).find((a) => a.id === item.asset_id);
-      const { data: auth } = await supabase.auth.getUser();
-      await supabase.from("activity_log").insert({
-        company_id: activeCompanyId,
-        employee_id: checked ? process.employee_id : null,
-        action: checked
-          ? `הצמדת פריט בקליטת עובד: ${asset?.asset_name ?? item.title}`
-          : `ביטול הצמדה בקליטת עובד: ${asset?.asset_name ?? item.title}`,
-        details: asset?.asset_code ? `מזהה פריט: ${asset.asset_code}` : null,
-        entity_type: "asset",
-        entity_id: item.asset_id,
-        performed_by: auth?.user?.id ?? null,
-      } as any);
-
-      qc.invalidateQueries({ queryKey: ["assets"] });
-      qc.invalidateQueries({ queryKey: ["employee-assets"] });
-      qc.invalidateQueries({ queryKey: ["activity-log"] });
-      qc.invalidateQueries({ queryKey: ["asset-assignment-history"] });
-
-      if (checked && asset) {
-        // Open the asset card so operations can complete its details right away.
-        setAssetCard({ ...asset, current_owner_id: process.employee_id, status: "in_use" });
-      }
+    try {
+      await completeItemMutation.mutateAsync({ itemId: item.id, done: checked, note: completionNotes[item.id] });
+    } catch (e: any) {
+      toast({ title: "שגיאה בעדכון הפריט", description: e.message, variant: "destructive" });
+      return;
     }
 
     await appendOnboardingAudit(
@@ -197,8 +170,10 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
       `${checked ? "סומן כבוצע" : "בוטל סימון ביצוע"}: ${item.title}`
     );
 
-    if (process.status === "sent" && checked) {
-      updateProcess.mutate({ id: process.id, status: "in_progress" });
+    if (checked && item.asset_id) {
+      const asset = (assets as any[]).find((a) => a.id === item.asset_id);
+      // Open the asset card so operations can complete its details right away.
+      if (asset) setAssetCard({ ...asset, current_owner_id: process.employee_id, status: "in_use" });
     }
   };
 
@@ -225,7 +200,8 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
         process_id: process.id,
         title,
         owner_role: newOwner,
-        item_type: "asset",
+        // A free-text item has no catalog category to pick stock from: it is closed as a task.
+        item_type: "task",
         notes: newNotes.trim() || null,
         status: "pending",
       } as any);
@@ -331,10 +307,10 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
                 size="sm"
                 className="gap-1.5"
                 onClick={() => { void finish(); }}
-                disabled={doneCount < items.length}
+                disabled={!canFinish}
                 loading={finishing}
                 loadingText="מפיק פרוטוקול…"
-                aria-describedby={doneCount < items.length ? "onb-finish-hint" : undefined}
+                aria-describedby={!canFinish ? "onb-finish-hint" : undefined}
               >
                 <CheckCircle2 className="w-4 h-4" /> סיום תהליך
               </Button>
@@ -348,10 +324,38 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
           </div>
         </div>
 
-        {process.status !== "done" && doneCount < items.length && (
+        {process.status !== "done" && !canFinish && (
           <p id="onb-finish-hint" className="text-xs text-muted-foreground mb-3">
-            {items.length - doneCount === 1 ? "נותר פריט אחד לסימון" : `נותרו ${items.length - doneCount} פריטים לסימון`} לפני סיום התהליך.
+            {doneCount < items.length && (items.length - doneCount === 1 ? "נותר פריט אחד לסימון. " : `נותרו ${items.length - doneCount} פריטים לסימון. `)}
+            {openGrants > 0 && (openGrants === 1 ? "הרשאה אחת עוד לא נפתחה. " : `${openGrants} הרשאות עוד לא נפתחו. `)}
+            התהליך ייסגר כשהכול יטופל.
           </p>
+        )}
+
+        {(accessGrants.length > 0 || (process.access_picks?.length ?? 0) > 0) && (
+          <section aria-labelledby="onb-access-title" className="border border-border/60 rounded-xl p-4 mb-4">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <h3 id="onb-access-title" className="text-sm font-semibold">הרשאות למערכות</h3>
+              <Link to="/system-access" className="text-xs text-primary hover:underline">למסך הרשאות מערכות</Link>
+            </div>
+            {accessGrants.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                נבחרו {process.access_picks?.length} הרשאות. הן יישלחו למנהל ההרשאות עם שליחת הבקשה לתפעול.
+              </p>
+            ) : (
+              <ul className="divide-y divide-border/50">
+                {accessGrants.map((g) => (
+                  <li key={g.id} className="flex flex-wrap items-center justify-between gap-2 py-1.5 text-sm">
+                    <span>{grantLabel(g)}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {GRANT_STATUS_LABEL[g.status]}
+                      {g.executed_at ? ` · ${g.executed_by_name ?? ""} ${formatDateTimeDMY(g.executed_at)}` : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         )}
 
         <div className="space-y-4">
@@ -390,13 +394,15 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
                                     </span>
                                   )}
                                   {rowSaving && <span role="status" className="text-xs text-muted-foreground">שומר…</span>}
-                                  <IconButton
-                                    label={`הסר את ${item.title}`}
-                                    className="mr-auto text-muted-foreground hover:text-destructive"
-                                    onClick={() => { void removeItem(item); }}
-                                  >
-                                    <Trash2 />
-                                  </IconButton>
+                                  {canRemoveItem(item) && (
+                                    <IconButton
+                                      label={`הסר את ${item.title}`}
+                                      className="mr-auto text-muted-foreground hover:text-destructive"
+                                      onClick={() => { void removeItem(item); }}
+                                    >
+                                      <Trash2 />
+                                    </IconButton>
+                                  )}
                                 </div>
                                 {item.notes && (
                                   <p className="text-xs mt-1.5 px-2.5 py-1.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-foreground flex items-start gap-1.5">
@@ -404,20 +410,42 @@ export function OnboardingChecklist({ process, onOpenChange }: Props) {
                                     <span><span className="font-medium">הערה לתפעול: </span>{item.notes}</span>
                                   </p>
                                 )}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-                                  <SearchableSelect
-                                    value={item.fulfillment_type ?? ""}
-                                    onChange={(v) => setItem(item.id, { fulfillment_type: v })}
-                                    options={FULFILLMENT_OPTIONS}
-                                    placeholder="אופן אספקה"
+                                {item.item_type === "vehicle" && item.status !== "done" && (
+                                  <VehicleItemAction
+                                    item={item}
+                                    process={process}
+                                    preferredModel={item.selected_model_id ? groupModels.find((m) => m.id === item.selected_model_id)?.name : null}
                                   />
-                                  <SearchableSelect
-                                    value={item.asset_id ?? ""}
-                                    onChange={(v) => setItem(item.id, { asset_id: v })}
-                                    options={assetOptions(item.catalog_ref_id, item.selected_group_id)}
-                                    placeholder="בחר פריט מהמלאי"
+                                )}
+                                {item.completion_note && (
+                                  <p className="text-xs mt-1.5 text-muted-foreground">הערת ביצוע: {item.completion_note}</p>
+                                )}
+                                {itemNeedsAsset(item.item_type) ? (
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                                    <SearchableSelect
+                                      value={item.fulfillment_type ?? ""}
+                                      onChange={(v) => setItem(item.id, { fulfillment_type: v })}
+                                      options={FULFILLMENT_OPTIONS}
+                                      placeholder="אופן אספקה"
+                                      disabled={item.status === "done"}
+                                    />
+                                    <SearchableSelect
+                                      value={item.asset_id ?? ""}
+                                      onChange={(v) => setItem(item.id, { asset_id: v })}
+                                      options={assetOptions(item)}
+                                      placeholder="בחר פריט מהמלאי"
+                                      disabled={item.status === "done"}
+                                    />
+                                  </div>
+                                ) : item.status !== "done" && (
+                                  <input
+                                    value={completionNotes[item.id] ?? ""}
+                                    onChange={(e) => setCompletionNotes((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                                    placeholder="הערת ביצוע (לא חובה)"
+                                    aria-label={`הערת ביצוע ל${item.title}`}
+                                    className="w-full mt-2 px-3 py-2 bg-card border border-border rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
                                   />
-                                </div>
+                                )}
                                 {item.asset_id && (() => {
                                   const a = (assets as any[]).find((x) => x.id === item.asset_id);
                                   if (!a) return null;

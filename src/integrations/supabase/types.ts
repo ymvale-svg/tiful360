@@ -267,6 +267,8 @@ export type Database = {
           skip_handover_form: boolean
           skip_return_form: boolean
           sort_order: number
+          fulfillment_track: string | null
+          show_in_onboarding: boolean | null
         }
         Insert: {
           category_name: string
@@ -287,6 +289,8 @@ export type Database = {
           skip_handover_form?: boolean
           skip_return_form?: boolean
           sort_order?: number
+          fulfillment_track?: string | null
+          show_in_onboarding?: boolean | null
         }
         Update: {
           category_name?: string
@@ -307,6 +311,8 @@ export type Database = {
           skip_handover_form?: boolean
           skip_return_form?: boolean
           sort_order?: number
+          fulfillment_track?: string | null
+          show_in_onboarding?: boolean | null
         }
         Relationships: [
           {
@@ -2573,6 +2579,8 @@ export type Database = {
           selected_model_id: string | null
           status: string
           title: string
+          asset_prior_owner_id: string | null
+          completion_note: string | null
         }
         Insert: {
           asset_id?: string | null
@@ -2591,6 +2599,8 @@ export type Database = {
           selected_model_id?: string | null
           status?: string
           title: string
+          asset_prior_owner_id?: string | null
+          completion_note?: string | null
         }
         Update: {
           asset_id?: string | null
@@ -2609,6 +2619,8 @@ export type Database = {
           selected_model_id?: string | null
           status?: string
           title?: string
+          asset_prior_owner_id?: string | null
+          completion_note?: string | null
         }
         Relationships: [
           {
@@ -2663,6 +2675,7 @@ export type Database = {
           sent_at: string | null
           status: string
           updated_at: string
+          access_picks: Json | null
         }
         Insert: {
           audit_log?: Json
@@ -2678,6 +2691,7 @@ export type Database = {
           sent_at?: string | null
           status?: string
           updated_at?: string
+          access_picks?: Json | null
         }
         Update: {
           audit_log?: Json
@@ -2693,6 +2707,7 @@ export type Database = {
           sent_at?: string | null
           status?: string
           updated_at?: string
+          access_picks?: Json | null
         }
         Relationships: [
           {

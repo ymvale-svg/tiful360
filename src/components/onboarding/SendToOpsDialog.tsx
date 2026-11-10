@@ -57,6 +57,18 @@ export function SendToOpsDialog({
         title: "נשלח לתפעול",
         description: "הפרוטוקול נשמר בתיק העובד ונפתחה קריאת שירות",
       });
+      if (res.accessResult) {
+        toast({
+          title: "בקשת ההרשאות נשלחה",
+          description: `${res.accessResult.created} הרשאות למערכות · קריאה ${res.accessResult.ticketCode}`,
+        });
+      } else if (res.accessErr) {
+        toast({
+          title: "בקשת ההרשאות לא נשלחה",
+          description: `${res.accessErr.message} — אפשר לשלוח אותה ממסך הרשאות מערכות`,
+          variant: "destructive",
+        });
+      }
       if (res.mailErr) {
         toast({
           title: "שים לב",

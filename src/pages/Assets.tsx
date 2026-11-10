@@ -23,6 +23,7 @@ import { ListSkeleton } from "@/components/feedback/StateView";
 // Merged screens: hand-over of unassigned items and vehicle subscriptions are tabs here.
 const UnassignedAssets = lazyWithReload(() => import("@/pages/UnassignedAssets"));
 const VehicleSubscriptions = lazyWithReload(() => import("@/pages/VehicleSubscriptions"));
+const LeasingTab = lazyWithReload(() => import("@/components/vehicles/LeasingTab").then((m) => ({ default: m.LeasingTab })));
 
 const assetStatusLabels: Record<string, string> = {
   in_use: "בשימוש", in_stock: "במלאי", in_repair: "בתיקון", lost: "אבד",
@@ -398,6 +399,12 @@ export default function Assets() {
       {activeTab === "subscriptions" && (
         <Suspense fallback={<ListSkeleton rows={5} />}>
           <div role="tabpanel" aria-label="רכב ומנויים"><VehicleSubscriptions /></div>
+        </Suspense>
+      )}
+
+      {activeTab === "leasing" && (
+        <Suspense fallback={<ListSkeleton rows={5} />}>
+          <div role="tabpanel" aria-label="ליסינג ורמות רכב"><LeasingTab /></div>
         </Suspense>
       )}
 

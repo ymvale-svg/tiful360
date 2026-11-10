@@ -17,12 +17,18 @@ import {
 } from "@/hooks/useOnboarding";
 import { appendOnboardingAudit } from "@/hooks/useOnboardingProtocol";
 import { useQueryClient } from "@tanstack/react-query";
-import { getDomain, DOMAIN_META, type DomainKey } from "@/lib/assetDomains";
+import { groupByTrack, itemTypeForCategory, showInOnboarding, TRACK_HINT, TRACK_LABEL } from "@/domain/onboarding/tracks";
+import { useAuth } from "@/hooks/useAuth";
+import { useAccessSystems, useHeldGrants } from "@/hooks/useSystemAccess";
+import { PEER_BASIS_LABEL, peersOf, suggestAccess, suggestEquipment } from "@/domain/suggestions/peers";
+import { AccessPicker } from "@/components/systemAccess/AccessPicker";
+import { defaultEffectiveLocal, itemsToPicks, picksToItems, type PickState } from "@/domain/systemAccess/picks";
 import { resolveOwnerRole, OWNER_ROLE_OPTIONS, OWNER_ROLE_LABEL } from "@/lib/domainConfig";
-import { Send, Copy, UserPlus, CalendarDays, AlertCircle, X } from "lucide-react";
+import { Send, Copy, UserPlus, CalendarDays, AlertCircle, X, Sparkles } from "lucide-react";
 import { EmployeeSetupWizard } from "@/components/EmployeeSetupWizard";
 import { SendToOpsDialog } from "@/components/onboarding/SendToOpsDialog";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 
 interface Props {
   open: boolean;
@@ -51,6 +57,16 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
   const createModel = useCreateAssetGroupModel();
   const create = useCreateOnboardingProcess();
   const qc = useQueryClient();
+  const { hasRole } = useAuth();
+  // Who handles an item, and what the catalog holds, are set by the people who run it; HR
+  // only chooses what the employee needs.
+  const canManageCatalog = hasRole("admin") || hasRole("operations") || hasRole("it_manager");
+
+  const { data: accessSystems = [] } = useAccessSystems();
+  // With systems defined in the access catalog, access is picked there instead of from asset categories.
+  const useAccessCatalog = accessSystems.some((s) => s.is_active);
+  const [accessPicks, setAccessPicks] = useState<PickState>({});
+  const { data: heldGrants = [] } = useHeldGrants();
 
   const [employeeId, setEmployeeId] = useState("");
   const [selected, setSelected] = useState<Record<string, SelectedEntry>>({});
@@ -68,6 +84,7 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
     if (!open) {
       setEmployeeId("");
       setSelected({});
+      setAccessPicks({});
       setCopyFromId("");
       setQuickAdd({});
       setQuickModel({});
@@ -90,6 +107,7 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
         next[i.catalog_ref_id] = entry;
       });
       setSelected(next);
+      setAccessPicks(itemsToPicks(editProcess.access_picks, defaultEffectiveLocal(editProcess.employees?.start_date)));
     }
   }, [open, editProcess]);
 
@@ -119,15 +137,22 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
     setSelected(next);
   }, [employeeId, templates]);
 
-  const blocks = useMemo(() => {
-    const byBlock = new Map<string, any[]>();
-    for (const c of categories as any[]) {
-      const key = c.onboarding_form_group || DOMAIN_META[getDomain(c)].title;
-      if (!byBlock.has(key)) byBlock.set(key, []);
-      byBlock.get(key)!.push(c);
-    }
-    return Array.from(byBlock.entries()).map(([title, cats]) => ({ title, cats }));
-  }, [categories]);
+  // Only categories meant for onboarding, grouped by how they are fulfilled.
+  const blocks = useMemo(
+    () =>
+      groupByTrack(categories as any[])
+        .filter(({ track }) => !(useAccessCatalog && track === "access"))
+        .map(({ track, categories: cats }) => ({
+          title: TRACK_LABEL[track],
+          hint: TRACK_HINT[track],
+          cats,
+        })),
+    [categories, useAccessCatalog]
+  );
+  const accessFrom = defaultEffectiveLocal((employee as { start_date?: string | null } | undefined)?.start_date);
+  const accessItems = picksToItems(accessPicks, accessFrom);
+  // Access already sent with the process is handled in the system access screen, not edited here.
+  const accessLocked = !!editProcess && editProcess.status !== "draft";
 
   const employeeOptions = useMemo(
     () =>
@@ -240,6 +265,8 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
     const next: Record<string, SelectedEntry> = { ...selected };
     theirs.forEach((a) => {
       const catId = a.category_id;
+      const sourceCat = (categories as any[]).find((c) => c.id === catId);
+      if (!showInOnboarding(sourceCat)) return;
       const groupId = a.group_id;
       const entry = next[catId] ?? { groupIds: [], notes: {}, owners: {}, models: {} };
       if (groupId && !entry.groupIds.includes(groupId)) {
@@ -254,16 +281,63 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
     toast({ title: "הועתק", description: `נבחרו ${theirs.length} פריטים מהעובד שנבחר` });
   };
 
+  // What employees in the same role (and department) hold today, merged into the selection.
+  const suggestFromPeers = () => {
+    if (!employee) return;
+    const group = peersOf(employee, employees);
+    if (!group) {
+      toast({ title: "אין מספיק עובדים דומים", description: "צריך לפחות שני עובדים פעילים באותו תפקיד או באותה מחלקה." });
+      return;
+    }
+    const visible = new Set(blocks.flatMap((b) => b.cats.map((c: { id: string }) => c.id)));
+    const equipment = suggestEquipment(group.peerIds, assets).filter((s) => visible.has(s.key.category_id));
+    const next: Record<string, SelectedEntry> = { ...selected };
+    let addedItems = 0;
+    for (const { key } of equipment) {
+      const entry = next[key.category_id] ?? { groupIds: [], notes: {}, owners: {}, models: {} };
+      const cat = categories.find((c) => c.id === key.category_id);
+      if (key.group_id && !entry.groupIds.includes(key.group_id)) {
+        entry.groupIds = [...entry.groupIds, key.group_id];
+        entry.owners = { ...entry.owners, [key.group_id]: resolveOwnerRole(groups.find((g) => g.id === key.group_id), cat) };
+        addedItems++;
+      } else if (!next[key.category_id]) {
+        addedItems++;
+      }
+      next[key.category_id] = entry;
+    }
+    setSelected(next);
+
+    let addedAccess = 0;
+    if (useAccessCatalog) {
+      const activeSystems = new Set(accessSystems.filter((s) => s.is_active).map((s) => s.id));
+      const picks: PickState = { ...accessPicks };
+      for (const { key } of suggestAccess(group.peerIds, heldGrants)) {
+        if (!activeSystems.has(key.system_id)) continue;
+        const entry = picks[key.system_id] ?? { groupIds: [], resourceIds: [], effectiveFrom: accessFrom };
+        if (key.group_id && !entry.groupIds.includes(key.group_id)) entry.groupIds = [...entry.groupIds, key.group_id];
+        else if (key.resource_id && !entry.resourceIds.includes(key.resource_id)) entry.resourceIds = [...entry.resourceIds, key.resource_id];
+        else if (picks[key.system_id]) continue;
+        picks[key.system_id] = entry;
+        addedAccess++;
+      }
+      setAccessPicks(picks);
+    }
+    toast({
+      title: addedItems + addedAccess ? "נוספה הצעה לפי עובדים דומים" : "לא נמצא מה להוסיף",
+      description: `${addedItems} פריטים ו-${addedAccess} הרשאות שמחזיקים לפחות חצי מ-${group.peerIds.length} העובדים ${PEER_BASIS_LABEL[group.basis]}. אפשר להסיר כל אחד.`,
+    });
+  };
+
   const buildItems = (): NewOnboardingItem[] =>
     Object.entries(selected).flatMap(([categoryId, entry]) => {
       const cat = (categories as any[]).find((c) => c.id === categoryId);
-      const domain = getDomain(cat);
+      const itemType = itemTypeForCategory(cat);
       if (entry.groupIds.length === 0) {
         return [
           {
             title: cat?.category_name ?? "פריט",
             owner_role: entry.owners["_"] || resolveOwnerRole(null, cat),
-            item_type: domain === "digital" ? "access" : domain === "licenses" ? "license" : "asset",
+            item_type: itemType,
             catalog_ref_id: categoryId,
             selected_group_id: null,
             notes: entry.notes["_"]?.trim() || null,
@@ -280,7 +354,7 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
         return {
           title: model ? `${baseTitle} · ${model.name}` : baseTitle,
           owner_role: entry.owners[groupId] || resolveOwnerRole(group, cat),
-          item_type: domain === "digital" ? "access" : domain === "licenses" ? "license" : "asset",
+          item_type: itemType,
           catalog_ref_id: categoryId,
           selected_group_id: groupId,
           selected_model_id: modelId,
@@ -345,7 +419,17 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
         );
         if (error) throw error;
       }
+      const accessChanged =
+        !accessLocked && JSON.stringify(accessItems) !== JSON.stringify(editProcess.access_picks ?? []);
+      if (accessChanged) {
+        const { error } = await supabase
+          .from("onboarding_processes")
+          .update({ access_picks: accessItems.length ? (accessItems as unknown as Json) : null })
+          .eq("id", editProcess.id);
+        if (error) throw error;
+      }
       const changes: string[] = [];
+      if (accessChanged) changes.push("הרשאות למערכות עודכנו");
       if (toInsert.length) changes.push(`${toInsert.length} נוספו`);
       if (toUpdate.length) changes.push(`${toUpdate.length} עודכנו`);
       if (toDelete.length) changes.push(`${toDelete.length} הוסרו`);
@@ -370,16 +454,16 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
       return;
     }
     const items = buildItems();
-    if (!items.length) {
+    if (!items.length && !accessItems.length) {
       toast({ title: "בחר לפחות פריט אחד", variant: "destructive" });
       return;
     }
     try {
       // The process is always created as a draft; sending to operations happens
       // in the protocol dialog (signature → PDF → ticket → email).
-      const proc = await create.mutateAsync({ employee_id: employeeId, items, status: "draft" });
+      const proc = await create.mutateAsync({ employee_id: employeeId, items, status: "draft", access_picks: accessItems });
       if (status === "sent" && proc?.id) {
-        setPendingSend({ processId: proc.id, employeeId, count: items.length });
+        setPendingSend({ processId: proc.id, employeeId, count: items.length + accessItems.length });
         onOpenChange(false);
         return;
       }
@@ -471,12 +555,42 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
                   options={(employees as any[]).map((e) => ({ value: e.id, label: e.full_name }))}
                   placeholder="בחר עובד להעתקה..."
                 />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="mt-2 gap-1.5"
+                  onClick={suggestFromPeers}
+                  disabled={!employee}
+                  title="מוסיף ציוד והרשאות שמחזיקים רוב העובדים באותו תפקיד ומחלקה"
+                >
+                  <Sparkles className="w-4 h-4" /> הצע לי סט לפי עובדים דומים
+                </Button>
               </div>
             </div>
 
+            {useAccessCatalog && (
+              <div className="border border-border/60 rounded-xl p-4">
+                <div className="flex items-baseline justify-between gap-2 mb-3">
+                  <h3 className="text-sm font-semibold">הרשאות למערכות</h3>
+                  <span className="text-xs text-muted-foreground">נשלח למנהל ההרשאות עם הבקשה</span>
+                </div>
+                {accessLocked ? (
+                  <p className="text-sm text-muted-foreground">
+                    ההרשאות נשלחו עם הבקשה ומטופלות במסך הרשאות מערכות. שינוי או תוספת: בקשת הרשאות חדשה משם.
+                  </p>
+                ) : (
+                  <AccessPicker value={accessPicks} onChange={setAccessPicks} defaultFrom={accessFrom} />
+                )}
+              </div>
+            )}
+
             {blocks.map((block) => (
               <div key={block.title} className="border border-border/60 rounded-xl p-4">
-                <h3 className="text-sm font-semibold mb-3">{block.title}</h3>
+                <div className="flex items-baseline justify-between gap-2 mb-3">
+                  <h3 className="text-sm font-semibold">{block.title}</h3>
+                  <span className="text-xs text-muted-foreground">{block.hint}</span>
+                </div>
                 <div className="space-y-2">
                   {block.cats.map((c: any) => {
                     const entry = selected[c.id];
@@ -514,7 +628,7 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
                                     );
                                   })}
                                 </div>
-                                <div className="flex items-center gap-2">
+                                {canManageCatalog && <div className="flex items-center gap-2">
                                   <input
                                     value={quickAdd[c.id] ?? ""}
                                     onChange={(e) => setQuickAdd((p) => ({ ...p, [c.id]: e.target.value }))}
@@ -537,7 +651,7 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
                                   >
                                     הוסף
                                   </Button>
-                                </div>
+                                </div>}
                                 {entry.groupIds.length === 0 && (
                                   <p className="text-xs text-muted-foreground">בחר לפחות תת-קטגוריה אחת</p>
                                 )}
@@ -548,14 +662,20 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
                                     <div key={groupId} className="bg-background border border-border rounded-lg p-2 space-y-2">
                                       <div className="flex items-center justify-between gap-2">
                                         <span className="text-sm font-medium">{group.name}</span>
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-xs text-muted-foreground">אחראי:</span>
-                                          <SearchableSelect
-                                            value={entry.owners[groupId] || resolveOwnerRole(group, c)}
-                                            onChange={(v) => setOwner(c.id, groupId, v)}
-                                            options={OWNER_ROLE_OPTIONS}
-                                          />
-                                        </div>
+                                        {canManageCatalog ? (
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-xs text-muted-foreground">אחראי:</span>
+                                            <SearchableSelect
+                                              value={entry.owners[groupId] || resolveOwnerRole(group, c)}
+                                              onChange={(v) => setOwner(c.id, groupId, v)}
+                                              options={OWNER_ROLE_OPTIONS}
+                                            />
+                                          </div>
+                                        ) : (
+                                          <span className="text-xs text-muted-foreground">
+                                            יטופל ע"י: {OWNER_ROLE_LABEL[entry.owners[groupId] || resolveOwnerRole(group, c)] ?? "תפעול"}
+                                          </span>
+                                        )}
                                       </div>
                                       {c.protocol_type === "vehicle" && (
                                         <div className="space-y-1.5 rounded-lg bg-muted/40 p-2">
@@ -573,7 +693,7 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
                                               />
                                             </div>
                                           </div>
-                                          <div className="flex items-center gap-2">
+                                          {canManageCatalog && <div className="flex items-center gap-2">
                                             <input
                                               value={quickModel[groupId] ?? ""}
                                               onChange={(e) => setQuickModel((p) => ({ ...p, [groupId]: e.target.value }))}
@@ -595,7 +715,7 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
                                             >
                                               הוסף
                                             </Button>
-                                          </div>
+                                          </div>}
                                         </div>
                                       )}
                                       <input
@@ -610,7 +730,7 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
                               </>
                             ) : (
                               <div className="space-y-2">
-                                <div className="flex items-center gap-2">
+                                {canManageCatalog && <div className="flex items-center gap-2">
                                   <input
                                     value={quickAdd[c.id] ?? ""}
                                     onChange={(e) => setQuickAdd((p) => ({ ...p, [c.id]: e.target.value }))}
@@ -632,15 +752,21 @@ export function NewOnboardingDialog({ open, onOpenChange, editProcess }: Props) 
                                   >
                                     הוסף
                                   </Button>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs text-muted-foreground">אחראי:</span>
-                                  <SearchableSelect
-                                    value={entry.owners["_"] || resolveOwnerRole(null, c)}
-                                    onChange={(v) => setOwner(c.id, "_", v)}
-                                    options={OWNER_ROLE_OPTIONS}
-                                  />
-                                </div>
+                                </div>}
+                                {canManageCatalog ? (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs text-muted-foreground">אחראי:</span>
+                                    <SearchableSelect
+                                      value={entry.owners["_"] || resolveOwnerRole(null, c)}
+                                      onChange={(v) => setOwner(c.id, "_", v)}
+                                      options={OWNER_ROLE_OPTIONS}
+                                    />
+                                  </div>
+                                ) : (
+                                  <p className="text-xs text-muted-foreground">
+                                    יטופל ע"י: {OWNER_ROLE_LABEL[entry.owners["_"] || resolveOwnerRole(null, c)] ?? "תפעול"}
+                                  </p>
+                                )}
 
                                 <input
                                   value={entry.notes["_"] ?? ""}

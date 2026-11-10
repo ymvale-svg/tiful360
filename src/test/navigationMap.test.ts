@@ -18,7 +18,8 @@ const menuPaths = items.map((i) => i.path);
 
 describe("navigation map", () => {
   it("has a compact sidebar of hub screens", () => {
-    expect(items.length).toBeLessThanOrEqual(8);
+    // Nine since system access got its own screen (the owner asked for it separate from assets).
+    expect(items.length).toBeLessThanOrEqual(9);
   });
 
   it("reaches every screen from the sidebar", () => {
@@ -34,7 +35,7 @@ describe("navigation map", () => {
   });
 
   it("opens a hub for exactly the roles that may open one of its tabs", () => {
-    for (const hub of ["employees", "requests", "assets", "settings"] as const) {
+    for (const hub of ["employees", "requests", "assets", "settings", "systemAccess"] as const) {
       const tabRoles = new Set(HUB_TABS[hub].flatMap((t) => [...t.roles]));
       expect([...SCREEN_ROLES[hub]].sort(), hub).toEqual([...tabRoles].sort());
     }
