@@ -3,6 +3,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { enqueueTransactionalEmail } from "../_shared/enqueueEmail.ts";
+import { forwardedToIt } from "../_shared/it-forwards.ts";
 
 const json = (b: unknown, status = 200) =>
   new Response(JSON.stringify(b), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -45,7 +46,7 @@ Deno.serve(async (req) => {
 
     const { data: t } = await admin
       .from("it_tickets")
-      .select("id, ticket_code, title, status, replies, employees(full_name, email)")
+      .select("id, ticket_code, title, status, replies, it_forwards, employees(full_name, email)")
       .eq("ticket_code", ticket_code)
       .eq("company_id", apiKey.company_id)
       .maybeSingle();
@@ -53,6 +54,25 @@ Deno.serve(async (req) => {
     if (t.status === "done") return json({ ok: true, already_closed: true, ticket_code: t.ticket_code });
 
     const now = new Date().toISOString();
+
+    // A ticket that was sent to an IT person is his responsibility: Mesimon finishing its task
+    // does not close it. It is logged on the ticket and stays open until the IT person closes it.
+    if (body.keep_if_forwarded_to_it === true && forwardedToIt((t as any).it_forwards)) {
+      const note = {
+        id: crypto.randomUUID(),
+        kind: "reply",
+        message: `המשימה במשימון הסתיימה${message ? ` (${message})` : ""}. הקריאה נשלחה לאיש IT ונשארת פתוחה עד שיסגור אותה.`,
+        author: "משימון",
+        author_id: null,
+        created_at: now,
+        emailed: false,
+      };
+      const replies = Array.isArray(t.replies) ? [...t.replies, note] : [note];
+      const { error } = await admin.from("it_tickets").update({ replies, updated_at: now }).eq("id", t.id);
+      if (error) return json({ error: "update failed", details: error.message }, 500);
+      return json({ ok: true, ticket_code: t.ticket_code, forwarded_to_it: true, status: t.status });
+    }
+
     const emp: any = (t as any).employees;
     const to = emp?.email && /^\S+@\S+\.\S+$/.test(emp.email) ? emp.email : null;
 
