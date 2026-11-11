@@ -81,12 +81,12 @@ export function RequestsTab() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap gap-1.5" role="group" aria-label="סינון בקשות">
           <Button size="sm" variant={status === "open" ? "default" : "outline"} aria-pressed={status === "open"} onClick={() => setStatus("open")}>פתוחות</Button>
-          <Button size="sm" variant={status === "done" ? "default" : "outline"} aria-pressed={status === "done"} onClick={() => setStatus("done")}>הושלמו</Button>
           {status === "open" && (
             <Button size="sm" variant={mineOnly ? "default" : "outline"} aria-pressed={mineOnly} onClick={() => setMineOnly((v) => !v)}>
               ממתין לי
             </Button>
           )}
+          <Button size="sm" variant={status === "done" ? "default" : "outline"} aria-pressed={status === "done"} onClick={() => setStatus("done")}>הושלמו</Button>
         </div>
         {canRequest && (
           <Button size="sm" onClick={() => setNewOpen(true)}>
