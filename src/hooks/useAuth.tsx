@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, ReactNode, use
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { rolesForCompany } from "@/lib/permissionGroups";
+import { clearAiChats } from "@/lib/aiChatSession";
 
 import type { AppRole } from "@/lib/screenAccess";
 export type { AppRole };
@@ -97,11 +98,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") clearAiChats();
       setSession(session);
       if (session?.user) {
         // A fresh sign-in has no roles yet; token refreshes keep the current ones visible.
-        if (_event === "SIGNED_IN") setRolesLoading(true);
+        if (event === "SIGNED_IN") setRolesLoading(true);
         setTimeout(() => { fetchRoles(session.user.id); checkAccess(); }, 0);
       } else {
         clearRoles();
@@ -133,6 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hasRole = useCallback((role: AppRole) => roles.includes(role) || roles.includes("super_admin"), [roles]);
   const signOut = async () => {
     await supabase.auth.signOut();
+    clearAiChats();
     clearRoles();
     setAccessBlocked(false);
   };

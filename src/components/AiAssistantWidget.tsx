@@ -3,6 +3,8 @@ import { Bot, X, Send, Loader2, Check, AlertCircle, GripHorizontal, ExternalLink
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
+import { useAuth } from "@/hooks/useAuth";
+import { loadAiChat, saveAiChat } from "@/lib/aiChatSession";
 import { cn } from "@/lib/utils";
 import { AiPendingActionCard } from "./AiPendingActionCard";
 import { useConfirm } from "@/components/feedback/ConfirmDialog";
@@ -67,6 +69,11 @@ export function AiAssistantWidget() {
   const uploadJobCount = useUploadJobCount();
   const confirm = useConfirm();
   const { activeCompanyId } = useCompany();
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
+  // Which user's saved conversation has been restored; nothing is saved before that,
+  // so the empty initial state can't overwrite the stored chat during a refresh.
+  const [hydratedFor, setHydratedFor] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -95,6 +102,22 @@ export function AiAssistantWidget() {
     },
     { w: VIEWER_W, h: VIEWER_H },
   );
+
+  // Restore the conversation (and whether the panel was open) after a page refresh.
+  useEffect(() => {
+    if (!userId || hydratedFor === userId) return;
+    const saved = loadAiChat(userId);
+    setOpen(saved?.open ?? false);
+    setMessages(saved?.messages ?? []);
+    setInput(saved?.input ?? "");
+    setPending(saved?.pending ?? null);
+    setHydratedFor(userId);
+  }, [userId, hydratedFor]);
+
+  useEffect(() => {
+    if (!userId || hydratedFor !== userId) return;
+    saveAiChat(userId, { open, messages, input, pending });
+  }, [userId, hydratedFor, open, messages, input, pending]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
