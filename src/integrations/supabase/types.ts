@@ -4028,6 +4028,8 @@ export type Database = {
           employer_tax_file_number: string
           default_income_type: string
           allow_edit_prefilled: boolean
+          require_attachments: boolean
+          require_id_copy: boolean
           write_back_to_employee: boolean
           updated_by: string | null
           created_at: string
@@ -4041,6 +4043,8 @@ export type Database = {
           employer_tax_file_number?: string
           default_income_type?: string
           allow_edit_prefilled?: boolean
+          require_attachments?: boolean
+          require_id_copy?: boolean
           write_back_to_employee?: boolean
           updated_by?: string | null
           created_at?: string
@@ -4054,6 +4058,8 @@ export type Database = {
           employer_tax_file_number?: string
           default_income_type?: string
           allow_edit_prefilled?: boolean
+          require_attachments?: boolean
+          require_id_copy?: boolean
           write_back_to_employee?: boolean
           updated_by?: string | null
           created_at?: string
@@ -4072,6 +4078,7 @@ export type Database = {
       tax_form_101: {
         Row: {
           access_token: string | null
+          attachments: Json
           company_id: string
           created_at: string
           created_by: string | null
@@ -4092,6 +4099,7 @@ export type Database = {
         }
         Insert: {
           access_token?: string | null
+          attachments?: Json
           company_id: string
           created_at?: string
           created_by?: string | null
@@ -4112,6 +4120,7 @@ export type Database = {
         }
         Update: {
           access_token?: string | null
+          attachments?: Json
           company_id?: string
           created_at?: string
           created_by?: string | null
@@ -5530,6 +5539,7 @@ export type Database = {
       }
       submit_tax_form_101: {
         Args: {
+          _attachments?: Json
           _form_data: Json
           _form_id: string
           _pdf_url: string

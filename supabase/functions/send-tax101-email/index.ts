@@ -7,6 +7,29 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function storagePath(value: string): string {
+  const marker = "/tax-forms-101/";
+  const idx = value.indexOf(marker);
+  return idx >= 0 ? value.slice(idx + marker.length).split("?")[0] : value;
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+}
+
+// deno-lint-ignore no-explicit-any
+async function downloadBase64(client: any, path: string): Promise<string> {
+  const { data, error } = await client.storage.from("tax-forms-101").download(path);
+  if (error || !data) throw new Error(`Failed to download ${path}: ${error?.message ?? "no data"}`);
+  const bytes = new Uint8Array(await data.arrayBuffer());
+  let binary = "";
+  const chunkSize = 8192;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -73,17 +96,34 @@ Deno.serve(async (req) => {
       throw new Error("No payroll emails configured and employee has no email");
     }
 
-    // Fetch the PDF and convert to base64
-    const pdfRes = await fetch(form.pdf_url);
-    if (!pdfRes.ok) throw new Error(`Failed to fetch PDF: ${pdfRes.status}`);
-    const pdfBuffer = await pdfRes.arrayBuffer();
-    const pdfBytes = new Uint8Array(pdfBuffer);
-    let binary = "";
-    const chunkSize = 8192;
-    for (let i = 0; i < pdfBytes.length; i += chunkSize) {
-      binary += String.fromCharCode(...pdfBytes.subarray(i, i + chunkSize));
+    // pdf_url holds the storage path (older rows: a full storage URL). Download it with
+    // the service client — the bucket is private, so a plain fetch() cannot read it.
+    const pdfBase64 = await downloadBase64(supabase, storagePath(form.pdf_url));
+
+    // Documents the employee attached (recorded by submit_tax_form_101). Attached to the
+    // mail up to a total size; anything beyond is listed so payroll opens it in the system.
+    const ATTACH_LIMIT = 25 * 1024 * 1024;
+    const attachments: { filename: string; content: string }[] = [];
+    const notAttached: string[] = [];
+    let total = 0;
+    const recorded = Array.isArray(form.attachments) ? form.attachments : [];
+    for (const a of recorded) {
+      const path = typeof a?.path === "string" ? a.path : "";
+      const name = typeof a?.name === "string" && a.name ? a.name : path.split("/").pop() ?? "נספח";
+      if (!path.startsWith(`${form.company_id}/${form.id}-att-`)) continue;
+      const size = typeof a?.size === "number" ? a.size : 0;
+      if (total + size > ATTACH_LIMIT) {
+        notAttached.push(name);
+        continue;
+      }
+      try {
+        attachments.push({ filename: name, content: await downloadBase64(supabase, path) });
+        total += size;
+      } catch (e) {
+        console.warn("tax101 attachment download failed:", path, e);
+        notAttached.push(name);
+      }
     }
-    const pdfBase64 = btoa(binary);
 
     const empName = employee?.full_name ?? "עובד";
     const fileName = `tofes-101-${empName.replace(/\s+/g, "-")}-${form.tax_year}.pdf`;
@@ -92,10 +132,11 @@ Deno.serve(async (req) => {
 
     const html = `
       <div dir="rtl" style="font-family:Arial,sans-serif;max-width:600px;padding:20px;">
-        <h2 style="color:#1e40af;">טופס 101 חתום — ${empName}</h2>
+        <h2 style="color:#1e40af;">טופס 101 חתום — ${escapeHtml(empName)}</h2>
         <p>שלום,</p>
-        <p>מצורף טופס 101 חתום של <strong>${empName}</strong> לשנת המס <strong>${form.tax_year}</strong>${company?.name ? ` בחברת ${company.name}` : ""}.</p>
+        <p>מצורף טופס 101 חתום של <strong>${escapeHtml(empName)}</strong> לשנת המס <strong>${form.tax_year}</strong>${company?.name ? ` בחברת ${company.name}` : ""}.</p>
         <p style="color:#666;font-size:13px;">הטופס נחתם דיגיטלית בתאריך ${fmtDateIL(form.signed_at)}.</p>
+        ${recorded.length ? `<p>נספחים שצורפו: <strong>${recorded.length}</strong>${notAttached.length ? ` (${notAttached.length} לא צורפו למייל בגלל גודל — אפשר לפתוח אותם במסך טפסי 101: ${notAttached.map(escapeHtml).join(", ")})` : ""}.</p>` : ""}
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;" />
         <p style="font-size:11px;color:#999;">הודעה זו נשלחה אוטומטית מערכת תיק 360.</p>
       </div>
@@ -114,7 +155,7 @@ Deno.serve(async (req) => {
         cc: payrollList.length > 0 && employee?.email ? [employee.email] : undefined,
         subject: `טופס 101 חתום - ${empName} - שנת ${form.tax_year}`,
         html: formatEmailHtml(html, { companyName: company?.name, companyLogoUrl: company?.logo_url }),
-        attachments: [{ filename: fileName, content: pdfBase64 }],
+        attachments: [{ filename: fileName, content: pdfBase64 }, ...attachments],
       }),
     });
 

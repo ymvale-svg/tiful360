@@ -6,7 +6,11 @@ import { CreateTax101BatchDialog } from "./CreateTax101BatchDialog";
 import { useCompanyTax101Forms, useSendTax101Invite, useDeleteTax101 } from "@/hooks/useTax101";
 import { useCompany } from "@/hooks/useCompany";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Plus, Mail, Download, Trash2, Loader2, Filter } from "lucide-react";
+import { FileText, Plus, Mail, Download, Trash2, Loader2, Filter, Paperclip } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { sanitizeAttachments, TAX101_ATTACHMENT_KINDS } from "@/lib/tax101/attachments";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -173,6 +177,7 @@ export function Tax101AdminTab() {
                             הורד
                           </Button>
                         )}
+                        <AttachmentsMenu formId={f.id} attachments={f.attachments} />
                         <Button
                           size="icon" variant="ghost" className="h-10 w-10"
                           aria-label="מחק טופס"
@@ -219,5 +224,38 @@ export function Tax101AdminTab() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+/** The documents the employee attached to a signed form, each opened through a short-lived signed URL. */
+function AttachmentsMenu({ formId, attachments }: { formId: string; attachments: unknown }) {
+  const { toast } = useToast();
+  const files = sanitizeAttachments(attachments, formId);
+  if (files.length === 0) return null;
+  const open = async (path: string) => {
+    try {
+      await openTax101Pdf(path);
+    } catch (e) {
+      toast({ title: "לא ניתן לפתוח את הקובץ", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
+    }
+  };
+  return (
+    <DropdownMenu dir="rtl">
+      <DropdownMenuTrigger asChild>
+        <Button size="sm" variant="ghost" className="h-10 gap-1 text-sm" aria-label={`נספחים (${files.length})`}>
+          <Paperclip className="w-3 h-3" aria-hidden="true" />
+          נספחים <span className="tabular-nums">{files.length}</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="max-w-xs">
+        <DropdownMenuLabel>נספחים שצורפו לטופס</DropdownMenuLabel>
+        {files.map((f) => (
+          <DropdownMenuItem key={f.path} onSelect={() => void open(f.path)} className="flex flex-col items-start gap-0.5">
+            <span className="text-sm">{TAX101_ATTACHMENT_KINDS[f.kind].label}</span>
+            <span className="max-w-[16rem] truncate text-xs text-muted-foreground" dir="auto">{f.name}</span>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

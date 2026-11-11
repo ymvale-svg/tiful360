@@ -137,6 +137,20 @@ export function Tax101SettingsCard() {
             onChange={(v) => set("allow_edit_prefilled", v)}
           />
           <SwitchRow
+            id="t101-require-docs"
+            label="חובה לצרף את המסמכים של הזיכויים שסומנו"
+            hint="למשל תעודת שחרור לחייל משוחרר או אישור יישוב מזכה. כבוי: הנספחים מוצגים אך אינם חוסמים חתימה."
+            checked={form.require_attachments}
+            onChange={(v) => set("require_attachments", v)}
+          />
+          <SwitchRow
+            id="t101-require-id"
+            label="חובה לצרף צילום תעודת זהות כולל ספח"
+            hint="הטופס מבקש צילום בפעם הראשונה או כשיש שינוי בפרטים."
+            checked={form.require_id_copy}
+            onChange={(v) => set("require_id_copy", v)}
+          />
+          <SwitchRow
             id="t101-write-back"
             label="עדכון כרטיס העובד לאחר החתימה"
             hint="כתובת, מצב משפחתי, טלפון, קופת חולים והילדים יעודכנו בכרטיס העובד לפי הטופס החתום."

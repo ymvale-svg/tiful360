@@ -26,6 +26,13 @@ import { cn } from "@/lib/utils";
 import page1Url from "@/assets/forms/tax101/page-1.webp";
 import page2Url from "@/assets/forms/tax101/page-2.webp";
 import { Tax101FieldControl, type FieldState } from "./Tax101FieldControl";
+import { Tax101AttachmentsPanel } from "./Tax101AttachmentsPanel";
+import {
+  attachmentRequirements,
+  missingRequiredAttachments,
+  sanitizeAttachments,
+  type Tax101Attachment,
+} from "@/lib/tax101/attachments";
 
 const PAGE_IMAGES = [page1Url, page2Url];
 
@@ -141,17 +148,27 @@ function FormEditor({
     return { ...d, employer: prefill.data.employer };
   });
 
+  // Uploaded attachments are recorded on the form only when it is signed; until then
+  // the list lives in the local draft so reopening the form keeps them.
+  const attachmentsKey = `${draftKey}:attachments`;
+  const [attachments, setAttachments] = useState<Tax101Attachment[]>(() => {
+    const stored = sanitizeAttachments(ctx.form.attachments, ctx.form.id);
+    const draft = sanitizeAttachments(readDraft(attachmentsKey), ctx.form.id);
+    return draft.length ? draft : stored;
+  });
+
   // Keep a local draft so closing the window never loses what was typed.
   useEffect(() => {
     const t = setTimeout(() => {
       try {
         localStorage.setItem(draftKey, JSON.stringify(data));
+        localStorage.setItem(attachmentsKey, JSON.stringify(attachments));
       } catch {
         /* storage unavailable — the form still works */
       }
     }, 600);
     return () => clearTimeout(t);
-  }, [data, draftKey]);
+  }, [data, attachments, draftKey, attachmentsKey]);
 
   const update = useCallback(
     (path: string, value: unknown) =>
@@ -165,6 +182,13 @@ function FormEditor({
 
   const validation = useMemo(() => validateTax101(data), [data]);
   const errorPaths = useMemo(() => new Set(validation.errors.map((e) => e.path)), [validation]);
+  const requirements = useMemo(() => attachmentRequirements(data, ctx.settings ?? {}), [data, ctx.settings]);
+  const missingDocs = useMemo(() => missingRequiredAttachments(requirements, attachments), [requirements, attachments]);
+  // Files of a document kind that no longer applies (credit unticked) are not sent.
+  const activeAttachments = useMemo(() => {
+    const kinds = new Set(requirements.map((r) => r.kind));
+    return attachments.filter((a) => kinds.has(a.kind));
+  }, [attachments, requirements]);
 
   const fieldState = (path: string): FieldState => {
     if (errorPaths.has(path)) return "missing";
@@ -219,7 +243,22 @@ function FormEditor({
     }
   };
 
+  const jumpToAttachments = useCallback(() => {
+    const el = document.getElementById("t101-attachments");
+    el?.scrollIntoView({ block: "start", behavior: "smooth" });
+    window.setTimeout(() => el?.focus({ preventScroll: true }), 250);
+  }, []);
+
   const startSigning = () => {
+    if (validation.ok && missingDocs.length > 0) {
+      toast({
+        title: `חסרים ${missingDocs.length} נספחים`,
+        description: missingDocs.map((d) => d.label).join(" · "),
+        variant: "destructive",
+      });
+      jumpToAttachments();
+      return;
+    }
     if (!validation.ok) {
       toast({
         title: `נותרו ${validation.errors.length} שדות להשלמה`,
@@ -239,9 +278,17 @@ function FormEditor({
       const path = `${ctx.form.company_id}/${ctx.form.id}-${Date.now()}.pdf`;
       const { error } = await uploadFile("tax-forms-101", path, blob, { contentType: "application/pdf", upsert: true });
       if (error) throw error;
-      await submit.mutateAsync({ formId: ctx.form.id, token, formData: data, signatureData: signature, pdfPath: path });
+      await submit.mutateAsync({
+        formId: ctx.form.id,
+        token,
+        formData: data,
+        signatureData: signature,
+        pdfPath: path,
+        attachments: activeAttachments,
+      });
       try {
         localStorage.removeItem(draftKey);
+        localStorage.removeItem(attachmentsKey);
       } catch {
         /* ignore */
       }
@@ -259,7 +306,7 @@ function FormEditor({
     }
   };
 
-  const remaining = validation.errors.length;
+  const remaining = validation.errors.length + missingDocs.length;
   const fieldsByPage = useMemo(() => [0, 1].map((p) => TAX101_FIELDS.filter((f) => f.page === p)), []);
 
   return (
@@ -323,7 +370,15 @@ function FormEditor({
           </section>
         ))}
 
-        <div className="mx-auto px-3" style={{ maxWidth: Math.min(pageWidth, 720) }}>
+        <div className="mx-auto space-y-4 px-3" style={{ maxWidth: Math.min(pageWidth, 720) }}>
+          <Tax101AttachmentsPanel
+            companyId={ctx.form.company_id}
+            formId={ctx.form.id}
+            requirements={requirements}
+            files={activeAttachments}
+            onChange={setAttachments}
+            disabled={submitting}
+          />
           <Tax101ValidationPanel result={validation} onJump={jumpTo} />
         </div>
       </div>
@@ -332,7 +387,8 @@ function FormEditor({
         <p className="text-sm" aria-live="polite">
           {remaining > 0 ? (
             <>
-              נותרו <span className="font-bold tabular-nums text-destructive">{remaining}</span> שדות להשלמה
+              נותרו <span className="font-bold tabular-nums text-destructive">{remaining}</span> פריטים להשלמה
+              {missingDocs.length > 0 && <span className="text-muted-foreground"> (כולל {missingDocs.length} נספחים)</span>}
             </>
           ) : (
             <span className="inline-flex items-center gap-1 font-medium text-success">
@@ -341,7 +397,11 @@ function FormEditor({
           )}
         </p>
         {remaining > 0 && (
-          <Button variant="outline" size="sm" onClick={() => jumpTo(validation.errors[0].path)}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => (validation.errors[0] ? jumpTo(validation.errors[0].path) : jumpToAttachments())}
+          >
             לשדה הבא <ChevronLeft className="h-4 w-4" aria-hidden="true" />
           </Button>
         )}

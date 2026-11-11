@@ -10,6 +10,7 @@ import {
   type Tax101Settings,
 } from "@/lib/tax101/prefill";
 import { TAX101_TEMPLATE_VERSION, type Tax101FormData } from "@/lib/tax101/types";
+import type { Tax101Attachment } from "@/lib/tax101/attachments";
 
 export type Tax101Status = "pending" | "signed" | "sent";
 
@@ -171,10 +172,14 @@ export interface Tax101ContextResult {
     signed_at: string | null;
     company_id: string;
     template_version: string | null;
+    attachments?: unknown;
   };
   company: { name: string | null; logo_url: string | null };
   employer: { name: string; address: string; phone: string; tax_file_number: string };
-  settings: Pick<Tax101Settings, "default_income_type" | "allow_edit_prefilled" | "write_back_to_employee">;
+  settings: Pick<
+    Tax101Settings,
+    "default_income_type" | "allow_edit_prefilled" | "write_back_to_employee" | "require_id_copy" | "require_attachments"
+  >;
   employee: Tax101EmployeeSource & { id: string; company_id: string | null; employee_code?: string | null };
   dependents: Tax101DependentSource[];
 }
@@ -207,12 +212,14 @@ export function useSubmitTax101() {
       formData,
       signatureData,
       pdfPath,
+      attachments = [],
     }: {
       formId: string;
       token?: string | null;
       formData: Tax101FormData;
       signatureData: string;
       pdfPath: string;
+      attachments?: Tax101Attachment[];
     }) => {
       const { data, error } = await supabase.rpc("submit_tax_form_101", {
         _form_id: formId,
@@ -221,6 +228,7 @@ export function useSubmitTax101() {
         _signature: signatureData,
         _pdf_url: pdfPath,
         _template_version: TAX101_TEMPLATE_VERSION,
+        _attachments: attachments as unknown as Json,
       });
       if (error) throw error;
 

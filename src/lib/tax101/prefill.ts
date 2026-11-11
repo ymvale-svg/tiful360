@@ -56,6 +56,10 @@ export interface Tax101Settings {
   allow_edit_prefilled: boolean;
   /** After signing, copy the employee's corrections back to the employee card. */
   write_back_to_employee: boolean;
+  /** Always ask for an ID copy (with its appendix). */
+  require_id_copy: boolean;
+  /** Documents of checked credits must be attached before signing. */
+  require_attachments: boolean;
 }
 
 export const DEFAULT_TAX101_SETTINGS: Tax101Settings = {
@@ -66,6 +70,8 @@ export const DEFAULT_TAX101_SETTINGS: Tax101Settings = {
   default_income_type: "monthly",
   allow_edit_prefilled: true,
   write_back_to_employee: true,
+  require_id_copy: false,
+  require_attachments: true,
 };
 
 export interface Tax101Context {
