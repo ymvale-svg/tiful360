@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ChevronDown, ChevronLeft, Copy, FolderTree, Plus } from "lucide-react";
+import { ChevronDown, ChevronLeft, FolderTree, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FileDrop } from "@/components/feedback/FileDrop";
 import { FormField } from "@/components/feedback/FormField";
@@ -15,7 +15,7 @@ import {
   useSetGroupResource,
 } from "@/hooks/useSystemAccess";
 import { buildTree, visibleNodes } from "@/domain/systemAccess/tree";
-import { diffTree, parseTreeExport, treeExportCommand } from "@/domain/systemAccess/treeImport";
+import { diffTree, parseTreeExport } from "@/domain/systemAccess/treeImport";
 import { LEVEL_LABEL, type AccessLevel } from "@/domain/systemAccess/protocol";
 import type { AccessGroup, AccessSystem } from "@/domain/systemAccess/types";
 
@@ -70,7 +70,6 @@ function SystemTree({ system }: { system: AccessSystem }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [groupId, setGroupId] = useState<string | null>(null);
   const [draft, setDraft] = useState({ name: "", external_name: "" });
-  const [root, setRoot] = useState("P:\\");
   const [query, setQuery] = useState("");
 
   const selectedGroup = groups.find((g) => g.id === groupId) ?? null;
@@ -103,7 +102,7 @@ function SystemTree({ system }: { system: AccessSystem }) {
     if (!file) return;
     const parsed = parseTreeExport(await file.text());
     if (parsed.paths.length === 0) {
-      toast({ title: "לא נמצאו תיקיות בקובץ", description: "ודאו שזה הקובץ שהפקודה יצרה.", variant: "destructive" });
+      toast({ title: "לא נמצאו תיקיות בקובץ", description: "ודאו שזה קובץ עץ התיקיות הנכון.", variant: "destructive" });
       return;
     }
     const diff = diffTree(resources.map((r) => r.path), parsed.paths);
@@ -171,7 +170,7 @@ function SystemTree({ system }: { system: AccessSystem }) {
           onRetry={() => void refetch()}
           isEmpty={resources.length === 0}
           label="עץ"
-          empty={{ title: "העץ ריק", description: "ייבאו את עץ התיקיות מהקובץ שהפקודה למטה יוצרת." }}
+          empty={{ title: "העץ ריק", description: "ייבאו את עץ התיקיות מקובץ CSV למטה." }}
         >
           <ul className="divide-y divide-border/50" aria-label={`עץ ${system.name}`}>
             {rows.map(({ row, depth, children }) => {
@@ -224,25 +223,6 @@ function SystemTree({ system }: { system: AccessSystem }) {
 
         <div className="rounded-lg bg-muted/40 p-3 space-y-2">
           <h3 className="text-sm font-semibold">ייבוא עץ מהשרת</h3>
-          <div className="flex flex-wrap items-end gap-2">
-            <FormField label="כונן או שיתוף" className="w-40">
-              <input value={root} onChange={(e) => setRoot(e.target.value)} className={inputClass} dir="ltr" />
-            </FormField>
-            <code dir="ltr" className="flex-1 min-w-0 text-xs bg-card border border-border rounded-lg p-2 break-all">
-              {treeExportCommand(root)}
-            </code>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                void navigator.clipboard?.writeText(treeExportCommand(root));
-                toast({ title: "הפקודה הועתקה" });
-              }}
-            >
-              <Copy className="w-4 h-4" /> העתק
-            </Button>
-          </div>
           <FileDrop
             accept=".csv,.txt,text/csv,text/plain"
             onFiles={(files) => { void onFiles(files); }}
