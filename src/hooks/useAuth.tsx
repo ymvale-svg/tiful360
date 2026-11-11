@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, ReactNode, useCallback } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, ReactNode, useCallback } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { rolesForCompany } from "@/lib/permissionGroups";
@@ -54,6 +54,8 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
 });
 
+const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -68,6 +70,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   });
   const [accessBlocked, setAccessBlocked] = useState(false);
+  // The user whose roles are loaded (or loading). Supabase emits SIGNED_IN again whenever the tab
+  // regains focus; only a different user may hide the screen while roles load, otherwise every
+  // open dialog on the page would be unmounted when the user switches tabs and comes back.
+  const rolesUserRef = useRef<string | null>(null);
 
   const checkAccess = useCallback(async () => {
     const { data, error } = await supabase.rpc("my_access_blocked" as any);
@@ -81,13 +87,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .select("company_id, permission_groups(roles)")
         .eq("user_id", userId),
     ]);
-    setGlobalRoles((data ?? []).map((r) => r.role as AppRole));
+    // Keep the previous arrays when nothing changed, so a refocus refresh re-renders nothing.
+    const nextGlobal = (data ?? []).map((r) => r.role as AppRole);
+    setGlobalRoles((prev) => (sameJson(prev, nextGlobal) ? prev : nextGlobal));
     // Before the groups migration is applied the table is missing: fall back to user_roles.
-    setMemberships(
-      groups.error
-        ? null
-        : (groups.data ?? []).map((m: any) => ({ company_id: m.company_id, roles: m.permission_groups?.roles ?? [] })),
-    );
+    const nextMemberships = groups.error
+      ? null
+      : (groups.data ?? []).map((m: any) => ({ company_id: m.company_id, roles: m.permission_groups?.roles ?? [] }));
+    setMemberships((prev) => (sameJson(prev, nextMemberships) ? prev : nextMemberships));
     setRolesLoading(false);
   }, []);
 
@@ -102,10 +109,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event === "SIGNED_OUT") clearAiChats();
       setSession(session);
       if (session?.user) {
-        // A fresh sign-in has no roles yet; token refreshes keep the current ones visible.
-        if (event === "SIGNED_IN") setRolesLoading(true);
+        // A fresh sign-in has no roles yet; the same user's refocus/token refresh keeps the current ones visible.
+        if (rolesUserRef.current !== session.user.id) {
+          rolesUserRef.current = session.user.id;
+          setRolesLoading(true);
+        }
         setTimeout(() => { fetchRoles(session.user.id); checkAccess(); }, 0);
       } else {
+        rolesUserRef.current = null;
         clearRoles();
         setAccessBlocked(false);
       }
@@ -115,6 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session?.user) {
+        rolesUserRef.current = session.user.id;
         fetchRoles(session.user.id);
         checkAccess();
       } else {
@@ -132,6 +144,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return rolesForCompany(globalRoles, memberships, roleCompanyId);
   }, [globalRoles, memberships, roleCompanyId, isSuperAdmin]);
 
+  // Same reference while it is the same user record: a token refresh on tab focus hands over a
+  // new session object, which would otherwise re-run every effect that depends on `user`.
+  const sessionUser = session?.user ?? null;
+  const userKey = sessionUser ? `${sessionUser.id}:${sessionUser.updated_at ?? ""}` : null;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const user = useMemo(() => sessionUser, [userKey]);
+
   const hasRole = useCallback((role: AppRole) => roles.includes(role) || roles.includes("super_admin"), [roles]);
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -144,7 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         session,
-        user: session?.user ?? null,
+        user,
         loading,
         roles,
         rolesLoading,
