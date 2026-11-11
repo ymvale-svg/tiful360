@@ -56,7 +56,7 @@ const STATUS_STYLE: Record<GrantStatus, string> = {
 export function RequestsTab() {
   const { user, roles, hasRole } = useAuth();
   const actor: Actor = useMemo(
-    () => ({ userId: user?.id ?? null, roles, isManager: hasRole("admin") }),
+    () => ({ userId: user?.id ?? null, roles, isManager: hasRole("admin") || hasRole("it_manager") }),
     [user?.id, roles, hasRole],
   );
   const canRequest = hasRole("admin") || hasRole("hr") || hasRole("operations") || hasRole("it_manager");

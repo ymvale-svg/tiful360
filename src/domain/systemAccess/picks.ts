@@ -49,7 +49,7 @@ export function toLocalInput(iso: string): string {
 export interface Actor {
   userId: string | null;
   roles: readonly string[];
-  /** Admin of the company (or super admin): runs the hub. */
+  /** Admin or IT manager of the company (or super admin): runs the hub. */
   isManager: boolean;
 }
 

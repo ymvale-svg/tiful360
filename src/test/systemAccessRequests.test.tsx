@@ -78,11 +78,12 @@ describe("access requests hub", () => {
     );
   });
 
-  it("shows IT only what was sent to IT, and returning needs a reason", async () => {
+  it("lets IT work new requests like an admin, and returning needs a reason", async () => {
     auth = { user: { id: "it" }, roles: ["it_manager"] };
     render(<ConfirmProvider><RequestsTab /></ConfirmProvider>);
-    expect(within(row("כונן P")).queryByRole("checkbox")).toBeNull();
-    expect(within(row("כונן P")).queryByRole("button", { name: "בוצע" })).toBeNull();
+    // New (onboarding) requests are waiting for IT too: they can be sent on or executed.
+    expect(within(row("כונן P")).getByRole("checkbox")).toBeTruthy();
+    expect(within(row("כונן P")).getByRole("button", { name: "בוצע" })).toBeTruthy();
     fireEvent.click(within(row("ויפלנס")).getByRole("button", { name: "החזר" }));
     const dialog = await screen.findByRole("dialog");
     fireEvent.click(within(dialog).getByRole("button", { name: "החזרה למנהל ההרשאות" }));
