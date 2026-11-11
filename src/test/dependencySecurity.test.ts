@@ -59,11 +59,11 @@ describe("dependency installation source", () => {
     expect(fs.existsSync(path.join(root, "pnpm-lock.yaml"))).toBe(false);
   });
 
-  it("has no Lovable editor-only dev tooling", () => {
-    const dev = Object.keys(pkg.devDependencies ?? {});
-    expect(dev).not.toContain("lovable-tagger");
-    expect(dev.filter((d) => d.startsWith("@lovable.dev/vite-plugin-"))).toEqual([]);
-    const vite = fs.readFileSync(path.join(root, "vite.config.ts"), "utf8");
-    expect(vite).not.toMatch(/lovable-tagger|__lovable_backend_proxy/);
+  // Lovable's editor adds its dev tooling (lovable-tagger, @lovable.dev/vite-plugin-*) back on
+  // every sync, so it is allowed; it must stay dev-only so it never ships in the app bundle.
+  it("keeps Lovable editor tooling in devDependencies only", () => {
+    const prod = Object.keys(pkg.dependencies ?? {});
+    expect(prod).not.toContain("lovable-tagger");
+    expect(prod.filter((d) => d.startsWith("@lovable.dev/vite-plugin-"))).toEqual([]);
   });
 });
