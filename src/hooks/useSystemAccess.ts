@@ -25,6 +25,8 @@ import {
   listHeldGrants,
   requestRevocation,
   listMySystemAccess,
+  assignAccessDirect,
+  type DirectAssignRow,
   type GrantAction,
 } from "@/services/systemAccess";
 import type { AccessGroup, AccessPick, AccessResource, AccessSystem } from "@/domain/systemAccess/types";
@@ -260,6 +262,19 @@ export function useEmployeeGrantHistory(employeeId: string | null) {
     queryKey: [...KEYS.requests, "employee", employeeId],
     queryFn: () => listEmployeeGrantHistory(supabase, employeeId!),
     enabled: !!employeeId,
+  });
+}
+
+/** The admin enters access employees already hold: active at once, no request or approval. */
+export function useAssignAccessDirect() {
+  const invalidate = useInvalidateRequests();
+  const { activeCompanyId } = useCompany();
+  return useMutation({
+    mutationFn: (rows: DirectAssignRow[]) => {
+      if (!activeCompanyId) throw new Error("לא נבחרה חברה");
+      return assignAccessDirect(supabase, activeCompanyId, rows);
+    },
+    onSuccess: invalidate,
   });
 }
 

@@ -4,7 +4,10 @@ import { ActiveFilters } from "@/components/ui/active-filters";
 import { EMPTY_ICONS } from "@/components/feedback/emptyIcons";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { UserPlus, Send, UserRound, AlertCircle, ListChecks, Settings2 } from "lucide-react";
+import { UserPlus, Send, UserRound, AlertCircle, ListChecks, Settings2, Trash2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useConfirm } from "@/components/feedback/ConfirmDialog";
+import { useToast } from "@/hooks/use-toast";
 import { EmptyState, ListSkeleton } from "@/components/feedback/StateView";
 import { NewOnboardingDialog } from "@/components/onboarding/NewOnboardingDialog";
 import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
@@ -16,7 +19,7 @@ import {
   ONBOARDING_STATUS_LABEL,
   daysUntil,
   useOnboardingProcesses,
-  useUpdateOnboardingProcess,
+  useDeleteOnboardingProcesses,
   type OnboardingProcess,
   type OnboardingStatus,
 } from "@/hooks/useOnboarding";
@@ -31,7 +34,10 @@ const STATUS_STYLE: Record<OnboardingStatus, string> = {
 export default function Onboarding() {
   const navigate = useNavigate();
   const { data: processes = [], isLoading, isError, error, refetch } = useOnboardingProcesses();
-  const updateProcess = useUpdateOnboardingProcess();
+  const deleteProcesses = useDeleteOnboardingProcesses();
+  const confirm = useConfirm();
+  const { toast } = useToast();
+  const [checked, setChecked] = useState<Set<string>>(new Set());
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selected, setSelected] = useState<OnboardingProcess | null>(null);
   const [sendTarget, setSendTarget] = useState<OnboardingProcess | null>(null);
@@ -40,6 +46,8 @@ export default function Onboarding() {
   const [catalogOpen, setCatalogOpen] = useState(false);
   const { hasRole } = useAuth();
   const canManageCatalog = hasRole("admin") || hasRole("operations");
+  // Only the company admin deletes onboarding processes (delete_onboarding_processes).
+  const canDelete = hasRole("admin");
 
   const filtered = useMemo(() => {
     return processes.filter((p) => {
@@ -52,6 +60,43 @@ export default function Onboarding() {
       );
     });
   }, [processes, query, statusFilter]);
+
+  // Selection is limited to what the filter shows, so a hidden process is never deleted by surprise.
+  const selectedIds = filtered.filter((p) => checked.has(p.id)).map((p) => p.id);
+  const allChecked = filtered.length > 0 && selectedIds.length === filtered.length;
+  const toggle = (id: string) =>
+    setChecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const toggleAll = () => setChecked(allChecked ? new Set() : new Set(filtered.map((p) => p.id)));
+
+  const deleteSelected = () => {
+    const ids = selectedIds;
+    if (ids.length === 0) return;
+    const open = filtered.filter((p) => ids.includes(p.id) && p.status !== "done").length;
+    void confirm({
+      title: `למחוק ${ids.length} תהליכי קליטה?`,
+      description: `הצ'קליסטים שלהם יימחקו לצמיתות${open ? `, קריאות קליטה פתוחות ייסגרו ועובדים שעדיין בסטטוס "בקליטה" יהפכו לפעילים` : ""}. העובדים עצמם, הציוד שכבר נמסר וההרשאות לא נמחקים.`,
+      confirmLabel: `מחק ${ids.length}`,
+      destructive: true,
+      ...(ids.length > 5 ? { requireText: "מחק" } : {}),
+      onConfirm: async () => {
+        const res = await deleteProcesses.mutateAsync(ids);
+        setChecked(new Set());
+        if (selected && ids.includes(selected.id)) setSelected(null);
+        toast({
+          title: `${res.deleted} תהליכי קליטה נמחקו`,
+          description: [
+            res.ticketsClosed ? `${res.ticketsClosed} קריאות נסגרו` : "",
+            res.employeesActivated ? `${res.employeesActivated} עובדים הוגדרו כפעילים` : "",
+          ].filter(Boolean).join(" · ") || undefined,
+        });
+      },
+    });
+  };
 
   // Keep the open sheet in sync with refreshed data.
   const openProcess = selected ? processes.find((p) => p.id === selected.id) ?? selected : null;
@@ -129,6 +174,20 @@ export default function Onboarding() {
             ]}
           />
         )}
+        {canDelete && !isLoading && !isError && filtered.length > 0 && (
+          <div className="px-4 py-2 flex flex-wrap items-center gap-3 bg-muted/20">
+            <label className="flex items-center gap-2 text-sm cursor-pointer min-h-10">
+              <Checkbox checked={allChecked ? true : selectedIds.length > 0 ? "indeterminate" : false} onCheckedChange={toggleAll} />
+              בחר הכל ({filtered.length})
+            </label>
+            {selectedIds.length > 0 && (
+              <Button size="sm" variant="destructive" className="gap-1.5 ms-auto" onClick={deleteSelected}>
+                <Trash2 className="w-3.5 h-3.5" />
+                מחק נבחרים ({selectedIds.length})
+              </Button>
+            )}
+          </div>
+        )}
         {!isLoading && !isError && filtered.length === 0 && (
           processes.length > 0 ? (
             <EmptyState
@@ -156,6 +215,17 @@ export default function Onboarding() {
               className="p-4 flex flex-col sm:flex-row sm:items-center gap-3 hover:bg-muted/30 transition-colors cursor-pointer"
               onClick={() => setSelected(p)}
             >
+              {canDelete && (
+                <div className="flex items-center">
+                  <Checkbox
+                    checked={checked.has(p.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    onCheckedChange={() => toggle(p.id)}
+                    aria-label={`בחירת תהליך הקליטה של ${p.employees?.full_name ?? "העובד"}`}
+                    className="h-5 w-5"
+                  />
+                </div>
+              )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-medium">

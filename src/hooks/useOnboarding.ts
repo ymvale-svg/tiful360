@@ -186,14 +186,26 @@ export function useUpdateOnboardingProcess() {
   });
 }
 
-export function useDeleteOnboardingProcess() {
+/**
+ * Deletes onboarding processes of the active company in one transaction (admin only): open
+ * onboarding tickets close, and employees no longer being onboarded become active.
+ */
+export function useDeleteOnboardingProcesses() {
   const qc = useQueryClient();
+  const { activeCompanyId } = useCompany();
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("onboarding_processes").delete().eq("id", id);
+    mutationFn: async (ids: string[]) => {
+      if (!activeCompanyId) throw new Error("לא נבחרה חברה");
+      const { data, error } = await supabase.rpc("delete_onboarding_processes", { _company_id: activeCompanyId, _process_ids: ids });
       if (error) throw error;
+      return data as { deleted: number; ticketsClosed: number; employeesActivated: number };
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["onboarding-processes"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["onboarding-processes"] });
+      qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
+      qc.invalidateQueries({ queryKey: ["employees"] });
+      qc.invalidateQueries({ queryKey: ["it-tickets"] });
+    },
   });
 }
 
