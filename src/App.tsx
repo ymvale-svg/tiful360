@@ -15,6 +15,7 @@ import { PwaUpdatePrompt } from "@/components/PwaUpdatePrompt";
 import { OAuthReturnRedirect } from "@/components/OAuthReturnRedirect";
 import { SessionHomeRedirect } from "@/components/SessionHomeRedirect";
 import { SplashScreen } from "@/components/SplashScreen";
+import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { LEGACY_REDIRECTS, SCREEN_ROLES, legacyTarget, type LegacyRedirect } from "@/lib/screenAccess";
 
 // Eager: critical entry pages and frequently-used screens (avoids Suspense flash on navigation)
@@ -73,6 +74,7 @@ const App = () => (
           <CompanyProvider>
             <OAuthReturnRedirect />
             <SessionHomeRedirect />
+            <RouteErrorBoundary>
             <Suspense fallback={<SplashScreen />}>
               <Routes>
                 <Route path="/login" element={<Login />} />
@@ -108,6 +110,7 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
+            </RouteErrorBoundary>
           </CompanyProvider>
         </AuthProvider>
       </BrowserRouter>
