@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { registerSW } from "virtual:pwa-register";
 import { RefreshCw } from "lucide-react";
+import { reloadOnceForStaleChunk } from "@/lib/lazyWithReload";
 
 /**
  * Registers the service worker and offers an update instead of applying one
@@ -28,19 +29,14 @@ export function PwaUpdatePrompt() {
     });
 
     // A deploy removes the previous hashed chunks. A tab holding the old
-    // index.html asks for one of them on its next lazy route and gets a 404,
-    // which surfaces as a blank screen rather than an error the user can act on.
-    // Reload once — the fresh HTML points at chunks that exist.
-    const RELOAD_FLAG = "pwa_chunk_reload";
+    // index.html asks for one of them on its next lazy route and gets a 404.
+    // Reload once — the fresh HTML points at chunks that exist. Only cancel the
+    // error when actually reloading: a cancelled preload error makes the import
+    // resolve to undefined, which crashes React instead of reaching the error screen.
     const onPreloadError = (e: Event) => {
-      e.preventDefault();
-      if (sessionStorage.getItem(RELOAD_FLAG)) return; // already tried; let it fail visibly
-      sessionStorage.setItem(RELOAD_FLAG, "1");
-      window.location.reload();
+      if (reloadOnceForStaleChunk()) e.preventDefault();
     };
     window.addEventListener("vite:preloadError", onPreloadError);
-    // A successful load means we are on a good build again.
-    sessionStorage.removeItem(RELOAD_FLAG);
 
     return () => window.removeEventListener("vite:preloadError", onPreloadError);
   }, []);
