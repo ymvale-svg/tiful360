@@ -320,6 +320,26 @@ export async function requestRevocation(db: Db, employeeId: string, grantIds: st
   return data as { requestId: string; ticketId: string; ticketCode: string; count: number };
 }
 
+/** One access an employee already holds, entered directly by the admin (no request or approval). */
+export interface DirectAssignRow {
+  employee_id: string;
+  system_id: string;
+  group_id?: string | null;
+  resource_id?: string | null;
+  /** ISO timestamp; omitted = the employee's first day at 08:00. */
+  effective_from?: string | null;
+  /** "YYYY-MM-DD": that day at 08:00 Israel time (used when effective_from is empty). */
+  effective_date?: string | null;
+  external_username?: string | null;
+}
+
+/** Records access as active at once (initial entry of existing access); held access is skipped. */
+export async function assignAccessDirect(db: Db, companyId: string, rows: DirectAssignRow[]) {
+  const { data, error } = await db.rpc("assign_system_access_direct", { _company_id: companyId, _rows: rows });
+  fail(error);
+  return data as { grants: number; employees: number; skipped: number };
+}
+
 /** Access the company's employees hold, including access waiting to be revoked. */
 export async function listHeldGrants(db: Db, companyId: string): Promise<Array<AccessGrant & { employees: { full_name: string; department: string | null; status: string } | null }>> {
   const { data, error } = await db

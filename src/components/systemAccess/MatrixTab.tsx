@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { FileText, Grid3x3, Unplug } from "lucide-react";
+import { FileText, Grid3x3, ShieldPlus, Unplug } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchInput } from "@/components/ui/search-input";
 import { StateView } from "@/components/feedback/StateView";
@@ -11,6 +11,7 @@ import { buildMatrix, bySystem, departmentsOf, filterMatrix, accessTarget } from
 import { formatIsraelDateTime } from "@/domain/systemAccess/protocol";
 import { unusualGrant } from "@/domain/suggestions/peers";
 import { useEmployees } from "@/hooks/useData";
+import { DirectAssignDialog } from "@/components/systemAccess/DirectAssignDialog";
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 const selectClass = "min-h-10 px-2 bg-card border border-border rounded-lg text-sm";
@@ -21,6 +22,9 @@ export function MatrixTab() {
   const confirm = useConfirm();
   const { hasRole } = useAuth();
   const canRevoke = hasRole("admin") || hasRole("hr") || hasRole("operations") || hasRole("it_manager");
+  // Only the company admin enters existing access directly (assign_system_access_direct).
+  const canAssign = hasRole("admin");
+  const [assignOpen, setAssignOpen] = useState(false);
   const { data: grants = [], isLoading, error, refetch } = useHeldGrants();
   const { data: systems = [] } = useAccessSystems();
   const revoke = useRequestRevocation();
@@ -116,7 +120,13 @@ export function MatrixTab() {
         >
           רק חריגים ({unusual.size})
         </Button>
+        {canAssign && (
+          <Button size="sm" onClick={() => setAssignOpen(true)} className="ms-auto">
+            <ShieldPlus className="w-4 h-4" /> הזנת הרשאות קיימות
+          </Button>
+        )}
       </div>
+      {canAssign && <DirectAssignDialog open={assignOpen} onOpenChange={setAssignOpen} />}
 
       <StateView
         loading={isLoading}
@@ -126,7 +136,9 @@ export function MatrixTab() {
         label="מטריצת הרשאות"
         empty={{
           title: grants.length === 0 ? "עוד אין הרשאות פעילות" : "אין תוצאות לסינון",
-          description: grants.length === 0 ? "הרשאות מופיעות כאן מרגע שהן נפתחות." : undefined,
+          description: grants.length === 0
+            ? canAssign ? "הזינו את ההרשאות הקיימות לעובד אחד או לכל החברה מאקסל." : "הרשאות מופיעות כאן מרגע שהן נפתחות."
+            : undefined,
           icon: <Grid3x3 className="w-6 h-6" />,
         }}
       >

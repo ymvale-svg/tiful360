@@ -4774,6 +4774,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      assign_system_access_direct: {
+        Args: { _company_id: string; _rows: Json }
+        Returns: Json
+      }
       complete_onboarding_item: {
         Args: { _done: boolean; _item_id: string; _note?: string }
         Returns: {
@@ -4843,6 +4847,10 @@ export type Database = {
       create_system_access_scan_token: {
         Args: { _system_id: string }
         Returns: string
+      }
+      delete_onboarding_processes: {
+        Args: { _company_id: string; _process_ids: string[] }
+        Returns: Json
       }
       delete_company_cascade: {
         Args: { _company_id: string }
@@ -5204,10 +5212,6 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
-      }
-      import_legacy_system_access: {
-        Args: { _apply?: boolean; _company_id: string }
-        Returns: Json
       }
       import_system_access_tree: {
         Args: { _paths: string[]; _system_id: string }
