@@ -31,6 +31,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { SubCategorySelect } from "@/components/assets/SubCategorySelect";
 import { SiteSelect } from "@/components/sites/SiteSelect";
 import { ContainerSelect } from "@/components/sites/ContainerSelect";
+import { SiteLocationInput } from "@/components/sites/SiteLocationInput";
 import { ManufacturerModelInput } from "@/components/assets/ManufacturerModelInput";
 
 import { cn } from "@/lib/utils";
@@ -110,6 +111,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
     current_owner_id: "",
     assigned_site_id: "",
     container_id: "",
+    site_location: "",
     status: "in_stock" as "in_use" | "in_stock" | "in_repair",
     expiry_date: "",
     notes: "",
@@ -227,10 +229,10 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
   const showBuiltin = (key: string) => isBuiltinFieldVisible(selectedGroup as any, key, domain);
   const catFields = useMemo(
     () =>
-      filterFieldsForGroup(catFieldsRaw as any[], form.group_id || null)
+      filterFieldsForGroup(catFieldsRaw as any[], form.group_id || null, (selectedGroup as any)?.hidden_category_fields)
         .filter((cf: any) => !EXPIRY_DUPLICATE_NAMES.has((cf.field_name ?? "").trim()))
         .filter((cf: any) => !vehicleLinkedGroup || cf.group_id === form.group_id),
-    [catFieldsRaw, form.group_id, vehicleLinkedGroup]
+    [catFieldsRaw, form.group_id, vehicleLinkedGroup, selectedGroup]
   );
 
   // Auto-name vehicle-linked subscriptions after their sub-category
@@ -245,7 +247,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
     if (!open) {
       setForm({
         asset_code: "", asset_name: "", category_id: "", group_id: "", serial_number: "", manufacturer_model: "",
-        current_owner_id: "", assigned_site_id: "", container_id: "", status: "in_stock", expiry_date: "", notes: "",
+        current_owner_id: "", assigned_site_id: "", container_id: "", site_location: "", status: "in_stock", expiry_date: "", notes: "",
         notification_days_before: "",
       });
       setCustomFields({});
@@ -476,6 +478,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
         current_owner_id: form.current_owner_id || undefined,
         assigned_site_id: form.assigned_site_id || null,
         container_id: form.assigned_site_id ? (form.container_id || null) : null,
+        site_location: form.assigned_site_id ? (form.site_location.trim() || null) : null,
         status: (form.current_owner_id || form.assigned_site_id) ? "in_use" : form.status,
         custom_fields: Object.keys(customFields).length > 0 ? customFields : undefined,
         expiry_date: form.expiry_date || undefined,
@@ -851,11 +854,16 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
             <div>
               <SiteSelect
                 value={form.assigned_site_id}
-                onChange={(v) => setForm(prev => ({ ...prev, assigned_site_id: v, container_id: "" }))}
-                label="שיוך לאתר (במקום עובד)"
+                onChange={(v) => setForm(prev => ({ ...prev, assigned_site_id: v, container_id: "", site_location: v === prev.assigned_site_id ? prev.site_location : "" }))}
+                label="שיוך לאתר (אפשר גם יחד עם עובד)"
               />
               {form.assigned_site_id && (
                 <div className="mt-2 space-y-2">
+                  <SiteLocationInput
+                    siteId={form.assigned_site_id}
+                    value={form.site_location}
+                    onChange={(v) => setForm(prev => ({ ...prev, site_location: v }))}
+                  />
                   <ContainerSelect
                     siteId={form.assigned_site_id}
                     value={form.container_id}
@@ -864,7 +872,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                   <button
                     type="button"
                     className="min-h-9 text-xs text-muted-foreground hover:text-destructive"
-                    onClick={() => setForm(prev => ({ ...prev, assigned_site_id: "", container_id: "" }))}
+                    onClick={() => setForm(prev => ({ ...prev, assigned_site_id: "", container_id: "", site_location: "" }))}
                   >
                     הסר שיוך לאתר
                   </button>

@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { useAssetGroups, useUpdateAssetGroup } from "@/hooks/useAssetGroups";
 import { useToast } from "@/hooks/use-toast";
 import { getBuiltinFields, isBuiltinFieldVisible } from "@/lib/builtinFields";
+import { useCategoryFields } from "@/hooks/useCategories";
 import type { DomainKey } from "@/lib/assetDomains";
 
 /** Checklist of built-in fields for one sub-category. Saves on click. */
@@ -11,7 +12,13 @@ export function SubCategoryFieldsChecklist({ group, domain }: { group: any; doma
   const updateGroup = useUpdateAssetGroup();
   const { toast } = useToast();
   const fields = useMemo(() => getBuiltinFields(domain), [domain]);
-  if (fields.length === 0) return <p className="text-xs text-muted-foreground">אין שדות קבועים בתחום זה.</p>;
+  const { data: categoryFieldsRaw } = useCategoryFields(group.category_id);
+  // Fields defined for the whole category (not for one sub-category); each can be hidden here.
+  const categoryFields = useMemo(
+    () => (categoryFieldsRaw ?? []).filter((f: any) => !f.group_id),
+    [categoryFieldsRaw],
+  );
+  const hidden: string[] = Array.isArray(group.hidden_category_fields) ? group.hidden_category_fields.map(String) : [];
 
   const toggle = async (key: string) => {
     const current = Array.isArray(group.visible_builtin_fields)
@@ -25,17 +32,50 @@ export function SubCategoryFieldsChecklist({ group, domain }: { group: any; doma
     }
   };
 
+  const toggleCategoryField = async (fieldId: string) => {
+    const next = hidden.includes(fieldId) ? hidden.filter((id) => id !== fieldId) : [...hidden, fieldId];
+    try {
+      await updateGroup.mutateAsync({ id: group.id, hidden_category_fields: next });
+    } catch (e: any) {
+      toast({ title: "שגיאה", description: e.message, variant: "destructive" });
+    }
+  };
+
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <p className="text-xs text-muted-foreground">שדה שלא מסומן לא יופיע בכרטיס הפריט ולא בטופס ההוספה. נשמר מיד.</p>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-        {fields.map((f) => (
-          <label key={f.key} className="flex items-center gap-2 text-sm cursor-pointer">
-            <input type="checkbox" className="w-4 h-4 accent-primary" checked={isBuiltinFieldVisible(group, f.key, domain)} onChange={() => toggle(f.key)} />
-            <span className="truncate">{f.label}</span>
-          </label>
-        ))}
-      </div>
+      {fields.length === 0 ? (
+        <p className="text-xs text-muted-foreground">אין שדות קבועים בתחום זה.</p>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+          {fields.map((f) => (
+            <label key={f.key} className="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="checkbox" className="w-4 h-4 accent-primary" checked={isBuiltinFieldVisible(group, f.key, domain)} onChange={() => toggle(f.key)} />
+              <span className="truncate">{f.label}</span>
+            </label>
+          ))}
+        </div>
+      )}
+      {categoryFields.length > 0 && (
+        <fieldset className="space-y-1.5">
+          <legend className="text-xs font-medium text-muted-foreground">שדות שהוגדרו לכל הקטגוריה</legend>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+            {categoryFields.map((f: any) => (
+              <label key={f.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 accent-primary"
+                  checked={!hidden.includes(f.id)}
+                  onChange={() => toggleCategoryField(f.id)}
+                  disabled={updateGroup.isPending}
+                />
+                <span className="truncate">{f.field_name}</span>
+              </label>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">הסתרה לא מוחקת ערכים שכבר נשמרו בפריטים.</p>
+        </fieldset>
+      )}
     </div>
   );
 }

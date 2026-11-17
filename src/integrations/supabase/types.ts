@@ -436,6 +436,7 @@ export type Database = {
           created_at: string
           default_owner_role: string | null
           description: string | null
+          hidden_category_fields: string[]
           id: string
           is_vehicle_related: boolean
           name: string
@@ -449,6 +450,7 @@ export type Database = {
           created_at?: string
           default_owner_role?: string | null
           description?: string | null
+          hidden_category_fields?: string[]
           id?: string
           is_vehicle_related?: boolean
           name: string
@@ -462,6 +464,7 @@ export type Database = {
           created_at?: string
           default_owner_role?: string | null
           description?: string | null
+          hidden_category_fields?: string[]
           id?: string
           is_vehicle_related?: boolean
           name?: string
@@ -620,6 +623,7 @@ export type Database = {
           notification_days_before: number | null
           password_expires_at: string | null
           serial_number: string | null
+          site_location: string | null
           status: Database["public"]["Enums"]["asset_status"]
           test_expiry: string | null
           updated_at: string
@@ -656,6 +660,7 @@ export type Database = {
           notification_days_before?: number | null
           password_expires_at?: string | null
           serial_number?: string | null
+          site_location?: string | null
           status?: Database["public"]["Enums"]["asset_status"]
           test_expiry?: string | null
           updated_at?: string
@@ -692,6 +697,7 @@ export type Database = {
           notification_days_before?: number | null
           password_expires_at?: string | null
           serial_number?: string | null
+          site_location?: string | null
           status?: Database["public"]["Enums"]["asset_status"]
           test_expiry?: string | null
           updated_at?: string

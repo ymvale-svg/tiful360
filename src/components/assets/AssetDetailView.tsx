@@ -26,6 +26,7 @@ import { VehicleLinkPanel } from "@/components/assets/VehicleLinkPanel";
 import { InsuranceVehicleLinkPanel, isCarInsuranceGroup } from "@/components/assets/InsuranceVehicleLink";
 import { isVehicleLinkedGroup } from "@/lib/vehicleLinkedGroups";
 import { useAssetGroups } from "@/hooks/useAssetGroups";
+import { useCategoryFields } from "@/hooks/useCategories";
 import { useDeleteAsset, useUpdateAsset } from "@/hooks/useMutations";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -92,6 +93,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
 
   // Called before the early return below so the hook order never changes while the asset loads.
   const { data: siteContainers } = useSiteContainers(asset?.assigned_site_id ?? null);
+  const { data: categoryFields } = useCategoryFields(asset?.category_id ?? "");
 
   if (!asset && assetsLoading) {
     return (
@@ -158,7 +160,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
       const previousOwner = owner?.full_name ?? assignedSite?.name ?? "";
       const { error } = await supabase
         .from("assets")
-        .update({ current_owner_id: null, assigned_site_id: null, container_id: null, status: "in_stock" } as any)
+        .update({ current_owner_id: null, assigned_site_id: null, container_id: null, site_location: null, status: "in_stock" } as any)
         .eq("id", assetId);
       if (error) throw new Error(error.message);
       try {
@@ -324,8 +326,15 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
               const showSerial = isBuiltinFieldVisible(group, "serial_number", domain);
               const showModel = isBuiltinFieldVisible(group, "manufacturer_model", domain);
               const showExpiry = isBuiltinFieldVisible(group, "expiry_date", domain) || (domain === "physical" && category?.protocol_type !== "vehicle" && !!expiry);
+              // Category-wide fields this sub-category hides; their saved values stay on the item.
+              const hiddenIds = new Set<string>(group?.hidden_category_fields ?? []);
+              const hiddenNames = new Set(
+                (categoryFields ?? [])
+                  .filter((f: any) => !f.group_id && hiddenIds.has(f.id))
+                  .map((f: any) => String(f.field_name)),
+              );
               const customEntries = asset.custom_fields
-                ? Object.entries(asset.custom_fields).filter(([k]) => !panelKeys.has(k))
+                ? Object.entries(asset.custom_fields).filter(([k]) => !panelKeys.has(k) && !hiddenNames.has(k))
                 : [];
               return (
                 <>
@@ -477,6 +486,7 @@ export function AssetDetailView({ assetId, categoryId, onBack, onBackToCategorie
                   <div className="min-w-0">
                     <div className="font-medium truncate">{assignedSite.name}</div>
                     <div className="text-xs text-muted-foreground">אתר מחוץ למשרד</div>
+                    {asset.site_location && <div className="text-xs font-medium truncate">מיקום: {asset.site_location}</div>}
                     {assignedContainer && <div className="text-xs font-medium truncate">מכולה: {assignedContainer.name}</div>}
                     {assignedSite.address && <div className="text-xs text-muted-foreground truncate">{assignedSite.address}</div>}
                     {assignedSite.contact_name && <div className="text-xs text-muted-foreground truncate">{assignedSite.contact_name}</div>}
