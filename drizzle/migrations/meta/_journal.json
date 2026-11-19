@@ -337,6 +337,13 @@
       "when": 1795070617148,
       "tag": "0047_fill_missing_employee_asset_ticket_codes",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1795070677148,
+      "tag": "0048_user_roles_writes_service_only",
+      "breakpoints": true
     }
   ]
 }
