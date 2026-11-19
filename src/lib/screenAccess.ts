@@ -75,6 +75,7 @@ export const HUB_TABS = {
     { key: "groups", label: "קבוצות והרשאות", roles: ADMINS },
     { key: "permission_audit", label: "לוג הרשאות", roles: ADMINS },
     { key: "companies", label: "ניהול חברות", roles: ["super_admin"], strict: true },
+    { key: "api_keys", label: "מפתחות API", roles: ["super_admin"], strict: true },
   ],
   systemAccess: [
     { key: "requests", label: "בקשות לטיפול", roles: ACCESS_REQUEST_ROLES },

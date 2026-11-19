@@ -6,7 +6,7 @@ import { FormField } from "@/components/feedback/FormField";
 import { Input } from "@/components/ui/input";
 import {
   Settings as SettingsIcon, Bell, Shield, Database, Users,
-  Building2, Save, Smartphone, Upload, Trash2, FileText, Building, UsersRound,
+  Building2, Save, Smartphone, Upload, Trash2, FileText, Building, UsersRound, KeyRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,6 +24,7 @@ import { Mail } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { PermissionAuditTab } from "@/components/settings/PermissionAuditTab";
 import { PermissionGroupsTab } from "@/components/settings/PermissionGroupsTab";
+import { ApiKeysTab } from "@/components/settings/ApiKeysTab";
 import { AnnouncementsManager } from "@/components/portal/AnnouncementsManager";
 import { ListSkeleton } from "@/components/feedback/StateView";
 import { useHubTab } from "@/hooks/useHubTab";
@@ -122,6 +123,7 @@ const TAB_ICONS: Record<string, typeof SettingsIcon> = {
   groups: UsersRound,
   permission_audit: Shield,
   companies: Building,
+  api_keys: KeyRound,
 };
 
 export default function Settings() {
@@ -170,6 +172,12 @@ export default function Settings() {
         {activeTab === "groups" && (
           <TabsContent value="groups">
             <PermissionGroupsTab />
+          </TabsContent>
+        )}
+
+        {activeTab === "api_keys" && (
+          <TabsContent value="api_keys">
+            <ApiKeysTab />
           </TabsContent>
         )}
 

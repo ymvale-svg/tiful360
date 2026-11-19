@@ -214,36 +214,126 @@ export type Database = {
           },
         ]
       }
+      api_key_companies: {
+        Row: {
+          api_key_id: string
+          company_id: string
+          created_at: string
+        }
+        Insert: {
+          api_key_id: string
+          company_id: string
+          created_at?: string
+        }
+        Update: {
+          api_key_id?: string
+          company_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_key_companies_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_key_companies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       api_keys: {
         Row: {
           company_id: string
           created_at: string
+          expires_at: string | null
           id: string
           is_active: boolean
           key_hash: string
           key_prefix: string
           last_used_at: string | null
           name: string
+          owner_user_id: string | null
+          scopes: string[]
         }
         Insert: {
           company_id: string
           created_at?: string
+          expires_at?: string | null
           id?: string
           is_active?: boolean
           key_hash: string
           key_prefix: string
           last_used_at?: string | null
           name: string
+          owner_user_id?: string | null
+          scopes?: string[]
         }
         Update: {
           company_id?: string
           created_at?: string
+          expires_at?: string | null
           id?: string
           is_active?: boolean
           key_hash?: string
           key_prefix?: string
           last_used_at?: string | null
           name?: string
+          owner_user_id?: string | null
+          scopes?: string[]
+        }
+        Relationships: []
+      }
+      api_request_log: {
+        Row: {
+          action: string
+          api_key_id: string | null
+          company_id: string | null
+          created_at: string
+          error: string | null
+          id: string
+          ip: string | null
+          key_prefix: string | null
+          owner_user_id: string | null
+          record_id: string | null
+          requested_ids: Json | null
+          resource: string
+          status: string
+        }
+        Insert: {
+          action: string
+          api_key_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          ip?: string | null
+          key_prefix?: string | null
+          owner_user_id?: string | null
+          record_id?: string | null
+          requested_ids?: Json | null
+          resource: string
+          status: string
+        }
+        Update: {
+          action?: string
+          api_key_id?: string | null
+          company_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          ip?: string | null
+          key_prefix?: string | null
+          owner_user_id?: string | null
+          record_id?: string | null
+          requested_ids?: Json | null
+          resource?: string
+          status?: string
         }
         Relationships: []
       }
