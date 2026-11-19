@@ -1,0 +1,85 @@
+import { describe, expect, it } from "vitest";
+import {
+  RESOURCES,
+  filterableColumns,
+  scopeForAction,
+} from "../../supabase/functions/_shared/openApiResources";
+
+/**
+ * The rules an external key must never be able to break. Every assertion here is
+ * a limit the user asked for: full control including deletion, payroll only for a
+ * dedicated key, and no way to wipe a whole table by accident.
+ */
+describe("open-api — what a key may and may not do", () => {
+  it("deleting needs the delete permission, writing needs write, looking needs read", () => {
+    expect(scopeForAction("delete")).toBe("delete");
+    expect(scopeForAction("preview_delete")).toBe("delete");
+    expect(scopeForAction("create")).toBe("write");
+    expect(scopeForAction("update")).toBe("write");
+    expect(scopeForAction("list")).toBe("read");
+    expect(scopeForAction("get")).toBe("read");
+    expect(scopeForAction("capabilities")).toBe("read");
+  });
+
+  it("money is only reachable with the payroll permission", () => {
+    expect(RESOURCES.payslips.payroll).toBe(true);
+    expect(RESOURCES.payslip_batches.payroll).toBe(true);
+    expect(RESOURCES.tax_form_101.payroll).toBe(true);
+    // Everything else must stay out of the payroll-only room.
+    const payrollTables = Object.entries(RESOURCES)
+      .filter(([, def]) => def.payroll)
+      .map(([, def]) => def.table);
+    expect(payrollTables.sort()).toEqual(["payslip_batches", "payslips", "tax_form_101"]);
+  });
+
+  it("a key can delete rows, but only from an explicit id list and never more than 100 at once", () => {
+    for (const def of Object.values(RESOURCES)) {
+      if (!def.actions.includes("delete")) continue;
+      expect(def.actions).toContain("preview_delete");
+      expect(def.maxDelete ?? 100).toBeLessThanOrEqual(100);
+    }
+  });
+
+  it("a key can never rewrite a company's own settings or a signed document", () => {
+    expect(RESOURCES.companies.actions).toEqual(["list", "get"]);
+    expect(RESOURCES.signed_documents.actions).toEqual(["list", "get"]);
+    // Grants are created by the access-request flow in the app, not from outside.
+    expect(RESOURCES.system_access_grants.actions).toEqual(["list", "get"]);
+  });
+
+  it("a company's encrypted password never leaves the API", () => {
+    expect(RESOURCES.companies.select).toBeDefined();
+    expect(RESOURCES.companies.select).not.toMatch(/git_password/);
+  });
+
+  it("records created from outside can carry the number the app normally fills in", () => {
+    expect(RESOURCES.employees.writable).toContain("employee_code");
+    expect(RESOURCES.assets.writable).toContain("asset_code");
+    expect(RESOURCES.service_tickets.writable).toContain("ticket_code");
+    expect(RESOURCES.attendance_punches.writable).toContain("employee_code_raw");
+  });
+
+  it("a resource without a writable list cannot be created or changed", () => {
+    for (const [name, def] of Object.entries(RESOURCES)) {
+      if (def.actions.includes("create") || def.actions.includes("update")) {
+        expect(def.writable, name).toBeTruthy();
+        expect(def.writable!.length, name).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("a caller can only filter by columns the resource actually allows", () => {
+    const cols = filterableColumns(RESOURCES.employees);
+    expect(cols).toContain("id");
+    expect(cols).toContain("company_id");
+    expect(cols).toContain("department");
+    // A column that is neither writable nor listed cannot be used to probe the table.
+    expect(cols).not.toContain("linked_user_id");
+  });
+
+  it("every resource names the column that keeps companies apart", () => {
+    for (const [name, def] of Object.entries(RESOURCES)) {
+      expect(def.company, name).toBeTruthy();
+    }
+  });
+});

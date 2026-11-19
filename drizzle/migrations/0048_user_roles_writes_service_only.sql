@@ -1,5 +1,5 @@
 -- Security fix (security-guard 2026-11-05):
--- (Renumbered from 0027 to 0046 after main gained migrations 0027-0045.)
+-- (Renumbered from 0027 to 0048 after main gained migrations 0027-0047.)
 -- appsec:user-roles-direct-insert-bypasses-group-guard
 --
 -- Since 0026_permission_groups, roles are granted only through permission groups:

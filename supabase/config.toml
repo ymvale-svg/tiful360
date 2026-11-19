@@ -47,5 +47,7 @@ project_id = "rhzmhiknbcipucfvgkok"
     verify_jwt = true
   [functions.it-api]
     verify_jwt = false
+  [functions.open-api]
+    verify_jwt = false
   [functions.reverse-geocode]
     verify_jwt = true

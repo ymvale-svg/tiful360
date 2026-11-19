@@ -327,8 +327,22 @@
     {
       "idx": 46,
       "version": "7",
-      "when": 1794910315172,
-      "tag": "0046_user_roles_writes_service_only",
+      "when": 1795070283841,
+      "tag": "0046_api_key_multi_company_scopes_and_log",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1795070617148,
+      "tag": "0047_fill_missing_employee_asset_ticket_codes",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1795070677148,
+      "tag": "0048_user_roles_writes_service_only",
       "breakpoints": true
     }
   ]
