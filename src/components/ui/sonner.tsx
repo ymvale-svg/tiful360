@@ -1,5 +1,15 @@
 import { useTheme } from "next-themes";
 import { Toaster as Sonner, toast } from "sonner";
+import { hebrewizeNode } from "@/lib/hebrewError";
+
+// Every error toast in the app is shown to the user in Hebrew.
+const t = toast as typeof toast & { __he?: boolean };
+if (!t.__he) {
+  const orig = toast.error;
+  t.error = ((msg: Parameters<typeof orig>[0], opts?: Parameters<typeof orig>[1]) =>
+    orig(hebrewizeNode(msg), opts && { ...opts, description: hebrewizeNode(opts.description) })) as typeof orig;
+  t.__he = true;
+}
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 

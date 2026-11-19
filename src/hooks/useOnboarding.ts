@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
 import { useAuth } from "@/hooks/useAuth";
+import { completeOnboardingItem, listOnboardingAssetPicks } from "@/services/onboarding";
+import type { AccessPick } from "@/domain/systemAccess/types";
 
 export type OnboardingStatus = "draft" | "sent" | "in_progress" | "done";
 
@@ -20,6 +22,8 @@ export interface OnboardingItem {
   notes: string | null;
   completed_at: string | null;
   assigned_at?: string | null;
+  completion_note?: string | null;
+  asset_prior_owner_id?: string | null;
   created_at: string;
 }
 
@@ -36,6 +40,8 @@ export interface OnboardingProcess {
   protocol_version?: number | null;
   it_ticket_id?: string | null;
   audit_log?: unknown;
+  /** System access picked in the form, requested when the process is sent. */
+  access_picks?: AccessPick[] | null;
   employees?: {
     full_name: string;
     employee_code: string;
@@ -113,10 +119,12 @@ export function useCreateOnboardingProcess() {
       employee_id,
       items,
       status = "draft",
+      access_picks = null,
     }: {
       employee_id: string;
       items: NewOnboardingItem[];
       status?: OnboardingStatus;
+      access_picks?: AccessPick[] | null;
     }) => {
       const { data: employee, error: employeeError } = await supabase
         .from("employees")
@@ -133,6 +141,7 @@ export function useCreateOnboardingProcess() {
           employee_id,
           status,
           created_by: user?.id ?? null,
+          access_picks: access_picks?.length ? access_picks : null,
         } as any)
         .select()
         .single();
@@ -213,6 +222,33 @@ export function useUpsertOnboardingItem() {
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["onboarding-processes"] }),
+  });
+}
+
+/** Tick or untick a checklist item; the hand-over and its log happen in one DB transaction. */
+export function useCompleteOnboardingItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ itemId, done, note }: { itemId: string; done: boolean; note?: string | null }) =>
+      completeOnboardingItem(supabase, itemId, done, note),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["onboarding-processes"] });
+      qc.invalidateQueries({ queryKey: ["onboarding-asset-picks"] });
+      qc.invalidateQueries({ queryKey: ["assets"] });
+      qc.invalidateQueries({ queryKey: ["employee-assets"] });
+      qc.invalidateQueries({ queryKey: ["activity-log"] });
+      qc.invalidateQueries({ queryKey: ["asset-assignment-history"] });
+    },
+  });
+}
+
+/** Asset picks of all onboarding items, so one asset is never offered to two items. */
+export function useOnboardingAssetPicks() {
+  const { activeCompanyId } = useCompany();
+  return useQuery({
+    queryKey: ["onboarding-asset-picks", activeCompanyId],
+    queryFn: () => listOnboardingAssetPicks(supabase),
+    enabled: !!activeCompanyId,
   });
 }
 

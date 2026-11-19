@@ -1,3 +1,4 @@
+import { lazyWithReload } from "@/lib/lazyWithReload";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate, useLocation } from "react-router-dom";
 import { lazy, Suspense } from "react";
@@ -12,7 +13,9 @@ import { CompanyProvider } from "@/hooks/useCompany";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PwaUpdatePrompt } from "@/components/PwaUpdatePrompt";
 import { OAuthReturnRedirect } from "@/components/OAuthReturnRedirect";
+import { SessionHomeRedirect } from "@/components/SessionHomeRedirect";
 import { SplashScreen } from "@/components/SplashScreen";
+import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { LEGACY_REDIRECTS, SCREEN_ROLES, legacyTarget, type LegacyRedirect } from "@/lib/screenAccess";
 
 // Eager: critical entry pages and frequently-used screens (avoids Suspense flash on navigation)
@@ -25,22 +28,23 @@ import EmployeeDetail from "@/pages/EmployeeDetail";
 // Lazy: less-frequent pages — split into separate chunks loaded on demand
 // Merged screens (leave, corrections, map, onboarding, hand-over, subscriptions, categories,
 // companies, announcements, alerts) are tabs of the hubs below and load their own chunks.
-const Assets = lazy(() => import("@/pages/Assets"));
-const AssetsDomainPage = lazy(() => import("@/pages/AssetsDomainPage"));
-const ITTickets = lazy(() => import("@/pages/ITTickets"));
-const Requests = lazy(() => import("@/pages/Requests"));
-const EmployeePortal = lazy(() => import("@/pages/EmployeePortal"));
-const Settings = lazy(() => import("@/pages/Settings"));
-const SelectCompany = lazy(() => import("@/pages/SelectCompany"));
-const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
-const Welcome = lazy(() => import("@/pages/Welcome"));
-const SignHandover = lazy(() => import("@/pages/SignHandover"));
-const SignOffboarding = lazy(() => import("@/pages/SignOffboarding"));
-const SelectExperience = lazy(() => import("@/pages/SelectExperience"));
-const Payroll = lazy(() => import("@/pages/Payroll"));
-const Tax101TokenPage = lazy(() => import("@/pages/Tax101TokenPage"));
-const NotFound = lazy(() => import("./pages/NotFound"));
-const OAuthConsent = lazy(() => import("@/pages/OAuthConsent"));
+const Assets = lazyWithReload(() => import("@/pages/Assets"));
+const AssetsDomainPage = lazyWithReload(() => import("@/pages/AssetsDomainPage"));
+const ITTickets = lazyWithReload(() => import("@/pages/ITTickets"));
+const Requests = lazyWithReload(() => import("@/pages/Requests"));
+const EmployeePortal = lazyWithReload(() => import("@/pages/EmployeePortal"));
+const Settings = lazyWithReload(() => import("@/pages/Settings"));
+const SystemAccess = lazyWithReload(() => import("@/pages/SystemAccess"));
+const SelectCompany = lazyWithReload(() => import("@/pages/SelectCompany"));
+const ResetPassword = lazyWithReload(() => import("@/pages/ResetPassword"));
+const Welcome = lazyWithReload(() => import("@/pages/Welcome"));
+const SignHandover = lazyWithReload(() => import("@/pages/SignHandover"));
+const SignOffboarding = lazyWithReload(() => import("@/pages/SignOffboarding"));
+const SelectExperience = lazyWithReload(() => import("@/pages/SelectExperience"));
+const Payroll = lazyWithReload(() => import("@/pages/Payroll"));
+const Tax101TokenPage = lazyWithReload(() => import("@/pages/Tax101TokenPage"));
+const NotFound = lazyWithReload(() => import("./pages/NotFound"));
+const OAuthConsent = lazyWithReload(() => import("@/pages/OAuthConsent"));
 
 import { ThemeProvider } from "next-themes";
 
@@ -69,6 +73,8 @@ const App = () => (
         <AuthProvider>
           <CompanyProvider>
             <OAuthReturnRedirect />
+            <SessionHomeRedirect />
+            <RouteErrorBoundary>
             <Suspense fallback={<SplashScreen />}>
               <Routes>
                 <Route path="/login" element={<Login />} />
@@ -96,6 +102,7 @@ const App = () => (
                   <Route path="/assets/:domain/:itemId?" element={<ProtectedRoute requiredRoles={SCREEN_ROLES.assetDomain}><AssetsDomainPage /></ProtectedRoute>} />
                   <Route path="/it-tickets" element={<ProtectedRoute requiredRoles={SCREEN_ROLES.tickets}><ITTickets /></ProtectedRoute>} />
                   <Route path="/settings" element={<ProtectedRoute requiredRoles={SCREEN_ROLES.settings}><Settings /></ProtectedRoute>} />
+                  <Route path="/system-access" element={<ProtectedRoute requiredRoles={SCREEN_ROLES.systemAccess}><SystemAccess /></ProtectedRoute>} />
                   {LEGACY_REDIRECTS.map((r) => (
                     <Route key={r.from} path={r.from} element={<LegacyRedirectRoute redirect={r} />} />
                   ))}
@@ -103,6 +110,7 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
+            </RouteErrorBoundary>
           </CompanyProvider>
         </AuthProvider>
       </BrowserRouter>

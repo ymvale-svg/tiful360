@@ -1,3 +1,4 @@
+import { lazyWithReload } from "@/lib/lazyWithReload";
 import { uploadFile } from "@/lib/uploadWithProgress";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -29,7 +30,7 @@ import { useHubTab } from "@/hooks/useHubTab";
 import { ANNOUNCEMENT_ROLES, canAccess, hubPath, tabRoles } from "@/lib/screenAccess";
 
 // Company management (super admin) is a tab here; its own chunk.
-const Companies = lazy(() => import("@/pages/Companies"));
+const Companies = lazyWithReload(() => import("@/pages/Companies"));
 
 // ============================
 // Generic Emails Settings (per column)

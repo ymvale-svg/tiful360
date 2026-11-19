@@ -24,6 +24,7 @@ import { useEmployees } from "@/hooks/useData";
 import { useSites } from "@/hooks/useSites";
 import { SiteSelect } from "@/components/sites/SiteSelect";
 import { ContainerSelect } from "@/components/sites/ContainerSelect";
+import { SiteLocationInput } from "@/components/sites/SiteLocationInput";
 import { useSiteContainers } from "@/hooks/useSiteContainers";
 import { useCompany } from "@/hooks/useCompany";
 import { useToast } from "@/hooks/use-toast";
@@ -53,6 +54,9 @@ interface AssetLike extends HandoverAssetLike {
   category_id?: string | null;
   group_id?: string | null;
   current_owner_id?: string | null;
+  assigned_site_id?: string | null;
+  container_id?: string | null;
+  site_location?: string | null;
   asset_categories?: {
     category_name?: string | null;
     skip_handover_form?: boolean | null;
@@ -118,7 +122,8 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
   const [assignTarget, setAssignTarget] = useState<"employee" | "site">("employee");
   const [siteId, setSiteIdRaw] = useState("");
   const [containerId, setContainerId] = useState("");
-  const setSiteId = (v: string) => { setSiteIdRaw(v); setContainerId(""); };
+  const [siteLocation, setSiteLocation] = useState("");
+  const setSiteId = (v: string) => { setSiteIdRaw(v); setContainerId(""); setSiteLocation(""); };
   const { data: siteContainers } = useSiteContainers(siteId || null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [freeText, setFreeText] = useState("");
@@ -160,7 +165,7 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
 
   const categoryName = asset?.asset_categories?.category_name ?? "";
   const isVehicle = asset?.asset_categories?.protocol_type === "vehicle" || !!asset?.license_plate;
-  /** Assignment to an off-site location instead of an employee (no signed protocol). */
+  /** Assignment to a site only, without an employee (no signed protocol). */
   const siteMode = assignTarget === "site" && !isReturn && !preassignedOwnerId;
   const categorySkips = isReturn
     ? asset?.asset_categories?.skip_return_form === true
@@ -195,6 +200,11 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
     setStep("details");
     setMode("on_site");
     setEmployeeId(preassignedOwnerId || defaultEmployeeId || "");
+    // An item can sit on a site and be held by an employee at once; keep its current site as the default.
+    setAssignTarget("employee");
+    setSiteIdRaw(asset?.assigned_site_id ?? "");
+    setContainerId(asset?.container_id ?? "");
+    setSiteLocation(asset?.site_location ?? "");
     setFreeText("");
     setOdometer(asset?.current_km != null ? String(asset.current_km) : "");
     setPhotos([]); setVideoFile(null); setOdometerPhoto(null); setAttachment(null);
@@ -237,7 +247,7 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
         savedAt,
         label: `${asset?.asset_name ?? ""} ${asset?.asset_code ? `(${asset.asset_code})` : ""}`.trim(),
         companyId: activeCompanyId ?? null,
-        state: { step, mode, employeeId, selectedKeys, freeText, odometer },
+        state: { step, mode, employeeId, selectedKeys, freeText, odometer, assignTarget, siteId, containerId, siteLocation },
         photos,
         video: videoFile,
         odometerPhoto,
@@ -262,6 +272,12 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
     setStep((s.step as Step) ?? "details");
     setMode((s.mode as Mode) ?? "on_site");
     if (s.employeeId) setEmployeeId(s.employeeId);
+    if (s.assignTarget === "employee" || s.assignTarget === "site") setAssignTarget(s.assignTarget);
+    if (typeof s.siteId === "string") {
+      setSiteIdRaw(s.siteId);
+      setContainerId(typeof s.containerId === "string" ? s.containerId : "");
+      setSiteLocation(typeof s.siteLocation === "string" ? s.siteLocation : "");
+    }
     if (Array.isArray(s.selectedKeys)) setSelectedKeys(s.selectedKeys);
     setFreeText(s.freeText ?? "");
     setOdometer(s.odometer ?? "");
@@ -372,10 +388,22 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
       issuerSignature: issuerSig,
     });
 
+  const siteName = (sites ?? []).find((s: any) => s.id === siteId)?.name ?? "";
+  const siteSuffix = siteId && siteName
+    ? ` · אתר ${siteName}${siteLocation.trim() ? ` (${siteLocation.trim()})` : ""}`
+    : "";
+
   const applyAssetUpdate = async () => {
+    // A return ends the employee's responsibility only; an item placed on a site stays there.
     const patch: Record<string, any> = isReturn
-      ? { current_owner_id: null, status: "in_stock" }
-      : { current_owner_id: employeeId, status: "in_use" };
+      ? { current_owner_id: null, status: asset?.assigned_site_id ? "in_use" : "in_stock" }
+      : {
+          current_owner_id: employeeId,
+          status: "in_use",
+          assigned_site_id: siteId || null,
+          container_id: siteId ? (containerId || null) : null,
+          site_location: siteId ? (siteLocation.trim() || null) : null,
+        };
     if (isVehicle && odometer) patch.current_km = Number(odometer);
     const { error } = await supabase.from("assets").update(patch as any).eq("id", asset!.id);
     if (error) throw error;
@@ -389,7 +417,7 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
           : `הזנת ציוד לעובד: ${asset?.asset_name ?? ""}`,
         details: isReturn
           ? `${employee?.full_name ?? ""} החזיר/ה את הפריט למלאי`
-          : `נמסר ל${employee?.full_name ?? ""}`,
+          : `נמסר ל${employee?.full_name ?? ""}${siteSuffix}`,
         entity_type: "asset",
         entity_id: asset!.id,
         performed_by: user?.id,
@@ -465,18 +493,18 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
   });
 
   /** Email the signed protocol to the receiving employee (recipient is resolved server-side). */
-  const sendProtocolEmail = async (pdfUrl: string | null) => {
+  const sendProtocolEmail = async (formId: string) => {
     if (!employeeId) return;
     try {
       const { data, error } = await supabase.functions.invoke("send-handover-protocol-email", {
 
         body: {
           employeeId,
+          formId,
           idempotencyKey: `handover-${asset!.id}-${employeeId}-${Date.now()}`,
 
           templateData: {
             employeeName: employee?.full_name ?? "",
-            companyName: activeCompany?.name ?? "",
             itemName: asset?.asset_name ?? "",
             itemCode: asset?.asset_code ?? "",
             direction,
@@ -488,8 +516,6 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
               ...(isVehicle && odometer ? [{ label: 'ק"מ במעמד המסירה', value: odometer }] : []),
             ].map((f: any) => ({ label: f.label, value: String(f.value ?? "") })),
             notes: freeText || null,
-            pdfUrl,
-            portalUrl: "https://tiful360.com/portal",
           },
         },
       });
@@ -532,20 +558,19 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
       const patch: Record<string, any> = {
         assigned_site_id: siteId,
         container_id: containerId || null,
-        current_owner_id: null,
+        site_location: siteLocation.trim() || null,
         status: "in_use",
       };
       if (isVehicle && odometer) patch.current_km = Number(odometer);
       const { error } = await supabase.from("assets").update(patch as any).eq("id", asset!.id);
       if (error) throw error;
 
-      const siteName = (sites ?? []).find((s: any) => s.id === siteId)?.name ?? "";
       const containerName = (siteContainers ?? []).find((c) => c.id === containerId)?.name;
       try {
         await supabase.from("activity_log").insert({
           company_id: activeCompanyId,
           action: `שיוך ציוד לאתר: ${asset?.asset_name ?? ""}`,
-          details: `הפריט שויך לאתר ${siteName}${containerName ? ` (מכולה: ${containerName})` : ""}`,
+          details: `הפריט שויך לאתר ${siteName}${siteLocation.trim() ? ` · ${siteLocation.trim()}` : ""}${containerName ? ` (מכולה: ${containerName})` : ""}`,
           entity_type: "asset",
           entity_id: asset!.id,
           performed_by: user?.id,
@@ -590,7 +615,7 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
         pdfUrl = await uploadFile(blob, "protocol.pdf", "application/pdf");
       }
 
-      await insertForm({
+      const signedRow = await insertForm({
         status: "signed",
         form_snapshot: { ...snapshot(media), employee_signature: receiver, issuer_signature: issuer } as any,
         signature_data: receiver,
@@ -603,7 +628,7 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
       setBusyStage("שומר את הפרוטוקול…");
       await applyAssetUpdate();
       setBusyStage("שולח מייל לעובד…");
-      await sendProtocolEmail(pdfUrl);
+      await sendProtocolEmail(signedRow.id);
 
       toast({ title: "הפרוטוקול נחתם ונשמר", description: "המסמך נוסף לאזור האישי, לכרטיס הפריט ונשלח במייל לעובד" });
       qc.invalidateQueries({ queryKey: ["assets"] });
@@ -702,14 +727,15 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
             {!preassignedOwnerId && !isReturn && (
               <div className="space-y-3">
                 <AssignTargetToggle value={assignTarget} onChange={setAssignTarget} />
-                {assignTarget === "site" ? (
-                  <div className="space-y-3">
-                    <SiteSelect value={siteId} onChange={setSiteId} label="אתר מחוץ למשרד" />
-                    {siteId && <ContainerSelect siteId={siteId} value={containerId} onChange={setContainerId} label="מכולה (מיקום אחסון באתר)" />}
-                  </div>
-                ) : (
+                {assignTarget === "employee" && (
                   <EmployeePicker employees={employees} value={employeeId} onChange={setEmployeeId} />
                 )}
+                <SiteFields
+                  optional={assignTarget === "employee"}
+                  siteId={siteId} onSiteChange={setSiteId}
+                  containerId={containerId} onContainerChange={setContainerId}
+                  location={siteLocation} onLocationChange={setSiteLocation}
+                />
               </div>
             )}
             <div className="flex gap-2">
@@ -763,23 +789,34 @@ export function HandoverFlow({ open, onOpenChange, asset: assetProp, direction =
             {step === "details" && (
               <div className="space-y-4">
                 {preassignedOwnerId || isReturn ? (
-                  <div className="rounded-lg border bg-muted/40 p-3">
-                    <div className="text-xs text-muted-foreground mb-0.5">{isReturn ? "מחזיר" : "עובד משויך"}</div>
-                    <div className="text-sm font-medium">
-                      {asset.employees?.full_name ?? employee?.full_name ?? "—"}
+                  <div className="space-y-3">
+                    <div className="rounded-lg border bg-muted/40 p-3">
+                      <div className="text-xs text-muted-foreground mb-0.5">{isReturn ? "מחזיר" : "עובד משויך"}</div>
+                      <div className="text-sm font-medium">
+                        {asset.employees?.full_name ?? employee?.full_name ?? "—"}
+                      </div>
                     </div>
+                    {!isReturn && (
+                      <SiteFields
+                        optional
+                        siteId={siteId} onSiteChange={setSiteId}
+                        containerId={containerId} onContainerChange={setContainerId}
+                        location={siteLocation} onLocationChange={setSiteLocation}
+                      />
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-3">
                     <AssignTargetToggle value={assignTarget} onChange={setAssignTarget} />
-                    {assignTarget === "site" ? (
-                      <div className="space-y-3">
-                        <SiteSelect value={siteId} onChange={setSiteId} label="אתר מחוץ למשרד" />
-                        {siteId && <ContainerSelect siteId={siteId} value={containerId} onChange={setContainerId} label="מכולה (מיקום אחסון באתר)" />}
-                      </div>
-                    ) : (
+                    {assignTarget === "employee" && (
                       <EmployeePicker employees={employees} value={employeeId} onChange={setEmployeeId} />
                     )}
+                    <SiteFields
+                      optional={assignTarget === "employee"}
+                      siteId={siteId} onSiteChange={setSiteId}
+                      containerId={containerId} onContainerChange={setContainerId}
+                      location={siteLocation} onLocationChange={setSiteLocation}
+                    />
                   </div>
                 )}
 
@@ -1010,15 +1047,46 @@ function AssignTargetToggle({
           active={value === "employee"}
           onClick={() => onChange("employee")}
           icon={<User className="w-4 h-4" />}
-          title="עובד"
+          title="עובד (ואתר)"
         />
         <ModeButton
           active={value === "site"}
           onClick={() => onChange("site")}
           icon={<MapPin className="w-4 h-4" />}
-          title="אתר מחוץ למשרד"
+          title="אתר בלבד"
         />
       </div>
+    </div>
+  );
+}
+
+/** Site, spot inside the site and storage container. Optional next to an employee, required for site-only. */
+function SiteFields({
+  optional, siteId, onSiteChange, containerId, onContainerChange, location, onLocationChange,
+}: {
+  optional: boolean;
+  siteId: string; onSiteChange: (v: string) => void;
+  containerId: string; onContainerChange: (v: string) => void;
+  location: string; onLocationChange: (v: string) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <SiteSelect value={siteId} onChange={onSiteChange} label={optional ? "שיוך גם לאתר (לא חובה)" : "אתר"} />
+      {siteId && (
+        <>
+          <SiteLocationInput siteId={siteId} value={location} onChange={onLocationChange} />
+          <ContainerSelect siteId={siteId} value={containerId} onChange={onContainerChange} label="מכולה (מיקום אחסון באתר)" />
+          {optional && (
+            <button
+              type="button"
+              className="min-h-9 text-xs text-muted-foreground hover:text-destructive"
+              onClick={() => onSiteChange("")}
+            >
+              הסר שיוך לאתר
+            </button>
+          )}
+        </>
+      )}
     </div>
   );
 }

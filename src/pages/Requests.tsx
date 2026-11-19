@@ -1,13 +1,14 @@
+import { lazyWithReload } from "@/lib/lazyWithReload";
 import { lazy, Suspense } from "react";
 import { HubTabBar } from "@/components/hub/HubTabBar";
 import { ListSkeleton } from "@/components/feedback/StateView";
 import { useHubTab } from "@/hooks/useHubTab";
 
 // Each tab is its own chunk; the map tab is the only one that loads leaflet.
-const LeaveRequests = lazy(() => import("@/pages/LeaveRequests"));
-const AttendanceCorrections = lazy(() => import("@/pages/AttendanceCorrections"));
-const AttendanceMap = lazy(() => import("@/pages/AttendanceMap"));
-const MonthlyAttendanceReview = lazy(() =>
+const LeaveRequests = lazyWithReload(() => import("@/pages/LeaveRequests"));
+const AttendanceCorrections = lazyWithReload(() => import("@/pages/AttendanceCorrections"));
+const AttendanceMap = lazyWithReload(() => import("@/pages/AttendanceMap"));
+const MonthlyAttendanceReview = lazyWithReload(() =>
   import("@/components/payroll/MonthlyAttendanceReview").then((m) => ({ default: m.MonthlyAttendanceReview })),
 );
 

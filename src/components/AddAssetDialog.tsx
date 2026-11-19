@@ -1,3 +1,4 @@
+import { DateInput } from "@/components/ui/date-input";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { SearchInput } from "@/components/ui/search-input";
 import {
@@ -30,6 +31,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { SubCategorySelect } from "@/components/assets/SubCategorySelect";
 import { SiteSelect } from "@/components/sites/SiteSelect";
 import { ContainerSelect } from "@/components/sites/ContainerSelect";
+import { SiteLocationInput } from "@/components/sites/SiteLocationInput";
 import { ManufacturerModelInput } from "@/components/assets/ManufacturerModelInput";
 
 import { cn } from "@/lib/utils";
@@ -109,14 +111,11 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
     current_owner_id: "",
     assigned_site_id: "",
     container_id: "",
+    site_location: "",
     status: "in_stock" as "in_use" | "in_stock" | "in_repair",
     expiry_date: "",
     notes: "",
     notification_days_before: "" as string,
-    account_username: "",
-    account_url: "",
-    mfa_enabled: false,
-    password_expires_at: "",
   });
   const [customFields, setCustomFields] = useState<Record<string, string>>({});
   const AGENT_NAME_KEYS = ["שם סוכן ביטוח", "שם סוכן", "סוכן ביטוח", "סוכן"];
@@ -215,7 +214,6 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
   const { isAdmin, isOperations } = useAuth();
   const canManage = isAdmin || isOperations;
   const domain = getDomain(selectedCategory as any);
-  const isDigital = domain === "digital";
   const isLicense = domain === "licenses";
   const addOption = useAddCategoryFieldOption();
   // Hide custom fields that duplicate the system expiry_date field.
@@ -231,10 +229,10 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
   const showBuiltin = (key: string) => isBuiltinFieldVisible(selectedGroup as any, key, domain);
   const catFields = useMemo(
     () =>
-      filterFieldsForGroup(catFieldsRaw as any[], form.group_id || null)
+      filterFieldsForGroup(catFieldsRaw as any[], form.group_id || null, (selectedGroup as any)?.hidden_category_fields)
         .filter((cf: any) => !EXPIRY_DUPLICATE_NAMES.has((cf.field_name ?? "").trim()))
         .filter((cf: any) => !vehicleLinkedGroup || cf.group_id === form.group_id),
-    [catFieldsRaw, form.group_id, vehicleLinkedGroup]
+    [catFieldsRaw, form.group_id, vehicleLinkedGroup, selectedGroup]
   );
 
   // Auto-name vehicle-linked subscriptions after their sub-category
@@ -249,9 +247,8 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
     if (!open) {
       setForm({
         asset_code: "", asset_name: "", category_id: "", group_id: "", serial_number: "", manufacturer_model: "",
-        current_owner_id: "", assigned_site_id: "", container_id: "", status: "in_stock", expiry_date: "", notes: "",
+        current_owner_id: "", assigned_site_id: "", container_id: "", site_location: "", status: "in_stock", expiry_date: "", notes: "",
         notification_days_before: "",
-        account_username: "", account_url: "", mfa_enabled: false, password_expires_at: "",
       });
       setCustomFields({});
       setBulkMode(false);
@@ -481,19 +478,12 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
         current_owner_id: form.current_owner_id || undefined,
         assigned_site_id: form.assigned_site_id || null,
         container_id: form.assigned_site_id ? (form.container_id || null) : null,
+        site_location: form.assigned_site_id ? (form.site_location.trim() || null) : null,
         status: (form.current_owner_id || form.assigned_site_id) ? "in_use" : form.status,
         custom_fields: Object.keys(customFields).length > 0 ? customFields : undefined,
         expiry_date: form.expiry_date || undefined,
         notes: form.notes || undefined,
         notification_days_before: form.notification_days_before.trim() === "" ? null : Number(form.notification_days_before),
-        ...(isDigital
-          ? {
-              account_username: form.account_username || undefined,
-              account_url: form.account_url || undefined,
-              mfa_enabled: form.mfa_enabled,
-              password_expires_at: form.password_expires_at || undefined,
-            }
-          : {}),
       } as any);
       // Close dialog + show toast immediately for snappy UX
       const catName = selectedCategory?.category_name ?? "פריט";
@@ -660,7 +650,6 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
     (!!form.asset_name.trim() && form.asset_name !== (defaultAssetName ?? "") && !vehicleLinkedGroup) ||
     !!form.serial_number || !!form.manufacturer_model || !!form.notes || !!form.expiry_date ||
     !!form.current_owner_id || !!form.assigned_site_id || !!form.notification_days_before ||
-    !!form.account_username || !!form.account_url || !!form.password_expires_at ||
     Object.values(customFields).some((v) => !!v && String(v).trim() !== "") ||
     pendingDocs.length > 0 || selectedEmployeeIds.length > 0;
   const busy = mutation.isPending || submitting || policyReading;
@@ -699,10 +688,10 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="w-5 h-5 text-primary" />
-            {selectedCategory?.prefix === "CINS" ? "הוספת ביטוח" : isDigital ? "הוספת גישה דיגיטלית" : isLicense ? "הוספת רישיון" : "הוספת פריט ציוד"}
+            {selectedCategory?.prefix === "CINS" ? "הוספת ביטוח" : isLicense ? "הוספת רישיון" : "הוספת פריט ציוד"}
           </DialogTitle>
           <DialogDescription>
-            {selectedCategory?.prefix === "CINS" ? "הוסף פוליסת ביטוח חדשה" : isDigital ? "הוסף גישה / חשבון חדש" : isLicense ? "הוסף רישיון חדש" : "הוסף פריט חדש למלאי הציוד"}
+            {selectedCategory?.prefix === "CINS" ? "הוסף פוליסת ביטוח חדשה" : isLicense ? "הוסף רישיון חדש" : "הוסף פריט חדש למלאי הציוד"}
           </DialogDescription>
         </DialogHeader>
 
@@ -743,7 +732,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
           {!bulkMode && (
             <div>
               <label htmlFor="add-asset-code" className="text-sm font-medium mb-1 block">
-                {selectedCategory?.prefix === "CINS" ? "מזהה פוליסה" : isDigital ? "מזהה גישה" : "מזהה / מס׳ סידורי"}
+                {selectedCategory?.prefix === "CINS" ? "מזהה פוליסה" : "מזהה / מס׳ סידורי"}
                 <span className="text-destructive mr-1" aria-hidden="true">*</span>
               </label>
               <input
@@ -770,7 +759,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
           ) : (
           <div>
             <label htmlFor="add-asset-name" className="text-sm font-medium mb-1 block">
-              {selectedCategory?.prefix === "CINS" ? "שם הפוליסה" : isDigital ? "שם המערכת / השירות" : "שם פריט"}
+              {selectedCategory?.prefix === "CINS" ? "שם הפוליסה" : "שם פריט"}
               <span className="text-destructive mr-1" aria-hidden="true">*</span>
             </label>
             <input
@@ -780,7 +769,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
               aria-describedby={errors.asset_name ? "add-asset-name-error" : undefined}
               value={form.asset_name}
               onChange={(e) => set("asset_name", e.target.value)}
-              placeholder={selectedCategory?.prefix === "CINS" ? "למשל: ביטוח קבלני - חיפה" : isDigital ? "למשל: Microsoft 365 / פריוריטי" : "למשל: MacBook Pro 16"}
+              placeholder={selectedCategory?.prefix === "CINS" ? "למשל: ביטוח קבלני - חיפה" : "למשל: MacBook Pro 16"}
               className={`w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 ${errors.asset_name ? "ring-2 ring-destructive/50" : "focus:ring-primary/30"}`}
             />
             {errors.asset_name && <p id="add-asset-name-error" role="alert" className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" aria-hidden="true" />{errors.asset_name}</p>}
@@ -802,65 +791,6 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
           )}
 
 
-
-          {/* Digital access details */}
-          {isDigital && !bulkMode && (
-            <div className="border-t border-border/50 pt-3 mt-3 space-y-3">
-              <p className="text-xs font-medium text-muted-foreground">פרטי הגישה</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {showBuiltin("account_username") && (
-                <div>
-                  <label htmlFor="add-asset-username" className="text-sm font-medium mb-1 block">שם משתמש</label>
-                  <input
-                    id="add-asset-username"
-                    value={form.account_username}
-                    onChange={(e) => set("account_username", e.target.value)}
-                    placeholder="username@company.com"
-                    dir="ltr"
-                    className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
-                  />
-                </div>
-                )}
-                {showBuiltin("account_url") && (
-                <div>
-                  <label htmlFor="add-asset-url" className="text-sm font-medium mb-1 block">כתובת המערכת</label>
-                  <input
-                    id="add-asset-url"
-                    value={form.account_url}
-                    onChange={(e) => set("account_url", e.target.value)}
-                    placeholder="https://"
-                    dir="ltr"
-                    className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
-                  />
-                </div>
-                )}
-                {showBuiltin("password_expires_at") && (
-                <div>
-                  <label htmlFor="add-asset-pwd-expiry" className="text-sm font-medium mb-1 block">תוקף סיסמה</label>
-                  <input
-                    id="add-asset-pwd-expiry"
-                    type="date"
-                    value={form.password_expires_at}
-                    onChange={(e) => set("password_expires_at", e.target.value)}
-                    dir="ltr"
-                    className="w-full px-3 py-2 bg-muted rounded-lg text-sm outline-none focus:ring-2 focus:ring-primary/30"
-                  />
-                </div>
-                )}
-                {showBuiltin("mfa_enabled") && (
-                <label className="flex items-center gap-2 text-sm mt-6">
-                  <input
-                    type="checkbox"
-                    checked={form.mfa_enabled}
-                    onChange={(e) => set("mfa_enabled", e.target.checked as any)}
-                    className="w-4 h-4 accent-primary"
-                  />
-                  אימות דו-שלבי (MFA) מופעל
-                </label>
-                )}
-              </div>
-            </div>
-          )}
 
           {!bulkMode && domain === "insurance" && isCarInsuranceGroup(selectedGroup as any) && (
             <div className="space-y-1">
@@ -886,7 +816,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                   <label id="add-asset-owner-label" className="text-sm font-medium mb-1 block">שיוך לעובד</label>
                   <SearchableSelect
                     value={form.current_owner_id}
-                    onChange={(v) => setForm(prev => ({ ...prev, current_owner_id: v, ...(v ? { assigned_site_id: "", container_id: "" } : {}) }))}
+                    onChange={(v) => setForm(prev => ({ ...prev, current_owner_id: v }))}
                     options={[
                       { value: "", label: "במלאי (ללא שיוך)" },
                       ...activeEmployees.map(e => ({ value: e.id, label: `${e.full_name} (${e.employee_code})` })),
@@ -907,7 +837,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                   <label htmlFor="add-asset-expiry" className="text-sm font-medium mb-1 block">
                     {selectedCategory?.prefix === "CINS" ? "תוקף עד" : "תאריך תפוגה"}
                   </label>
-                  <input
+                  <DateInput 
                     id="add-asset-expiry"
                     type="date"
                     value={form.expiry_date}
@@ -924,11 +854,16 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
             <div>
               <SiteSelect
                 value={form.assigned_site_id}
-                onChange={(v) => setForm(prev => ({ ...prev, assigned_site_id: v, container_id: "", ...(v ? { current_owner_id: "" } : {}) }))}
-                label="שיוך לאתר (במקום עובד)"
+                onChange={(v) => setForm(prev => ({ ...prev, assigned_site_id: v, container_id: "", site_location: v === prev.assigned_site_id ? prev.site_location : "" }))}
+                label="שיוך לאתר (אפשר גם יחד עם עובד)"
               />
               {form.assigned_site_id && (
                 <div className="mt-2 space-y-2">
+                  <SiteLocationInput
+                    siteId={form.assigned_site_id}
+                    value={form.site_location}
+                    onChange={(v) => setForm(prev => ({ ...prev, site_location: v }))}
+                  />
                   <ContainerSelect
                     siteId={form.assigned_site_id}
                     value={form.container_id}
@@ -937,7 +872,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                   <button
                     type="button"
                     className="min-h-9 text-xs text-muted-foreground hover:text-destructive"
-                    onClick={() => setForm(prev => ({ ...prev, assigned_site_id: "", container_id: "" }))}
+                    onClick={() => setForm(prev => ({ ...prev, assigned_site_id: "", container_id: "", site_location: "" }))}
                   >
                     הסר שיוך לאתר
                   </button>
@@ -983,7 +918,7 @@ export function AddAssetDialog({ open, onOpenChange, defaultCategoryId, defaultG
                     <Users className="w-3 h-3" aria-hidden="true" /> פר עובד
                   </button>
                 </div>
-                <input
+                <DateInput 
                   id="add-asset-bulk-expiry"
                   type="date"
                   value={form.expiry_date}

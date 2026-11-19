@@ -256,6 +256,7 @@ export type Database = {
           default_owner_role: string | null
           description: string | null
           domain: string
+          fulfillment_track: string | null
           icon: string | null
           id: string
           is_assignable: boolean
@@ -263,6 +264,7 @@ export type Database = {
           prefix: string
           protocol_field_defaults: Json
           protocol_type: Database["public"]["Enums"]["protocol_domain"]
+          show_in_onboarding: boolean | null
           signing_protocol: string | null
           skip_handover_form: boolean
           skip_return_form: boolean
@@ -276,6 +278,7 @@ export type Database = {
           default_owner_role?: string | null
           description?: string | null
           domain?: string
+          fulfillment_track?: string | null
           icon?: string | null
           id?: string
           is_assignable?: boolean
@@ -283,6 +286,7 @@ export type Database = {
           prefix: string
           protocol_field_defaults?: Json
           protocol_type?: Database["public"]["Enums"]["protocol_domain"]
+          show_in_onboarding?: boolean | null
           signing_protocol?: string | null
           skip_handover_form?: boolean
           skip_return_form?: boolean
@@ -296,6 +300,7 @@ export type Database = {
           default_owner_role?: string | null
           description?: string | null
           domain?: string
+          fulfillment_track?: string | null
           icon?: string | null
           id?: string
           is_assignable?: boolean
@@ -303,6 +308,7 @@ export type Database = {
           prefix?: string
           protocol_field_defaults?: Json
           protocol_type?: Database["public"]["Enums"]["protocol_domain"]
+          show_in_onboarding?: boolean | null
           signing_protocol?: string | null
           skip_handover_form?: boolean
           skip_return_form?: boolean
@@ -430,6 +436,7 @@ export type Database = {
           created_at: string
           default_owner_role: string | null
           description: string | null
+          hidden_category_fields: string[]
           id: string
           is_vehicle_related: boolean
           name: string
@@ -443,6 +450,7 @@ export type Database = {
           created_at?: string
           default_owner_role?: string | null
           description?: string | null
+          hidden_category_fields?: string[]
           id?: string
           is_vehicle_related?: boolean
           name: string
@@ -456,6 +464,7 @@ export type Database = {
           created_at?: string
           default_owner_role?: string | null
           description?: string | null
+          hidden_category_fields?: string[]
           id?: string
           is_vehicle_related?: boolean
           name?: string
@@ -614,6 +623,7 @@ export type Database = {
           notification_days_before: number | null
           password_expires_at: string | null
           serial_number: string | null
+          site_location: string | null
           status: Database["public"]["Enums"]["asset_status"]
           test_expiry: string | null
           updated_at: string
@@ -650,6 +660,7 @@ export type Database = {
           notification_days_before?: number | null
           password_expires_at?: string | null
           serial_number?: string | null
+          site_location?: string | null
           status?: Database["public"]["Enums"]["asset_status"]
           test_expiry?: string | null
           updated_at?: string
@@ -686,6 +697,7 @@ export type Database = {
           notification_days_before?: number | null
           password_expires_at?: string | null
           serial_number?: string | null
+          site_location?: string | null
           status?: Database["public"]["Enums"]["asset_status"]
           test_expiry?: string | null
           updated_at?: string
@@ -942,6 +954,7 @@ export type Database = {
           edited_by: string | null
           employee_code_raw: string
           employee_id: string | null
+          geo_address: string | null
           id: string
           processed_at: string | null
           processed_by: string | null
@@ -958,6 +971,7 @@ export type Database = {
           edited_by?: string | null
           employee_code_raw: string
           employee_id?: string | null
+          geo_address?: string | null
           id?: string
           processed_at?: string | null
           processed_by?: string | null
@@ -974,6 +988,7 @@ export type Database = {
           edited_by?: string | null
           employee_code_raw?: string
           employee_id?: string | null
+          geo_address?: string | null
           id?: string
           processed_at?: string | null
           processed_by?: string | null
@@ -1840,6 +1855,27 @@ export type Database = {
         }
         Relationships: []
       }
+      geo_address_cache: {
+        Row: {
+          address: string
+          created_at: string
+          lat_key: number
+          lng_key: number
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          lat_key: number
+          lng_key: number
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          lat_key?: number
+          lng_key?: number
+        }
+        Relationships: []
+      }
       git_lookups_cache: {
         Row: {
           company_id: string
@@ -2534,10 +2570,12 @@ export type Database = {
       onboarding_items: {
         Row: {
           asset_id: string | null
+          asset_prior_owner_id: string | null
           assigned_at: string | null
           catalog_ref_id: string | null
           completed_at: string | null
           completed_by: string | null
+          completion_note: string | null
           created_at: string
           fulfillment_type: string | null
           id: string
@@ -2552,10 +2590,12 @@ export type Database = {
         }
         Insert: {
           asset_id?: string | null
+          asset_prior_owner_id?: string | null
           assigned_at?: string | null
           catalog_ref_id?: string | null
           completed_at?: string | null
           completed_by?: string | null
+          completion_note?: string | null
           created_at?: string
           fulfillment_type?: string | null
           id?: string
@@ -2570,10 +2610,12 @@ export type Database = {
         }
         Update: {
           asset_id?: string | null
+          asset_prior_owner_id?: string | null
           assigned_at?: string | null
           catalog_ref_id?: string | null
           completed_at?: string | null
           completed_by?: string | null
+          completion_note?: string | null
           created_at?: string
           fulfillment_type?: string | null
           id?: string
@@ -2592,6 +2634,20 @@ export type Database = {
             columns: ["asset_id"]
             isOneToOne: false
             referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_items_asset_prior_owner_id_fkey"
+            columns: ["asset_prior_owner_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_items_asset_prior_owner_id_fkey"
+            columns: ["asset_prior_owner_id"]
+            isOneToOne: false
+            referencedRelation: "employees_public"
             referencedColumns: ["id"]
           },
           {
@@ -2626,6 +2682,7 @@ export type Database = {
       }
       onboarding_processes: {
         Row: {
+          access_picks: Json | null
           audit_log: Json
           company_id: string
           completed_at: string | null
@@ -2641,6 +2698,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          access_picks?: Json | null
           audit_log?: Json
           company_id: string
           completed_at?: string | null
@@ -2656,6 +2714,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          access_picks?: Json | null
           audit_log?: Json
           company_id?: string
           completed_at?: string | null
@@ -3425,6 +3484,53 @@ export type Database = {
           },
         ]
       }
+      suppliers: {
+        Row: {
+          company_id: string
+          contact_name: string | null
+          created_at: string
+          email: string | null
+          id: string
+          is_active: boolean
+          kind: string
+          name: string
+          notes: string | null
+          phone: string | null
+        }
+        Insert: {
+          company_id: string
+          contact_name?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+        }
+        Update: {
+          company_id?: string
+          contact_name?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppressed_emails: {
         Row: {
           created_at: string
@@ -3448,6 +3554,467 @@ export type Database = {
           reason?: string
         }
         Relationships: []
+      }
+      system_access_grants: {
+        Row: {
+          company_id: string
+          created_at: string
+          dispatch_ticket_id: string | null
+          dispatched_at: string | null
+          effective_from: string
+          employee_id: string
+          executed_at: string | null
+          executed_by: string | null
+          executed_by_name: string | null
+          external_username: string | null
+          group_id: string | null
+          id: string
+          note: string | null
+          rejection_reason: string | null
+          request_id: string
+          resource_id: string | null
+          revoke_dispatch_ticket_id: string | null
+          revoke_dispatched_at: string | null
+          revoke_due_at: string | null
+          revoke_note: string | null
+          revoke_request_id: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          revoked_by_name: string | null
+          status: string
+          system_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          dispatch_ticket_id?: string | null
+          dispatched_at?: string | null
+          effective_from: string
+          employee_id: string
+          executed_at?: string | null
+          executed_by?: string | null
+          executed_by_name?: string | null
+          external_username?: string | null
+          group_id?: string | null
+          id?: string
+          note?: string | null
+          rejection_reason?: string | null
+          request_id: string
+          resource_id?: string | null
+          revoke_dispatch_ticket_id?: string | null
+          revoke_dispatched_at?: string | null
+          revoke_due_at?: string | null
+          revoke_note?: string | null
+          revoke_request_id?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          revoked_by_name?: string | null
+          status?: string
+          system_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          dispatch_ticket_id?: string | null
+          dispatched_at?: string | null
+          effective_from?: string
+          employee_id?: string
+          executed_at?: string | null
+          executed_by?: string | null
+          executed_by_name?: string | null
+          external_username?: string | null
+          group_id?: string | null
+          id?: string
+          note?: string | null
+          rejection_reason?: string | null
+          request_id?: string
+          resource_id?: string | null
+          revoke_dispatch_ticket_id?: string | null
+          revoke_dispatched_at?: string | null
+          revoke_due_at?: string | null
+          revoke_note?: string | null
+          revoke_request_id?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          revoked_by_name?: string | null
+          status?: string
+          system_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_access_grants_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_grants_dispatch_ticket_id_fkey"
+            columns: ["dispatch_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "it_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_grants_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_grants_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_grants_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "system_access_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_grants_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "system_access_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_grants_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "system_access_resources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_grants_revoke_dispatch_ticket_id_fkey"
+            columns: ["revoke_dispatch_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "it_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_grants_revoke_request_id_fkey"
+            columns: ["revoke_request_id"]
+            isOneToOne: false
+            referencedRelation: "system_access_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_grants_system_id_fkey"
+            columns: ["system_id"]
+            isOneToOne: false
+            referencedRelation: "system_access_systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      system_access_group_resources: {
+        Row: {
+          company_id: string
+          group_id: string
+          level: string
+          resource_id: string
+        }
+        Insert: {
+          company_id: string
+          group_id: string
+          level?: string
+          resource_id: string
+        }
+        Update: {
+          company_id?: string
+          group_id?: string
+          level?: string
+          resource_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_access_group_resources_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "system_access_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_group_resources_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "system_access_resources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      system_access_groups: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string | null
+          external_name: string | null
+          id: string
+          is_active: boolean
+          name: string
+          system_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description?: string | null
+          external_name?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          system_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          external_name?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          system_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_access_groups_system_id_fkey"
+            columns: ["system_id"]
+            isOneToOne: false
+            referencedRelation: "system_access_systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      system_access_requests: {
+        Row: {
+          company_id: string
+          completed_at: string | null
+          employee_id: string
+          hub_ticket_id: string | null
+          id: string
+          kind: string
+          note: string | null
+          onboarding_process_id: string | null
+          requested_at: string
+          requested_by: string
+          requested_by_name: string
+          status: string
+        }
+        Insert: {
+          company_id: string
+          completed_at?: string | null
+          employee_id: string
+          hub_ticket_id?: string | null
+          id?: string
+          kind?: string
+          note?: string | null
+          onboarding_process_id?: string | null
+          requested_at?: string
+          requested_by: string
+          requested_by_name: string
+          status?: string
+        }
+        Update: {
+          company_id?: string
+          completed_at?: string | null
+          employee_id?: string
+          hub_ticket_id?: string | null
+          id?: string
+          kind?: string
+          note?: string | null
+          onboarding_process_id?: string | null
+          requested_at?: string
+          requested_by?: string
+          requested_by_name?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_access_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_requests_hub_ticket_id_fkey"
+            columns: ["hub_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "it_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_requests_onboarding_process_id_fkey"
+            columns: ["onboarding_process_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_processes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      system_access_resources: {
+        Row: {
+          company_id: string
+          created_at: string
+          external_ref: string | null
+          id: string
+          is_active: boolean
+          missing_since: string | null
+          name: string
+          parent_id: string | null
+          path: string
+          sort_order: number
+          system_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          external_ref?: string | null
+          id?: string
+          is_active?: boolean
+          missing_since?: string | null
+          name: string
+          parent_id?: string | null
+          path: string
+          sort_order?: number
+          system_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          external_ref?: string | null
+          id?: string
+          is_active?: boolean
+          missing_since?: string | null
+          name?: string
+          parent_id?: string | null
+          path?: string
+          sort_order?: number
+          system_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_access_resources_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "system_access_resources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_access_resources_system_id_fkey"
+            columns: ["system_id"]
+            isOneToOne: false
+            referencedRelation: "system_access_systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      system_access_scan_keys: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          system_id: string
+          token_hash: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          system_id: string
+          token_hash: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          system_id?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_access_scan_keys_system_id_fkey"
+            columns: ["system_id"]
+            isOneToOne: true
+            referencedRelation: "system_access_systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      system_access_systems: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          owner_role: Database["public"]["Enums"]["app_role"]
+          owner_user_id: string | null
+          provisioning: string
+          resource_label: string
+          scan_agent: string | null
+          scan_last_at: string | null
+          scan_last_result: Json | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          owner_role?: Database["public"]["Enums"]["app_role"]
+          owner_user_id?: string | null
+          provisioning?: string
+          resource_label?: string
+          scan_agent?: string | null
+          scan_last_at?: string | null
+          scan_last_result?: Json | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          owner_role?: Database["public"]["Enums"]["app_role"]
+          owner_user_id?: string | null
+          provisioning?: string
+          resource_label?: string
+          scan_agent?: string | null
+          scan_last_at?: string | null
+          scan_last_result?: Json | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_access_systems_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tax_form_101: {
         Row: {
@@ -3605,6 +4172,197 @@ export type Database = {
         }
         Relationships: []
       }
+      vehicle_quotes: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          delivery_date: string | null
+          extracted: Json | null
+          file_path: string | null
+          id: string
+          includes: string | null
+          km_per_year: number | null
+          model: string | null
+          monthly_price: number | null
+          notes: string | null
+          period_months: number | null
+          request_id: string
+          supplier_id: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          delivery_date?: string | null
+          extracted?: Json | null
+          file_path?: string | null
+          id?: string
+          includes?: string | null
+          km_per_year?: number | null
+          model?: string | null
+          monthly_price?: number | null
+          notes?: string | null
+          period_months?: number | null
+          request_id: string
+          supplier_id?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          delivery_date?: string | null
+          extracted?: Json | null
+          file_path?: string | null
+          id?: string
+          includes?: string | null
+          km_per_year?: number | null
+          model?: string | null
+          monthly_price?: number | null
+          notes?: string | null
+          period_months?: number | null
+          request_id?: string
+          supplier_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_quotes_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_quotes_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_requests: {
+        Row: {
+          asset_id: string | null
+          chosen_quote_id: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          delivered_at: string | null
+          desired_date: string | null
+          employee_id: string
+          id: string
+          onboarding_item_id: string | null
+          ordered_at: string | null
+          period_months: number
+          preferences: Json
+          quote_body: string | null
+          quote_subject: string | null
+          quotes_requested_at: string | null
+          requested_supplier_ids: string[]
+          status: string
+          tier_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          asset_id?: string | null
+          chosen_quote_id?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          delivered_at?: string | null
+          desired_date?: string | null
+          employee_id: string
+          id?: string
+          onboarding_item_id?: string | null
+          ordered_at?: string | null
+          period_months?: number
+          preferences?: Json
+          quote_body?: string | null
+          quote_subject?: string | null
+          quotes_requested_at?: string | null
+          requested_supplier_ids?: string[]
+          status?: string
+          tier_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          asset_id?: string | null
+          chosen_quote_id?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          delivered_at?: string | null
+          desired_date?: string | null
+          employee_id?: string
+          id?: string
+          onboarding_item_id?: string | null
+          ordered_at?: string | null
+          period_months?: number
+          preferences?: Json
+          quote_body?: string | null
+          quote_subject?: string | null
+          quotes_requested_at?: string | null
+          requested_supplier_ids?: string[]
+          status?: string
+          tier_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_requests_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_requests_chosen_quote_fkey"
+            columns: ["chosen_quote_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_requests_onboarding_item_id_fkey"
+            columns: ["onboarding_item_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_requests_tier_id_fkey"
+            columns: ["tier_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_tiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vehicle_subscriptions: {
         Row: {
           asset_id: string | null
@@ -3665,6 +4423,82 @@ export type Database = {
             columns: ["employee_vehicle_id"]
             isOneToOne: false
             referencedRelation: "employee_vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_tier_roles: {
+        Row: {
+          company_id: string
+          department: string | null
+          id: string
+          role_name: string
+          tier_id: string
+        }
+        Insert: {
+          company_id: string
+          department?: string | null
+          id?: string
+          role_name: string
+          tier_id: string
+        }
+        Update: {
+          company_id?: string
+          department?: string | null
+          id?: string
+          role_name?: string
+          tier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_tier_roles_tier_id_fkey"
+            columns: ["tier_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_tiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_tiers: {
+        Row: {
+          allowed_models: string | null
+          company_id: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          level: number
+          monthly_cap: number | null
+          name: string
+        }
+        Insert: {
+          allowed_models?: string | null
+          company_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          level?: number
+          monthly_cap?: number | null
+          name: string
+        }
+        Update: {
+          allowed_models?: string | null
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          level?: number
+          monthly_cap?: number | null
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_tiers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -3753,6 +4587,7 @@ export type Database = {
           edited_by: string | null
           employee_code_raw: string
           employee_id: string | null
+          geo_address: string | null
           id: string
           processed_at: string | null
           processed_by: string | null
@@ -3784,6 +4619,7 @@ export type Database = {
           edited_by: string | null
           employee_code_raw: string
           employee_id: string | null
+          geo_address: string | null
           id: string
           processed_at: string | null
           processed_by: string | null
@@ -3813,6 +4649,7 @@ export type Database = {
           edited_by: string | null
           employee_code_raw: string
           employee_id: string | null
+          geo_address: string | null
           id: string
           processed_at: string | null
           processed_by: string | null
@@ -3831,6 +4668,12 @@ export type Database = {
       apply_attendance_correction: {
         Args: { _correction_id: string }
         Returns: undefined
+      }
+      attendance_report_visible_employee_ids: {
+        Args: { _company_id: string }
+        Returns: {
+          employee_id: string
+        }[]
       }
       can_manage_announcements: {
         Args: { _company_id: string; _user_id: string }
@@ -3937,6 +4780,35 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      complete_onboarding_item: {
+        Args: { _done: boolean; _item_id: string; _note?: string }
+        Returns: {
+          asset_id: string | null
+          asset_prior_owner_id: string | null
+          assigned_at: string | null
+          catalog_ref_id: string | null
+          completed_at: string | null
+          completed_by: string | null
+          completion_note: string | null
+          created_at: string
+          fulfillment_type: string | null
+          id: string
+          item_type: string
+          notes: string | null
+          owner_role: string
+          process_id: string
+          selected_group_id: string | null
+          selected_model_id: string | null
+          status: string
+          title: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "onboarding_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       confirm_my_attendance_month: {
         Args: { _month: string }
         Returns: {
@@ -3964,9 +4836,27 @@ export type Database = {
         Args: { _process_id: string }
         Returns: number
       }
+      create_system_access_revocation: {
+        Args: {
+          _actor: string
+          _due_at: string
+          _emp: Database["public"]["Tables"]["employees"]["Row"]
+          _grant_ids: string[]
+          _note: string
+        }
+        Returns: Json
+      }
+      create_system_access_scan_token: {
+        Args: { _system_id: string }
+        Returns: string
+      }
       delete_company_cascade: {
         Args: { _company_id: string }
         Returns: undefined
+      }
+      dispatch_system_access: {
+        Args: { _grant_ids: string[]; _note?: string }
+        Returns: Json
       }
       edit_own_punch_time: {
         Args: { _new_punch_at: string; _punch_id: string }
@@ -3978,6 +4868,7 @@ export type Database = {
           edited_by: string | null
           employee_code_raw: string
           employee_id: string | null
+          geo_address: string | null
           id: string
           processed_at: string | null
           processed_by: string | null
@@ -4013,6 +4904,8 @@ export type Database = {
           role: string
         }[]
       }
+      fleet_can_manage: { Args: { _company_id: string }; Returns: boolean }
+      fleet_can_view: { Args: { _company_id: string }; Returns: boolean }
       gen_handover_short_code: { Args: never; Returns: string }
       get_attendance_agent_status: {
         Args: { _company_id: string }
@@ -4045,6 +4938,28 @@ export type Database = {
           gap_type: string
           punch_count: number
           punch_times: string
+        }[]
+      }
+      get_attendance_location_report: {
+        Args: {
+          _company_id: string
+          _employee_id?: string
+          _from: string
+          _to: string
+        }
+        Returns: {
+          accuracy: number
+          department: string
+          direction: string
+          employee_code: string
+          employee_id: string
+          full_name: string
+          geo_address: string
+          lat: number
+          lng: number
+          punch_at: string
+          punch_id: string
+          source: string
         }[]
       }
       get_company_birthdays: {
@@ -4235,6 +5150,14 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_punches_missing_address: {
+        Args: { _punch_ids: string[] }
+        Returns: {
+          lat: number
+          lng: number
+          punch_id: string
+        }[]
+      }
       get_subordinate_employee_ids: {
         Args: { _manager_user_id: string }
         Returns: {
@@ -4288,6 +5211,32 @@ export type Database = {
         }
         Returns: boolean
       }
+      import_legacy_system_access: {
+        Args: { _apply?: boolean; _company_id: string }
+        Returns: Json
+      }
+      import_system_access_tree: {
+        Args: { _paths: string[]; _system_id: string }
+        Returns: Json
+      }
+      import_system_access_tree_core: {
+        Args: {
+          _actor: string
+          _paths: string[]
+          _source: string
+          _system: Database["public"]["Tables"]["system_access_systems"]["Row"]
+        }
+        Returns: Json
+      }
+      ingest_system_access_tree: {
+        Args: {
+          _agent: string
+          _paths: string[]
+          _system_id: string
+          _token: string
+        }
+        Returns: Json
+      }
       is_company_admin: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
@@ -4308,7 +5257,71 @@ export type Database = {
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       my_access_blocked: { Args: never; Returns: boolean }
       my_self_edit_count_this_month: { Args: never; Returns: number }
+      onboarding_item_needs_asset: {
+        Args: { _item_type: string }
+        Returns: boolean
+      }
+      request_system_access: {
+        Args: {
+          _employee_id: string
+          _items: Json
+          _note?: string
+          _onboarding_process_id?: string
+        }
+        Returns: Json
+      }
+      request_system_access_revocation: {
+        Args: { _employee_id: string; _grant_ids?: string[]; _note?: string }
+        Returns: Json
+      }
       resolve_handover_short_code: { Args: { _code: string }; Returns: string }
+      resolve_system_access_grant: {
+        Args: {
+          _action: string
+          _executed_at?: string
+          _external_username?: string
+          _grant_id: string
+          _note?: string
+        }
+        Returns: {
+          company_id: string
+          created_at: string
+          dispatch_ticket_id: string | null
+          dispatched_at: string | null
+          effective_from: string
+          employee_id: string
+          executed_at: string | null
+          executed_by: string | null
+          executed_by_name: string | null
+          external_username: string | null
+          group_id: string | null
+          id: string
+          note: string | null
+          rejection_reason: string | null
+          request_id: string
+          resource_id: string | null
+          revoke_dispatch_ticket_id: string | null
+          revoke_dispatched_at: string | null
+          revoke_due_at: string | null
+          revoke_note: string | null
+          revoke_request_id: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          revoked_by_name: string | null
+          status: string
+          system_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "system_access_grants"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      revoke_system_access_scan_token: {
+        Args: { _system_id: string }
+        Returns: undefined
+      }
       seed_default_permission_groups: {
         Args: { _company_id: string }
         Returns: undefined
@@ -4488,10 +5501,79 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      sync_system_access_tickets: {
+        Args: { _request_id: string }
+        Returns: undefined
+      }
       sync_user_roles_from_groups: {
         Args: { _user_id: string }
         Returns: undefined
       }
+      system_access_actor_name: { Args: { _uid: string }; Returns: string }
+      system_access_can_manage: {
+        Args: { _company_id: string }
+        Returns: boolean
+      }
+      system_access_can_view: {
+        Args: { _company_id: string }
+        Returns: boolean
+      }
+      system_access_grant_label: {
+        Args: {
+          _grant: Database["public"]["Tables"]["system_access_grants"]["Row"]
+        }
+        Returns: string
+      }
+      system_access_grant_open: {
+        Args: { _kind: string; _status: string }
+        Returns: boolean
+      }
+      system_access_is_manager: {
+        Args: { _company_id: string }
+        Returns: boolean
+      }
+      system_access_is_owner: { Args: { _system_id: string }; Returns: boolean }
+      system_access_request_grants: {
+        Args: {
+          _request: Database["public"]["Tables"]["system_access_requests"]["Row"]
+        }
+        Returns: {
+          company_id: string
+          created_at: string
+          dispatch_ticket_id: string | null
+          dispatched_at: string | null
+          effective_from: string
+          employee_id: string
+          executed_at: string | null
+          executed_by: string | null
+          executed_by_name: string | null
+          external_username: string | null
+          group_id: string | null
+          id: string
+          note: string | null
+          rejection_reason: string | null
+          request_id: string
+          resource_id: string | null
+          revoke_dispatch_ticket_id: string | null
+          revoke_dispatched_at: string | null
+          revoke_due_at: string | null
+          revoke_note: string | null
+          revoke_request_id: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          revoked_by_name: string | null
+          status: string
+          system_id: string
+        }[]
+        SetofOptions: {
+          from: "system_access_requests"
+          to: "system_access_grants"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      system_access_scan_status: { Args: { _system_id: string }; Returns: Json }
+      system_access_status_label: { Args: { _status: string }; Returns: string }
       update_my_birthday_preference: {
         Args: {
           _hebrew_day?: number

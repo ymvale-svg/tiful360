@@ -20,13 +20,19 @@ export function useCategoryFields(categoryId: string) {
 
 /**
  * Filter category fields for a specific sub-category.
- * A field with group_id = null applies to every sub-category of the category.
+ * A field with group_id = null applies to every sub-category of the category,
+ * unless that sub-category lists it in hiddenCategoryFieldIds.
  */
-export function filterFieldsForGroup<T extends { group_id?: string | null }>(
+export function filterFieldsForGroup<T extends { id?: string; group_id?: string | null }>(
   fields: T[] | undefined | null,
   groupId?: string | null,
+  hiddenCategoryFieldIds?: readonly string[] | null,
 ): T[] {
-  return (fields ?? []).filter((f) => !f.group_id || f.group_id === groupId);
+  const hidden = groupId && hiddenCategoryFieldIds?.length ? new Set(hiddenCategoryFieldIds) : null;
+  return (fields ?? []).filter((f) => {
+    if (f.group_id) return f.group_id === groupId;
+    return !(hidden && f.id && hidden.has(f.id));
+  });
 }
 
 export function useCreateCategory() {

@@ -1,3 +1,4 @@
+import { DateInput } from "@/components/ui/date-input";
 import { useEffect, useMemo, useState } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -20,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { ManufacturerModelInput } from "@/components/assets/ManufacturerModelInput";
 import { SiteSelect } from "@/components/sites/SiteSelect";
 import { ContainerSelect } from "@/components/sites/ContainerSelect";
+import { SiteLocationInput } from "@/components/sites/SiteLocationInput";
 import { useSiteContainers } from "@/hooks/useSiteContainers";
 import { useSites } from "@/hooks/useSites";
 import { openHandoverFile } from "@/lib/handoverUrl";
@@ -69,7 +71,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
 
   const [form, setForm] = useState({
     asset_name: "", category_id: "", group_id: "", serial_number: "", current_owner_id: "",
-    assigned_site_id: "", container_id: "",
+    assigned_site_id: "", container_id: "", site_location: "",
     status: "in_stock", manufacturer_model: "", condition: "good",
     expiry_date: "", notes: "", notification_days_before: "" as string,
   });
@@ -105,7 +107,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
       (!t.group_id && t.category_id === form.category_id),
     );
   }, [protocolTemplates, form.group_id, form.category_id]);
-  const catFields = filterFieldsForGroup(catFieldsRaw as any[], form.group_id || null).filter((cf: any) => {
+  const catFields = filterFieldsForGroup(catFieldsRaw as any[], form.group_id || null, (selectedGroup as any)?.hidden_category_fields).filter((cf: any) => {
     if (selectedCategory?.prefix === "CINS" && cf.field_name === "תוקף פוליסה") return false;
     return true;
   });
@@ -120,6 +122,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
       current_owner_id: a.current_owner_id ?? "",
       assigned_site_id: (a as any).assigned_site_id ?? "",
       container_id: (a as any).container_id ?? "",
+      site_location: (a as any).site_location ?? "",
       status: a.status,
       manufacturer_model: a.manufacturer_model ?? "",
       condition: a.condition ?? "good",
@@ -151,16 +154,17 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
     const owner = asset.current_owner_id ?? "";
     const site = (asset as any).assigned_site_id ?? "";
     const container = (asset as any).container_id ?? "";
+    const location = (asset as any).site_location ?? "";
     const status = asset.status;
-    setForm((prev) => ({ ...prev, current_owner_id: owner, assigned_site_id: site, container_id: container, status }));
+    setForm((prev) => ({ ...prev, current_owner_id: owner, assigned_site_id: site, container_id: container, site_location: location, status }));
     setBaseline((prev) => {
       if (!prev) return prev;
       try {
         const [f, cf] = JSON.parse(prev);
-        return JSON.stringify([{ ...f, current_owner_id: owner, assigned_site_id: site, container_id: container, status }, cf]);
+        return JSON.stringify([{ ...f, current_owner_id: owner, assigned_site_id: site, container_id: container, site_location: location, status }, cf]);
       } catch { return prev; }
     });
-  }, [asset?.current_owner_id, (asset as any)?.assigned_site_id, (asset as any)?.container_id, asset?.status]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [asset?.current_owner_id, (asset as any)?.assigned_site_id, (asset as any)?.container_id, (asset as any)?.site_location, asset?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // History of past owners — derived from signed handover forms for this asset
   const { data: handoverHistory } = useQuery({
@@ -262,6 +266,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
         current_owner_id: form.current_owner_id || null,
         assigned_site_id: form.assigned_site_id || null,
         container_id: form.assigned_site_id ? (form.container_id || null) : null,
+        site_location: form.assigned_site_id ? (form.site_location.trim() || null) : null,
         status: (form.current_owner_id || form.assigned_site_id) ? "in_use" : (form.status as any),
         manufacturer_model: form.manufacturer_model || null,
         condition: form.condition,
@@ -451,7 +456,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                     {isView ? (
                       <div className={readCls} dir="ltr">{form.expiry_date ? new Date(form.expiry_date).toLocaleDateString("en-GB") : display(null)}</div>
                     ) : (
-                      <input
+                      <DateInput 
                         id="edit-asset-expiry"
                         type="date"
                         value={form.expiry_date}
@@ -473,6 +478,7 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                   <label className="text-sm font-medium mb-1 block">שיוך לאתר</label>
                   <div className={readCls}>
                     {siteName ?? <span className="text-muted-foreground">ללא שיוך לאתר</span>}
+                    {form.site_location && <span className="block text-xs text-muted-foreground mt-0.5">מיקום: {form.site_location}</span>}
                     {containerName && <span className="block text-xs text-muted-foreground mt-0.5">מכולה: {containerName}</span>}
                   </div>
                 </>
@@ -480,14 +486,14 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                 <>
                   <SiteSelect
                     value={form.assigned_site_id}
-                    onChange={(v) => setForm({ ...form, assigned_site_id: v, container_id: "", ...(v ? { current_owner_id: "" } : {}) })}
-                    label="שיוך לאתר (במקום עובד)"
+                    onChange={(v) => setForm({ ...form, assigned_site_id: v, container_id: "", site_location: v === form.assigned_site_id ? form.site_location : "" })}
+                    label="שיוך לאתר (אפשר גם יחד עם עובד)"
                   />
                   {form.assigned_site_id && (
                     <button
                       type="button"
                       className="min-h-9 text-xs text-destructive hover:underline mt-1"
-                      onClick={() => setForm({ ...form, assigned_site_id: "", container_id: "" })}
+                      onClick={() => setForm({ ...form, assigned_site_id: "", container_id: "", site_location: "" })}
                     >
                       הסר שיוך לאתר
                     </button>
@@ -495,6 +501,14 @@ export function EditAssetDialog({ open, onOpenChange, asset }: Props) {
                 </>
               )}
             </div>
+          )}
+
+          {!isView && form.assigned_site_id && (
+            <SiteLocationInput
+              siteId={form.assigned_site_id}
+              value={form.site_location}
+              onChange={(v) => setForm({ ...form, site_location: v })}
+            />
           )}
 
           {!isView && form.assigned_site_id && (

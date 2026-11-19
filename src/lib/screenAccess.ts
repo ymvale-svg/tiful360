@@ -35,6 +35,10 @@ const ALL_OPS: RoleList = ["admin", "it_manager", "super_admin", "operations", "
 const ATTENDANCE_STAFF: RoleList = ["admin", "super_admin", "direct_manager", "payroll", "hr"];
 const ASSET_STAFF: RoleList = ["admin", "it_manager", "super_admin", "operations", "finance", "legal"];
 const ADMINS: RoleList = ["admin", "super_admin"];
+/** Who defines systems, environments, folder trees and access groups. */
+const ACCESS_CATALOG_MANAGERS: RoleList = ["admin", "super_admin", "it_manager"];
+/** Who requests access (HR, operations) or works the requests (admins, IT). */
+const ACCESS_REQUEST_ROLES: RoleList = ["admin", "super_admin", "it_manager", "hr", "operations"];
 export const ANNOUNCEMENT_ROLES: RoleList = ["admin", "super_admin", "ceo", "operations", "secretariat", "hr"];
 
 /** Tabs of every hub screen, in display order. The first tab the user may open is the default. */
@@ -57,6 +61,7 @@ export const HUB_TABS = {
     { key: "assets", label: "משאבים", roles: ASSET_STAFF },
     { key: "handover", label: "ממתינים לשיוך", roles: ASSET_STAFF },
     { key: "subscriptions", label: "רכב ומנויים", roles: ["admin", "super_admin", "operations", "finance", "payroll"] },
+    { key: "leasing", label: "ליסינג ורמות רכב", roles: ["admin", "super_admin", "operations", "finance"] },
     { key: "categories", label: "קטגוריות", roles: ["admin", "super_admin", "operations", "legal"] },
   ],
   settings: [
@@ -71,6 +76,12 @@ export const HUB_TABS = {
     { key: "permission_audit", label: "לוג הרשאות", roles: ADMINS },
     { key: "companies", label: "ניהול חברות", roles: ["super_admin"], strict: true },
   ],
+  systemAccess: [
+    { key: "requests", label: "בקשות לטיפול", roles: ACCESS_REQUEST_ROLES },
+    { key: "matrix", label: "מטריצת הרשאות", roles: ACCESS_REQUEST_ROLES },
+    { key: "systems", label: "מערכות וסביבות", roles: ACCESS_CATALOG_MANAGERS },
+    { key: "tree", label: "עץ וקבוצות גישה", roles: ACCESS_CATALOG_MANAGERS },
+  ],
 } as const satisfies Record<string, readonly HubTab[]>;
 
 export type HubKey = keyof typeof HUB_TABS;
@@ -82,6 +93,7 @@ export const HUB_PATHS: Record<HubKey, string> = {
   requests: "/requests",
   assets: "/assets",
   settings: "/settings",
+  systemAccess: "/system-access",
 };
 
 function union(...lists: RoleList[]): AppRole[] {
@@ -100,6 +112,7 @@ export const SCREEN_ROLES = {
   assetDomain: ASSET_STAFF,
   tickets: ALL_OPS,
   settings: tabUnion("settings"),
+  systemAccess: tabUnion("systemAccess"),
 } as const;
 
 /** Role list of one hub tab. */

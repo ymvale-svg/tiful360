@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
       if (requestedCompany && r.company_id !== requestedCompany) continue
       // Skip days where the agent was down for this company (no punches at all).
       if (!activeDays.get(r.company_id)?.has(day)) continue
-      const cur = perCompany.get(r.company_id) ?? { name: r.company_name, rows: [] }
+      const cur = perCompany.get(r.company_id) ?? { name: r.company_name, rows: [] as any[] }
       cur.rows.push({ ...r, day })
       perCompany.set(r.company_id, cur)
     }

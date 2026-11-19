@@ -41,3 +41,9 @@ export async function buildOffboardingProtocolPdf(...args: Args<BuildOffboarding
 export async function buildProtocolPreviewPdf(...args: Args<BuildProtocolPreviewPdf>) {
   return (await import("./buildProtocolPreviewPdf")).buildProtocolPreviewPdf(...args);
 }
+
+type BuildAccessProtocolPdf = typeof import("./buildAccessProtocolPdf")["buildAccessProtocolPdf"];
+
+export async function buildAccessProtocolPdf(...args: Args<BuildAccessProtocolPdf>) {
+  return (await import("./buildAccessProtocolPdf")).buildAccessProtocolPdf(...args);
+}

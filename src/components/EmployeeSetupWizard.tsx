@@ -1,3 +1,4 @@
+import { DateInput } from "@/components/ui/date-input";
 import { useMemo, useState } from "react";
 import { isValidEmail, isValidIsraeliId, isValidPhone } from "@/lib/employeeValidation";
 import { useDirtyGuard } from "@/components/feedback/useDirtyGuard";
@@ -272,7 +273,18 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
       onOpenChange(false);
       reset();
     } catch (err: any) {
-      toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+      const msg = String(err?.message ?? "");
+      if (msg.includes("employees_id_number_key")) {
+        setErrors({ id_number: "תעודת זהות זו כבר רשומה במערכת" });
+        setStep(0);
+        toast({ title: "תעודת הזהות כבר קיימת", description: "עובד עם ת.ז. זו כבר רשום (ייתכן בחברה אחרת או כעובד לא פעיל). בדקו את המספר או פנו למנהל המערכת.", variant: "destructive" });
+      } else if (msg.includes("employees_employee_code_key")) {
+        setErrors({ employee_number: "מספר עובד זה כבר קיים" });
+        setStep(0);
+        toast({ title: "מספר העובד כבר קיים", description: "בחרו מספר עובד אחר", variant: "destructive" });
+      } else {
+        toast({ title: "שגיאה", description: msg, variant: "destructive" });
+      }
     } finally {
       setSubmitting(false);
     }
@@ -359,7 +371,7 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
               </div>
               <div>
                 <label htmlFor="wiz-birth_date" className="text-sm font-medium mb-1 block">תאריך לידה</label>
-                <input{...fieldProps("birth_date")} type="date" value={form.birth_date} onChange={(e) => set("birth_date", e.target.value)} className={inputCls("birth_date")} dir="ltr" />
+                <DateInput {...fieldProps("birth_date")} type="date" value={form.birth_date} onChange={(e) => set("birth_date", e.target.value)} className={inputCls("birth_date")} dir="ltr" />
               </div>
               <div className="flex items-center justify-between border border-border/50 rounded-lg p-3">
                 <div className="flex items-center gap-2">
@@ -413,7 +425,7 @@ export function EmployeeSetupWizard({ open, onOpenChange, onCreated }: Props) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label htmlFor="wiz-start_date" className="text-sm font-medium mb-1 block">תאריך התחלה<span className="text-destructive mr-1">*</span></label>
-                  <input{...fieldProps("start_date")} type="date" value={form.start_date} onChange={(e) => set("start_date", e.target.value)} className={inputCls("start_date")} dir="ltr" />
+                  <DateInput {...fieldProps("start_date")} type="date" value={form.start_date} onChange={(e) => set("start_date", e.target.value)} className={inputCls("start_date")} dir="ltr" />
                   {errMsg("start_date")}
                 </div>
                 <div>

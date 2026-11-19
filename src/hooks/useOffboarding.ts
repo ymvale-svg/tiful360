@@ -6,7 +6,7 @@ interface OffboardingParams {
   employeeName: string;
   employeeCode: string;
   endDate: string;
-  digitalAccess: Array<{ access_type: string; resource_path: string }>;
+  systemAccess: Array<{ access_type: string; resource_path: string }>;
   assets: Array<{ asset_name: string; asset_code: string; category_name: string }>;
 }
 

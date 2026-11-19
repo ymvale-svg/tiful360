@@ -11,6 +11,7 @@ import {
   Crown,
   Wallet,
   CalendarDays,
+  KeyRound,
 } from "lucide-react";
 import { useAlerts, useDashboardStats } from "@/hooks/useData";
 import { useEffect, useState, useTransition } from "react";
@@ -36,6 +37,7 @@ const preload = {
   itTickets: () => import("@/pages/ITTickets"),
   payroll: () => import("@/pages/Payroll"),
   settings: () => import("@/pages/Settings"),
+  systemAccess: () => import("@/pages/SystemAccess"),
   portal: () => import("@/pages/EmployeePortal"),
 };
 
@@ -71,6 +73,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: "ציוד ומשאבים", icon: Package, path: "/assets", roles: SCREEN_ROLES.assets, preload: preload.assets },
       { label: "קריאות שירות", icon: Shield, path: "/it-tickets", roles: SCREEN_ROLES.tickets, preload: preload.itTickets, count: "tickets" },
+      { label: "הרשאות מערכות", icon: KeyRound, path: "/system-access", roles: SCREEN_ROLES.systemAccess, preload: preload.systemAccess },
     ],
   },
   {

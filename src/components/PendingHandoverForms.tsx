@@ -96,11 +96,11 @@ export function PendingHandoverForms({ employeeId }: Props) {
         supabase.functions.invoke("send-handover-protocol-email", {
           body: {
             employeeId: active.employee_id,
+            formId: active.id,
             idempotencyKey: `handover-form-${active.id}`,
 
             templateData: {
               employeeName: emp.full_name ?? snap.employee_name ?? "",
-              companyName: snap.company_name ?? "",
               itemName: snapshotItemLabel(snap).name,
               itemCode: snapshotItemLabel(snap).code,
               direction: active.direction ?? "handover",
@@ -109,8 +109,6 @@ export function PendingHandoverForms({ employeeId }: Props) {
               issuedAt: formatDateTimeDMY(new Date()),
               fields: (snap.fields ?? []).map((f: any) => ({ label: f.label, value: String(f.value ?? "") })),
               notes: snap.free_text ?? null,
-              pdfUrl,
-              portalUrl: `${window.location.origin}/portal`,
             },
           },
         }).catch((e) => console.error("protocol email failed", e));

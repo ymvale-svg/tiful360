@@ -1,4 +1,5 @@
 import { Suspense, useState } from "react";
+import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 import { Outlet, useNavigate } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { CompanySelector } from "./CompanySelector";
@@ -94,9 +95,11 @@ export function AppLayout() {
         </header>
 
         <main id="main-content" tabIndex={-1} className="p-3 sm:p-4 lg:p-6 focus:outline-none pb-24 w-full max-w-full overflow-x-hidden">
-          <Suspense fallback={null}>
-            <Outlet />
-          </Suspense>
+          <RouteErrorBoundary>
+            <Suspense fallback={null}>
+              <Outlet />
+            </Suspense>
+          </RouteErrorBoundary>
         </main>
       </div>
       <AiAssistantWidget />

@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
       .from(table)
       .select("id, company_id, employee_id, status" + (body.form_type === "handover" ? ", asset_id" : ""))
       .eq("sign_token", body.sign_token)
-      .maybeSingle();
+      .maybeSingle<{ id: string; company_id: string; employee_id: string; status: string; asset_id?: string }>();
 
     if (lookupErr) return json({ error: "lookup_failed", details: lookupErr.message }, 500);
     if (!form) return json({ error: "invalid_token" }, 401);

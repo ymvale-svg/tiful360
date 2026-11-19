@@ -1,3 +1,4 @@
+import { lazyWithReload } from "@/lib/lazyWithReload";
 import { RowContextMenu, copyAction, openInNewTab } from "@/components/context/RowContextMenu";
 import { SearchInput } from "@/components/ui/search-input";
 import { ActiveFilters } from "@/components/ui/active-filters";
@@ -35,7 +36,7 @@ import { EmptyState, StateView } from "@/components/feedback/StateView";
 type EmployeeStatus = "active" | "onboarding" | "leaving" | "inactive";
 
 // Onboarding was its own screen; it is now a tab of the employees hub (own chunk).
-const Onboarding = lazy(() => import("@/pages/Onboarding"));
+const Onboarding = lazyWithReload(() => import("@/pages/Onboarding"));
 
 const statusLabels: Record<EmployeeStatus, string> = {
   active: "פעיל",

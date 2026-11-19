@@ -194,8 +194,141 @@
     {
       "idx": 27,
       "version": "7",
-      "when": 1793787499873,
-      "tag": "0027_user_roles_writes_service_only",
+      "when": 1793867761694,
+      "tag": "0027_hr_company_wide_employee_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1793867870886,
+      "tag": "0028_hr_attendance_map",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793868297967,
+      "tag": "0029_hr_manage_punches",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1793868339127,
+      "tag": "0030_hr_edit_punch_time",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1793873427582,
+      "tag": "0031_allow_onboarding_employee_signup",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1793873522578,
+      "tag": "0032_asset_groups_allow_hr",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1794314941006,
+      "tag": "0033_attendance_location_report",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1794315279835,
+      "tag": "0034_location_report_remote_only",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1794317613588,
+      "tag": "0035_document_location_report_remote_only",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794325081719,
+      "tag": "0036_onboarding_checklist_integrity",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1794325102001,
+      "tag": "0037_onboarding_fulfillment_tracks",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1794325184012,
+      "tag": "0038_system_access_catalog",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1794325276203,
+      "tag": "0039_system_access_requests",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1794325384204,
+      "tag": "0040_system_access_revocation",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1794325436350,
+      "tag": "0041_vehicle_leasing",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1794325480771,
+      "tag": "0042_system_access_tree_scan",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1794326466395,
+      "tag": "0043_system_access_onboarding_link_and_legacy_import",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1794909800265,
+      "tag": "0044_asset_site_location_and_hidden_category_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1794910255172,
+      "tag": "0045_routing_emails_static_sql",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1794910315172,
+      "tag": "0046_user_roles_writes_service_only",
       "breakpoints": true
     }
   ]

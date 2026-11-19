@@ -41,3 +41,29 @@ describe("development transformer compatibility", () => {
     expect(result.code).not.toContain(": number");
   });
 });
+describe("dependency installation source", () => {
+  const fs = require("node:fs") as typeof import("node:fs");
+  const path = require("node:path") as typeof import("node:path");
+  const root = path.resolve(__dirname, "../..");
+  const lock = fs.readFileSync(path.join(root, "bun.lock"), "utf8");
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+
+  it("resolves packages from the public npm registry, not a hosting provider's private cache", () => {
+    expect(lock).not.toMatch(/npm\.pkg\.dev/);
+    expect(lock).not.toMatch(/lovable-core-prod/);
+  });
+
+  it("keeps Bun as the only lockfile", () => {
+    expect(fs.existsSync(path.join(root, "package-lock.json"))).toBe(false);
+    expect(fs.existsSync(path.join(root, "yarn.lock"))).toBe(false);
+    expect(fs.existsSync(path.join(root, "pnpm-lock.yaml"))).toBe(false);
+  });
+
+  // Lovable's editor adds its dev tooling (lovable-tagger, @lovable.dev/vite-plugin-*) back on
+  // every sync, so it is allowed; it must stay dev-only so it never ships in the app bundle.
+  it("keeps Lovable editor tooling in devDependencies only", () => {
+    const prod = Object.keys(pkg.dependencies ?? {});
+    expect(prod).not.toContain("lovable-tagger");
+    expect(prod.filter((d) => d.startsWith("@lovable.dev/vite-plugin-"))).toEqual([]);
+  });
+});

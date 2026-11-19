@@ -11,6 +11,8 @@ import {
   ONBOARDING_SUBJECT,
 } from "@/lib/serviceTickets";
 import { OWNER_ROLE_LABEL } from "@/lib/domainConfig";
+import { hasProcessRequest, requestAccess } from "@/services/systemAccess";
+import type { AccessPick } from "@/domain/systemAccess/types";
 import {
   buildOnboardingProtocolPdf,
   type OnboardingProtocolItem,
@@ -22,6 +24,8 @@ const ITEM_KIND_LABEL: Record<string, string> = {
   access: "הרשאה דיגיטלית",
   license: "רישיון / תוכנה",
   subscription: "מנוי",
+  task: "משימה",
+  vehicle: "רכב",
 };
 
 export const ONBOARDING_DOCUMENT_TYPE = "onboarding_protocol";
@@ -173,6 +177,28 @@ export async function appendOnboardingAudit(processId: string, action: string) {
     .eq("id", processId);
 }
 
+/**
+ * Turn the access picked in the onboarding form into a system access request, once per process.
+ * A failure is returned, not thrown: the onboarding itself was already sent.
+ */
+async function requestOnboardingAccess(processId: string, employeeId: string) {
+  try {
+    const { data: proc } = await supabase
+      .from("onboarding_processes")
+      .select("access_picks")
+      .eq("id", processId)
+      .maybeSingle();
+    const picks = (proc?.access_picks ?? []) as unknown as AccessPick[];
+    if (picks.length === 0) return { accessResult: null, accessErr: null };
+    if (await hasProcessRequest(supabase, processId)) return { accessResult: null, accessErr: null };
+    const accessResult = await requestAccess(supabase, employeeId, picks, { onboardingProcessId: processId });
+    await appendOnboardingAudit(processId, `נשלחה בקשת הרשאות למערכות (${accessResult.created}) — קריאה ${accessResult.ticketCode}`);
+    return { accessResult, accessErr: null };
+  } catch (e) {
+    return { accessResult: null, accessErr: e instanceof Error ? e : new Error(String(e)) };
+  }
+}
+
 /** Produce + store the request protocol, open the service ticket and notify ops/IT/HR. */
 export function useSendOnboardingToOps() {
   const qc = useQueryClient();
@@ -267,12 +293,16 @@ export function useSendOnboardingToOps() {
         { body: { process_id: processId, document_path: built.path, requested_by: user?.email ?? null } }
       );
 
-      return { built, ticketId: ticket.id, mailData, mailErr };
+      // System access picked in the form goes to the access manager as one request.
+      const access = await requestOnboardingAccess(processId, employeeId);
+
+      return { built, ticketId: ticket.id, mailData, mailErr, ...access };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["onboarding-processes"] });
       qc.invalidateQueries({ queryKey: ["it-tickets"] });
       qc.invalidateQueries({ queryKey: ["employee-documents"] });
+      qc.invalidateQueries({ queryKey: ["system-access", "requests"] });
     },
   });
 }

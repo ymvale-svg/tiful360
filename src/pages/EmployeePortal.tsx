@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useMySystemAccess } from "@/hooks/useSystemAccess";
 import { SearchInput } from "@/components/ui/search-input";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
@@ -189,9 +190,6 @@ export default function EmployeePortal() {
   // While the company or the employee card loads, never claim "not linked" or "no equipment".
   const employeeLoading = companyLoading || employeeQuery.isLoading;
 
-  // Prefixes considered "digital" (shown in הרשאות ומערכות section instead of ציוד פיזי)
-  const DIGITAL_PREFIXES = ["DACC", "SFT"];
-
   // Fetch assets assigned to my employee
   const assetsQuery = useQuery({
     queryKey: ["my_assets", myEmployee?.id],
@@ -203,43 +201,15 @@ export default function EmployeePortal() {
         .eq("current_owner_id", myEmployee.id)
         .eq("status", "in_use");
       if (error) throw error;
-      // Exclude digital items - they appear in their own section
-      return (data ?? []).filter(
-        (a: any) => !DIGITAL_PREFIXES.includes(a.asset_categories?.prefix ?? "")
-      );
+      return data ?? [];
     },
     enabled: !!myEmployee?.id,
   });
   const myAssets = assetsQuery.data ?? [];
 
-  // Fetch digital access for my employee (DACC + SFT categories)
-  const digitalQuery = useQuery({
-    queryKey: ["my_digital_access", myEmployee?.id],
-    queryFn: async () => {
-      if (!myEmployee?.id) return [];
-      const { data, error } = await supabase
-        .from("assets")
-        .select("*, asset_categories!inner(category_name, prefix)")
-        .eq("current_owner_id", myEmployee.id)
-        .in("asset_categories.prefix", DIGITAL_PREFIXES);
-      if (error) throw error;
-      return (data ?? []).map((a: any) => ({
-        id: a.id,
-        access_type:
-          a.custom_fields?.["סוג גישה"] ??
-          a.asset_categories?.category_name ??
-          a.asset_name,
-        resource_path:
-          a.custom_fields?.["נתיב/משאב"] ??
-          a.asset_name ??
-          a.serial_number ??
-          "—",
-        permission_level: a.custom_fields?.["רמת הרשאה"] ?? "—",
-      }));
-    },
-    enabled: !!myEmployee?.id,
-  });
-  const myDigitalAccess = digitalQuery.data ?? [];
+  // System access comes only from the system access screen.
+  const accessQuery = useMySystemAccess(!!myEmployee?.id);
+  const myAccess = accessQuery.data ?? [];
 
   // Fetch attendance punches for my employee (last 30 days)
   const punchesQuery = useMyPunches(myEmployee?.id, 30);
@@ -892,24 +862,26 @@ export default function EmployeePortal() {
 
                 <MyProtocolsList employeeId={emp.id} />
 
-                <h2 className="font-semibold text-sm mt-6">הרשאות ומערכות{digitalQuery.isSuccess ? ` (${myDigitalAccess.length})` : ""}</h2>
+                <h2 className="font-semibold text-sm mt-6">הרשאות ומערכות{accessQuery.isSuccess ? ` (${myAccess.length})` : ""}</h2>
                 <StateView
-                  loading={digitalQuery.isLoading}
-                  error={digitalQuery.error}
-                  onRetry={() => { void digitalQuery.refetch(); }}
+                  loading={accessQuery.isLoading}
+                  error={accessQuery.error}
+                  onRetry={() => { void accessQuery.refetch(); }}
                   label="את ההרשאות שלך"
-                  isEmpty={myDigitalAccess.length === 0}
-                  empty={{ icon: <Wifi className="w-6 h-6" />, title: "אין הרשאות דיגיטליות" }}
+                  isEmpty={myAccess.length === 0}
+                  empty={{ icon: <Wifi className="w-6 h-6" />, title: "אין הרשאות למערכות" }}
                 >
                   <ul className="grid grid-cols-1 gap-3">
-                    {myDigitalAccess.map((item) => (
+                    {myAccess.map((item) => (
                       <li key={item.id} className="bg-card rounded-xl border border-border/50 p-3 flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                           <Wifi className="w-5 h-5 text-primary" aria-hidden="true" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{item.resource_path}</p>
-                          <p className="text-xs text-muted-foreground">{item.access_type} • {item.permission_level}</p>
+                          <p className="text-sm font-medium truncate">{item.system_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {item.target ?? "כל המערכת"}{item.pending_revoke ? " • ממתין לניתוק" : ""}
+                          </p>
                         </div>
                       </li>
                     ))}

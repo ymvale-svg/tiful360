@@ -1,0 +1,58 @@
+# Render Blueprint for the tiful360 web app (static SPA).
+# Backend stays on Supabase; only the frontend is hosted here.
+# Mirrors the security headers in vercel.json. See docs/migration/lovable-to-render-plan.md, stage 2.
+services:
+  - type: web
+    name: tiful360
+    runtime: static
+    branch: main
+    autoDeploy: true
+    buildCommand: npm install -g bun@1.4.4 && bun install --frozen-lockfile && bun run build
+    staticPublishPath: ./dist
+    pullRequestPreviewsEnabled: false
+    envVars:
+      # Same values as the current .env (public, browser-side values).
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: VITE_SUPABASE_PROJECT_ID
+        sync: false
+    routes:
+      # SPA fallback. Existing files (assets, manifest, /.well-known/assetlinks.json) are served as-is.
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Content-Security-Policy
+        value: "frame-ancestors 'none'"
+      - path: /*
+        name: Strict-Transport-Security
+        value: max-age=63072000; includeSubDomains; preload
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Permissions-Policy
+        value: geolocation=(self), camera=(self), microphone=(), payment=(), usb=()
+      # A deploy must be visible on the next load: never cache the HTML shell or the service worker.
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache
+      - path: /sw.js
+        name: Cache-Control
+        value: no-cache
+      - path: /manifest.webmanifest
+        name: Cache-Control
+        value: no-cache
+      # Hashed build output never changes under the same name.
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable

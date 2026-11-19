@@ -1,3 +1,4 @@
+import { lazyWithReload } from "@/lib/lazyWithReload";
 import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { SearchInput } from "@/components/ui/search-input";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -20,8 +21,9 @@ import { HubTabBar } from "@/components/hub/HubTabBar";
 import { ListSkeleton } from "@/components/feedback/StateView";
 
 // Merged screens: hand-over of unassigned items and vehicle subscriptions are tabs here.
-const UnassignedAssets = lazy(() => import("@/pages/UnassignedAssets"));
-const VehicleSubscriptions = lazy(() => import("@/pages/VehicleSubscriptions"));
+const UnassignedAssets = lazyWithReload(() => import("@/pages/UnassignedAssets"));
+const VehicleSubscriptions = lazyWithReload(() => import("@/pages/VehicleSubscriptions"));
+const LeasingTab = lazyWithReload(() => import("@/components/vehicles/LeasingTab").then((m) => ({ default: m.LeasingTab })));
 
 const assetStatusLabels: Record<string, string> = {
   in_use: "בשימוש", in_stock: "במלאי", in_repair: "בתיקון", lost: "אבד",
@@ -397,6 +399,12 @@ export default function Assets() {
       {activeTab === "subscriptions" && (
         <Suspense fallback={<ListSkeleton rows={5} />}>
           <div role="tabpanel" aria-label="רכב ומנויים"><VehicleSubscriptions /></div>
+        </Suspense>
+      )}
+
+      {activeTab === "leasing" && (
+        <Suspense fallback={<ListSkeleton rows={5} />}>
+          <div role="tabpanel" aria-label="ליסינג ורמות רכב"><LeasingTab /></div>
         </Suspense>
       )}
 

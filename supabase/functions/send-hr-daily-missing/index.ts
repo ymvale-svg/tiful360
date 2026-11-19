@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
   const byCompany = new Map<string, { company_name: string; rows: any[] }>()
   for (const r of rows ?? []) {
     if (requestedCompany && r.company_id !== requestedCompany) continue
-    const cur = byCompany.get(r.company_id) ?? { company_name: r.company_name, rows: [] }
+    const cur = byCompany.get(r.company_id) ?? { company_name: r.company_name, rows: [] as any[] }
     cur.rows.push(r)
     byCompany.set(r.company_id, cur)
   }

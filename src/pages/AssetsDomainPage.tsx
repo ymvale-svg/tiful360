@@ -77,7 +77,6 @@ function insuranceStatus(a: any, domain: DomainKey): { label: string; cls: strin
 }
 
 function expiryOf(a: any, domain: DomainKey): string | null {
-  if (domain === "digital") return a.license_expires_at || a.password_expires_at || null;
   if (domain === "licenses") return a.license_expires_at || null;
   if (a.expiry_date) return a.expiry_date;
   // Fallback: a custom date field such as "תוקף חוזה" / "תפוגה" / "תאריך סיום".
@@ -244,6 +243,9 @@ export default function AssetsDomainPage() {
       a.license_plate?.toLowerCase().includes(q) ||
       a.employees?.full_name?.toLowerCase().includes(q) ||
       a.sites?.name?.toLowerCase().includes(q) ||
+      a.site_location?.toLowerCase().includes(q) ||
+      a.container?.asset_name?.toLowerCase().includes(q) ||
+      legacySiteValue(a).toLowerCase().includes(q) ||
       sub.toLowerCase().includes(q)
     );
   };
@@ -1041,6 +1043,13 @@ interface ColDef {
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}/;
+/** Site written in the older "שיוך לאתר…" custom field, before items had a real site link. */
+function legacySiteValue(a: any): string {
+  const cf = a?.custom_fields ?? {};
+  const k = Object.keys(cf).find((key) => /^שיוך לאתר/.test(key.trim()));
+  return k ? fmtCustom(cf[k]) : "";
+}
+
 function fmtCustom(v: unknown): string {
   if (v === null || v === undefined || v === "") return "";
   if (Array.isArray(v)) return v.join(", ");
@@ -1066,17 +1075,11 @@ function InstancesTable({
 }) {
   const isInsurance = domain === "insurance";
   const { data: nextPayments } = useNextInsurancePayments(domain === "insurance" ? (localStorage.getItem("activeCompanyId")) : null);
-  const siteOf = (a: any): string => {
-    const cf = a.custom_fields ?? {};
-    const k = Object.keys(cf).find((key) => /^שיוך לאתר/.test(key.trim()));
-    return (k ? fmtCustom(cf[k]) : "") || a.sites?.name || "";
-  };
+  const siteOf = (a: any): string => legacySiteValue(a) || a.sites?.name || "";
   const secondValue = (a: any) =>
-    (domain === "digital"
-      ? a.account_username
-      : domain === "licenses"
-        ? (a.custom_fields?.["ספק"] ?? a.manufacturer_model)
-        : a.serial_number) ?? null;
+    (domain === "licenses"
+      ? (a.custom_fields?.["ספק"] ?? a.manufacturer_model)
+      : a.serial_number) ?? null;
 
   const expiryInfo = (a: any) => {
     const exp = expiryOf(a, domain);
@@ -1094,20 +1097,25 @@ function InstancesTable({
       { key: "name", label: "שם פריט", render: (a) => a.asset_name ?? "—", sortVal: (a) => a.asset_name ?? "" },
       {
         key: "second",
-        label: domain === "digital" ? "שם משתמש" : domain === "licenses" ? "ספק" : "מס׳ סידורי",
-        render: (a) => <span dir={domain === "digital" ? "ltr" : undefined}>{secondValue(a) ?? "—"}</span>,
+        label: domain === "licenses" ? "ספק" : "מס׳ סידורי",
+        render: (a) => secondValue(a) ?? "—",
         sortVal: (a) => secondValue(a) ?? "",
       },
       {
         key: "employee", label: "עובד / אתר",
-        render: (a) => a.employees?.full_name ? (
-          <EmployeeLink employeeId={a.current_owner_id} name={a.employees.full_name} />
-        ) : a.sites?.name ? (
-          <span className="inline-flex items-center gap-1">
-            <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-            <span className="truncate">{a.sites.name}{a.container?.asset_name ? ` · ${a.container.asset_name}` : ""}</span>
+        render: (a) => !a.employees?.full_name && !a.sites?.name ? dash : (
+          <span className="inline-flex flex-col gap-0.5 min-w-0">
+            {a.employees?.full_name && <EmployeeLink employeeId={a.current_owner_id} name={a.employees.full_name} />}
+            {a.sites?.name && (
+              <span className="inline-flex items-center gap-1 min-w-0">
+                <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" aria-hidden="true" />
+                <span className="truncate">
+                  {[a.sites.name, a.site_location, a.container?.asset_name].filter(Boolean).join(" · ")}
+                </span>
+              </span>
+            )}
           </span>
-        ) : dash,
+        ),
         sortVal: (a) => a.employees?.full_name ?? a.sites?.name ?? "",
       },
       { key: "site", label: "אתר", render: (a) => siteOf(a) || dash, sortVal: siteOf },

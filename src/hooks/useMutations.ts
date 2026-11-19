@@ -47,6 +47,9 @@ export function useCreateAsset() {
       group_id?: string | null;
       serial_number?: string;
       current_owner_id?: string;
+      assigned_site_id?: string | null;
+      container_id?: string | null;
+      site_location?: string | null;
       status?: "in_use" | "in_stock" | "in_repair";
       custom_fields?: Record<string, any>;
       expiry_date?: string;
@@ -123,6 +126,7 @@ export function useUpdateAsset() {
       queryClient.invalidateQueries({ queryKey: ["assets"] });
       queryClient.invalidateQueries({ queryKey: ["asset-categories"] });
       queryClient.invalidateQueries({ queryKey: ["employee-assets"] });
+      queryClient.invalidateQueries({ queryKey: ["site-locations"] });
     },
   });
 }
@@ -141,9 +145,8 @@ export function useUpdateEmployee() {
   });
 }
 
-// useUpsertDigitalAccess and useDeleteDigitalAccess removed -
-// digital access is now managed via the assets table (DACC category).
-// Use useUpsertAsset / useDeleteAsset (if available) or direct supabase calls.
+// System access (accounts, permissions) is managed only in the system access screen
+// (src/hooks/useSystemAccess.ts), not as assets.
 
 export function useUnassignAsset() {
   const queryClient = useQueryClient();

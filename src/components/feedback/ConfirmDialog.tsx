@@ -1,3 +1,4 @@
+import type React from "react";
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import {
@@ -30,7 +31,10 @@ export interface ConfirmOptions {
 
 type Pending = ConfirmOptions & { resolve: (ok: boolean) => void };
 
-const ConfirmContext = createContext<((opts: ConfirmOptions) => Promise<boolean>) | null>(null);
+type ConfirmFn = (opts: ConfirmOptions) => Promise<boolean>;
+// Keep one context instance across hot reloads so provider and consumers never mismatch.
+const g = globalThis as unknown as { __tifulConfirmContext?: React.Context<ConfirmFn | null> };
+const ConfirmContext = g.__tifulConfirmContext ?? (g.__tifulConfirmContext = createContext<ConfirmFn | null>(null));
 
 /**
  * Promise-based confirmation, replacing window.confirm / window.prompt:

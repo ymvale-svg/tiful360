@@ -1,5 +1,5 @@
 import type { ExpiringAsset } from "@/hooks/useExpiringAssets";
-import { domainKeyToSlug, getDomain, type DomainKey } from "@/lib/assetDomains";
+import { domainKeyToSlug, getDomain, isDomainKey, type DomainKey } from "@/lib/assetDomains";
 
 type Category = { id: string; domain?: string | null; prefix?: string; protocol_type?: string };
 export interface ExpiringResourceTarget {
@@ -16,8 +16,8 @@ export function getExpiringResourceTargets(items: ExpiringAsset[], categories: C
     let href: string | null = null;
     if (item.asset_id) {
       const category = item.category_id ? categoryMap.get(item.category_id) : undefined;
-      const fallback: DomainKey = item.domain === "vehicle" ? "physical"
-        : item.domain === "license" ? "licenses" : item.domain;
+      const fallback: DomainKey = item.domain === "license" ? "licenses"
+        : isDomainKey(item.domain) ? item.domain : "physical";
       const domain = category ? getDomain(category) : fallback;
       href = `/assets/${domainKeyToSlug(domain)}/${item.asset_id}`;
     } else if (item.source_type === "digital_access" && item.current_owner_id) {
