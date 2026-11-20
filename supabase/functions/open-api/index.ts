@@ -305,6 +305,8 @@ Deno.serve(async (req) => {
       const { data, error, count } = await q.range(offset, offset + limit - 1);
       if (error) throw new ApiError(`הקריאה נכשלה: ${error.message}`);
       const listed = ((data ?? []) as unknown as Array<Record<string, unknown>>).map((r) => publicRow(def, r));
+      // Which records were read, not only that the resource was read (תקנות אבטחת מידע, תיעוד גישה).
+      log.record_id = listed.map((r) => String(r.id ?? "")).filter(Boolean).join(",");
       return json({ ok: true, resource, count: count ?? listed.length, offset, limit, rows: listed });
     }
 
@@ -319,6 +321,7 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (error) throw new ApiError(`הקריאה נכשלה: ${error.message}`);
       if (!data) throw new ApiError("הרשומה לא נמצאה בחברה הזו.");
+      log.record_id = id;
       return json({ ok: true, resource, row: publicRow(def, data as unknown as Record<string, unknown>) });
     }
 
