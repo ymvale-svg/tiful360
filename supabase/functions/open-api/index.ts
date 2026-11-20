@@ -10,6 +10,7 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import {
   RESOURCES,
   filterableColumns,
+  publicRow,
   scopeForAction,
   type ApiAction,
   type ResourceDef,
@@ -303,7 +304,10 @@ Deno.serve(async (req) => {
       if (orderCol) q = q.order(orderCol, { ascending: body.order_dir === "asc" });
       const { data, error, count } = await q.range(offset, offset + limit - 1);
       if (error) throw new ApiError(`הקריאה נכשלה: ${error.message}`);
-      return json({ ok: true, resource, count: count ?? (data?.length ?? 0), offset, limit, rows: data ?? [] });
+      const listed = ((data ?? []) as unknown as Array<Record<string, unknown>>).map((r) => publicRow(def, r));
+      // Which records were read, not only that the resource was read (תקנות אבטחת מידע, תיעוד גישה).
+      log.record_id = listed.map((r) => String(r.id ?? "")).filter(Boolean).join(",");
+      return json({ ok: true, resource, count: count ?? listed.length, offset, limit, rows: listed });
     }
 
     if (action === "get") {
@@ -317,7 +321,8 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (error) throw new ApiError(`הקריאה נכשלה: ${error.message}`);
       if (!data) throw new ApiError("הרשומה לא נמצאה בחברה הזו.");
-      return json({ ok: true, resource, row: data });
+      log.record_id = id;
+      return json({ ok: true, resource, row: publicRow(def, data as unknown as Record<string, unknown>) });
     }
 
     if (action === "create") {
@@ -328,7 +333,7 @@ Deno.serve(async (req) => {
         .select(def.select ?? "*");
       if (error) throw new ApiError(`השמירה נכשלה: ${error.message}`);
       log.record_id = String((rows as unknown as Array<Record<string, unknown>> | null)?.[0]?.id ?? "");
-      return json({ ok: true, resource, row: (rows as unknown as Array<Record<string, unknown>> | null)?.[0] ?? null });
+      return json({ ok: true, resource, row: publicRow(def, (rows as unknown as Array<Record<string, unknown>> | null)?.[0] ?? null) });
     }
 
     if (action === "update") {
@@ -344,7 +349,7 @@ Deno.serve(async (req) => {
       if (error) throw new ApiError(`העדכון נכשל: ${error.message}`);
       if (!rows?.length) throw new ApiError("הרשומה לא נמצאה בחברה הזו, ואף רשומה לא השתנתה.");
       log.record_id = id;
-      return json({ ok: true, resource, row: rows[0] });
+      return json({ ok: true, resource, row: publicRow(def, rows[0] as unknown as Record<string, unknown>) });
     }
 
     // delete + preview_delete both work on an explicit id list only.
@@ -364,7 +369,7 @@ Deno.serve(async (req) => {
         resource,
         would_delete: matched.length,
         missing_ids: ids.filter((i) => !matched.some((r) => String(r.id) === i)),
-        rows: matched,
+        rows: matched.map((r) => publicRow(def, r)),
       });
     }
 

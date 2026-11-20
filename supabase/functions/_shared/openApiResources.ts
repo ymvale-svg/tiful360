@@ -33,6 +33,11 @@ export interface ResourceDef {
   order?: string;
   /** explicit column list to return (defaults to the whole row) */
   select?: string;
+  /**
+   * columns that are never returned to a key: signatures, signing-link tokens,
+   * GPS payloads and internal snapshots. Stripped from every row by publicRow().
+   */
+  omit?: string[];
   /** payroll scope is additionally required */
   payroll?: boolean;
   /** how many rows one delete may take */
@@ -47,6 +52,7 @@ export const RESOURCES: Record<string, ResourceDef> = {
   // ── people ────────────────────────────────────────────────────────────────
   employees: {
     table: "employees",
+    omit: ["offboarding_snapshot"],
     label: "עובדים",
     company: "company_id",
     actions: READ_WRITE_DELETE,
@@ -249,6 +255,7 @@ export const RESOURCES: Record<string, ResourceDef> = {
   // ── attendance & leave ────────────────────────────────────────────────────
   attendance_punches: {
     table: "attendance_punches",
+    omit: ["raw_payload"],
     label: "החתמות",
     company: "company_id",
     actions: READ_WRITE_DELETE,
@@ -298,36 +305,44 @@ export const RESOURCES: Record<string, ResourceDef> = {
     table: "permission_groups",
     label: "קבוצות הרשאה",
     company: "company_id",
-    actions: READ_WRITE_DELETE,
+    // read only from outside: a key must never grant roles or move rows between companies
+    // (the group/system triggers set company_id from the parent row, not from the key).
+    actions: READ_ONLY,
     order: "name",
     search: ["name", "description"],
-    writable: ["name", "description", "roles", "system_key"],
+    filters: ["name", "description", "roles", "system_key"],
   },
   permission_group_members: {
     table: "permission_group_members",
     label: "חברי קבוצות הרשאה",
     company: "company_id",
-    actions: READ_WRITE_DELETE,
+    // read only from outside: a key must never grant roles or move rows between companies
+    // (the group/system triggers set company_id from the parent row, not from the key).
+    actions: READ_ONLY,
     order: "created_at",
-    writable: ["group_id", "user_id"],
+    filters: ["group_id", "user_id"],
   },
   system_access_systems: {
     table: "system_access_systems",
     label: "מערכות",
     company: "company_id",
-    actions: READ_WRITE_DELETE,
+    // read only from outside: a key must never grant roles or move rows between companies
+    // (the group/system triggers set company_id from the parent row, not from the key).
+    actions: READ_ONLY,
     order: "sort_order",
     search: ["name"],
-    writable: ["name", "provisioning", "owner_role", "owner_user_id", "resource_label", "is_active", "sort_order"],
+    filters: ["name", "provisioning", "owner_role", "owner_user_id", "resource_label", "is_active", "sort_order"],
   },
   system_access_resources: {
     table: "system_access_resources",
     label: "סביבות ופריטים",
     company: "company_id",
-    actions: READ_WRITE_DELETE,
+    // read only from outside: a key must never grant roles or move rows between companies
+    // (the group/system triggers set company_id from the parent row, not from the key).
+    actions: READ_ONLY,
     order: "sort_order",
     search: ["name", "path"],
-    writable: ["system_id", "parent_id", "name", "path", "external_ref", "is_active", "sort_order"],
+    filters: ["system_id", "parent_id", "name", "path", "external_ref", "is_active", "sort_order"],
   },
   system_access_grants: {
     table: "system_access_grants",
@@ -342,6 +357,7 @@ export const RESOURCES: Record<string, ResourceDef> = {
   // ── processes & documents ─────────────────────────────────────────────────
   onboarding_processes: {
     table: "onboarding_processes",
+    omit: ["audit_log"],
     label: "תהליכי קליטה",
     company: "company_id",
     actions: READ_WRITE,
@@ -366,6 +382,7 @@ export const RESOURCES: Record<string, ResourceDef> = {
   },
   signed_documents: {
     table: "signed_documents",
+    omit: ["employee_signature", "issuer_signature"],
     label: "מסמכים חתומים",
     company: "company_id",
     actions: READ_ONLY,
@@ -373,6 +390,7 @@ export const RESOURCES: Record<string, ResourceDef> = {
   },
   tax_form_101: {
     table: "tax_form_101",
+    omit: ["access_token", "token_expires_at", "signature_data"],
     label: "טופסי 101",
     company: "company_id",
     actions: READ_ONLY,
@@ -402,6 +420,14 @@ export const RESOURCES: Record<string, ResourceDef> = {
     filters: ["id", "name"],
   },
 };
+
+/** A row as an external key may see it: without the resource's omitted columns. */
+export function publicRow<T extends Record<string, unknown> | null | undefined>(def: ResourceDef, row: T): T {
+  if (!row || !def.omit?.length) return row;
+  const out: Record<string, unknown> = { ...row };
+  for (const c of def.omit) delete out[c];
+  return out as T;
+}
 
 /** Which permission a caller needs for one action. */
 export function scopeForAction(action: ApiAction): Scope {

@@ -29,11 +29,15 @@ Deno.serve(async (req) => {
     const hash = await sha256(key);
     const { data: apiKey } = await admin
       .from("api_keys")
-      .select("id, company_id, is_active")
+      .select("id, company_id, is_active, expires_at")
       .eq("key_hash", hash)
       .eq("is_active", true)
       .maybeSingle();
     if (!apiKey) return json({ error: "invalid api key" }, 401);
+    // Keys now share one table with the open API, where an expiry date can be set.
+    if (apiKey.expires_at && new Date(apiKey.expires_at).getTime() < Date.now()) {
+      return json({ error: "api key expired" }, 401);
+    }
     await admin.from("api_keys").update({ last_used_at: new Date().toISOString() }).eq("id", apiKey.id);
 
     const body = await req.json().catch(() => ({}));
