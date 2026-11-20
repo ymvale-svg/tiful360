@@ -82,4 +82,14 @@ describe("open-api — what a key may and may not do", () => {
       expect(def.company, name).toBeTruthy();
     }
   });
+
+  it("a key can never grant roles or change the systems and environments of a company", () => {
+    // Writes run as the super admin who owns the key, so the group guards would let them through,
+    // and the group/system triggers set company_id from the parent row, not from the key.
+    for (const name of ["permission_groups", "permission_group_members", "system_access_systems", "system_access_resources"]) {
+      expect(RESOURCES[name].actions).toEqual(["list", "get"]);
+      expect(RESOURCES[name].writable).toBeUndefined();
+    }
+  });
+
 });

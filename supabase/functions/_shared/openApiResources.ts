@@ -298,36 +298,44 @@ export const RESOURCES: Record<string, ResourceDef> = {
     table: "permission_groups",
     label: "קבוצות הרשאה",
     company: "company_id",
-    actions: READ_WRITE_DELETE,
+    // read only from outside: a key must never grant roles or move rows between companies
+    // (the group/system triggers set company_id from the parent row, not from the key).
+    actions: READ_ONLY,
     order: "name",
     search: ["name", "description"],
-    writable: ["name", "description", "roles", "system_key"],
+    filters: ["name", "description", "roles", "system_key"],
   },
   permission_group_members: {
     table: "permission_group_members",
     label: "חברי קבוצות הרשאה",
     company: "company_id",
-    actions: READ_WRITE_DELETE,
+    // read only from outside: a key must never grant roles or move rows between companies
+    // (the group/system triggers set company_id from the parent row, not from the key).
+    actions: READ_ONLY,
     order: "created_at",
-    writable: ["group_id", "user_id"],
+    filters: ["group_id", "user_id"],
   },
   system_access_systems: {
     table: "system_access_systems",
     label: "מערכות",
     company: "company_id",
-    actions: READ_WRITE_DELETE,
+    // read only from outside: a key must never grant roles or move rows between companies
+    // (the group/system triggers set company_id from the parent row, not from the key).
+    actions: READ_ONLY,
     order: "sort_order",
     search: ["name"],
-    writable: ["name", "provisioning", "owner_role", "owner_user_id", "resource_label", "is_active", "sort_order"],
+    filters: ["name", "provisioning", "owner_role", "owner_user_id", "resource_label", "is_active", "sort_order"],
   },
   system_access_resources: {
     table: "system_access_resources",
     label: "סביבות ופריטים",
     company: "company_id",
-    actions: READ_WRITE_DELETE,
+    // read only from outside: a key must never grant roles or move rows between companies
+    // (the group/system triggers set company_id from the parent row, not from the key).
+    actions: READ_ONLY,
     order: "sort_order",
     search: ["name", "path"],
-    writable: ["system_id", "parent_id", "name", "path", "external_ref", "is_active", "sort_order"],
+    filters: ["system_id", "parent_id", "name", "path", "external_ref", "is_active", "sort_order"],
   },
   system_access_grants: {
     table: "system_access_grants",
