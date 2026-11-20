@@ -33,6 +33,11 @@ export interface ResourceDef {
   order?: string;
   /** explicit column list to return (defaults to the whole row) */
   select?: string;
+  /**
+   * columns that are never returned to a key: signatures, signing-link tokens,
+   * GPS payloads and internal snapshots. Stripped from every row by publicRow().
+   */
+  omit?: string[];
   /** payroll scope is additionally required */
   payroll?: boolean;
   /** how many rows one delete may take */
@@ -47,6 +52,7 @@ export const RESOURCES: Record<string, ResourceDef> = {
   // ── people ────────────────────────────────────────────────────────────────
   employees: {
     table: "employees",
+    omit: ["offboarding_snapshot"],
     label: "עובדים",
     company: "company_id",
     actions: READ_WRITE_DELETE,
@@ -249,6 +255,7 @@ export const RESOURCES: Record<string, ResourceDef> = {
   // ── attendance & leave ────────────────────────────────────────────────────
   attendance_punches: {
     table: "attendance_punches",
+    omit: ["raw_payload"],
     label: "החתמות",
     company: "company_id",
     actions: READ_WRITE_DELETE,
@@ -350,6 +357,7 @@ export const RESOURCES: Record<string, ResourceDef> = {
   // ── processes & documents ─────────────────────────────────────────────────
   onboarding_processes: {
     table: "onboarding_processes",
+    omit: ["audit_log"],
     label: "תהליכי קליטה",
     company: "company_id",
     actions: READ_WRITE,
@@ -374,6 +382,7 @@ export const RESOURCES: Record<string, ResourceDef> = {
   },
   signed_documents: {
     table: "signed_documents",
+    omit: ["employee_signature", "issuer_signature"],
     label: "מסמכים חתומים",
     company: "company_id",
     actions: READ_ONLY,
@@ -381,6 +390,7 @@ export const RESOURCES: Record<string, ResourceDef> = {
   },
   tax_form_101: {
     table: "tax_form_101",
+    omit: ["access_token", "token_expires_at", "signature_data"],
     label: "טופסי 101",
     company: "company_id",
     actions: READ_ONLY,
@@ -410,6 +420,14 @@ export const RESOURCES: Record<string, ResourceDef> = {
     filters: ["id", "name"],
   },
 };
+
+/** A row as an external key may see it: without the resource's omitted columns. */
+export function publicRow<T extends Record<string, unknown> | null | undefined>(def: ResourceDef, row: T): T {
+  if (!row || !def.omit?.length) return row;
+  const out: Record<string, unknown> = { ...row };
+  for (const c of def.omit) delete out[c];
+  return out as T;
+}
 
 /** Which permission a caller needs for one action. */
 export function scopeForAction(action: ApiAction): Scope {

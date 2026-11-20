@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   RESOURCES,
   filterableColumns,
+  publicRow,
   scopeForAction,
 } from "../../supabase/functions/_shared/openApiResources";
 
@@ -92,4 +93,24 @@ describe("open-api — what a key may and may not do", () => {
     }
   });
 
+  it("signatures, signing-link tokens, GPS payloads and internal snapshots never leave the API", () => {
+    const hidden: Record<string, string[]> = {
+      employees: ["offboarding_snapshot"],
+      attendance_punches: ["raw_payload"],
+      signed_documents: ["employee_signature", "issuer_signature"],
+      tax_form_101: ["access_token", "token_expires_at", "signature_data"],
+      onboarding_processes: ["audit_log"],
+    };
+    for (const [name, cols] of Object.entries(hidden)) {
+      const row: Record<string, unknown> = { id: "r1", company_id: "c1" };
+      for (const c of cols) row[c] = "secret";
+      const out = publicRow(RESOURCES[name], row) as Record<string, unknown>;
+      for (const c of cols) expect(out).not.toHaveProperty(c);
+      expect(out.id).toBe("r1");
+      // and none of them can be set from outside either
+      for (const c of cols) expect(RESOURCES[name].writable ?? []).not.toContain(c);
+    }
+    expect(publicRow(RESOURCES.sites, { id: "s1", name: "x" })).toEqual({ id: "s1", name: "x" });
+    expect(publicRow(RESOURCES.employees, null)).toBeNull();
+  });
 });
