@@ -163,3 +163,12 @@ describe("open-api — identity details need their own permission (appsec:open-a
     expect(screen).toMatch(/key: "identity"/);
   });
 });
+
+describe("open-api — employees are never deleted from outside (appsec:open-api-delete-employee-cascades-payroll)", () => {
+  it("employees cannot be deleted or delete-previewed; ending employment goes through offboarding", () => {
+    expect(RESOURCES.employees.actions).not.toContain("delete");
+    expect(RESOURCES.employees.actions).not.toContain("preview_delete");
+    expect(RESOURCES.employees.actions).toEqual(["list", "get", "create", "update"]);
+    expect(RESOURCES.offboarding_processes.actions).toContain("create");
+  });
+});

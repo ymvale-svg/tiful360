@@ -67,7 +67,9 @@ export const RESOURCES: Record<string, ResourceDef> = {
     identity: IDENTITY_COLUMNS,
     label: "עובדים",
     company: "company_id",
-    actions: READ_WRITE_DELETE,
+    // no delete from outside: deleting an employee cascades to forms 101, attendance,
+    // leave and onboarding. Ending employment goes through offboarding_processes.
+    actions: READ_WRITE,
     order: "full_name",
     search: ["full_name", "id_number", "email", "phone", "department", "employee_code"],
     filters: ["id", "employee_code", "full_name", "id_number", "email", "phone", "department", "status", "role", "sub_employer_id", "tracks_attendance", "can_remote_punch", "start_date", "end_date", "created_at"],
