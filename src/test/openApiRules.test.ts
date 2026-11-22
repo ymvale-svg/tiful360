@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   RESOURCES,
   filterableColumns,
   publicRow,
+  resourceForScopes,
   scopeForAction,
 } from "../../supabase/functions/_shared/openApiResources";
+
+const root = join(__dirname, "../..");
 
 /**
  * The rules an external key must never be able to break. Every assertion here is
@@ -112,5 +117,49 @@ describe("open-api — what a key may and may not do", () => {
     }
     expect(publicRow(RESOURCES.sites, { id: "s1", name: "x" })).toEqual({ id: "s1", name: "x" });
     expect(publicRow(RESOURCES.employees, null)).toBeNull();
+  });
+});
+
+describe("open-api — identity details need their own permission (appsec:open-api-select-star-personal-data)", () => {
+  const identity = [
+    "id_number", "birth_date", "street", "house_number", "city", "postal_code", "po_box",
+    "marital_status", "country_of_birth", "aliyah_date", "health_fund_member",
+  ];
+
+  it("a key without the identity permission sees no ID number, birth date, address or family details", () => {
+    const def = resourceForScopes(RESOURCES.employees, ["read", "write", "delete", "payroll"]);
+    const row: Record<string, unknown> = { id: "e1", company_id: "c1", full_name: "דנה" };
+    for (const c of identity) row[c] = "x";
+    const out = publicRow(def, row) as Record<string, unknown>;
+    for (const c of identity) expect(out, c).not.toHaveProperty(c);
+    expect(out.full_name).toBe("דנה");
+  });
+
+  it("a key without the identity permission cannot search, filter or sort by those details", () => {
+    const def = resourceForScopes(RESOURCES.employees, ["read"]);
+    expect(def.search).not.toContain("id_number");
+    expect(def.search).toContain("full_name");
+    const cols = filterableColumns(def);
+    for (const c of identity) expect(cols, c).not.toContain(c);
+    expect(cols).toContain("department");
+  });
+
+  it("a key with the identity permission still gets them", () => {
+    const def = resourceForScopes(RESOURCES.employees, ["read", "identity"]);
+    const out = publicRow(def, { id: "e1", id_number: "123" }) as Record<string, unknown>;
+    expect(out.id_number).toBe("123");
+    expect(def.search).toContain("id_number");
+    expect(filterableColumns(def)).toContain("id_number");
+  });
+
+  it("the other resources are not changed by the identity permission", () => {
+    expect(resourceForScopes(RESOURCES.sites, ["read"])).toBe(RESOURCES.sites);
+  });
+
+  it("the key table and the keys screen both know the identity permission", () => {
+    const migration = readFileSync(join(root, "drizzle/migrations/0049_api_key_identity_scope.sql"), "utf8");
+    expect(migration).toMatch(/api_keys_scopes_allowed[\s\S]*'identity'/);
+    const screen = readFileSync(join(root, "src/components/settings/ApiKeysTab.tsx"), "utf8");
+    expect(screen).toMatch(/key: "identity"/);
   });
 });

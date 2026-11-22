@@ -11,6 +11,7 @@ import {
   RESOURCES,
   filterableColumns,
   publicRow,
+  resourceForScopes,
   scopeForAction,
   type ApiAction,
   type ResourceDef,
@@ -29,6 +30,7 @@ const SCOPE_HE: Record<Scope, string> = {
   write: "הוספה ועריכה",
   delete: "מחיקה",
   payroll: "שכר",
+  identity: "פרטים מזהים",
 };
 
 /** A failure whose message is already meant for a human, in Hebrew. */
@@ -236,10 +238,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    const def = RESOURCES[resource];
-    if (!def) {
+    const known = RESOURCES[resource];
+    if (!known) {
       throw new ApiError(`החלק "${resource}" אינו מוכר. זמינים: ${Object.keys(RESOURCES).join(", ")}.`);
     }
+    // Identifying details (ID number, birth date, address) only for a key with the identity scope.
+    const def = resourceForScopes(known, apiKey.scopes);
     if (!def.actions.includes(action)) {
       throw new ApiError(`הפעולה "${action}" לא נתמכת ב${def.label}. נתמך: ${def.actions.join(", ")}.`);
     }

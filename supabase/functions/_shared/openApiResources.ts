@@ -10,7 +10,7 @@
  * out on purpose, so a key can never rewrite them.
  */
 
-export type Scope = "read" | "write" | "delete" | "payroll";
+export type Scope = "read" | "write" | "delete" | "payroll" | "identity";
 export type ApiAction =
   | "list" | "get" | "create" | "update" | "delete" | "preview_delete" | "capabilities";
 
@@ -38,11 +38,22 @@ export interface ResourceDef {
    * GPS payloads and internal snapshots. Stripped from every row by publicRow().
    */
   omit?: string[];
+  /**
+   * identifying details (ID number, birth date, address, family status) that are
+   * returned, searched and filtered only for a key with the identity scope.
+   */
+  identity?: string[];
   /** payroll scope is additionally required */
   payroll?: boolean;
   /** how many rows one delete may take */
   maxDelete?: number;
 }
+
+/** Employee details that identify a person; they need the identity scope. */
+export const IDENTITY_COLUMNS = [
+  "id_number", "birth_date", "street", "house_number", "city", "postal_code", "po_box",
+  "marital_status", "country_of_birth", "aliyah_date", "health_fund_member",
+];
 
 const READ_WRITE_DELETE: ApiAction[] = ["list", "get", "create", "update", "delete", "preview_delete"];
 const READ_WRITE: ApiAction[] = ["list", "get", "create", "update"];
@@ -53,6 +64,7 @@ export const RESOURCES: Record<string, ResourceDef> = {
   employees: {
     table: "employees",
     omit: ["offboarding_snapshot"],
+    identity: IDENTITY_COLUMNS,
     label: "עובדים",
     company: "company_id",
     actions: READ_WRITE_DELETE,
@@ -429,6 +441,21 @@ export function publicRow<T extends Record<string, unknown> | null | undefined>(
   return out as T;
 }
 
+/**
+ * The resource as one key may use it: without the identity scope, the identifying
+ * columns are omitted from rows and cannot be searched, filtered or sorted on.
+ */
+export function resourceForScopes(def: ResourceDef, scopes: readonly string[] | null | undefined): ResourceDef {
+  if (!def.identity?.length || (scopes ?? []).includes("identity")) return def;
+  const hidden = new Set(def.identity);
+  return {
+    ...def,
+    omit: [...(def.omit ?? []), ...def.identity],
+    search: def.search?.filter((c) => !hidden.has(c)),
+    filters: def.filters?.filter((c) => !hidden.has(c)),
+  };
+}
+
 /** Which permission a caller needs for one action. */
 export function scopeForAction(action: ApiAction): Scope {
   if (action === "delete" || action === "preview_delete") return "delete";
@@ -436,11 +463,15 @@ export function scopeForAction(action: ApiAction): Scope {
   return "read";
 }
 
-/** Columns a caller may filter on: id + writable + the explicit filter list. */
+/**
+ * Columns a caller may filter on: id + writable + the explicit filter list,
+ * minus any column the key may not see (filtering on it would reveal it).
+ */
 export function filterableColumns(def: ResourceDef): string[] {
   const base = new Set<string>(["id", "created_at"]);
   for (const c of def.writable ?? []) base.add(c);
   for (const c of def.filters ?? []) base.add(c);
   base.add(def.company);
+  for (const c of def.omit ?? []) base.delete(c);
   return Array.from(base);
 }
