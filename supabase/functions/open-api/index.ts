@@ -306,7 +306,10 @@ Deno.serve(async (req) => {
       if (error) throw new ApiError(`הקריאה נכשלה: ${error.message}`);
       const listed = ((data ?? []) as unknown as Array<Record<string, unknown>>).map((r) => publicRow(def, r));
       // Which records were read, not only that the resource was read (תקנות אבטחת מידע, תיעוד גישה).
-      log.record_id = listed.map((r) => String(r.id ?? "")).filter(Boolean).join(",");
+      const readIds = listed.map((r) => String(r.id ?? "")).filter(Boolean);
+      log.record_id = readIds.join(",");
+      // record_id is cut to 500 characters (about 13 ids); the full list goes to requested_ids (jsonb).
+      log.requested_ids = readIds;
       return json({ ok: true, resource, count: count ?? listed.length, offset, limit, rows: listed });
     }
 
