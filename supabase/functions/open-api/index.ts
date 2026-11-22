@@ -16,6 +16,7 @@ import {
   type ResourceDef,
   type Scope,
 } from "../_shared/openApiResources.ts";
+import { searchOrFilter } from "../_shared/openApiSearch.ts";
 
 const DEFAULT_PAGE = 50;
 const MAX_PAGE = 200;
@@ -295,8 +296,7 @@ Deno.serve(async (req) => {
       if (search) {
         const cols = def.search ?? [];
         if (!cols.length) throw new ApiError(`ב${def.label} לא אפשרי חיפוש חופשי.`);
-        const clean = search.replaceAll("%", "\\%").replaceAll("_", "\\_");
-        q = q.or(cols.map((c) => `${c}.ilike.%${clean}%`).join(","));
+        q = q.or(searchOrFilter(cols, search));
       }
       const orderCol = typeof body.order_by === "string" && filterableColumns(def).includes(body.order_by)
         ? body.order_by
