@@ -68,13 +68,17 @@ Deno.serve(async (req) => {
   const freshnessCutoff = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString()
   const companyHasPunches = new Set<string>()
   if (companyIds.length > 0) {
-    const { data: punchRows } = await admin
-      .from('attendance_punches')
-      .select('company_id')
-      .in('company_id', companyIds)
-      .gte('punch_at', freshnessCutoff)
-      .limit(5000)
-    for (const p of punchRows ?? []) companyHasPunches.add((p as any).company_id)
+    // One existence check per company: a shared capped list could be filled by
+    // one busy company and make the others look like their clock is down.
+    await Promise.all(companyIds.map(async (cid) => {
+      const { data } = await admin
+        .from('attendance_punches')
+        .select('id')
+        .eq('company_id', cid)
+        .gte('punch_at', freshnessCutoff)
+        .limit(1)
+      if (data && data.length > 0) companyHasPunches.add(cid as string)
+    }))
   }
 
   for (const r of rows ?? []) {

@@ -5,6 +5,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { sendTemplateEmailLogged } from '../_shared/send-email-logged.ts'
+import { fetchAllRows } from '../_shared/fetchAllRows.ts'
 
 function todayIL(): Date {
   const now = new Date()
@@ -69,15 +70,22 @@ Deno.serve(async (req) => {
   const requestedCompany: string | undefined = body?.company_id
 
   // Fetch unmatched punches in the window
-  let q = admin
-    .from('attendance_punches')
-    .select('company_id, employee_code_raw, punch_at')
-    .is('employee_id', null)
-    .gte('punch_at', `${fromISO}T00:00:00+00:00`)
-    .lte('punch_at', `${toISOStr}T23:59:59+00:00`)
-    .limit(10000)
-  if (requestedCompany) q = q.eq('company_id', requestedCompany)
-  const { data: punches, error } = await q
+  let punches: any[] | null = null
+  let error: { message: string } | null = null
+  try {
+    punches = await fetchAllRows((from, to) => {
+      let q = admin
+        .from('attendance_punches')
+        .select('id, company_id, employee_code_raw, punch_at')
+        .is('employee_id', null)
+        .gte('punch_at', `${fromISO}T00:00:00+00:00`)
+        .lte('punch_at', `${toISOStr}T23:59:59+00:00`)
+        .order('punch_at', { ascending: true })
+        .order('id', { ascending: true })
+      if (requestedCompany) q = q.eq('company_id', requestedCompany)
+      return q.range(from, to)
+    })
+  } catch (e) { error = { message: (e as any)?.message ?? String(e) } }
   if (error) {
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },

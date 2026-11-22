@@ -6,6 +6,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import * as XLSX from 'npm:xlsx@0.18.5'
 import { sendTemplateEmailLogged } from '../_shared/send-email-logged.ts'
+import { fetchAllRows } from '../_shared/fetchAllRows.ts'
 
 const WEEKDAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת']
 
@@ -72,30 +73,24 @@ Deno.serve(async (req) => {
   const rangeEndIso = `${to}T23:59:59+00:00`
   const activeDays = new Map<string, Set<string>>() // company_id -> Set<'YYYY-MM-DD'>
   {
-    let cursor: string | null = rangeStartIso
-    // Paginate to be safe on large ranges
-    while (cursor) {
-      const q = admin
+    let data: any[] = []
+    try {
+      data = await fetchAllRows((from, to) => admin
         .from('attendance_punches')
-        .select('company_id, punch_at')
-        .gte('punch_at', cursor)
+        .select('id, company_id, punch_at')
+        .gte('punch_at', rangeStartIso)
         .lte('punch_at', rangeEndIso)
         .order('punch_at', { ascending: true })
-        .limit(10000)
-      const { data, error } = await q
-      if (error) break
-      for (const p of data ?? []) {
-        const cid = (p as any).company_id as string
-        const iso = new Date((p as any).punch_at).toLocaleString('en-CA', {
-          timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit',
-        }).slice(0, 10)
-        if (!activeDays.has(cid)) activeDays.set(cid, new Set())
-        activeDays.get(cid)!.add(iso)
-      }
-      if (!data || data.length < 10000) break
-      const last = data[data.length - 1] as any
-      // advance cursor 1ms past last punch to avoid infinite loop
-      cursor = new Date(new Date(last.punch_at).getTime() + 1).toISOString()
+        .order('id', { ascending: true })
+        .range(from, to))
+    } catch (_e) { data = [] }
+    for (const p of data) {
+      const cid = (p as any).company_id as string
+      const iso = new Date((p as any).punch_at).toLocaleString('en-CA', {
+        timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit',
+      }).slice(0, 10)
+      if (!activeDays.has(cid)) activeDays.set(cid, new Set())
+      activeDays.get(cid)!.add(iso)
     }
   }
 

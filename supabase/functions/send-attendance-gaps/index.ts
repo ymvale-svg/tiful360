@@ -1,6 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { sendTemplateEmailLogged } from '../_shared/send-email-logged.ts'
+import { fetchAllRows } from '../_shared/fetchAllRows.ts'
 
 const APP_URL = 'https://tiful360.com'
 
@@ -68,9 +69,13 @@ Deno.serve(async (req) => {
   }
 
   // Fetch gaps via RPC (impersonating user so RLS/security definer check passes)
-  const { data: gaps, error: rpcErr } = await userClient.rpc('get_attendance_gaps', {
-    _company_id: company_id, _from: from, _to: to,
-  })
+  let gaps: any[] = []
+  let rpcErr: { message: string } | null = null
+  try {
+    gaps = await fetchAllRows((start, end) => userClient.rpc('get_attendance_gaps', {
+      _company_id: company_id, _from: from, _to: to,
+    }).order('employee_id').order('gap_date').order('gap_type').range(start, end))
+  } catch (e) { rpcErr = { message: (e as any)?.message ?? String(e) } }
   if (rpcErr) {
     return new Response(JSON.stringify({ error: rpcErr.message }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
