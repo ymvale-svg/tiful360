@@ -234,3 +234,16 @@ describe("open-api — database errors stay in the log (appsec:open-api-db-error
     expect(src).toMatch(/return json\(\{ ok: false, error: message \}/);
   });
 });
+
+describe("open-api — server to server only (appsec:open-api-cors-wildcard)", () => {
+  it("the open API sends no CORS headers, so a browser page cannot call it", () => {
+    const src = readFileSync(join(root, "supabase/functions/open-api/index.ts"), "utf8");
+    expect(src).not.toMatch(/corsHeaders/);
+    expect(src).not.toMatch(/Access-Control-Allow-Origin/);
+  });
+
+  it("the documentation says the key must never be put in browser code", () => {
+    const screen = readFileSync(join(root, "src/components/settings/ApiKeysTab.tsx"), "utf8");
+    expect(screen).toMatch(/אסור לשים את המפתח בקוד שרץ בדפדפן/);
+  });
+});

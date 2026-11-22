@@ -5,8 +5,10 @@
 // What the caller actually sees is decided by the row-level-security rules of the
 // key's owner account, because every query runs with that account's own session.
 // A key can therefore never out-grow the person who created it.
+//
+// Server to server only: no CORS headers are sent, because a key placed in browser
+// code is visible to every visitor of that page.
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import {
   RESOURCES,
   filterableColumns,
@@ -49,7 +51,7 @@ class DbError extends ApiError {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" },
   });
 
 async function sha256(text: string): Promise<string> {
@@ -171,7 +173,8 @@ function readIds(body: Record<string, unknown>, def: ResourceDef): string[] {
 
 // ── the call ─────────────────────────────────────────────────────────────────
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  // Server-to-server only: no CORS headers, so no browser page can call this with a key.
+  if (req.method === "OPTIONS") return new Response(null, { status: 405 });
 
   const admin = createClient(
     Deno.env.get("SUPABASE_URL")!,
