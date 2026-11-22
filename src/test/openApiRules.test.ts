@@ -220,3 +220,17 @@ describe("open-api — call log: only real keys, and old rows can be removed (ap
     expect(sql).not.toMatch(/TG_OP = 'UPDATE'/);
   });
 });
+
+describe("open-api — database errors stay in the log (appsec:open-api-db-error-messages-returned)", () => {
+  const src = readFileSync(join(root, "supabase/functions/open-api/index.ts"), "utf8");
+
+  it("no Postgres error text is put into a message that goes back to the caller", () => {
+    expect(src).not.toMatch(/new ApiError\([^;]*\.message/);
+    expect(src).toMatch(/throw new DbError\("הקריאה נכשלה\.", error\)/);
+  });
+
+  it("the Postgres error text is kept in the call log only", () => {
+    expect(src).toMatch(/log\.error = e instanceof DbError/);
+    expect(src).toMatch(/return json\(\{ ok: false, error: message \}/);
+  });
+});
