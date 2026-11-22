@@ -6,11 +6,12 @@
  * before any database query runs.
  *
  * `writable` is the exact set of columns a caller may set on create/update.
- * Columns that carry money, identity links, signatures or audit data are left
- * out on purpose, so a key can never rewrite them.
+ * Columns that carry money or balances (salaries, payment amounts, vacation and
+ * sick balances), identity links, signatures or audit data are left out on
+ * purpose, so a key can never rewrite them.
  */
 
-export type Scope = "read" | "write" | "delete" | "payroll";
+export type Scope = "read" | "write" | "delete" | "payroll" | "identity";
 export type ApiAction =
   | "list" | "get" | "create" | "update" | "delete" | "preview_delete" | "capabilities";
 
@@ -38,11 +39,22 @@ export interface ResourceDef {
    * GPS payloads and internal snapshots. Stripped from every row by publicRow().
    */
   omit?: string[];
+  /**
+   * identifying details (ID number, birth date, address, family status) that are
+   * returned, searched and filtered only for a key with the identity scope.
+   */
+  identity?: string[];
   /** payroll scope is additionally required */
   payroll?: boolean;
   /** how many rows one delete may take */
   maxDelete?: number;
 }
+
+/** Employee details that identify a person; they need the identity scope. */
+export const IDENTITY_COLUMNS = [
+  "id_number", "birth_date", "street", "house_number", "city", "postal_code", "po_box",
+  "marital_status", "country_of_birth", "aliyah_date", "health_fund_member",
+];
 
 const READ_WRITE_DELETE: ApiAction[] = ["list", "get", "create", "update", "delete", "preview_delete"];
 const READ_WRITE: ApiAction[] = ["list", "get", "create", "update"];
@@ -53,16 +65,18 @@ export const RESOURCES: Record<string, ResourceDef> = {
   employees: {
     table: "employees",
     omit: ["offboarding_snapshot"],
+    identity: IDENTITY_COLUMNS,
     label: "עובדים",
     company: "company_id",
-    actions: READ_WRITE_DELETE,
+    // no delete from outside: deleting an employee cascades to forms 101, attendance,
+    // leave and onboarding. Ending employment goes through offboarding_processes.
+    actions: READ_WRITE,
     order: "full_name",
     search: ["full_name", "id_number", "email", "phone", "department", "employee_code"],
     filters: ["id", "employee_code", "full_name", "id_number", "email", "phone", "department", "status", "role", "sub_employer_id", "tracks_attendance", "can_remote_punch", "start_date", "end_date", "created_at"],
     writable: [
       "employee_code", "full_name", "id_number", "role", "department", "direct_manager_id", "status",
-      "start_date", "end_date", "phone", "email", "birth_date", "vacation_balance",
-      "sick_balance", "gender", "street", "house_number", "city", "postal_code", "po_box",
+      "start_date", "end_date", "phone", "email", "birth_date", "gender", "street", "house_number", "city", "postal_code", "po_box",
       "country_of_birth", "aliyah_date", "marital_status", "is_israeli_resident",
       "health_fund_member", "sub_employer_id", "can_remote_punch",
       "birthday_calendar_preference", "hebrew_birth_day", "hebrew_birth_month",
@@ -249,7 +263,7 @@ export const RESOURCES: Record<string, ResourceDef> = {
     company: "company_id",
     actions: READ_WRITE_DELETE,
     order: "due_date",
-    writable: ["asset_id", "due_date", "amount", "note", "paid_at"],
+    writable: ["asset_id", "due_date", "note", "paid_at"],
   },
 
   // ── attendance & leave ────────────────────────────────────────────────────
@@ -289,7 +303,7 @@ export const RESOURCES: Record<string, ResourceDef> = {
     payroll: true,
     order: "created_at",
     filters: ["id", "employee_id", "period_year", "period_month", "extraction_status", "id_number_detected", "employee_name_detected", "created_at"],
-    writable: ["employee_id", "employee_name_detected", "period_year", "period_month", "vacation_balance", "sick_balance", "gross_salary", "net_salary", "work_days", "work_hours", "work_days_num", "extraction_notes"],
+    writable: ["employee_id", "employee_name_detected", "period_year", "period_month", "work_days", "work_hours", "work_days_num", "extraction_notes"],
   },
   payslip_batches: {
     table: "payslip_batches",
@@ -429,6 +443,31 @@ export function publicRow<T extends Record<string, unknown> | null | undefined>(
   return out as T;
 }
 
+/**
+ * The resource as one key may use it: without the identity scope, the identifying
+ * columns are omitted from rows and cannot be searched, filtered or sorted on.
+ */
+export function resourceForScopes(def: ResourceDef, scopes: readonly string[] | null | undefined): ResourceDef {
+  if (!def.identity?.length || (scopes ?? []).includes("identity")) return def;
+  const hidden = new Set(def.identity);
+  return {
+    ...def,
+    omit: [...(def.omit ?? []), ...def.identity],
+    search: def.search?.filter((c) => !hidden.has(c)),
+    filters: def.filters?.filter((c) => !hidden.has(c)),
+  };
+}
+
+/**
+ * Whether a key may close service tickets through it-api. Keys created in the keys
+ * screen (they have an owner) need the write scope; older keys without an owner
+ * predate scopes and keep working.
+ */
+export function itApiKeyMayWrite(key: { owner_user_id?: string | null; scopes?: readonly string[] | null }): boolean {
+  if (!key.owner_user_id) return true;
+  return (key.scopes ?? []).includes("write");
+}
+
 /** Which permission a caller needs for one action. */
 export function scopeForAction(action: ApiAction): Scope {
   if (action === "delete" || action === "preview_delete") return "delete";
@@ -436,11 +475,15 @@ export function scopeForAction(action: ApiAction): Scope {
   return "read";
 }
 
-/** Columns a caller may filter on: id + writable + the explicit filter list. */
+/**
+ * Columns a caller may filter on: id + writable + the explicit filter list,
+ * minus any column the key may not see (filtering on it would reveal it).
+ */
 export function filterableColumns(def: ResourceDef): string[] {
   const base = new Set<string>(["id", "created_at"]);
   for (const c of def.writable ?? []) base.add(c);
   for (const c of def.filters ?? []) base.add(c);
   base.add(def.company);
+  for (const c of def.omit ?? []) base.delete(c);
   return Array.from(base);
 }

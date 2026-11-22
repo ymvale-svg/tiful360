@@ -344,6 +344,20 @@
       "when": 1795070677148,
       "tag": "0048_user_roles_writes_service_only",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1795070737148,
+      "tag": "0049_api_key_identity_scope",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1795070797148,
+      "tag": "0050_api_request_log_retention_delete",
+      "breakpoints": true
     }
   ]
 }

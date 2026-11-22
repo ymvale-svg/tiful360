@@ -4,6 +4,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { enqueueTransactionalEmail } from "../_shared/enqueueEmail.ts";
 import { forwardedToIt } from "../_shared/it-forwards.ts";
+import { itApiKeyMayWrite } from "../_shared/openApiResources.ts";
 
 const json = (b: unknown, status = 200) =>
   new Response(JSON.stringify(b), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -15,33 +16,66 @@ async function sha256(text: string): Promise<string> {
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/** What the call log needs to know; filled in by handle() as the call goes. */
+interface CallInfo {
+  apiKey: Record<string, any> | null;
+  action: string;
+  recordId: string | null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  const info: CallInfo = { apiKey: null, action: "-", recordId: null };
+  const res = await handle(req, admin, info);
+  // Every call with a real key is recorded, like the open API. Calls without one are not.
+  if (info.apiKey) {
+    const body = res.ok ? null : await res.clone().json().catch(() => null);
+    await admin.from("api_request_log").insert({
+      api_key_id: info.apiKey.id,
+      key_prefix: info.apiKey.key_prefix ?? null,
+      owner_user_id: info.apiKey.owner_user_id ?? null,
+      company_id: info.apiKey.company_id ?? null,
+      resource: "service_tickets",
+      action: info.action.slice(0, 100) || "-",
+      record_id: info.recordId,
+      status: res.ok ? "ok" : "error",
+      error: res.ok ? null : String(body?.error ?? res.status).slice(0, 500),
+      ip: req.headers.get("x-forwarded-for") ?? null,
+    });
+  }
+  return res;
+});
+
+async function handle(req: Request, admin: ReturnType<typeof createClient>, info: CallInfo): Promise<Response> {
   try {
     const auth = req.headers.get("Authorization");
     if (!auth?.startsWith("Bearer ")) return json({ error: "missing api key" }, 401);
     const key = auth.slice(7).trim();
     if (!key) return json({ error: "missing api key" }, 401);
 
-    const url = Deno.env.get("SUPABASE_URL")!;
-    const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-
     const hash = await sha256(key);
     const { data: apiKey } = await admin
       .from("api_keys")
-      .select("id, company_id, is_active, expires_at")
+      .select("id, company_id, is_active, expires_at, owner_user_id, scopes, key_prefix")
       .eq("key_hash", hash)
       .eq("is_active", true)
       .maybeSingle();
     if (!apiKey) return json({ error: "invalid api key" }, 401);
+    info.apiKey = apiKey;
     // Keys now share one table with the open API, where an expiry date can be set.
     if (apiKey.expires_at && new Date(apiKey.expires_at).getTime() < Date.now()) {
       return json({ error: "api key expired" }, 401);
+    }
+    // Keys from the keys screen carry scopes: closing a ticket is a write.
+    if (!itApiKeyMayWrite(apiKey)) {
+      return json({ error: "api key lacks the write permission" }, 403);
     }
     await admin.from("api_keys").update({ last_used_at: new Date().toISOString() }).eq("id", apiKey.id);
 
     const body = await req.json().catch(() => ({}));
     const action = typeof body.action === "string" ? body.action : "";
+    info.action = action;
     const ticket_code = typeof body.ticket_code === "string" ? body.ticket_code.trim() : "";
     const message = String(body.message ?? "").trim().slice(0, 4000);
 
@@ -55,6 +89,7 @@ Deno.serve(async (req) => {
       .eq("company_id", apiKey.company_id)
       .maybeSingle();
     if (!t) return json({ error: "ticket not found" }, 404);
+    info.recordId = String(t.id);
     if (t.status === "done") return json({ ok: true, already_closed: true, ticket_code: t.ticket_code });
 
     const now = new Date().toISOString();
@@ -120,4 +155,4 @@ Deno.serve(async (req) => {
   } catch (e) {
     return json({ error: "server error", details: String(e) }, 500);
   }
-});
+}

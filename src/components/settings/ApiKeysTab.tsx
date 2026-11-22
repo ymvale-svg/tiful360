@@ -22,13 +22,14 @@ import { ListSkeleton, StateView } from "@/components/feedback/StateView";
 import { useConfirm } from "@/components/feedback/ConfirmDialog";
 import { formatDateDMY } from "@/lib/utils";
 
-type Scope = "read" | "write" | "delete" | "payroll";
+type Scope = "read" | "write" | "delete" | "payroll" | "identity";
 
 const SCOPES: { key: Scope; label: string; hint: string }[] = [
   { key: "read", label: "קריאה", hint: "להציג רשימות ורשומות" },
   { key: "write", label: "הוספה ועריכה", hint: "ליצור ולשנות רשומות" },
   { key: "delete", label: "מחיקה", hint: "למחוק רשומות לפי רשימת מזהים מדויקת" },
   { key: "payroll", label: "שכר", hint: "תלושי שכר ונתוני שכר" },
+  { key: "identity", label: "פרטים מזהים", hint: "ת\"ז, תאריך לידה, כתובת, מצב משפחתי וקופת חולים של עובדים" },
 ];
 
 const SCOPE_LABEL: Record<string, string> = Object.fromEntries(SCOPES.map((s) => [s.key, s.label]));
@@ -515,8 +516,11 @@ export function ApiKeysTab() {
             <ul className="list-disc space-y-1 pr-5 text-muted-foreground">
               <li>המפתח רואה רק את החברות שסומנות לו, ורק מה שבעל המפתח רואה במערכת.</li>
               <li>תלושי שכר ונתוני שכר דורשים את ההרשאה "שכר".</li>
+              <li>ת"ז, תאריך לידה, כתובת, מצב משפחתי וקופת חולים של עובדים מוחזרים, ואפשר לחפש ולסנן לפיהם, רק עם ההרשאה "פרטים מזהים".</li>
               <li>מחיקה דורשת הרשאת "מחיקה" ורשימת מזהים מדויקת; אם מזהה אחד לא נמצא — אף רשומה לא נמחקת.</li>
+              <li>עובדים לא נמחקים דרך הממשק. סיום העסקה — דרך <code dir="ltr">offboarding_processes</code>.</li>
               <li>עד 120 קריאות בדקה למפתח. חריגה מחזירה הודעה ברורה.</li>
+              <li>הממשק מיועד לקריאות משרת לשרת בלבד. אסור לשים את המפתח בקוד שרץ בדפדפן (אתר או אפליקציית ווב): כל מבקר יכול לראות אותו שם. קריאה מדפדפן נחסמת.</li>
               <li>המפתח המלא מוצג פעם אחת בלבד. אם אבד — יוצרים מפתח חדש.</li>
             </ul>
           </div>

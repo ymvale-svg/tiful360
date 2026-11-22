@@ -5,12 +5,15 @@
 // What the caller actually sees is decided by the row-level-security rules of the
 // key's owner account, because every query runs with that account's own session.
 // A key can therefore never out-grow the person who created it.
+//
+// Server to server only: no CORS headers are sent, because a key placed in browser
+// code is visible to every visitor of that page.
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import {
   RESOURCES,
   filterableColumns,
   publicRow,
+  resourceForScopes,
   scopeForAction,
   type ApiAction,
   type ResourceDef,
@@ -30,15 +33,26 @@ const SCOPE_HE: Record<Scope, string> = {
   write: "הוספה ועריכה",
   delete: "מחיקה",
   payroll: "שכר",
+  identity: "פרטים מזהים",
 };
 
 /** A failure whose message is already meant for a human, in Hebrew. */
 class ApiError extends Error {}
 
+/**
+ * A database failure: the caller gets only the general message; the database's own
+ * text (table, column and constraint names) is kept in the call log, not returned.
+ */
+class DbError extends ApiError {
+  constructor(message: string, readonly detail: { message?: string } | null) {
+    super(message);
+  }
+}
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" },
   });
 
 async function sha256(text: string): Promise<string> {
@@ -160,7 +174,8 @@ function readIds(body: Record<string, unknown>, def: ResourceDef): string[] {
 
 // ── the call ─────────────────────────────────────────────────────────────────
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  // Server-to-server only: no CORS headers, so no browser page can call this with a key.
+  if (req.method === "OPTIONS") return new Response(null, { status: 405 });
 
   const admin = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -237,10 +252,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    const def = RESOURCES[resource];
-    if (!def) {
+    const known = RESOURCES[resource];
+    if (!known) {
       throw new ApiError(`החלק "${resource}" אינו מוכר. זמינים: ${Object.keys(RESOURCES).join(", ")}.`);
     }
+    // Identifying details (ID number, birth date, address) only for a key with the identity scope.
+    const def = resourceForScopes(known, apiKey.scopes);
     if (!def.actions.includes(action)) {
       throw new ApiError(`הפעולה "${action}" לא נתמכת ב${def.label}. נתמך: ${def.actions.join(", ")}.`);
     }
@@ -303,7 +320,7 @@ Deno.serve(async (req) => {
         : def.order;
       if (orderCol) q = q.order(orderCol, { ascending: body.order_dir === "asc" });
       const { data, error, count } = await q.range(offset, offset + limit - 1);
-      if (error) throw new ApiError(`הקריאה נכשלה: ${error.message}`);
+      if (error) throw new DbError("הקריאה נכשלה.", error);
       const listed = ((data ?? []) as unknown as Array<Record<string, unknown>>).map((r) => publicRow(def, r));
       // Which records were read, not only that the resource was read (תקנות אבטחת מידע, תיעוד גישה).
       const readIds = listed.map((r) => String(r.id ?? "")).filter(Boolean);
@@ -322,7 +339,7 @@ Deno.serve(async (req) => {
         .eq(def.company, companyId)
         .eq("id", id)
         .maybeSingle();
-      if (error) throw new ApiError(`הקריאה נכשלה: ${error.message}`);
+      if (error) throw new DbError("הקריאה נכשלה.", error);
       if (!data) throw new ApiError("הרשומה לא נמצאה בחברה הזו.");
       log.record_id = id;
       return json({ ok: true, resource, row: publicRow(def, data as unknown as Record<string, unknown>) });
@@ -334,7 +351,7 @@ Deno.serve(async (req) => {
         .from(def.table)
         .insert({ ...data, [def.company]: companyId })
         .select(def.select ?? "*");
-      if (error) throw new ApiError(`השמירה נכשלה: ${error.message}`);
+      if (error) throw new DbError("השמירה נכשלה.", error);
       log.record_id = String((rows as unknown as Array<Record<string, unknown>> | null)?.[0]?.id ?? "");
       return json({ ok: true, resource, row: publicRow(def, (rows as unknown as Array<Record<string, unknown>> | null)?.[0] ?? null) });
     }
@@ -349,7 +366,7 @@ Deno.serve(async (req) => {
         .eq(def.company, companyId)
         .eq("id", id)
         .select(def.select ?? "*");
-      if (error) throw new ApiError(`העדכון נכשל: ${error.message}`);
+      if (error) throw new DbError("העדכון נכשל.", error);
       if (!rows?.length) throw new ApiError("הרשומה לא נמצאה בחברה הזו, ואף רשומה לא השתנתה.");
       log.record_id = id;
       return json({ ok: true, resource, row: publicRow(def, rows[0] as unknown as Record<string, unknown>) });
@@ -363,7 +380,7 @@ Deno.serve(async (req) => {
       .select(def.select ?? "*")
       .eq(def.company, companyId)
       .in("id", ids);
-    if (error) throw new ApiError(`הקריאה נכשלה: ${error.message}`);
+    if (error) throw new DbError("הקריאה נכשלה.", error);
     const matched = (rows ?? []) as unknown as Array<Record<string, unknown>>;
 
     if (action === "preview_delete") {
@@ -382,29 +399,33 @@ Deno.serve(async (req) => {
       );
     }
     const { error: delErr } = await user.from(def.table).delete().eq(def.company, companyId).in("id", ids);
-    if (delErr) throw new ApiError(`המחיקה נכשלה: ${delErr.message}`);
+    if (delErr) throw new DbError("המחיקה נכשלה.", delErr);
     log.record_id = ids.join(",");
     return json({ ok: true, resource, deleted: matched.length });
   } catch (e) {
     const message = e instanceof ApiError ? e.message : "שגיאה בלתי צפויה. נסו שוב או פנו לתמיכה.";
     log.status = "error";
-    log.error = message;
+    log.error = e instanceof DbError && e.detail?.message ? `${message} ${e.detail.message}` : message;
     return json({ ok: false, error: message }, e instanceof ApiError ? statusOf(message) : 500);
   } finally {
-    // Every call is recorded, successful or not. The log table cannot be edited.
-    await admin.from("api_request_log").insert({
-      api_key_id: apiKey?.id ?? null,
-      key_prefix: apiKey?.key_prefix ?? null,
-      owner_user_id: apiKey?.owner_user_id ?? null,
-      company_id: log.company_id ?? null,
-      resource: String(log.resource ?? "-"),
-      action: String(log.action ?? "-"),
-      record_id: log.record_id ? String(log.record_id).slice(0, 500) : null,
-      requested_ids: log.requested_ids ?? null,
-      status: String(log.status ?? "error"),
-      error: log.error ? String(log.error).slice(0, 500) : null,
-      ip: log.ip ?? null,
-    });
+    // Every call with a real key is recorded, successful or not. Calls without a valid
+    // key are not, so anyone on the internet cannot flood the log. The log table cannot
+    // be edited; only old rows past the retention period may be removed.
+    if (apiKey) {
+      await admin.from("api_request_log").insert({
+        api_key_id: apiKey.id ?? null,
+        key_prefix: apiKey.key_prefix ?? null,
+        owner_user_id: apiKey.owner_user_id ?? null,
+        company_id: log.company_id ?? null,
+        resource: String(log.resource ?? "-"),
+        action: String(log.action ?? "-"),
+        record_id: log.record_id ? String(log.record_id).slice(0, 500) : null,
+        requested_ids: log.requested_ids ?? null,
+        status: String(log.status ?? "error"),
+        error: log.error ? String(log.error).slice(0, 500) : null,
+        ip: log.ip ?? null,
+      });
+    }
   }
 });
 
