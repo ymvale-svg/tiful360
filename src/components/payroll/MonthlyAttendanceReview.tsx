@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronDown, ChevronLeft, Mail, FileDown, Check, X, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import {
   monthWorkingDays, buildReviewDays, isGapDay, LEAVE_TYPE_LABEL,
   type ReviewDay, type MonthPunch, type ApprovedLeave,
@@ -103,13 +104,12 @@ export function MonthlyAttendanceReview() {
   const { data: punches = [] } = useQuery({
     queryKey: ["attendance_punches", "mar", activeCompanyId, month], enabled,
     queryFn: async () => {
-      const { data, error } = await supabase.from("attendance_punches")
+      const rows = await fetchAllRows((from, to) => supabase.from("attendance_punches")
         .select("id, employee_id, punch_at, direction")
         .eq("company_id", activeCompanyId!).neq("status", "rejected")
         .gte("punch_at", new Date(y, m - 1, 1).toISOString()).lt("punch_at", new Date(y, m, 1).toISOString())
-        .order("punch_at");
-      if (error) throw error;
-      return (data ?? []) as MonthPunch[];
+        .order("punch_at").order("id").range(from, to));
+      return rows as MonthPunch[];
     },
   });
   const { data: leaves = [] } = useQuery({

@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompany } from "@/hooks/useCompany";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { toast } from "@/hooks/use-toast";
 import { Download, FileDown, AlertTriangle } from "lucide-react";
 import {
@@ -98,16 +99,15 @@ export function MichpalExportCard() {
     queryKey: ["michpal-punches", activeCompanyId, from, to],
     queryFn: async () => {
       if (!activeCompanyId) return [];
-      const { data, error } = await supabase
+      return fetchAllRows((start, end) => supabase
         .from("attendance_punches")
         .select("employee_id, punch_at, direction, source, status")
         .eq("company_id", activeCompanyId)
         .gte("punch_at", ilDayStartIso(from))
         .lte("punch_at", ilDayEndIso(to))
         .order("punch_at", { ascending: true })
-        .limit(20000);
-      if (error) throw error;
-      return data ?? [];
+        .order("id", { ascending: true })
+        .range(start, end));
     },
     enabled: !!activeCompanyId,
   });

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { resolvePunchAddressInBackground } from "@/hooks/useAttendanceLocationReport";
 import { useCompany } from "@/hooks/useCompany";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 export interface AttendancePunch {
   id: string;
@@ -73,14 +74,15 @@ export function useMonthlyPunchStats(year: number, month: number) {
       if (!activeCompanyId) return { total: 0, pending: 0, approved: 0, lastAt: null as string | null };
       const start = new Date(year, month - 1, 1).toISOString();
       const end = new Date(year, month, 1).toISOString();
-      const { data, error } = await supabase
+      const arr = await fetchAllRows<{ status: string; punch_at: string }>((from, to) => supabase
         .from("attendance_punches")
-        .select("status, punch_at")
+        .select("id, status, punch_at")
         .eq("company_id", activeCompanyId)
         .gte("punch_at", start)
-        .lt("punch_at", end);
-      if (error) throw error;
-      const arr = data ?? [];
+        .lt("punch_at", end)
+        .order("punch_at")
+        .order("id")
+        .range(from, to));
       const lastAt = arr.length ? arr.reduce((a, b) => (a.punch_at > b.punch_at ? a : b)).punch_at : null;
       return {
         total: arr.length,
