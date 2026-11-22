@@ -6,8 +6,9 @@
  * before any database query runs.
  *
  * `writable` is the exact set of columns a caller may set on create/update.
- * Columns that carry money, identity links, signatures or audit data are left
- * out on purpose, so a key can never rewrite them.
+ * Columns that carry money or balances (salaries, payment amounts, vacation and
+ * sick balances), identity links, signatures or audit data are left out on
+ * purpose, so a key can never rewrite them.
  */
 
 export type Scope = "read" | "write" | "delete" | "payroll" | "identity";
@@ -75,8 +76,7 @@ export const RESOURCES: Record<string, ResourceDef> = {
     filters: ["id", "employee_code", "full_name", "id_number", "email", "phone", "department", "status", "role", "sub_employer_id", "tracks_attendance", "can_remote_punch", "start_date", "end_date", "created_at"],
     writable: [
       "employee_code", "full_name", "id_number", "role", "department", "direct_manager_id", "status",
-      "start_date", "end_date", "phone", "email", "birth_date", "vacation_balance",
-      "sick_balance", "gender", "street", "house_number", "city", "postal_code", "po_box",
+      "start_date", "end_date", "phone", "email", "birth_date", "gender", "street", "house_number", "city", "postal_code", "po_box",
       "country_of_birth", "aliyah_date", "marital_status", "is_israeli_resident",
       "health_fund_member", "sub_employer_id", "can_remote_punch",
       "birthday_calendar_preference", "hebrew_birth_day", "hebrew_birth_month",
@@ -263,7 +263,7 @@ export const RESOURCES: Record<string, ResourceDef> = {
     company: "company_id",
     actions: READ_WRITE_DELETE,
     order: "due_date",
-    writable: ["asset_id", "due_date", "amount", "note", "paid_at"],
+    writable: ["asset_id", "due_date", "note", "paid_at"],
   },
 
   // ── attendance & leave ────────────────────────────────────────────────────
@@ -303,7 +303,7 @@ export const RESOURCES: Record<string, ResourceDef> = {
     payroll: true,
     order: "created_at",
     filters: ["id", "employee_id", "period_year", "period_month", "extraction_status", "id_number_detected", "employee_name_detected", "created_at"],
-    writable: ["employee_id", "employee_name_detected", "period_year", "period_month", "vacation_balance", "sick_balance", "gross_salary", "net_salary", "work_days", "work_hours", "work_days_num", "extraction_notes"],
+    writable: ["employee_id", "employee_name_detected", "period_year", "period_month", "work_days", "work_hours", "work_days_num", "extraction_notes"],
   },
   payslip_batches: {
     table: "payslip_batches",

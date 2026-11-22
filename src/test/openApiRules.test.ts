@@ -192,3 +192,12 @@ describe("it-api — keys from the keys screen need write; every call is logged 
     expect(src).toMatch(/from\("api_request_log"\)\s*\.insert\(/);
   });
 });
+
+describe("open-api — money and balances are never written from outside (appsec:open-api-money-columns-writable)", () => {
+  it("salaries, payment amounts and vacation/sick balances are not writable", () => {
+    const money = ["gross_salary", "net_salary", "vacation_balance", "sick_balance", "amount"];
+    for (const [name, def] of Object.entries(RESOURCES)) {
+      for (const c of money) expect(def.writable ?? [], `${name}.${c}`).not.toContain(c);
+    }
+  });
+});
