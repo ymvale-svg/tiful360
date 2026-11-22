@@ -392,20 +392,24 @@ Deno.serve(async (req) => {
     log.error = message;
     return json({ ok: false, error: message }, e instanceof ApiError ? statusOf(message) : 500);
   } finally {
-    // Every call is recorded, successful or not. The log table cannot be edited.
-    await admin.from("api_request_log").insert({
-      api_key_id: apiKey?.id ?? null,
-      key_prefix: apiKey?.key_prefix ?? null,
-      owner_user_id: apiKey?.owner_user_id ?? null,
-      company_id: log.company_id ?? null,
-      resource: String(log.resource ?? "-"),
-      action: String(log.action ?? "-"),
-      record_id: log.record_id ? String(log.record_id).slice(0, 500) : null,
-      requested_ids: log.requested_ids ?? null,
-      status: String(log.status ?? "error"),
-      error: log.error ? String(log.error).slice(0, 500) : null,
-      ip: log.ip ?? null,
-    });
+    // Every call with a real key is recorded, successful or not. Calls without a valid
+    // key are not, so anyone on the internet cannot flood the log. The log table cannot
+    // be edited; only old rows past the retention period may be removed.
+    if (apiKey) {
+      await admin.from("api_request_log").insert({
+        api_key_id: apiKey.id ?? null,
+        key_prefix: apiKey.key_prefix ?? null,
+        owner_user_id: apiKey.owner_user_id ?? null,
+        company_id: log.company_id ?? null,
+        resource: String(log.resource ?? "-"),
+        action: String(log.action ?? "-"),
+        record_id: log.record_id ? String(log.record_id).slice(0, 500) : null,
+        requested_ids: log.requested_ids ?? null,
+        status: String(log.status ?? "error"),
+        error: log.error ? String(log.error).slice(0, 500) : null,
+        ip: log.ip ?? null,
+      });
+    }
   }
 });
 

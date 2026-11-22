@@ -201,3 +201,22 @@ describe("open-api — money and balances are never written from outside (appsec
     }
   });
 });
+
+describe("open-api — call log: only real keys, and old rows can be removed (appsec:open-api-unauth-log-flood-no-retention, privacy:api-request-log-undeletable-no-retention)", () => {
+  it("a call without a valid key is not written to the log", () => {
+    const src = readFileSync(join(root, "supabase/functions/open-api/index.ts"), "utf8");
+    const fin = src.slice(src.indexOf("} finally {"));
+    expect(fin).toMatch(/if \(apiKey\)\s*\{\s*await admin\.from\("api_request_log"\)\.insert\(/);
+  });
+
+  it("the log trigger lets only service_role delete, and only rows older than 24 months", () => {
+    const sql = readFileSync(join(root, "drizzle/migrations/0050_api_request_log_retention_delete.sql"), "utf8");
+    expect(sql).toMatch(/CREATE OR REPLACE FUNCTION public\.api_request_log_immutable\(\)/);
+    expect(sql).toMatch(/TG_OP = 'DELETE'/);
+    expect(sql).toMatch(/current_user = 'service_role'/);
+    expect(sql).toMatch(/OLD\.created_at < now\(\) - interval '24 months'/);
+    // updates stay blocked for everyone
+    expect(sql).toMatch(/RAISE EXCEPTION/);
+    expect(sql).not.toMatch(/TG_OP = 'UPDATE'/);
+  });
+});
