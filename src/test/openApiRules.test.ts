@@ -5,6 +5,7 @@ import {
   RESOURCES,
   filterableColumns,
   publicRow,
+  itApiKeyMayWrite,
   resourceForScopes,
   scopeForAction,
 } from "../../supabase/functions/_shared/openApiResources";
@@ -170,5 +171,24 @@ describe("open-api — employees are never deleted from outside (appsec:open-api
     expect(RESOURCES.employees.actions).not.toContain("preview_delete");
     expect(RESOURCES.employees.actions).toEqual(["list", "get", "create", "update"]);
     expect(RESOURCES.offboarding_processes.actions).toContain("create");
+  });
+});
+
+describe("it-api — keys from the keys screen need write; every call is logged (appsec:it-api-ignores-key-scopes-expiry)", () => {
+  it("a key created in the keys screen (with an owner) closes tickets only with the write permission", () => {
+    expect(itApiKeyMayWrite({ owner_user_id: "u1", scopes: ["read"] })).toBe(false);
+    expect(itApiKeyMayWrite({ owner_user_id: "u1", scopes: ["read", "write"] })).toBe(true);
+    expect(itApiKeyMayWrite({ owner_user_id: "u1", scopes: null })).toBe(false);
+  });
+
+  it("an older key without an owner keeps working as before", () => {
+    expect(itApiKeyMayWrite({ owner_user_id: null, scopes: ["read"] })).toBe(true);
+    expect(itApiKeyMayWrite({ owner_user_id: null, scopes: null })).toBe(true);
+  });
+
+  it("it-api checks the permission and writes every call to api_request_log", () => {
+    const src = readFileSync(join(root, "supabase/functions/it-api/index.ts"), "utf8");
+    expect(src).toMatch(/itApiKeyMayWrite\(/);
+    expect(src).toMatch(/from\("api_request_log"\)\s*\.insert\(/);
   });
 });

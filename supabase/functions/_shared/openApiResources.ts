@@ -458,6 +458,16 @@ export function resourceForScopes(def: ResourceDef, scopes: readonly string[] | 
   };
 }
 
+/**
+ * Whether a key may close service tickets through it-api. Keys created in the keys
+ * screen (they have an owner) need the write scope; older keys without an owner
+ * predate scopes and keep working.
+ */
+export function itApiKeyMayWrite(key: { owner_user_id?: string | null; scopes?: readonly string[] | null }): boolean {
+  if (!key.owner_user_id) return true;
+  return (key.scopes ?? []).includes("write");
+}
+
 /** Which permission a caller needs for one action. */
 export function scopeForAction(action: ApiAction): Scope {
   if (action === "delete" || action === "preview_delete") return "delete";
