@@ -1,3 +1,5 @@
+import { groupPunchesByWorkDay, pairDayPunches, type PunchPair } from "@/lib/attendancePairs";
+
 export interface ApprovedLeave {
   start_date: string;
   end_date: string | null;
@@ -66,39 +68,39 @@ export type DayStatus = "ok" | "missing" | "partial" | "leave";
 
 export interface ReviewDay {
   day: string;
+  /** הכניסה הראשונה ביום */
   inPunch: MonthPunch | null;
+  /** היציאה האחרונה ביום */
   outPunch: MonthPunch | null;
+  /** כל זוגות הכניסה/יציאה ביום, לפי הסדר */
+  pairs: PunchPair<MonthPunch>[];
+  workedMinutes: number;
+  breakMinutes: number;
   leave: string | null;
   status: DayStatus;
 }
 
 /**
- * שורת יום לכל יום עבודה: היעדרות מאושרת → "leave"; כניסה+יציאה → "ok";
- * החתמה אחת בלבד → "partial"; בלי החתמה → "missing".
+ * שורת יום לכל יום עבודה: כל הזוגות שלמים → "ok"; היעדרות מאושרת → "leave";
+ * חסרה כניסה או יציאה באחד הזוגות (גם באמצע היום) → "partial"; בלי החתמה → "missing".
  */
 export function buildReviewDays(
   workingDays: string[],
   punches: MonthPunch[],
   leaves: ApprovedLeave[],
 ): ReviewDay[] {
-  const byDay = new Map<string, MonthPunch[]>();
-  for (const p of punches) {
-    const k = toDayKey(new Date(p.punch_at));
-    if (!byDay.has(k)) byDay.set(k, []);
-    byDay.get(k)!.push(p);
-  }
+  const byDay = groupPunchesByWorkDay(punches, (iso) => toDayKey(new Date(iso)));
   return workingDays.map((day) => {
-    const list = (byDay.get(day) ?? []).slice().sort((a, b) => a.punch_at.localeCompare(b.punch_at));
-    const inPunch = list.find((p) => p.direction === "in") ?? (list.length ? list[0] : null);
-    const outCand = [...list].reverse().find((p) => p.direction === "out") ?? (list.length > 1 ? list[list.length - 1] : null);
-    const outPunch = outCand && outCand.id !== inPunch?.id ? outCand : null;
+    const { pairs, workedMinutes, breakMinutes, hasGap } = pairDayPunches(byDay.get(day) ?? []);
+    const inPunch = pairs.find((p) => p.in)?.in ?? null;
+    const outPunch = [...pairs].reverse().find((p) => p.out)?.out ?? null;
     const leave = leaveLabelForDay(leaves, day);
     let status: DayStatus;
-    if (inPunch && outPunch) status = "ok";
+    if (pairs.length && !hasGap) status = "ok";
     else if (leave) status = "leave";
-    else if (inPunch || outPunch) status = "partial";
+    else if (pairs.length) status = "partial";
     else status = "missing";
-    return { day, inPunch, outPunch, leave, status };
+    return { day, inPunch, outPunch, pairs, workedMinutes, breakMinutes, leave, status };
   });
 }
 

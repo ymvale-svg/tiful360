@@ -66,3 +66,23 @@ describe("buildReviewDays", () => {
     expect(rows[2].leave).toBe("חופשה");
   });
 });
+
+describe("buildReviewDays — יציאה וחזרה באותו יום", () => {
+  const p = (id: string, at: string, direction: string) => ({ id, employee_id: "e", punch_at: at, direction });
+  it("שני זוגות שלמים = יום תקין, השעות בלי זמן היציאה", () => {
+    const [r] = buildReviewDays(["2026-11-18"], [
+      p("1", new Date(2026, 10, 18, 9).toISOString(), "in"), p("2", new Date(2026, 10, 18, 12).toISOString(), "out"),
+      p("3", new Date(2026, 10, 18, 13).toISOString(), "in"), p("4", new Date(2026, 10, 18, 17).toISOString(), "out"),
+    ], []);
+    expect(r.status).toBe("ok");
+    expect(r.pairs.length).toBe(2);
+    expect(r.workedMinutes).toBe(420);
+  });
+  it("כניסה בבוקר ויציאה בערב אבל חסרה החזרה באמצע = חסרה החתמה", () => {
+    const [r] = buildReviewDays(["2026-11-18"], [
+      p("1", new Date(2026, 10, 18, 9).toISOString(), "in"), p("2", new Date(2026, 10, 18, 12).toISOString(), "out"),
+      p("3", new Date(2026, 10, 18, 17).toISOString(), "out"),
+    ], []);
+    expect(r.status).toBe("partial");
+  });
+});

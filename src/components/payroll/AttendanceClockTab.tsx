@@ -23,6 +23,7 @@ import { useConfirm } from "@/components/feedback/ConfirmDialog";
 import { undoToast } from "@/components/feedback/undoToast";
 
 import { AttendanceFlowIndicator } from "./AttendanceFlowIndicator";
+import { groupPunchesByWorkDay, pairDayPunches, minutesToHours, minutesToHM, type PunchPair } from "@/lib/attendancePairs";
 import { AttendanceSettingsSection } from "./AttendanceSettingsSection";
 import { useCompany } from "@/hooks/useCompany";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,9 +52,6 @@ function formatDayLabel(iso: string) {
   const d = new Date(iso);
   const wd = d.toLocaleDateString("he-IL", { weekday: "short" });
   return `${wd} ${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-function dayKey(iso: string) {
-  return iso.slice(0, 10);
 }
 
 export function AttendanceClockTab() {
@@ -311,9 +309,7 @@ function OrphansPanel({ punches, employees }: { punches: AttendancePunch[]; empl
 }
 
 function DayStatusBadge({ items, leave }: { items: AttendancePunch[]; leave: string | null }) {
-  const firstIn = items.find(p => p.direction === "in")?.punch_at;
-  const outs = items.filter(p => p.direction === "out");
-  const lastOut = outs[outs.length - 1]?.punch_at;
+  const { hasGap } = pairDayPunches(items);
   if (items.length === 0) {
     return leave ? (
       <Badge variant="outline" className="border-primary/40 text-primary bg-primary/10 whitespace-nowrap">{leave}</Badge>
@@ -321,7 +317,7 @@ function DayStatusBadge({ items, leave }: { items: AttendancePunch[]; leave: str
       <Badge variant="outline" className="border-destructive/40 text-destructive bg-destructive/10 whitespace-nowrap">לא החתים</Badge>
     );
   }
-  if (!firstIn || !lastOut) {
+  if (hasGap) {
     return (
       <Badge variant="outline" className="border-amber-500/50 text-amber-700 dark:text-amber-300 bg-amber-500/10 whitespace-nowrap">
         חסרה החתמה
@@ -359,15 +355,8 @@ function EmployeeMonthlyTable({ punches, loading, employeeId, year, month }: {
     },
   });
 
-  const punchDays = useMemo(() => {
-    const map = new Map<string, AttendancePunch[]>();
-    for (const p of punches) {
-      const k = dayKey(p.punch_at);
-      if (!map.has(k)) map.set(k, []);
-      map.get(k)!.push(p);
-    }
-    return map;
-  }, [punches]);
+  // משמרת שעוברת את חצות נספרת ליום הכניסה
+  const punchDays = useMemo(() => groupPunchesByWorkDay(punches), [punches]);
 
   // כל ימי העבודה בחודש (א׳–ה׳, ללא חגים, עד היום) + ימים שיש בהם פעימות
   const rows = useMemo(() => {
@@ -378,17 +367,11 @@ function EmployeeMonthlyTable({ punches, loading, employeeId, year, month }: {
       .map((day) => ({ day, items: punchDays.get(day) ?? [], leave: leaveLabelForDay(leaves, day) }));
   }, [year, month, holidays, punchDays, leaves]);
 
-  const totalHours = useMemo(() => {
-    let total = 0;
-    for (const { items } of rows) {
-      const ins = items.filter(p => p.direction === "in").map(p => new Date(p.punch_at).getTime());
-      const outs = items.filter(p => p.direction === "out").map(p => new Date(p.punch_at).getTime());
-      if (ins.length && outs.length) {
-        total += (Math.max(...outs) - Math.min(...ins)) / 3600000;
-      }
-    }
-    return total;
-  }, [rows]);
+  // סכום זוגות הכניסה/יציאה בלבד — זמן יציאה באמצע היום לא נספר
+  const totalHours = useMemo(
+    () => rows.reduce((sum, { items }) => sum + pairDayPunches(items).workedMinutes, 0) / 60,
+    [rows],
+  );
 
   if (loading) return <Card><CardContent className="py-8 text-center text-muted-foreground">טוען…</CardContent></Card>;
 
@@ -417,21 +400,15 @@ function EmployeeMonthlyTable({ punches, loading, employeeId, year, month }: {
               <tr>
                 <th className="text-right p-2">תאריך</th>
                 <th className="text-right p-2">פעימות</th>
-                <th className="text-right p-2 hidden lg:table-cell">כניסה</th>
-                <th className="text-right p-2 hidden lg:table-cell">יציאה</th>
+                <th className="text-right p-2 hidden lg:table-cell">כניסה ← יציאה</th>
                 <th className="text-right p-2">סה"כ</th>
                 <th className="text-right p-2">מצב</th>
               </tr>
             </thead>
             <tbody>
               {rows.map(({ day, items, leave }) => {
-                const ins = items.filter(p => p.direction === "in");
-                const outs = items.filter(p => p.direction === "out");
-                const firstIn = ins[0]?.punch_at;
-                const lastOut = outs[outs.length - 1]?.punch_at;
-                const hours = firstIn && lastOut
-                  ? ((new Date(lastOut).getTime() - new Date(firstIn).getTime()) / 3600000).toFixed(1)
-                  : "—";
+                const dp = pairDayPunches(items);
+                const hours = dp.workedMinutes ? minutesToHours(dp.workedMinutes) : "—";
                 return (
                   <tr key={day} className="border-t align-top">
                     <td className="p-2 whitespace-nowrap">{formatDayLabel(day)}</td>
@@ -444,9 +421,11 @@ function EmployeeMonthlyTable({ punches, loading, employeeId, year, month }: {
                         <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </td>
-                    <td className="p-2 whitespace-nowrap hidden lg:table-cell">{firstIn ? formatTime(firstIn) : "—"}</td>
-                    <td className="p-2 whitespace-nowrap hidden lg:table-cell">{lastOut ? formatTime(lastOut) : "—"}</td>
-                    <td className="p-2 whitespace-nowrap">{hours}</td>
+                    <td className="p-2 whitespace-nowrap hidden lg:table-cell"><PairsList pairs={dp.pairs} /></td>
+                    <td className="p-2 whitespace-nowrap">
+                      {hours}
+                      {dp.breakMinutes > 0 && <div className="text-xs text-muted-foreground">הפסקות {minutesToHM(dp.breakMinutes)}</div>}
+                    </td>
                     <td className="p-2"><DayStatusBadge items={items} leave={leave} /></td>
                   </tr>
                 );
@@ -458,14 +437,9 @@ function EmployeeMonthlyTable({ punches, loading, employeeId, year, month }: {
         {/* Mobile: card list */}
         <div className="md:hidden space-y-2">
           {rows.map(({ day, items, leave }) => {
-            const ins = items.filter(p => p.direction === "in");
-            const outs = items.filter(p => p.direction === "out");
-            const firstIn = ins[0]?.punch_at;
-            const lastOut = outs[outs.length - 1]?.punch_at;
-            const hours = firstIn && lastOut
-              ? ((new Date(lastOut).getTime() - new Date(firstIn).getTime()) / 3600000).toFixed(1)
-              : "—";
-            const hasPair = !!(firstIn && lastOut);
+            const dp = pairDayPunches(items);
+            const hours = minutesToHours(dp.workedMinutes);
+            const hasPair = dp.pairs.length > 0 && !dp.hasGap;
             return (
               <div key={day} className="border rounded-lg p-3 bg-card space-y-2">
                 <div className="flex items-center justify-between">
@@ -481,9 +455,10 @@ function EmployeeMonthlyTable({ punches, loading, employeeId, year, month }: {
                     {items.map(p => (<PunchChip key={p.id} punch={p} />))}
                   </div>
                 )}
-                {hasPair && (
+                {dp.pairs.length > 0 && (
                   <div className="text-[0.8125rem] text-muted-foreground pt-1 border-t border-border/50">
-                    {formatTime(firstIn!)} → {formatTime(lastOut!)} · {hours} שעות
+                    <PairsList pairs={dp.pairs} />
+                    {dp.workedMinutes > 0 && <div>{hours} שעות{dp.breakMinutes > 0 ? ` · הפסקות ${minutesToHM(dp.breakMinutes)}` : ""}</div>}
                   </div>
                 )}
               </div>
@@ -492,6 +467,22 @@ function EmployeeMonthlyTable({ punches, loading, employeeId, year, month }: {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/** כל זוגות היום בשורות: "09:00 ← 12:00"; שעה חסרה מוצגת כ"חסר". */
+function PairsList({ pairs }: { pairs: PunchPair<AttendancePunch>[] }) {
+  if (!pairs.length) return <span>—</span>;
+  return (
+    <div className="flex flex-col gap-0.5">
+      {pairs.map((p, i) => (
+        <span key={p.in?.id ?? p.out?.id ?? i} dir="rtl">
+          {p.in ? formatTime(p.in.punch_at) : <span className="text-amber-700 dark:text-amber-300 font-medium">חסר</span>}
+          {" ← "}
+          {p.out ? formatTime(p.out.punch_at) : <span className="text-amber-700 dark:text-amber-300 font-medium">חסר</span>}
+        </span>
+      ))}
+    </div>
   );
 }
 

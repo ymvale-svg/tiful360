@@ -5351,6 +5351,10 @@ export type Database = {
         Args: { _item_type: string }
         Returns: boolean
       }
+      punch_sequence_broken: {
+        Args: { _directions: string[] }
+        Returns: boolean
+      }
       request_system_access: {
         Args: {
           _employee_id: string

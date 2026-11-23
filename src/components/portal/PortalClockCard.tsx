@@ -32,10 +32,14 @@ export function PortalClockCard({
   const lastOut = [...today].reverse().find((p) => p.direction === "out");
   const isIn = last?.direction === "in";
 
+  // אחרי יציאה באמצע היום הכפתור הבולט הוא שוב "כניסה", והחזרה נרשמת ככניסה חדשה.
+  const returned = isIn && firstIn && firstIn.id !== last.id;
   const status = !last
     ? "עוד לא החתמת היום"
     : isIn
-      ? `בעבודה מ-${hhmm(firstIn?.punch_at ?? last.punch_at)}`
+      ? returned
+        ? `חזרת לעבודה ב-${hhmm(last.punch_at)} (נכנסת היום ב-${hhmm(firstIn!.punch_at)})`
+        : `בעבודה מ-${hhmm(firstIn?.punch_at ?? last.punch_at)}`
       : `יצאת ב-${hhmm(lastOut!.punch_at)}`;
 
   return (

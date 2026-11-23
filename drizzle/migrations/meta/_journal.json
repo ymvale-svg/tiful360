@@ -358,6 +358,13 @@
       "when": 1795070797148,
       "tag": "0050_api_request_log_retention_delete",
       "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1795421789885,
+      "tag": "0051_attendance_gaps_mid_day",
+      "breakpoints": true
     }
   ]
 }

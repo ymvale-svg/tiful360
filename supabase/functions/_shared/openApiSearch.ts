@@ -10,8 +10,8 @@
 export function searchOrFilter(cols: string[], search: string): string {
   const clean = search
     .replace(/[,()"\\]/g, " ")
-    .replaceAll("%", "\\%")
-    .replaceAll("_", "\\_")
+    .replace(/%/g, "\\%")
+    .replace(/_/g, "\\_")
     .trim();
   return cols.map((c) => `${c}.ilike.%${clean}%`).join(",");
 }

@@ -12,9 +12,10 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronDown, ChevronLeft, Mail, FileDown, Check, X, Save } from "lucide-react";
+import { ChevronDown, ChevronLeft, Mail, FileDown, Check, X, Save, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetchAllRows } from "@/lib/fetchAllRows";
+import { minutesToHM } from "@/lib/attendancePairs";
 import {
   monthWorkingDays, buildReviewDays, isGapDay, LEAVE_TYPE_LABEL,
   type ReviewDay, type MonthPunch, type ApprovedLeave,
@@ -271,12 +272,13 @@ export function MonthlyAttendanceReview() {
       const gaps = rows.filter(isGapDay).length;
       const abs = rows.filter((r) => r.status === "leave").length;
       const tr = rows.map((r) => `<tr class="${isGapDay(r) ? "gap" : ""}"><td>${fmtDate(r.day)}</td><td>${dow(r.day)}</td>
-        <td>${fmtTime(r.inPunch?.punch_at)}</td><td>${fmtTime(r.outPunch?.punch_at)}</td>
+        <td>${r.pairs.map((x) => fmtTime(x.in?.punch_at) || "—").join("<br>")}</td><td>${r.pairs.map((x) => fmtTime(x.out?.punch_at) || "—").join("<br>")}</td>
+        <td>${r.workedMinutes ? minutesToHM(r.workedMinutes) : ""}</td>
         <td>${r.leave ?? (r.status === "missing" ? "לא החתים" : r.status === "partial" ? "חסרה החתמה" : "")}</td></tr>`).join("");
       return `<section><h1>דוח נוכחות – ${month.split("-").reverse().join("/")}</h1>
         <div class="meta"><b>${e.full_name}</b> · מספר עובד: ${e.employee_code ?? "—"} · מחלקה: ${e.department ?? "—"}</div>
         <div class="meta">ימי עבודה: ${rows.length} · היעדרויות: ${abs} · ימים חסרים: ${gaps}</div>
-        <table><thead><tr><th>תאריך</th><th>יום</th><th>כניסה</th><th>יציאה</th><th>הערה</th></tr></thead><tbody>${tr}</tbody></table></section>`;
+        <table><thead><tr><th>תאריך</th><th>יום</th><th>כניסה</th><th>יציאה</th><th>שעות</th><th>הערה</th></tr></thead><tbody>${tr}</tbody></table></section>`;
     }).join("");
     w.document.write(`<html dir="rtl" lang="he"><head><title>דוח נוכחות ${month}</title><style>
       body{font-family:Arial,sans-serif;margin:0} section{page-break-after:always;padding:16px}
@@ -373,13 +375,13 @@ export function MonthlyAttendanceReview() {
                       <div className="overflow-x-auto">
                       <table className="w-full min-w-[40rem] text-sm bg-card rounded">
                         <thead><tr className="text-muted-foreground"><th className="p-1 text-right">תאריך</th><th className="p-1 text-right">יום</th>
-                          <th className="p-1 text-right">כניסה</th><th className="p-1 text-right">יציאה</th><th className="p-1 text-right">מצב / סיבה</th><th className="p-1 text-right">פעולות</th></tr></thead>
+                          <th className="p-1 text-right">כניסה</th><th className="p-1 text-right">יציאה</th><th className="p-1 text-right">שעות</th><th className="p-1 text-right">מצב / סיבה</th><th className="p-1 text-right">פעולות</th></tr></thead>
                         <tbody>
                           {shown.map((r) => (
                             <DayRow key={r.day} r={r} emp={e} pending={pend.filter((c) => c.correction_date === r.day)}
                               busy={busy} canApprove={canApprove} onTime={setTime} onAbsence={markAbsence} onReview={review} onDirty={markDirty} />
                           ))}
-                          {!shown.length && <tr><td colSpan={6} className="p-3 text-center text-muted-foreground">אין חוסרים החודש</td></tr>}
+                          {!shown.length && <tr><td colSpan={7} className="p-3 text-center text-muted-foreground">אין חוסרים החודש</td></tr>}
                         </tbody>
                       </table>
                       </div>
@@ -405,23 +407,64 @@ function ReportStatus({ status }: { status?: string }) {
 }
 
 function DayRow({ r, emp, pending, busy, canApprove, onTime, onAbsence, onReview, onDirty }: any) {
-  const [inT, setInT] = useState(fmtTime(r.inPunch?.punch_at));
-  const [outT, setOutT] = useState(fmtTime(r.outPunch?.punch_at));
+  const day = r as ReviewDay;
+  // שורה לכל זוג כניסה/יציאה; יום ריק מקבל שורה ריקה אחת להשלמה.
+  const basePairs = day.pairs.length ? day.pairs : [{ in: null, out: null }];
+  const initial = () => basePairs.map((p) => ({ in: fmtTime(p.in?.punch_at), out: fmtTime(p.out?.punch_at) }));
+  const [vals, setVals] = useState(initial);
+  const [extra, setExtra] = useState<Array<{ in: string; out: string }>>([]);
+  const baseKey = basePairs.map((p) => `${p.in?.id}-${p.in?.punch_at}-${p.out?.id}-${p.out?.punch_at}`).join("|");
+  useEffect(() => { setVals(initial()); setExtra([]); }, [baseKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const gap = isGapDay(r);
-  const changed = inT !== fmtTime(r.inPunch?.punch_at) || outT !== fmtTime(r.outPunch?.punch_at);
+  const changed = vals.some((v, i) => v.in !== fmtTime(basePairs[i]?.in?.punch_at) || v.out !== fmtTime(basePairs[i]?.out?.punch_at))
+    || extra.some((x) => x.in || x.out);
   const dirtyKey = `${emp.id}|${r.day}`;
   useEffect(() => { onDirty?.(dirtyKey, changed); }, [changed, dirtyKey, onDirty]);
   useEffect(() => () => onDirty?.(dirtyKey, false), [dirtyKey, onDirty]);
   const save = async () => {
-    if (inT && inT !== fmtTime(r.inPunch?.punch_at)) await onTime(emp, r.day, "in", r.inPunch, inT);
-    if (outT && outT !== fmtTime(r.outPunch?.punch_at)) await onTime(emp, r.day, "out", r.outPunch, outT);
+    for (let i = 0; i < vals.length; i++) {
+      const p = basePairs[i];
+      if (vals[i].in && vals[i].in !== fmtTime(p?.in?.punch_at)) await onTime(emp, r.day, "in", p?.in ?? null, vals[i].in);
+      if (vals[i].out && vals[i].out !== fmtTime(p?.out?.punch_at)) await onTime(emp, r.day, "out", p?.out ?? null, vals[i].out);
+    }
+    for (const x of extra) {
+      if (x.in) await onTime(emp, r.day, "in", null, x.in);
+      if (x.out) await onTime(emp, r.day, "out", null, x.out);
+    }
   };
+  const setVal = (i: number, k: "in" | "out", v: string) => setVals((cur) => cur.map((x, j) => (j === i ? { ...x, [k]: v } : x)));
+  const setExtraVal = (i: number, k: "in" | "out", v: string) => setExtra((cur) => cur.map((x, j) => (j === i ? { ...x, [k]: v } : x)));
+  const rows = [...vals.map((v, i) => ({ v, i, isExtra: false })), ...extra.map((v, i) => ({ v, i, isExtra: true }))];
   return (
     <>
-      <tr className={cn("border-t", gap && "bg-destructive/15")}>
+      <tr className={cn("border-t align-top", gap && "bg-destructive/15")}>
         <td className="p-1">{fmtDate(r.day)}</td><td className="p-1">{dow(r.day)}</td>
-        <td className="p-1"><Input type="time" className="h-10 w-32" value={inT} onChange={(e) => setInT(e.target.value)} aria-label={`כניסה ${fmtDate(r.day)}`} /></td>
-        <td className="p-1"><Input type="time" className="h-10 w-32" value={outT} onChange={(e) => setOutT(e.target.value)} aria-label={`יציאה ${fmtDate(r.day)}`} /></td>
+        <td className="p-1">
+          <div className="flex flex-col gap-1">
+            {rows.map(({ v, i, isExtra }) => (
+              <Input key={`${isExtra ? "x" : "p"}${i}`} type="time" className="h-10 w-32" value={v.in}
+                onChange={(e) => (isExtra ? setExtraVal(i, "in", e.target.value) : setVal(i, "in", e.target.value))}
+                aria-label={`כניסה ${rows.length > 1 ? `${isExtra ? vals.length + i + 1 : i + 1} ` : ""}${fmtDate(r.day)}`} />
+            ))}
+          </div>
+        </td>
+        <td className="p-1">
+          <div className="flex flex-col gap-1">
+            {rows.map(({ v, i, isExtra }) => (
+              <Input key={`${isExtra ? "x" : "p"}${i}`} type="time" className="h-10 w-32" value={v.out}
+                onChange={(e) => (isExtra ? setExtraVal(i, "out", e.target.value) : setVal(i, "out", e.target.value))}
+                aria-label={`יציאה ${rows.length > 1 ? `${isExtra ? vals.length + i + 1 : i + 1} ` : ""}${fmtDate(r.day)}`} />
+            ))}
+            <Button type="button" size="sm" variant="ghost" className="h-9 justify-start px-1 text-primary"
+              onClick={() => setExtra((cur) => [...cur, { in: "", out: "" }])}>
+              <Plus className="w-4 h-4 ml-1" aria-hidden="true" />יציאה וחזרה
+            </Button>
+          </div>
+        </td>
+        <td className="p-1 whitespace-nowrap">
+          {day.workedMinutes ? minutesToHM(day.workedMinutes) : "—"}
+          {day.breakMinutes > 0 && <div className="text-xs text-muted-foreground">הפסקות {minutesToHM(day.breakMinutes)}</div>}
+        </td>
         <td className="p-1">
           {r.leave ? <Badge variant="secondary">{r.leave}</Badge>
             : r.status === "missing" ? <span className="text-destructive font-medium">לא החתים</span>
@@ -442,7 +485,7 @@ function DayRow({ r, emp, pending, busy, canApprove, onTime, onAbsence, onReview
       </tr>
       {pending.map((c: any) => (
         <tr key={c.id} className="bg-primary/5">
-          <td colSpan={5} className="p-1 text-xs">
+          <td colSpan={6} className="p-1 text-xs">
             <b>בקשת תיקון:</b> כניסה {hhmm(c.requested_check_in) || "—"} · יציאה {hhmm(c.requested_check_out) || "—"} · נימוק: {c.reason ?? "—"}
           </td>
           <td className="p-1">

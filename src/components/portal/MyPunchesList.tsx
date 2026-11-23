@@ -12,14 +12,7 @@ import { useEditOwnPunchTime, useAddOwnPunch, useMySelfEditCount, type Attendanc
 import { useCompanyHolidaySet } from "@/hooks/useCompanyHolidays";
 
 import { useToast } from "@/hooks/use-toast";
-
-function calcHours(inTime: string, outTime: string): string {
-  const [ih, im] = inTime.split(":").map(Number);
-  const [oh, om] = outTime.split(":").map(Number);
-  const mins = (oh * 60 + om) - (ih * 60 + im);
-  if (mins <= 0) return "—";
-  return (mins / 60).toFixed(1);
-}
+import { groupPunchesByWorkDay, pairDayPunches, minutesToHours, minutesToHM } from "@/lib/attendancePairs";
 
 interface LeaveRange {
   request_type: string;
@@ -69,12 +62,8 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
 
   const highlightRef = useRef<HTMLDivElement | null>(null);
 
-  const byDay = new Map<string, AttendancePunch[]>();
-  for (const p of punches) {
-    const day = new Date(p.punch_at).toLocaleDateString("en-GB");
-    if (!byDay.has(day)) byDay.set(day, []);
-    byDay.get(day)!.push(p);
-  }
+  // משמרת שעוברת את חצות נספרת ליום הכניסה
+  const byDay = groupPunchesByWorkDay(punches, (iso) => new Date(iso).toLocaleDateString("en-GB"));
 
   // Approved leave days inside the displayed range that have no punches —
   // shown as a labeled card so the day isn't a "hole" in the list.
@@ -217,6 +206,27 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
     }
   };
 
+  /** יציאה באמצע היום וחזרה: שתי החתמות, יציאה ואז כניסה. */
+  const addBreak = async (dayKey: string, outTime: string, backTime: string): Promise<string | null> => {
+    if (!outTime || !backTime) return "יש למלא שעת יציאה ושעת חזרה";
+    if (backTime <= outTime) return "שעת החזרה צריכה להיות אחרי שעת היציאה";
+    const [dd, mm, yyyy] = dayKey.split("/").map(Number);
+    const at = (t: string) => { const [h, m] = t.split(":").map(Number); return new Date(yyyy, mm - 1, dd, h, m, 0, 0).toISOString(); };
+    try {
+      await add.mutateAsync({ punchAt: at(outTime), direction: "out" });
+    } catch (e: any) {
+      return e?.message || "השמירה נכשלה";
+    }
+    try {
+      await add.mutateAsync({ punchAt: at(backTime), direction: "in" });
+    } catch (e: any) {
+      toast({ title: "היציאה נשמרה, החזרה לא", description: e?.message, variant: "destructive" });
+      return null;
+    }
+    toast({ title: "נוספו יציאה וחזרה", description: `${outTime} – ${backTime}` });
+    return null;
+  };
+
   return (
     <div className="space-y-2">
       <div className="flex items-start gap-2 text-[0.8125rem] text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
@@ -251,21 +261,13 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
           );
         }
         const sorted = [...items].sort((a, b) => a.punch_at.localeCompare(b.punch_at));
-        const ins = sorted.filter((p) => p.direction === "in");
-        const outs = sorted.filter((p) => p.direction === "out");
-        const firstIn = ins[0];
-        const lastOut = outs[outs.length - 1];
-        const hours = firstIn && lastOut
-          ? calcHours(
-              new Date(firstIn.punch_at).toTimeString().slice(0, 5),
-              new Date(lastOut.punch_at).toTimeString().slice(0, 5),
-            )
-          : "—";
+        const dp = pairDayPunches(sorted);
+        // יום ריק: זוג ריק אחד להשלמה
+        const pairs = dp.pairs.length ? dp.pairs : [{ in: null, out: null }];
         const isRemote = sorted.some((p) => p.source === "portal_remote");
         const isHighlighted = day === highlightKey;
-        const missingIn = !firstIn;
-        const missingOut = !lastOut;
-        const hasMissing = missingIn || missingOut;
+        const hasMissing = sorted.length === 0 || dp.hasGap;
+        const timeOf = (p: AttendancePunch | null | undefined) => (p ? new Date(p.punch_at).toTimeString().slice(0, 5) : undefined);
 
         return (
           <div
@@ -297,34 +299,50 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              <PunchSlot
-                icon={<ArrowRight className="w-3.5 h-3.5" />}
-                label="כניסה"
-                punch={firstIn}
-                accent="emerald"
-                onSave={save}
-                onAdd={(t) => addPunch(day, "in", t)}
-                defaultTime="09:00"
-                pending={edit.isPending || add.isPending}
-              />
-              <PunchSlot
-                icon={<ArrowLeft className="w-3.5 h-3.5" />}
-                label="יציאה"
-                punch={lastOut}
-                accent="rose"
-                onSave={save}
-                onAdd={(t) => addPunch(day, "out", t)}
-                defaultTime="17:00"
-                pending={edit.isPending || add.isPending}
-              />
+            <div className="space-y-2 mb-2">
+              {pairs.map((pr, i) => (
+                <div key={pr.in?.id ?? pr.out?.id ?? i}>
+                  {i > 0 && (
+                    <div className="text-xs text-muted-foreground text-center mb-1.5">
+                      {pairs[i - 1].out && pr.in
+                        ? `יציאה באמצע היום · ${minutesToHM(Math.max(0, Math.round((new Date(pr.in.punch_at).getTime() - new Date(pairs[i - 1].out!.punch_at).getTime()) / 60000)))}`
+                        : "יציאה באמצע היום"}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-2">
+                    <PunchSlot
+                      icon={<ArrowRight className="w-3.5 h-3.5" />}
+                      label={i === 0 ? "כניסה" : "חזרה"}
+                      punch={pr.in ?? undefined}
+                      accent="emerald"
+                      onSave={save}
+                      onAdd={(t) => addPunch(day, "in", t)}
+                      defaultTime={timeOf(pairs[i - 1]?.out) ?? "09:00"}
+                      pending={edit.isPending || add.isPending}
+                    />
+                    <PunchSlot
+                      icon={<ArrowLeft className="w-3.5 h-3.5" />}
+                      label="יציאה"
+                      punch={pr.out ?? undefined}
+                      accent="rose"
+                      onSave={save}
+                      onAdd={(t) => addPunch(day, "out", t)}
+                      defaultTime={timeOf(pairs[i + 1]?.in) ?? timeOf(pr.in) ?? "17:00"}
+                      pending={edit.isPending || add.isPending}
+                    />
+                  </div>
+                </div>
+              ))}
+              {sorted.length > 0 && (
+                <AddBreakControl pending={add.isPending} onAdd={(o, b) => addBreak(day, o, b)} />
+              )}
             </div>
-
 
             <div className="flex items-center gap-3 text-[0.8125rem] text-muted-foreground border-t border-border/50 pt-2">
               <span className="inline-flex items-center gap-1 font-medium text-foreground">
-                <Clock className="w-3 h-3" /> {hours} שעות
+                <Clock className="w-3 h-3" /> {dp.workedMinutes ? minutesToHours(dp.workedMinutes) : "—"} שעות עבודה
               </span>
+              {dp.breakMinutes > 0 && <span>יציאות {minutesToHM(dp.breakMinutes)}</span>}
               <span>({sorted.length} פעימות)</span>
               {sorted.some((p: any) => p.edited_at) && (
                 <span className="inline-flex items-center gap-1 text-primary font-medium" title="נערך ידנית">
@@ -382,6 +400,48 @@ function CorrectionReasonDialog({ open, onClose, onSubmit }: { open: boolean; on
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** "+ הוסף יציאה וחזרה": שעת יציאה ושעת חזרה, נשמרות כשתי החתמות. */
+function AddBreakControl({ pending, onAdd }: { pending: boolean; onAdd: (outTime: string, backTime: string) => Promise<string | null> }) {
+  const [open, setOpen] = useState(false);
+  const [outT, setOutT] = useState("12:00");
+  const [backT, setBackT] = useState("13:00");
+  const [error, setError] = useState<string | null>(null);
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => { setError(null); setOpen(true); }}
+        className="inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-sm font-medium text-primary hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <Plus className="w-4 h-4" aria-hidden="true" /> הוסף יציאה וחזרה
+      </button>
+    );
+  }
+  const submit = async () => {
+    setError(null);
+    const err = await onAdd(outT, backT);
+    if (err) setError(err);
+    else setOpen(false);
+  };
+  return (
+    <div className="rounded-lg border border-dashed border-border p-2.5 space-y-2">
+      <div className="grid grid-cols-2 gap-2">
+        <FormField label="יצאתי ב-">
+          <Input type="time" value={outT} onChange={(e) => setOutT(e.target.value)} className="h-11 text-base font-mono" />
+        </FormField>
+        <FormField label="חזרתי ב-">
+          <Input type="time" value={backT} onChange={(e) => setBackT(e.target.value)} className="h-11 text-base font-mono" />
+        </FormField>
+      </div>
+      {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
+      <div className="flex gap-2">
+        <Button size="sm" onClick={submit} loading={pending} loadingText="שומר…">שמור</Button>
+        <Button size="sm" variant="outline" onClick={() => setOpen(false)} disabled={pending}>ביטול</Button>
+      </div>
+    </div>
   );
 }
 
