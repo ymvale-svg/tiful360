@@ -445,7 +445,7 @@ export function publicRow<T extends Record<string, unknown> | null | undefined>(
 
 /**
  * The resource as one key may use it: without the identity scope, the identifying
- * columns are omitted from rows and cannot be searched, filtered or sorted on.
+ * columns are omitted from rows and cannot be searched, filtered, sorted on or written.
  */
 export function resourceForScopes(def: ResourceDef, scopes: readonly string[] | null | undefined): ResourceDef {
   if (!def.identity?.length || (scopes ?? []).includes("identity")) return def;
@@ -455,6 +455,7 @@ export function resourceForScopes(def: ResourceDef, scopes: readonly string[] | 
     omit: [...(def.omit ?? []), ...def.identity],
     search: def.search?.filter((c) => !hidden.has(c)),
     filters: def.filters?.filter((c) => !hidden.has(c)),
+    writable: def.writable?.filter((c) => !hidden.has(c)),
   };
 }
 
