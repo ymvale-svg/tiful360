@@ -145,6 +145,17 @@ describe("open-api — identity details need their own permission (appsec:open-a
     expect(cols).toContain("department");
   });
 
+  it("a key without the identity permission cannot write ID number, birth date, address or family details", () => {
+    const def = resourceForScopes(RESOURCES.employees, ["read", "write"]);
+    for (const c of identity) expect(def.writable, c).not.toContain(c);
+    expect(def.writable).toContain("full_name");
+  });
+
+  it("a key with the identity permission can still write them", () => {
+    const def = resourceForScopes(RESOURCES.employees, ["read", "write", "identity"]);
+    expect(def.writable).toContain("id_number");
+  });
+
   it("a key with the identity permission still gets them", () => {
     const def = resourceForScopes(RESOURCES.employees, ["read", "identity"]);
     const out = publicRow(def, { id: "e1", id_number: "123" }) as Record<string, unknown>;
