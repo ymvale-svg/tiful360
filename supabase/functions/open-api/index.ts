@@ -247,7 +247,8 @@ Deno.serve(async (req) => {
           label: def.label,
           actions: def.actions,
           payroll: !!def.payroll,
-          writable: def.writable ?? [],
+          // Without the identity scope, ID number / birth date / address are not writable, so do not list them.
+          writable: resourceForScopes(def, apiKey.scopes).writable ?? [],
         })),
       });
     }

@@ -164,6 +164,12 @@ describe("open-api — identity details need their own permission (appsec:open-a
     expect(filterableColumns(def)).toContain("id_number");
   });
 
+  it("capabilities lists writable fields for the key's own scopes (no identity fields without the identity permission)", () => {
+    const src = readFileSync(join(root, "supabase/functions/open-api/index.ts"), "utf8");
+    expect(src).toContain("writable: resourceForScopes(def, apiKey.scopes).writable");
+    expect(src).not.toMatch(/writable: def\.writable \?\? \[\]/);
+  });
+
   it("the other resources are not changed by the identity permission", () => {
     expect(resourceForScopes(RESOURCES.sites, ["read"])).toBe(RESOURCES.sites);
   });
