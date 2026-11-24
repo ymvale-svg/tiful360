@@ -16,6 +16,7 @@ import { ChevronDown, ChevronLeft, Mail, FileDown, Check, X, Save, Plus } from "
 import { cn } from "@/lib/utils";
 import { fetchAllRows } from "@/lib/fetchAllRows";
 import { minutesToHM } from "@/lib/attendancePairs";
+import { attendanceReportMeta } from "@/lib/attendanceReportHtml";
 import {
   monthWorkingDays, buildReviewDays, isGapDay, LEAVE_TYPE_LABEL,
   type ReviewDay, type MonthPunch, type ApprovedLeave,
@@ -276,7 +277,7 @@ export function MonthlyAttendanceReview() {
         <td>${r.workedMinutes ? minutesToHM(r.workedMinutes) : ""}</td>
         <td>${r.leave ?? (r.status === "missing" ? "לא החתים" : r.status === "partial" ? "חסרה החתמה" : "")}</td></tr>`).join("");
       return `<section><h1>דוח נוכחות – ${month.split("-").reverse().join("/")}</h1>
-        <div class="meta"><b>${e.full_name}</b> · מספר עובד: ${e.employee_code ?? "—"} · מחלקה: ${e.department ?? "—"}</div>
+        <div class="meta">${attendanceReportMeta(e)}</div>
         <div class="meta">ימי עבודה: ${rows.length} · היעדרויות: ${abs} · ימים חסרים: ${gaps}</div>
         <table><thead><tr><th>תאריך</th><th>יום</th><th>כניסה</th><th>יציאה</th><th>שעות</th><th>הערה</th></tr></thead><tbody>${tr}</tbody></table></section>`;
     }).join("");
