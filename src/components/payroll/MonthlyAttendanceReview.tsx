@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronDown, ChevronLeft, Mail, FileDown, Check, X, Save, Plus } from "lucide-react";
+import { ChevronDown, ChevronLeft, Mail, FileDown, Check, X, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetchAllRows } from "@/lib/fetchAllRows";
 import { minutesToHM } from "@/lib/attendancePairs";
@@ -408,16 +408,14 @@ function ReportStatus({ status }: { status?: string }) {
 
 function DayRow({ r, emp, pending, busy, canApprove, onTime, onAbsence, onReview, onDirty }: any) {
   const day = r as ReviewDay;
-  // שורה לכל זוג כניסה/יציאה; יום ריק מקבל שורה ריקה אחת להשלמה.
+  // כל זוג כניסה/יציאה מקבל שורה משלו תחת אותו תאריך.
   const basePairs = day.pairs.length ? day.pairs : [{ in: null, out: null }];
   const initial = () => basePairs.map((p) => ({ in: fmtTime(p.in?.punch_at), out: fmtTime(p.out?.punch_at) }));
   const [vals, setVals] = useState(initial);
-  const [extra, setExtra] = useState<Array<{ in: string; out: string }>>([]);
   const baseKey = basePairs.map((p) => `${p.in?.id}-${p.in?.punch_at}-${p.out?.id}-${p.out?.punch_at}`).join("|");
-  useEffect(() => { setVals(initial()); setExtra([]); }, [baseKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setVals(initial()); }, [baseKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const gap = isGapDay(r);
-  const changed = vals.some((v, i) => v.in !== fmtTime(basePairs[i]?.in?.punch_at) || v.out !== fmtTime(basePairs[i]?.out?.punch_at))
-    || extra.some((x) => x.in || x.out);
+  const changed = vals.some((v, i) => v.in !== fmtTime(basePairs[i]?.in?.punch_at) || v.out !== fmtTime(basePairs[i]?.out?.punch_at));
   const dirtyKey = `${emp.id}|${r.day}`;
   useEffect(() => { onDirty?.(dirtyKey, changed); }, [changed, dirtyKey, onDirty]);
   useEffect(() => () => onDirty?.(dirtyKey, false), [dirtyKey, onDirty]);
@@ -427,62 +425,52 @@ function DayRow({ r, emp, pending, busy, canApprove, onTime, onAbsence, onReview
       if (vals[i].in && vals[i].in !== fmtTime(p?.in?.punch_at)) await onTime(emp, r.day, "in", p?.in ?? null, vals[i].in);
       if (vals[i].out && vals[i].out !== fmtTime(p?.out?.punch_at)) await onTime(emp, r.day, "out", p?.out ?? null, vals[i].out);
     }
-    for (const x of extra) {
-      if (x.in) await onTime(emp, r.day, "in", null, x.in);
-      if (x.out) await onTime(emp, r.day, "out", null, x.out);
-    }
   };
   const setVal = (i: number, k: "in" | "out", v: string) => setVals((cur) => cur.map((x, j) => (j === i ? { ...x, [k]: v } : x)));
-  const setExtraVal = (i: number, k: "in" | "out", v: string) => setExtra((cur) => cur.map((x, j) => (j === i ? { ...x, [k]: v } : x)));
-  const rows = [...vals.map((v, i) => ({ v, i, isExtra: false })), ...extra.map((v, i) => ({ v, i, isExtra: true }))];
   return (
     <>
-      <tr className={cn("border-t align-top", gap && "bg-destructive/15")}>
-        <td className="p-1">{fmtDate(r.day)}</td><td className="p-1">{dow(r.day)}</td>
-        <td className="p-1">
-          <div className="flex flex-col gap-1">
-            {rows.map(({ v, i, isExtra }) => (
-              <Input key={`${isExtra ? "x" : "p"}${i}`} type="time" className="h-10 w-32" value={v.in}
-                onChange={(e) => (isExtra ? setExtraVal(i, "in", e.target.value) : setVal(i, "in", e.target.value))}
-                aria-label={`כניסה ${rows.length > 1 ? `${isExtra ? vals.length + i + 1 : i + 1} ` : ""}${fmtDate(r.day)}`} />
-            ))}
-          </div>
-        </td>
-        <td className="p-1">
-          <div className="flex flex-col gap-1">
-            {rows.map(({ v, i, isExtra }) => (
-              <Input key={`${isExtra ? "x" : "p"}${i}`} type="time" className="h-10 w-32" value={v.out}
-                onChange={(e) => (isExtra ? setExtraVal(i, "out", e.target.value) : setVal(i, "out", e.target.value))}
-                aria-label={`יציאה ${rows.length > 1 ? `${isExtra ? vals.length + i + 1 : i + 1} ` : ""}${fmtDate(r.day)}`} />
-            ))}
-            <Button type="button" size="sm" variant="ghost" className="h-9 justify-start px-1 text-primary"
-              onClick={() => setExtra((cur) => [...cur, { in: "", out: "" }])}>
-              <Plus className="w-4 h-4 ml-1" aria-hidden="true" />יציאה וחזרה
-            </Button>
-          </div>
-        </td>
-        <td className="p-1 whitespace-nowrap">
-          {day.workedMinutes ? minutesToHM(day.workedMinutes) : "—"}
-          {day.breakMinutes > 0 && <div className="text-xs text-muted-foreground">הפסקות {minutesToHM(day.breakMinutes)}</div>}
-        </td>
-        <td className="p-1">
-          {r.leave ? <Badge variant="secondary">{r.leave}</Badge>
-            : r.status === "missing" ? <span className="text-destructive font-medium">לא החתים</span>
-            : r.status === "partial" ? <span className="text-destructive font-medium">חסרה החתמה</span>
-            : <span className="text-muted-foreground">תקין</span>}
-        </td>
-        <td className="p-1">
-          <div className="flex items-center gap-1">
-            {changed && <Button size="sm" disabled={busy} onClick={save}><Save className="w-4 h-4 ml-1" />שמור</Button>}
-            {gap && (
-              <Select value="" onValueChange={(v) => { void onAbsence(emp, r.day, v); }}>
-                <SelectTrigger className="h-10 w-36" aria-label={`סמן היעדרות ב-${fmtDate(r.day)}`}><SelectValue placeholder="סמן היעדרות" /></SelectTrigger>
-                <SelectContent>{ABSENCE_TYPES.map((t) => <SelectItem key={t} value={t}>{LEAVE_TYPE_LABEL[t]}</SelectItem>)}</SelectContent>
-              </Select>
-            )}
-          </div>
-        </td>
-      </tr>
+      {vals.map((v, i) => (
+        <tr key={`${basePairs[i]?.in?.id ?? "missing-in"}-${basePairs[i]?.out?.id ?? "missing-out"}-${i}`}
+          className={cn("border-t align-top", gap && "bg-destructive/15")}>
+          <td className="p-1">{fmtDate(r.day)}</td>
+          <td className="p-1">{dow(r.day)}</td>
+          <td className="p-1">
+            <Input type="time" className="h-10 w-32" value={v.in}
+              onChange={(e) => setVal(i, "in", e.target.value)}
+              aria-label={`כניסה ${vals.length > 1 ? `${i + 1} ` : ""}${fmtDate(r.day)}`} />
+          </td>
+          <td className="p-1">
+            <Input type="time" className="h-10 w-32" value={v.out}
+              onChange={(e) => setVal(i, "out", e.target.value)}
+              aria-label={`יציאה ${vals.length > 1 ? `${i + 1} ` : ""}${fmtDate(r.day)}`} />
+          </td>
+          {i === 0 && (
+            <>
+              <td rowSpan={vals.length} className="p-1 whitespace-nowrap align-top">
+                {day.workedMinutes ? minutesToHM(day.workedMinutes) : "—"}
+                {day.breakMinutes > 0 && <div className="text-xs text-muted-foreground">הפסקות {minutesToHM(day.breakMinutes)}</div>}
+              </td>
+              <td rowSpan={vals.length} className="p-1 align-top">
+                {r.leave ? <Badge variant="secondary">{r.leave}</Badge>
+                  : r.status === "missing" ? <span className="text-destructive font-medium">לא החתים</span>
+                  : r.status === "partial" ? <span className="text-destructive font-medium">חסרה החתמה</span>
+                  : <span className="text-muted-foreground">תקין</span>}
+              </td>
+              <td rowSpan={vals.length} className="p-1 align-top">
+                <div className="flex items-center gap-1">
+                  {changed && <Button size="sm" disabled={busy} onClick={save}><Save className="w-4 h-4 ml-1" />שמור</Button>}
+                  {gap && (
+                    <Select value="" onValueChange={(v) => { void onAbsence(emp, r.day, v); }}>
+                      <SelectTrigger className="h-10 w-36" aria-label={`סמן היעדרות ב-${fmtDate(r.day)}`}><SelectValue placeholder="סמן היעדרות" /></SelectTrigger>
+                      <SelectContent>{ABSENCE_TYPES.map((t) => <SelectItem key={t} value={t}>{LEAVE_TYPE_LABEL[t]}</SelectItem>)}</SelectContent>
+                    </Select>
+                  )}
+                </div>
+              </td>
+            </>
+          )}
+        </tr>
+      ))}
       {pending.map((c: any) => (
         <tr key={c.id} className="bg-primary/5">
           <td colSpan={6} className="p-1 text-xs">

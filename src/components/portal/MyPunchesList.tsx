@@ -206,27 +206,6 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
     }
   };
 
-  /** יציאה באמצע היום וחזרה: שתי החתמות, יציאה ואז כניסה. */
-  const addBreak = async (dayKey: string, outTime: string, backTime: string): Promise<string | null> => {
-    if (!outTime || !backTime) return "יש למלא שעת יציאה ושעת חזרה";
-    if (backTime <= outTime) return "שעת החזרה צריכה להיות אחרי שעת היציאה";
-    const [dd, mm, yyyy] = dayKey.split("/").map(Number);
-    const at = (t: string) => { const [h, m] = t.split(":").map(Number); return new Date(yyyy, mm - 1, dd, h, m, 0, 0).toISOString(); };
-    try {
-      await add.mutateAsync({ punchAt: at(outTime), direction: "out" });
-    } catch (e: any) {
-      return e?.message || "השמירה נכשלה";
-    }
-    try {
-      await add.mutateAsync({ punchAt: at(backTime), direction: "in" });
-    } catch (e: any) {
-      toast({ title: "היציאה נשמרה, החזרה לא", description: e?.message, variant: "destructive" });
-      return null;
-    }
-    toast({ title: "נוספו יציאה וחזרה", description: `${outTime} – ${backTime}` });
-    return null;
-  };
-
   return (
     <div className="space-y-2">
       <div className="flex items-start gap-2 text-[0.8125rem] text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
@@ -301,18 +280,11 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
 
             <div className="space-y-2 mb-2">
               {pairs.map((pr, i) => (
-                <div key={pr.in?.id ?? pr.out?.id ?? i}>
-                  {i > 0 && (
-                    <div className="text-xs text-muted-foreground text-center mb-1.5">
-                      {pairs[i - 1].out && pr.in
-                        ? `יציאה באמצע היום · ${minutesToHM(Math.max(0, Math.round((new Date(pr.in.punch_at).getTime() - new Date(pairs[i - 1].out!.punch_at).getTime()) / 60000)))}`
-                        : "יציאה באמצע היום"}
-                    </div>
-                  )}
+                <div key={pr.in?.id ?? pr.out?.id ?? i} aria-label={`כניסה ויציאה ${i + 1} בתאריך ${day}`}>
                   <div className="grid grid-cols-2 gap-2">
                     <PunchSlot
                       icon={<ArrowRight className="w-3.5 h-3.5" />}
-                      label={i === 0 ? "כניסה" : "חזרה"}
+                      label="כניסה"
                       punch={pr.in ?? undefined}
                       accent="emerald"
                       onSave={save}
@@ -333,9 +305,6 @@ export function MyPunchesList({ punches, leaves = [], highlightDate, daysBack = 
                   </div>
                 </div>
               ))}
-              {sorted.length > 0 && (
-                <AddBreakControl pending={add.isPending} onAdd={(o, b) => addBreak(day, o, b)} />
-              )}
             </div>
 
             <div className="flex items-center gap-3 text-[0.8125rem] text-muted-foreground border-t border-border/50 pt-2">
@@ -400,48 +369,6 @@ function CorrectionReasonDialog({ open, onClose, onSubmit }: { open: boolean; on
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-/** "+ הוסף יציאה וחזרה": שעת יציאה ושעת חזרה, נשמרות כשתי החתמות. */
-function AddBreakControl({ pending, onAdd }: { pending: boolean; onAdd: (outTime: string, backTime: string) => Promise<string | null> }) {
-  const [open, setOpen] = useState(false);
-  const [outT, setOutT] = useState("12:00");
-  const [backT, setBackT] = useState("13:00");
-  const [error, setError] = useState<string | null>(null);
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => { setError(null); setOpen(true); }}
-        className="inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-sm font-medium text-primary hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <Plus className="w-4 h-4" aria-hidden="true" /> הוסף יציאה וחזרה
-      </button>
-    );
-  }
-  const submit = async () => {
-    setError(null);
-    const err = await onAdd(outT, backT);
-    if (err) setError(err);
-    else setOpen(false);
-  };
-  return (
-    <div className="rounded-lg border border-dashed border-border p-2.5 space-y-2">
-      <div className="grid grid-cols-2 gap-2">
-        <FormField label="יצאתי ב-">
-          <Input type="time" value={outT} onChange={(e) => setOutT(e.target.value)} className="h-11 text-base font-mono" />
-        </FormField>
-        <FormField label="חזרתי ב-">
-          <Input type="time" value={backT} onChange={(e) => setBackT(e.target.value)} className="h-11 text-base font-mono" />
-        </FormField>
-      </div>
-      {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
-      <div className="flex gap-2">
-        <Button size="sm" onClick={submit} loading={pending} loadingText="שומר…">שמור</Button>
-        <Button size="sm" variant="outline" onClick={() => setOpen(false)} disabled={pending}>ביטול</Button>
-      </div>
-    </div>
   );
 }
 
